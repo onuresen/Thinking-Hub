@@ -1,21 +1,21 @@
 # Thinking Hub — Claude Context
 
 ## What this is
-Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HTML/CSS/JS loaded directly in browser. 8 standalone tool pages share one shell (`hub.html`) via iframe + postMessage.
+Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HTML/CSS/JS loaded directly in browser. Standalone tool pages share one shell (`index.html`) via iframe + postMessage.
 
 ## Architecture in one sentence
-`hub.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage + optional Supabase sync).
+`index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage + optional Supabase sync).
 
 ## File map
 | File | Role |
 |------|------|
-| `hub.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
+| `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
-| `hub-search.js` | Global Cmd+K search, injected into hub.html only |
-| `hub-tutorial.js` | Onboarding tour, injected into hub.html only |
+| `hub-search.js` | Global Cmd+K search, injected into index.html only |
+| `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
 | `supabase-schema.sql` | Cloud DB schema |
@@ -27,9 +27,21 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
+| `focus-hub.html` | Pomodoro focus timer, task session log |
+| `log-hub.html` | Private daily captain's log with mood heatmap |
+| `retro-hub.html` | Async team retrospective (Went Well / Improve / Actions) |
+| `assumptions-hub.html` | Assumption tracker linked to decisions |
+| `review-hub.html` | Structured weekly review ritual |
+| `matrix-hub.html` | Eisenhower 2×2 priority/impact matrix |
+| `meetings-hub.html` | Meeting notes with action-item extraction |
+| `goals-hub.html` | OKR / quarterly goals hub |
+| `learning-hub.html` | Reading & learning log |
+| `stakeholder-hub.html` | Visual power/interest stakeholder grid |
+| `risk-hub.html` | Risk register with heat-map |
+| `achievements-hub.html` | Achievements & milestones tracker |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-links.js` / `hub-data.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-tutorial.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -49,7 +61,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -79,7 +91,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 ## Obsidian integration — current state (Option A, done)
 
 **What's in place:**
-- Vault name stored in `hub-settings-v1` → `{ obsidianVault: string }` via hub.html ⚙️ modal
+- Vault name stored in `hub-settings-v1` → `{ obsidianVault: string }` via index.html ⚙️ modal
 - `project-hub.html` tasks: `obsidianNote` field on task objects; `⟡ Note` badge in task-meta opens `obsidian://` URI; `⟡` action button on hover calls `promptObsidianNote()` for any task (new or existing); field in Add Task modal
 - `decision-hub.html` decisions: `obsidianNote` field; input + `⟡ Open` button in Log tab; saved in `saveCurrent()`
 - Link format: `obsidian://open?vault={vaultName}&file={notePath}` — one-way, opens note in Obsidian
@@ -106,7 +118,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 2. **Frontmatter parsing** — inline micro-parser (no npm): split on `---`, parse `key: value` and `key: [a, b]` lines. No dependency needed for basic Obsidian frontmatter.
 
 3. **UI additions:**
-   - In hub.html ⚙️ modal: "Pick Vault Folder" button (shown only when `HubObsidian.isAvailable()`); shows indexed note count + last-indexed time; "Re-index" button
+   - In index.html ⚙️ modal: "Pick Vault Folder" button (shown only when `HubObsidian.isAvailable()`); shows indexed note count + last-indexed time; "Re-index" button
    - In `project-hub.html` task modal: autocomplete suggestions for `task-obsidian` field — as user types, show matching note titles from the index
    - In `decision-hub.html` log tab: same autocomplete on `i-obsidian` input
    - Optional: "Related notes" panel next to a task — shows notes whose title/tags overlap with task title
@@ -119,7 +131,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 | File | Change |
 |------|--------|
 | `hub-obsidian.js` (new) | Full vault reader + index module |
-| `hub.html` | Load `hub-obsidian.js`; add vault picker UI to ⚙️ modal |
+| `index.html` | Load `hub-obsidian.js`; add vault picker UI to ⚙️ modal |
 | `project-hub.html` | Autocomplete on `task-obsidian` input |
 | `decision-hub.html` | Autocomplete on `i-obsidian` input |
 | `CLAUDE.md` | Move Option B to "done" when complete |
@@ -150,7 +162,7 @@ Graph Hub is view-only. Add:
 ### Priority 3 — Hub dashboard widget items clickable `[group: hub-shell]`
 **ID:** 2B  
 Status widgets on the home dashboard show items (tasks, decisions, questions) but clicking opens the tool root, not the item. Use existing `hub-navigate` postMessage + hub-highlight protocol so clicking an item navigates directly to it.  
-**Files:** `hub.html`
+**Files:** `index.html`
 
 ---
 
@@ -176,53 +188,31 @@ Workspace tab has 9 fields across 3 lenses — overwhelming on first open. Show 
 ### Priority 6 — Better cross-tool onboarding tour `[group: hub-shell]`
 **ID:** 2F  
 Current tutorial covers tools in isolation. Add a "Quick Tour" that walks the power workflow: create project → swipe ideas → link to decision → graph view. 5 steps, triggered on first project creation. Reuses `hub-tutorial.js` step format.  
-**Files:** `hub.html`, `hub-tutorial.js`
+**Files:** `index.html`, `hub-tutorial.js`
 
 ---
 
-### Priority 7 — New tool: Focus Timer `[group: new-tools-solo]`
-**ID:** 3B  
-`focus-hub.html` — Pomodoro-style focus session tracker.
-- Pick a task from Project Hub; 25/50-min countdown with SVG ring animation
-- Session log (what, how long); daily/weekly histogram
-- Marks task "in progress" during session; offers "mark done" at end  
-**Storage key:** `focus-hub-v1`  
-**Files:** New `focus-hub.html`; register in `hub.html` app list
+### ~~Priority 7 — New tool: Focus Timer~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3B — **Implemented.**  
+**Files:** `focus-hub.html`
 
 ---
 
-### Priority 8 — New tool: Daily Log `[group: new-tools-solo]`
-**ID:** 3D  
-`log-hub.html` — Private daily captain's log.
-- Date-stamped freeform markdown entries with 5-emoji mood picker
-- GitHub-style mood heatmap + streak counter
-- Searchable via Cmd+K (add resolver to `hub-links.js`)
-- localStorage only by default (never auto-synced)  
-**Storage key:** `log-hub-v1`  
-**Files:** New `log-hub.html`; register in `hub.html`
+### ~~Priority 8 — New tool: Daily Log~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3D — **Implemented.**  
+**Files:** `log-hub.html`
 
 ---
 
-### Priority 9 — New tool: Retrospective Board `[group: new-tools-team]`
-**ID:** 3C  
-`retro-hub.html` — Async team retro: Went Well / Improve / Actions columns.
-- Emoji reaction voting (👍 ❤️ 🔥) per item; group by theme via drag
-- Real-time collab via Supabase (items in `retro-hub-v1`)
-- Export to markdown  
-**Storage key:** `retro-hub-v1`  
-**Files:** New `retro-hub.html`; register in `hub.html`
+### ~~Priority 9 — New tool: Retrospective Board~~ ✓ Done `[group: new-tools-team]`
+**ID:** 3C — **Implemented.**  
+**Files:** `retro-hub.html`
 
 ---
 
-### Priority 10 — New tool: Assumption Tracker `[group: new-tools-team]`
-**ID:** 3E  
-`assumptions-hub.html` — Track assumptions behind decisions.
-- Fields: statement, why it matters, confidence (1–5 stars), status (Assumed → Testing → Validated / Invalidated)
-- Linked decision field (links to decision-hub items via hub-links)
-- When invalidated → linked decision flagged "needs review"
-- Horizontal swim-lane layout by status  
-**Storage key:** `assumptions-hub-v1`  
-**Files:** New `assumptions-hub.html`; register in `hub.html`
+### ~~Priority 10 — New tool: Assumption Tracker~~ ✓ Done `[group: new-tools-team]`
+**ID:** 3E — **Implemented.**  
+**Files:** `assumptions-hub.html`
 
 ---
 
@@ -235,7 +225,7 @@ Current tutorial covers tools in isolation. Add a "Quick Tour" that walks the po
 
 **4C — Empty state illustrations:** Replace emoji + text with inline monochromatic SVG spot-illustrations per tool (Graph Hub: interconnected dots; Idea Swiper: blank card pile; KMQT: four empty columns). **Files:** per-tool HTML files
 
-**4D — Iframe loading progress bar:** Subtle top-of-iframe progress bar during tool load (like YouTube's red bar). CSS animation triggered by class on the shell; no JS timing needed. **Files:** `hub.html`, `theme.css`
+**4D — Iframe loading progress bar:** Subtle top-of-iframe progress bar during tool load (like YouTube's red bar). CSS animation triggered by class on the shell; no JS timing needed. **Files:** `index.html`, `theme.css`
 
 ---
 
@@ -267,15 +257,9 @@ Scattered z-index values (9000, 9999, 8500, 10000). Add `--z-modal`, `--z-popove
 
 ---
 
-### Priority 19 — New tool: Weekly Review `[group: new-tools-solo]`
-**ID:** 3A  
-`review-hub.html` — Structured weekly review ritual.
-- "Done this week": pull tasks completed in last 7 days from Project Hub
-- "Capture": freeform wins/blockers/notes textarea
-- "Next week": open tasks + pin 3 "big rocks" (draggable priority)
-- Left-to-right timeline layout: Last week → Right now → Next week  
-**Storage key:** `review-hub-v1`  
-**Files:** New `review-hub.html`; register in `hub.html`
+### ~~Priority 19 — New tool: Weekly Review~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3A — **Implemented.**  
+**Files:** `review-hub.html`
 
 ---
 
@@ -321,75 +305,36 @@ Add a canvas item resolver in `hub-links.js` `resolveItems()`. Each canvas node 
 
 ---
 
-### Priority 26 — New tool: Priority / Impact Matrix `[group: new-tools-solo]`
-**ID:** 3F  
-`matrix-hub.html` — Eisenhower-style 2×2 quadrant (Do / Schedule / Delegate / Eliminate) for sorting tasks by Urgency × Importance.
-- Receive tasks from Project Hub via hub-links postMessage, or add inline
-- Each card shows task title + project tag; drag between quadrants
-- "Flush to Project Hub" button updates task priority based on quadrant placement
-- Export as SVG  
-**Storage key:** `matrix-hub-v1`  
-**Files:** New `matrix-hub.html`; register in `hub.html`
+### ~~Priority 26 — New tool: Priority / Impact Matrix~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3F — **Implemented.**  
+**Files:** `matrix-hub.html`
 
 ---
 
-### Priority 27 — New tool: Meeting Notes `[group: new-tools-team]`
-**ID:** 3G  
-`meetings-hub.html` — Structured meeting notes with action item extraction that flows into Project Hub.
-- Create meeting: title, date, project link, attendees (freeform tags)
-- Side-by-side agenda + notes layout
-- Inline action-item extraction: highlight text → "Make Action" → creates task in Project Hub via HubStorage write (reuse write path from Priority 1)
-- Past meetings list with quick-view panel; searchable via Cmd+K  
-**Storage key:** `meetings-hub-v1`  
-**Files:** New `meetings-hub.html`; register in `hub.html`; `hub-data.js` write path
+### ~~Priority 27 — New tool: Meeting Notes~~ ✓ Done `[group: new-tools-team]`
+**ID:** 3G — **Implemented.**  
+**Files:** `meetings-hub.html`
 
 ---
 
-### Priority 28 — New tool: OKR / Goals Hub `[group: new-tools-solo]`
-**ID:** 3H  
-`goals-hub.html` — Quarterly objectives with measurable key results; the "north star" layer connecting daily tasks to strategic intent.
-- Quarterly objective cards (title + why it matters) with 2–4 Key Results each
-- Key Result progress via numeric slider or checkbox
-- Projects in Project Hub can declare which Objective they serve
-- Dashboard widget in hub.html shows current quarter OKRs + overall progress %
-- Archive past quarters (read-only collapse)  
-**Storage key:** `goals-hub-v1`  
-**Files:** New `goals-hub.html`; register in `hub.html`; hub.html dashboard widget; `hub-data.js` read extension
+### ~~Priority 28 — New tool: OKR / Goals Hub~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3H — **Implemented.**  
+**Files:** `goals-hub.html`
 
 ---
 
-### Priority 29 — New tool: Reading & Learning Log `[group: new-tools-solo]`
-**ID:** 3I  
-`learning-hub.html` — Track books, articles, courses, and videos with highlights and key insights; upstream of idea-swiper.
-- Add items: book / article / course / video — with URL, author, status (To Read / Reading / Done)
-- Per-item highlights/notes section (textarea per item)
-- Tag system with sidebar filter
-- "Send to Idea Swiper" button seeds a new swipeable idea card from a highlight
-- Searchable via Cmd+K  
-**Storage key:** `learning-hub-v1`  
-**Files:** New `learning-hub.html`; register in `hub.html`; `idea-swiper.html` (accept deep-link seeding)
+### ~~Priority 29 — New tool: Reading & Learning Log~~ ✓ Done `[group: new-tools-solo]`
+**ID:** 3I — **Implemented.**  
+**Files:** `learning-hub.html`
 
 ---
 
-### Priority 30 — New tool: Stakeholder Map `[group: new-tools-team]`
-**ID:** 3J  
-`stakeholder-hub.html` — Visual power/interest grid for stakeholder mapping; replaces the 5 old standalone Stakeholder-Alignment versions with a proper hub-integrated tool.
-- Power/Interest 2×2 grid: Manage Closely / Keep Satisfied / Keep Informed / Monitor
-- Stakeholder cards: name, role, project tags, stance (Champion / Neutral / Resistant), notes
-- Filter by project (links to project-hub items); quick-add from project member list
-- Export as PNG via html2canvas (already a dependency)  
-**Storage key:** `stakeholder-hub-v1`  
-**Files:** New `stakeholder-hub.html`; register in `hub.html`
+### ~~Priority 30 — New tool: Stakeholder Map~~ ✓ Done `[group: new-tools-team]`
+**ID:** 3J — **Implemented.**  
+**Files:** `stakeholder-hub.html`
 
 ---
 
-### Priority 31 — New tool: Risk Register `[group: new-tools-team]`
-**ID:** 3K  
-`risk-hub.html` — Track project risks with probability/impact heat-map and mitigation plans. Pair with assumptions-hub (Priority 10) once that's done.
-- Risk cards: title, category (Technical / Resource / Schedule / External), probability (1–5), impact (1–5)
-- Heat-map grid auto-positions each risk by probability × impact score
-- Status: Open / Mitigating / Closed; mitigation notes field
-- Link to project via hub-links; when linked project is Done, risks auto-archive
-- Filter by project / category / severity band  
-**Storage key:** `risk-hub-v1`  
-**Files:** New `risk-hub.html`; register in `hub.html`
+### ~~Priority 31 — New tool: Risk Register~~ ✓ Done `[group: new-tools-team]`
+**ID:** 3K — **Implemented.**  
+**Files:** `risk-hub.html`
