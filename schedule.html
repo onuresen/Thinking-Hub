@@ -2049,10 +2049,8 @@
     // Auto-sync imported Project Hub items
     // ═══════════════════════════════════════════════════════════════
     function syncFromProjectHub() {
-      const raw = HubStorage.get('project-hub-v1');
-      if (!raw) return;
-      let phData;
-      try { phData = JSON.parse(raw); } catch { return; }
+      const phData = HubStorage.get('project-hub-v1');
+      if (!phData) return;
 
       const taskMap = {};
       const msMap = {};

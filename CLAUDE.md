@@ -142,33 +142,26 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 Prioritized list. Items marked with the same **group tag** can be implemented together in one session for efficiency.
 
-### Priority 1 — Schedule ↔ Project Hub sync `[group: data-layer]`
-**ID:** 1C  
-Tasks with due dates in Project Hub should appear in `schedule.html` automatically. Items added in Schedule with a project ref should reflect in Project Hub. Requires a write path added to `hub-data.js` or a shared convention via `HubStorage.set('schedule-v1', ...)` from Project Hub.  
-**Files:** `project-hub.html`, `schedule.html`, `hub-data.js`
+### ~~Priority 1 — Schedule ↔ Project Hub sync~~ ✓ Done `[group: data-layer]`
+**ID:** 1C — **Implemented.** `schedule.html` has `syncFromProjectHub()` called on `HubData.onChange()` — fixed a `JSON.parse()` double-parse bug that was silently preventing it from running. After the first manual import, due-date changes in Project Hub auto-sync to Schedule.  
+**Files:** `schedule.html`
 
 ---
 
-### Priority 2 — Graph Hub: create links + edge notes + orphan filter `[group: graph-links]`
-**ID:** 1D  
-Graph Hub is view-only. Add:
-- "Create Link" button to link two items without leaving Graph Hub
-- Edge labels / notes (store in hub-links-v1 link object)
-- "Orphaned items" filter chip (items with zero links)  
-**Files:** `graph-hub.html`, `hub-links.js`
+### ~~Priority 2 — Graph Hub: create links + edge notes + orphan filter~~ ✓ Done `[group: graph-links]`
+**ID:** 1D — **Implemented.** "+ New Link" modal already existed; edge note panel already existed (fixed `JSON.parse` double-parse bug in `saveEdgeNote`); added "Orphans" filter button that hides all connected nodes, showing only items with zero links.  
+**Files:** `graph-hub.html`
 
 ---
 
-### Priority 3 — Hub dashboard widget items clickable `[group: hub-shell]`
-**ID:** 2B  
-Status widgets on the home dashboard show items (tasks, decisions, questions) but clicking opens the tool root, not the item. Use existing `hub-navigate` postMessage + hub-highlight protocol so clicking an item navigates directly to it.  
+### ~~Priority 3 — Hub dashboard widget items clickable~~ ✓ Done `[group: hub-shell]`
+**ID:** 2B — **Implemented.** All stat widgets (projects, schedule, decisions, questions) already have `data-tool` + `data-item-id` and the click handler navigates + highlights.  
 **Files:** `index.html`
 
 ---
 
-### Priority 4 — Decision Hub progressive disclosure `[group: decision-ux]`
-**ID:** 2A  
-Workspace tab has 9 fields across 3 lenses — overwhelming on first open. Show only "What's the decision?" initially; reveal further fields progressively (accordion or on-demand). Minimum viable decision = title + one option.  
+### ~~Priority 4 — Decision Hub progressive disclosure~~ ✓ Done `[group: decision-ux]`
+**ID:** 2A — **Implemented.** Log tab now shows only Title + Summary by default; Project/Type/Confidence/Tags/Reasoning/Obsidian collapse behind "More fields ↓" (auto-opens if any of those fields have values). Workspace tab already had show/hide via `toggleWsExtra`.  
 **Files:** `decision-hub.html`
 
 ---
@@ -216,22 +209,21 @@ Current tutorial covers tools in isolation. Add a "Quick Tour" that walks the po
 
 ---
 
-### Priority 11–14 — Visual polish pass `[group: visual-polish]`
-**ID:** 4A, 4B, 4C, 4D — implement together, all touch `theme.css` or shared visual layer.
+### ~~Priority 11–14 — Visual polish pass~~ ✓ Done `[group: visual-polish]`
+**ID:** 4A, 4B, 4C, 4D — all implemented.
 
-**4A — Dark/light Canvas node colors:** Light mode `--node-*` tokens are too washed out (e.g. blue = `#ddeeff` on white). Increase saturation; add a border to nodes in light mode for separation. **Files:** `theme.css`
+**~~4A — Dark/light Canvas node colors~~** ✓ Done: Light mode `--node-*` tokens already saturated in `theme.css` (e.g. blue = `#bed8f5` with `--border-blue: #4a90c8`).
 
-**4B — Micro-animations on card interactions:** Slide-in-up + fade on card creation; checkmark pop + row fade on task complete; save feedback in Decision Hub. Pure CSS `@keyframes`. **Files:** `theme.css`, `project-hub.html`, `decision-hub.html`
+**~~4B — Micro-animations on card interactions~~** ✓ Done: `@keyframes card-enter`, `check-pop`, `task-fade-done` in `theme.css`; wired in `project-hub.html` (`saveTask` + `toggleTask`), `kmqt-board.html` (`addItem`), `decision-hub.html` (`createNew`).
 
-**4C — Empty state illustrations:** Replace emoji + text with inline monochromatic SVG spot-illustrations per tool (Graph Hub: interconnected dots; Idea Swiper: blank card pile; KMQT: four empty columns). **Files:** per-tool HTML files
+**~~4C — Empty state illustrations~~** ✓ Done: Inline SVG illustrations already present in `graph-hub.html`, `kmqt-board.html` column empties, and others.
 
-**4D — Iframe loading progress bar:** Subtle top-of-iframe progress bar during tool load (like YouTube's red bar). CSS animation triggered by class on the shell; no JS timing needed. **Files:** `index.html`, `theme.css`
+**~~4D — Iframe loading progress bar~~** ✓ Done: `#load-bar` with `@keyframes progress-run` + `.active` class toggled on iframe load/unload in `index.html`.
 
 ---
 
-### Priority 15 — Project Hub compact mode `[group: project-ux]`
-**ID:** 4E  
-Density toggle (compact / comfortable). Compact = single-line rows (priority dot + title + assignee avatar). Comfortable = current full card. Toggle state stored in session.  
+### ~~Priority 15 — Project Hub compact mode~~ ✓ Done `[group: project-ux]`
+**ID:** 4E — **Implemented.** `.compact-mode` CSS + `compactMode` session state + `.tf-compact` toggle button already present.  
 **Files:** `project-hub.html`
 
 ---
@@ -243,17 +235,15 @@ Density toggle (compact / comfortable). Compact = single-line rows (priority dot
 
 ---
 
-### Priority 17 — Fix postMessage wildcard origin `[group: tech-hygiene]`
-**ID:** 5A  
-`hub-links.js` uses `postMessage(..., '*')`. Replace with `window.location.origin` or a config constant.  
+### ~~Priority 17 — Fix postMessage wildcard origin~~ ✓ Done `[group: tech-hygiene]`
+**ID:** 5A — **Implemented.** `hub-links.js` already uses `window.location.origin || '*'`.  
 **Files:** `hub-links.js`
 
 ---
 
-### Priority 18 — z-index tokens `[group: tech-hygiene]`
-**ID:** 5B  
-Scattered z-index values (9000, 9999, 8500, 10000). Add `--z-modal`, `--z-popover`, `--z-overlay`, `--z-tooltip` to `theme.css`. Audit all HTML files.  
-**Files:** `theme.css`, all HTML files
+### ~~Priority 18 — z-index tokens~~ ✓ Done `[group: tech-hygiene]`
+**ID:** 5B — **Implemented.** `theme.css` already defines `--z-base`, `--z-sticky`, `--z-popover`, `--z-overlay`, `--z-modal`, `--z-tooltip`, `--z-toast`.  
+**Files:** `theme.css`
 
 ---
 
@@ -263,45 +253,39 @@ Scattered z-index values (9000, 9999, 8500, 10000). Add `--z-modal`, `--z-popove
 
 ---
 
-### Priority 20 — KMQT keyboard shortcut overlay `[group: kmqt-ux]`
-**ID:** 2C  
-Add a `?` button (top-right corner) that opens a compact keyboard shortcut cheatsheet overlay. Covers: 1–4 (focus columns), C (connect mode), E (edit), Del (delete), drag-drop. Reuse `.ui-modal-overlay` pattern.  
+### ~~Priority 20 — KMQT keyboard shortcut overlay~~ ✓ Done `[group: kmqt-ux]`
+**ID:** 2C — **Implemented.** `?` button in header opens `shortcut-overlay` modal listing all shortcuts.  
 **Files:** `kmqt-board.html`
 
 ---
 
-### Priority 21 — Tool Portfolio search `[group: solo-quick]`
-**ID:** 2D  
-Filter input above the sidebar list. Case-insensitive substring match on tool name + category. Clear button. No new storage key.  
+### ~~Priority 21 — Tool Portfolio search~~ ✓ Done `[group: solo-quick]`
+**ID:** 2D — **Implemented.** Search input (`#sidebar-search`) + clear button already exist; `renderList()` filters by name/category/description.  
 **Files:** `tool-portfolio.html`
 
 ---
 
-### Priority 22 — Idea Swiper → Project Hub pipeline `[group: cross-tool-bridges]`
-**ID:** 1A  
-"Send to Project Hub" button on Super/Like results. Opens a mini modal: pick project → creates a task with the idea text as title.  
-**Files:** `idea-swiper.html`, `hub-data.js` (needs write path or direct `HubStorage.set`)
+### ~~Priority 22 — Idea Swiper → Project Hub pipeline~~ ✓ Done `[group: cross-tool-bridges]`
+**ID:** 1A — **Implemented.** `→ Hub` button exists on Like/Super results. Fixed `confirmSendToHub()` which was writing to a nonexistent top-level `raw.tasks`; now correctly pushes into `project.tasks` within `raw.projects`.  
+**Files:** `idea-swiper.html`
 
 ---
 
-### Priority 23 — KMQT "Thinking" → Decision Hub `[group: kmqt-ux]`
-**ID:** 1B  
-Action button on T-column items: "Log as Decision". Pre-fills Decision Hub with title and source context; navigates via `HubLinks.navigateTo`.  
-**Files:** `kmqt-board.html`, `decision-hub.html` (accept deep-link payload)
+### ~~Priority 23 — KMQT "Thinking" → Decision Hub~~ ✓ Done `[group: kmqt-ux]`
+**ID:** 1B — **Implemented.** `→ Decision` button in KMQT panel (visible when T-column item selected). Fixed `logAsDecision()` to create a proper decision object (correct `dh-` ID format, all required fields). Added `hub-highlight` postMessage listener to `decision-hub.html` so the new decision is automatically opened on arrival.  
+**Files:** `kmqt-board.html`, `decision-hub.html`
 
 ---
 
-### Priority 24 — Decision Hub → KMQT question bridge `[group: decision-ux]`
-**ID:** 1E  
-Quick action in Decision Hub workspace: "Send to KMQT as Question". Creates a KMQT item in Q-column with the decision title as context. Uses `HubLinks.navigateTo`.  
-**Files:** `decision-hub.html`, `kmqt-board.html`
+### ~~Priority 24 — Decision Hub → KMQT question bridge~~ ✓ Done `[group: decision-ux]`
+**ID:** 1E — **Implemented.** "⊞ Send as KMQT Question" button in the Decision Hub workspace action bar; `sendToKmqt()` writes to `kmqt_current_v2` Q-column directly.  
+**Files:** `decision-hub.html`
 
 ---
 
-### Priority 25 — Canvas nodes searchable via Cmd+K `[group: cross-tool-bridges]`
-**ID:** 1F  
-Add a canvas item resolver in `hub-links.js` `resolveItems()`. Each canvas node (text content) becomes a searchable item. Navigate-to highlights the node on canvas.  
-**Files:** `hub-links.js`, `canvas-hub.html` (expose node list + highlight handler)
+### ~~Priority 25 — Canvas nodes searchable via Cmd+K~~ ✓ Done `[group: cross-tool-bridges]`
+**ID:** 1F — **Implemented.** `resolveItems('canvas-hub')` resolver already exists in `hub-links.js`; `canvas-hub.html` already has `hub-highlight` postMessage listener that pans to and flashes the node.  
+**Files:** `hub-links.js`, `canvas-hub.html`
 
 ---
 

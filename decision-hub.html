@@ -596,6 +596,7 @@
         byProject[pid].forEach(d => {
           const item = document.createElement('div');
           item.className = 'nav-item' + (currentId === d.id ? ' active' : '');
+          item.dataset.id = d.id;
 
           let icon = '◎';
           if (d.type === 'note') icon = '✎';
@@ -638,6 +639,10 @@
       saveData();
       openDecision(id);
       renderSidebar();
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`.nav-item[data-id="${id}"]`);
+        if (el) el.classList.add('card-enter');
+      });
     }
 
     function openDecision(id) {
@@ -722,62 +727,67 @@
       if (currentTab === 'log') {
         const projOpts = HubData.getProjects().map(p => `<option value="${p.id}" ${dec.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
+        const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote);
+        const obsidianLink = (() => { const v = (HubStorage.get('hub-settings-v1') || {}).obsidianVault || ''; return (dec.obsidianNote && v) ? `<a href="obsidian://open?vault=${encodeURIComponent(v)}&file=${encodeURIComponent(dec.obsidianNote)}" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;transition:background 0.12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface3)'">⟡ Open</a>` : ''; })();
         c.innerHTML = `
           <div class="card">
-            <div class="form-row">
-              <div class="form-group" style="flex:2">
-                <label class="form-label">Title</label>
-                <input class="form-input" id="i-title" value="${dec.title || ''}">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Project</label>
-                <select class="form-select" id="i-project">
-                  <option value="">— No Project —</option>
-                  ${projOpts}
-                </select>
-              </div>
-            </div>
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Type</label>
-                <select class="form-select" id="i-type">
-                  <option value="decision" ${dec.type === 'decision' ? 'selected' : ''}>Decision</option>
-                  <option value="note" ${dec.type === 'note' ? 'selected' : ''}>Note</option>
-                  <option value="risk" ${dec.type === 'risk' ? 'selected' : ''}>Risk</option>
-                  <option value="open" ${dec.type === 'open' ? 'selected' : ''}>Open Q</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Confidence</label>
-                <select class="form-select" id="i-conf">
-                  <option value="high" ${dec.confidence === 'high' ? 'selected' : ''}>High</option>
-                  <option value="medium" ${dec.confidence === 'medium' ? 'selected' : ''}>Medium</option>
-                  <option value="low" ${dec.confidence === 'low' ? 'selected' : ''}>Low</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Tags</label>
-                <input class="form-input" id="i-tags" value="${dec.tags || ''}" placeholder="Comma separated">
-              </div>
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input class="form-input" id="i-title" value="${dec.title || ''}">
             </div>
 
             <div class="form-group">
               <label class="form-label">Summary / Action</label>
               <textarea class="form-textarea" id="i-summary" style="min-height:100px">${dec.summary || ''}</textarea>
             </div>
-            
-            <div class="form-group">
-              <label class="form-label">Reasoning & Evidence</label>
-              <textarea class="form-textarea" id="i-reason" style="min-height:100px">${dec.reason || ''}</textarea>
-            </div>
 
-            <div class="form-group" style="display:flex;gap:10px;align-items:flex-end">
-              <div style="flex:1">
-                <label class="form-label">Obsidian Note</label>
-                <input class="form-input" id="i-obsidian" value="${(dec.obsidianNote || '').replace(/"/g, '&quot;')}" placeholder="Optional: path/to/note.md">
+            <button class="ws-expand-btn" id="log-expand-btn" onclick="toggleWsExtra('log-extra','log-expand-btn')">${logHasExtra ? 'Show less ↑' : 'More fields ↓'}</button>
+
+            <div class="ws-extra${logHasExtra ? ' open' : ''}" id="log-extra">
+              <div class="form-row" style="margin-top:12px">
+                <div class="form-group" style="flex:2">
+                  <label class="form-label">Project</label>
+                  <select class="form-select" id="i-project">
+                    <option value="">— No Project —</option>
+                    ${projOpts}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Type</label>
+                  <select class="form-select" id="i-type">
+                    <option value="decision" ${dec.type === 'decision' ? 'selected' : ''}>Decision</option>
+                    <option value="note" ${dec.type === 'note' ? 'selected' : ''}>Note</option>
+                    <option value="risk" ${dec.type === 'risk' ? 'selected' : ''}>Risk</option>
+                    <option value="open" ${dec.type === 'open' ? 'selected' : ''}>Open Q</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Confidence</label>
+                  <select class="form-select" id="i-conf">
+                    <option value="high" ${dec.confidence === 'high' ? 'selected' : ''}>High</option>
+                    <option value="medium" ${dec.confidence === 'medium' ? 'selected' : ''}>Medium</option>
+                    <option value="low" ${dec.confidence === 'low' ? 'selected' : ''}>Low</option>
+                  </select>
+                </div>
               </div>
-              ${(() => { const v = (HubStorage.get('hub-settings-v1') || {}).obsidianVault || ''; return (dec.obsidianNote && v) ? `<a href="obsidian://open?vault=${encodeURIComponent(v)}&file=${encodeURIComponent(dec.obsidianNote)}" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;transition:background 0.12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface3)'">⟡ Open</a>` : ''; })()}
+
+              <div class="form-group">
+                <label class="form-label">Tags</label>
+                <input class="form-input" id="i-tags" value="${dec.tags || ''}" placeholder="Comma separated">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Reasoning & Evidence</label>
+                <textarea class="form-textarea" id="i-reason" style="min-height:100px">${dec.reason || ''}</textarea>
+              </div>
+
+              <div class="form-group" style="display:flex;gap:10px;align-items:flex-end">
+                <div style="flex:1">
+                  <label class="form-label">Obsidian Note</label>
+                  <input class="form-input" id="i-obsidian" value="${(dec.obsidianNote || '').replace(/"/g, '&quot;')}" placeholder="Optional: path/to/note.md">
+                </div>
+                ${obsidianLink}
+              </div>
             </div>
           </div>
         `;
@@ -1066,6 +1076,13 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('decision-hub');
+    });
+
+    window.addEventListener('message', e => {
+      if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+        const dec = decisions.find(d => d.id === e.data.itemId);
+        if (dec) openDecision(dec.id);
+      }
     });
   </script>
 </body>

@@ -3567,16 +3567,18 @@ On-demand tutoring market"></textarea>
     function confirmSendToHub() {
       const projectId = document.getElementById('send-project-select').value;
       if (!projectId || !_sendIdea) return;
-      const raw = HubStorage.get('project-hub-v1') || {};
-      const tasks = raw.tasks || [];
-      const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      tasks.push({
-        id: uid(), projectId, title: _sendIdea,
+      const raw = HubStorage.get('project-hub-v1') || { members: [], projects: [] };
+      const project = (raw.projects || []).find(p => p.id === projectId);
+      if (!project) return;
+      if (!project.tasks) project.tasks = [];
+      const taskId = 'task-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      project.tasks.push({
+        id: taskId, title: _sendIdea,
         status: 'todo', priority: 'medium', done: false,
         createdAt: new Date().toISOString(),
         tags: ['from-idea-swiper']
       });
-      HubStorage.set('project-hub-v1', { ...raw, tasks });
+      HubStorage.set('project-hub-v1', raw);
       closeSendModal();
       // Brief toast feedback
       const t = document.createElement('div');

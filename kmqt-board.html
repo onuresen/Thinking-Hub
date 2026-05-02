@@ -1112,6 +1112,10 @@
       state.columns[col].unshift(item);
       autosave();
       renderAll();
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`.item[data-id="${item.id}"]`);
+        if (el) el.classList.add('card-enter');
+      });
     }
 
     function deleteItem(itemId) {
@@ -1157,20 +1161,26 @@
     function logAsDecision() {
       const item = getItem(state.selectedItemId);
       if (!item) return;
-      const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const dh = HubStorage.get('decision-hub-v1') || {};
-      const entries = Array.isArray(dh) ? dh : (dh.entries || []);
+      const dh = HubStorage.get('decision-hub-v1');
+      const entries = Array.isArray(dh) ? dh : [];
       const newEntry = {
-        id: uid(),
+        id: 'dh-' + Date.now().toString(36),
         title: item.text,
-        statement: item.text,
-        context: 'Escalated from KMQT T (Thinking/Try) column',
-        status: 'open',
+        type: 'decision',
+        confidence: 'medium',
+        summary: '',
+        reason: 'Escalated from KMQT Thinking column',
+        tags: 'kmqt',
+        projectId: '',
+        obsidianNote: '',
+        problemLens: {},
+        decisionCanvas: {},
+        optionMap: [],
+        alignment: [],
         createdAt: new Date().toISOString()
       };
       entries.push(newEntry);
-      const saved = Array.isArray(dh) ? entries : { ...dh, entries };
-      HubStorage.set('decision-hub-v1', saved);
+      HubStorage.set('decision-hub-v1', entries);
       // Navigate to Decision Hub with this entry highlighted
       if (typeof HubLinks !== 'undefined' && HubLinks.navigateTo) {
         HubLinks.navigateTo('decision-hub', newEntry.id);

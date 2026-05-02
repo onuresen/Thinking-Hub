@@ -296,6 +296,7 @@
     <button class="btn" onclick="fitGraph()">Fit to Screen</button>
     <button class="btn" id="physics-btn" onclick="togglePhysics()">Freeze Layout</button>
     <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
+    <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
     <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
   </div>
 
@@ -621,6 +622,28 @@
       updateStats();
     }
 
+    // ── Orphans filter ────────────────────────────────────────
+    let orphansOnly = false;
+
+    function toggleOrphans() {
+      orphansOnly = !orphansOnly;
+      document.getElementById('orphans-btn').classList.toggle('frozen', orphansOnly);
+      applyOrphans();
+    }
+
+    function applyOrphans() {
+      if (!nodesDS || !edgesDS) return;
+      if (!orphansOnly) { applyLeaves(); return; }
+      const connected = new Set();
+      edgesDS.forEach(e => { connected.add(e.from); connected.add(e.to); });
+      const updates = [];
+      nodesMap.forEach((node, id) => {
+        updates.push({ id, hidden: hiddenTools.has(node.tool) || connected.has(id) });
+      });
+      nodesDS.update(updates);
+      updateStats();
+    }
+
     // ── Edge click → info panel ───────────────────────────────
     let _currentEdgeId = null;
     let _edgeLinksCache = [];
@@ -634,8 +657,7 @@
     function saveEdgeNote() {
       if (!_currentEdgeId) return;
       const note = document.getElementById('edge-note').value.trim();
-      const raw = HubStorage.get('hub-links-v1');
-      const links = raw ? JSON.parse(raw) : [];
+      const links = HubStorage.get('hub-links-v1') || [];
       const idx = links.findIndex(l => l.id === _currentEdgeId);
       if (idx >= 0) { links[idx].note = note; HubStorage.set('hub-links-v1', links); }
       closeEdgePanel();

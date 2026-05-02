@@ -2539,10 +2539,17 @@
     function toggleTask(e, taskId, projectId) {
       e.stopPropagation();
       const task = findTask(taskId, projectId);
-      if (task) {
-        task.done = !task.done;
-        task.status = task.done ? 'done' : 'todo';
-        saveState();
+      if (!task) return;
+      task.done = !task.done;
+      task.status = task.done ? 'done' : 'todo';
+      saveState();
+      if (task.done) {
+        const row = e.currentTarget.closest('[data-task-id]');
+        if (row) {
+          row.classList.add('task-fade-done');
+          setTimeout(() => { renderContent(); if (state.selectedProject) renderPanel(state.selectedProject); }, 460);
+          return;
+        }
       }
       renderContent();
       if (state.selectedProject) renderPanel(state.selectedProject);
@@ -2971,10 +2978,15 @@
       const projId = document.getElementById('task-project').value;
       const proj = getProject(projId); if (!proj) return;
       const statusVal = document.getElementById('task-status')?.value || 'todo';
-      proj.tasks.push({ id: uid(), title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+      const newId = uid();
+      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, obsidianNote: document.getElementById('task-obsidian').value.trim() });
       saveState(); closeModal('modal-task'); showToast('Task added');
       renderContent();
       if (state.selectedProject === projId) renderPanel(projId);
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-task-id="${newId}"]`);
+        if (el) el.classList.add('card-enter');
+      });
     }
 
     // ─── EDIT STATE ──────────────────────────────────────────────────────────────
