@@ -152,9 +152,8 @@ const HubLinks = (() => {
 
   // ── Utilities ──────────────────────────────────────────────────────────────
 
-  function _esc(s) {
-    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  const _esc = typeof HubUtils !== 'undefined' ? HubUtils.esc
+    : s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // ── CSS injection ──────────────────────────────────────────────────────────
 

@@ -150,9 +150,8 @@ const HubSearch = (() => {
     }
   }
 
-  function _esc(str) {
-    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  const _esc = typeof HubUtils !== 'undefined' ? HubUtils.esc
+    : str => (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   function _injectModal() {
     if (document.getElementById('hub-search-overlay')) return;

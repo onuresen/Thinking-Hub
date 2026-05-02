@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -11,6 +11,7 @@
 
   <script src="hub-storage.js"></script>
   <script src="hub-tutorial.js"></script>
+  <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-search.js"></script>
   <script src="hub-toast.js"></script>
@@ -1233,11 +1234,20 @@
     let _pendingHighlight = null;
 
     window.addEventListener('message', e => {
-      if (!e.data || e.data.type !== 'hub-navigate') return;
-      const { tool, itemId } = e.data;
-      if (!tool) return;
-      _pendingHighlight = itemId || null;
-      openApp(tool);
+      if (!e.data) return;
+      if (e.data.type === 'hub-navigate') {
+        const { tool, itemId } = e.data;
+        if (!tool) return;
+        _pendingHighlight = itemId || null;
+        openApp(tool);
+      }
+      if (e.data.type === 'hub-first-project') {
+        if (!HubStorage.get('quick-tour-seen-v1')) {
+          HubStorage.set('quick-tour-seen-v1', true);
+          goHome();
+          setTimeout(startWorkflowTour, 400);
+        }
+      }
     });
 
     // ── Keyboard shortcut (Escape → home) ────────────────────────────────────────
@@ -1589,6 +1599,36 @@
           }
         ]);
       }, 100);
+    }
+
+    function startWorkflowTour() {
+      HubTutorial.start([
+        {
+          element: '[data-app="project-hub"]',
+          title: 'Your project is live!',
+          text: "You've created your first project. Here's a quick tour of how the tools connect — so you can get the most out of Thinking Hub right away."
+        },
+        {
+          element: '[data-app="schedule"]',
+          title: 'Tasks → Schedule (automatic)',
+          text: 'Any task you add with a due date in Project Hub syncs automatically to the Schedule view. No manual import needed.'
+        },
+        {
+          element: '[data-app="idea-swiper"]',
+          title: 'Idea Swiper → your project',
+          text: 'Dump raw ideas into Idea Swiper and swipe to sort. Hit "Like" or "Super" and you can push the idea directly into your project as a task with one tap.'
+        },
+        {
+          element: '[data-app="decision-hub"]',
+          title: 'Log decisions, not just tasks',
+          text: 'When you face a real choice, log it in Decision Hub — frame the problem, map options, record the rationale. Open questions can be sent to KMQT for deeper thinking.'
+        },
+        {
+          element: '[data-app="graph-hub"]',
+          title: 'See everything connected',
+          text: 'The Dependency Graph shows links across all tools. Press ⌘K (or Ctrl+K) anywhere in the hub to search every project, task, idea, decision, and note instantly.'
+        }
+      ]);
     }
 
     // ── Data Export / Import ──────────────────────────────────────────────────────

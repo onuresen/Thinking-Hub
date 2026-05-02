@@ -12,6 +12,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
+| `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
 | `hub-search.js` | Global Cmd+K search, injected into index.html only |
@@ -41,7 +42,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `achievements-hub.html` | Achievements & milestones tracker |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-tutorial.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-utils.js` → `hub-tutorial.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -61,7 +62,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -83,7 +84,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`
 
 ## Known duplication (accepted, don't add more)
-- `_esc(s)` HTML-escape utility exists in both `hub-links.js` and `hub-search.js` — intentional isolation
+- `_esc(s)` now lives in `hub-utils.js` (`HubUtils.esc`); `hub-links.js` and `hub-search.js` fall back to an inline copy if `HubUtils` is not loaded — intentional resilience
 - HubStorage safety shim in both `hub-data.js` and `hub-links.js` — intentional fallback
 
 ---
@@ -178,10 +179,9 @@ Prioritized list. Items marked with the same **group tag** can be implemented to
 
 ---
 
-### Priority 6 — Better cross-tool onboarding tour `[group: hub-shell]`
-**ID:** 2F  
-Current tutorial covers tools in isolation. Add a "Quick Tour" that walks the power workflow: create project → swipe ideas → link to decision → graph view. 5 steps, triggered on first project creation. Reuses `hub-tutorial.js` step format.  
-**Files:** `index.html`, `hub-tutorial.js`
+### ~~Priority 6 — Better cross-tool onboarding tour~~ ✓ Done `[group: hub-shell]`
+**ID:** 2F — **Implemented.** `startWorkflowTour()` added to `index.html` — 5 steps covering Project Hub → Schedule sync → Idea Swiper pipeline → Decision Hub → Graph + Cmd+K. Triggered by `hub-first-project` postMessage from `project-hub.html` when the first project is created (guarded by `quick-tour-seen-v1` storage key). Reuses `HubTutorial.start()`.  
+**Files:** `index.html`, `project-hub.html`
 
 ---
 
@@ -228,10 +228,9 @@ Current tutorial covers tools in isolation. Add a "Quick Tour" that walks the po
 
 ---
 
-### Priority 16 — Escape utility deduplication `[group: tech-hygiene]`
-**ID:** 5D  
-`_esc()` exists in `hub-links.js` and `hub-search.js`; `escapeHtml()` / `escapeAttr()` in other tools. Extract to `hub-utils.js`, load before `hub-links.js`. Update Known Duplication note in this file.  
-**Files:** New `hub-utils.js`, `hub-links.js`, `hub-search.js`, `hub-bootstrap.js` (load order), tool HTML files
+### ~~Priority 16 — Escape utility deduplication~~ ✓ Done `[group: tech-hygiene]`
+**ID:** 5D — **Implemented.** Created `hub-utils.js` exposing `HubUtils.esc()`; both `hub-links.js` and `hub-search.js` use it with an inline fallback. Added `hub-utils.js` before `hub-links.js` in all 21 HTML files. Script load order updated.  
+**Files:** `hub-utils.js` (new), `hub-links.js`, `hub-search.js`, all HTML files, `CLAUDE.md`
 
 ---
 

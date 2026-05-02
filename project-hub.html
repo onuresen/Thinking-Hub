@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Hub</title>
   <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -2946,8 +2947,10 @@
     function saveProject() {
       const name = document.getElementById('proj-name').value.trim(); if (!name) return;
       const members = [...document.querySelectorAll('#proj-members input:checked')].map(cb => cb.value);
+      const isFirst = state.projects.length === 0;
       state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [] });
       saveState(); closeModal('modal-project'); showToast('Project created'); renderContent();
+      if (isFirst) window.parent.postMessage({ type: 'hub-first-project' }, '*');
     }
 
     function showAddTask(preProjectId, preStatus) {
