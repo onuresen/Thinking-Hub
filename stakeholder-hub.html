@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stakeholder Map</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 10px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+    .project-filter {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px;
+      padding: 5px 10px; cursor: pointer; outline: none;
+    }
+    .project-filter:focus { border-color: var(--accent); }
+
+    /* ── Body ── */
+    .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Grid area ── */
+    .grid-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; gap: 0; overflow: hidden; min-width: 0; }
+    .axis-y-label {
+      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.1em; display: flex;
+      align-items: center; justify-content: center; width: 18px; flex-shrink: 0;
+    }
+    .grid-with-axis { flex: 1; display: flex; gap: 0; min-height: 0; overflow: hidden; }
+    .grid-main { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+    .x-labels { display: flex; padding-left: 0; }
+    .x-label { flex: 1; text-align: center; font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 4px; }
+    .grid-rows { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
+    .grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
+
+    /* ── Quadrants ── */
+    .quadrant {
+      flex: 1; border-radius: var(--r); border: 1.5px solid var(--border);
+      padding: 10px; display: flex; flex-direction: column; gap: 6px;
+      overflow: hidden; min-width: 0; transition: border-color 0.15s;
+    }
+    .quadrant.manage { border-color: #6366f1; background: rgba(99,102,241,0.03); }
+    .quadrant.satisfy { border-color: #f59e0b; background: rgba(245,158,11,0.03); }
+    .quadrant.inform { border-color: var(--accent); background: rgba(184,240,51,0.03); }
+    .quadrant.monitor { border-color: var(--border); background: transparent; }
+
+    .q-label {
+      font-family: var(--font-display); font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.07em; flex-shrink: 0;
+    }
+    .q-label.manage { color: #818cf8; }
+    .q-label.satisfy { color: #fbbf24; }
+    .q-label.inform { color: var(--accent); }
+    .q-label.monitor { color: var(--text3); }
+    .q-sublabel { font-size: 9.5px; color: var(--text3); font-family: var(--font-mono); flex-shrink: 0; }
+
+    .q-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+    .q-cards::-webkit-scrollbar { width: 3px; }
+    .q-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Stakeholder card ── */
+    .sh-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 7px 10px; cursor: pointer; transition: border-color 0.12s; display: flex; align-items: center; gap: 8px;
+    }
+    .sh-card:hover { border-color: var(--border2); }
+    .sh-card.selected { border-color: var(--accent); }
+    .sh-avatar {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--text2); flex-shrink: 0;
+    }
+    .sh-info { flex: 1; min-width: 0; }
+    .sh-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sh-role { font-size: 10.5px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stance-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .stance-dot.champion { background: var(--accent-like); }
+    .stance-dot.neutral { background: var(--text3); }
+    .stance-dot.resistant { background: var(--accent-nope); }
+    .q-add-btn {
+      background: none; border: 1px dashed var(--border); border-radius: var(--r-sm);
+      color: var(--text3); font-size: 11px; padding: 4px; cursor: pointer;
+      text-align: center; transition: all 0.12s; flex-shrink: 0; font-family: var(--font-body);
+    }
+    .q-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      width: 300px; min-width: 300px; border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
+    }
+    .dp-header {
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dp-title { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; flex: 1; }
+    .dp-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 17px; }
+    .dp-close:hover { color: var(--text); }
+    .dp-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .dp-body::-webkit-scrollbar { width: 4px; }
+    .dp-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .dp-footer { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-shrink: 0; }
+    .dp-footer .spacer { flex: 1; }
+
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input, .field-textarea, .field-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 7px 9px; color: var(--text);
+      font-family: var(--font-body); font-size: 12.5px; outline: none; transition: border-color 0.15s;
+    }
+    .field-textarea { resize: vertical; min-height: 60px; }
+    .field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--accent); }
+
+    /* ── Slider ── */
+    .slider-row { display: flex; align-items: center; gap: 8px; }
+    .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+    .slider-val { font-size: 12px; font-family: var(--font-mono); color: var(--accent); min-width: 14px; text-align: center; }
+
+    /* ── Add modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
+      width: 380px; max-width: 94vw; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">◇</div>
+  <div class="logo-text">Stakeholder Map</div>
+  <div class="topbar-spacer"></div>
+  <select class="project-filter" id="project-filter" onchange="renderGrid()">
+    <option value="">All projects</option>
+  </select>
+  <button class="btn btn-primary" onclick="openAddModal()" style="font-size:12px;padding:6px 14px">+ Add stakeholder</button>
+</div>
+
+<div class="body-wrap">
+  <div class="grid-area">
+    <div class="grid-with-axis">
+      <div class="axis-y-label">Power →</div>
+      <div class="grid-main">
+        <div class="x-labels">
+          <div class="x-label">Low Interest</div>
+          <div class="x-label">High Interest</div>
+        </div>
+        <div class="grid-rows">
+          <!-- Top row: High Power -->
+          <div class="grid-row">
+            <div class="quadrant satisfy" id="q-satisfy">
+              <div class="q-label satisfy">Keep Satisfied</div>
+              <div class="q-sublabel">High Power · Low Interest</div>
+              <div class="q-cards" id="cards-satisfy"></div>
+              <button class="q-add-btn" onclick="openAddModal('satisfy')">+ Add</button>
+            </div>
+            <div class="quadrant manage" id="q-manage">
+              <div class="q-label manage">Manage Closely</div>
+              <div class="q-sublabel">High Power · High Interest</div>
+              <div class="q-cards" id="cards-manage"></div>
+              <button class="q-add-btn" onclick="openAddModal('manage')">+ Add</button>
+            </div>
+          </div>
+          <!-- Bottom row: Low Power -->
+          <div class="grid-row">
+            <div class="quadrant monitor" id="q-monitor">
+              <div class="q-label monitor">Monitor</div>
+              <div class="q-sublabel">Low Power · Low Interest</div>
+              <div class="q-cards" id="cards-monitor"></div>
+              <button class="q-add-btn" onclick="openAddModal('monitor')">+ Add</button>
+            </div>
+            <div class="quadrant inform" id="q-inform">
+              <div class="q-label inform">Keep Informed</div>
+              <div class="q-sublabel">Low Power · High Interest</div>
+              <div class="q-cards" id="cards-inform"></div>
+              <button class="q-add-btn" onclick="openAddModal('inform')">+ Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="detail-panel" id="detail-panel" style="display:none">
+    <div class="dp-header">
+      <div class="dp-title" id="dp-title">Stakeholder</div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-body">
+      <div>
+        <div class="field-label">Name</div>
+        <input class="field-input" id="dp-name" oninput="dpChange()" />
+      </div>
+      <div>
+        <div class="field-label">Role / Title</div>
+        <input class="field-input" id="dp-role" oninput="dpChange()" />
+      </div>
+      <div>
+        <div class="field-label">Stance</div>
+        <select class="field-select" id="dp-stance" onchange="dpChange()">
+          <option value="champion">Champion</option>
+          <option value="neutral">Neutral</option>
+          <option value="resistant">Resistant</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Power (1–5)</div>
+        <div class="slider-row">
+          <input type="range" min="1" max="5" id="dp-power" oninput="updateSlider('dp-power','pwr-val');dpChange()">
+          <div class="slider-val" id="pwr-val">3</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Interest (1–5)</div>
+        <div class="slider-row">
+          <input type="range" min="1" max="5" id="dp-interest" oninput="updateSlider('dp-interest','int-val');dpChange()">
+          <div class="slider-val" id="int-val">3</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Notes</div>
+        <textarea class="field-textarea" id="dp-notes" oninput="dpChange()"></textarea>
+      </div>
+    </div>
+    <div class="dp-footer">
+      <button class="btn btn-primary" onclick="saveDetail()">Save</button>
+      <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" onclick="deleteStakeholder()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick-add modal -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Stakeholder</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Name *</div>
+        <input class="field-input" id="am-name" placeholder="Full name" />
+      </div>
+      <div>
+        <div class="field-label">Role / Title</div>
+        <input class="field-input" id="am-role" placeholder="Role or organisation" />
+      </div>
+      <div>
+        <div class="field-label">Starting quadrant</div>
+        <select class="field-select" id="am-quadrant">
+          <option value="manage">Manage Closely (High Power, High Interest)</option>
+          <option value="satisfy">Keep Satisfied (High Power, Low Interest)</option>
+          <option value="inform">Keep Informed (Low Power, High Interest)</option>
+          <option value="monitor">Monitor (Low Power, Low Interest)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveNewStakeholder()">Add</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'stakeholder-hub-v1';
+  const QUADRANTS = ['manage','satisfy','inform','monitor'];
+  const QUADRANT_DEFAULTS = { manage: [4,4], satisfy: [4,2], inform: [2,4], monitor: [2,2] };
+
+  let data = { stakeholders: [] };
+  let activeId = null;
+  let projectFilter = '';
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { stakeholders: [] };
+    if (!data.stakeholders) data.stakeholders = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  function quadrantFor(sh) {
+    const p = parseInt(sh.power) || 3;
+    const i = parseInt(sh.interest) || 3;
+    if (p >= 3 && i >= 3) return 'manage';
+    if (p >= 3 && i < 3) return 'satisfy';
+    if (p < 3 && i >= 3) return 'inform';
+    return 'monitor';
+  }
+
+  function initials(name) {
+    return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  }
+
+  // ── Project filter ───────────────────────────────────────────────────────────
+
+  function buildProjectFilter() {
+    const sel = document.getElementById('project-filter');
+    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    sel.innerHTML = '<option value="">All projects</option>' +
+      projects.map(p => `<option value="${_esc(p.id)}">${_esc(p.name)}</option>`).join('');
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  function renderGrid() {
+    projectFilter = document.getElementById('project-filter').value;
+    let items = data.stakeholders;
+    if (projectFilter) items = items.filter(sh => (sh.projectIds||[]).includes(projectFilter));
+
+    QUADRANTS.forEach(q => {
+      const el = document.getElementById('cards-' + q);
+      const inQ = items.filter(sh => quadrantFor(sh) === q);
+      el.innerHTML = inQ.length
+        ? inQ.map(sh => renderCard(sh)).join('')
+        : `<div style="font-size:11px;color:var(--text3);font-style:italic;padding:2px">No stakeholders here</div>`;
+    });
+  }
+
+  function renderCard(sh) {
+    return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" onclick="openDetail('${sh.id}')">
+      <div class="sh-avatar">${_esc(initials(sh.name))}</div>
+      <div class="sh-info">
+        <div class="sh-name">${_esc(sh.name||'Unnamed')}</div>
+        ${sh.role ? `<div class="sh-role">${_esc(sh.role)}</div>` : ''}
+      </div>
+      <div class="stance-dot ${sh.stance||'neutral'}" title="${sh.stance||'neutral'}"></div>
+    </div>`;
+  }
+
+  // ── Detail panel ─────────────────────────────────────────────────────────────
+
+  function openDetail(id) {
+    activeId = id;
+    const sh = data.stakeholders.find(s => s.id === id);
+    if (!sh) return;
+    document.getElementById('detail-panel').style.display = 'flex';
+    document.getElementById('dp-title').textContent = sh.name || 'Stakeholder';
+    document.getElementById('dp-name').value = sh.name || '';
+    document.getElementById('dp-role').value = sh.role || '';
+    document.getElementById('dp-stance').value = sh.stance || 'neutral';
+    document.getElementById('dp-notes').value = sh.notes || '';
+    const p = parseInt(sh.power)||3, i = parseInt(sh.interest)||3;
+    document.getElementById('dp-power').value = p;
+    document.getElementById('dp-interest').value = i;
+    document.getElementById('pwr-val').textContent = p;
+    document.getElementById('int-val').textContent = i;
+    renderGrid();
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-panel').style.display = 'none';
+    activeId = null;
+    renderGrid();
+  }
+
+  function dpChange() {
+    document.getElementById('dp-title').textContent = document.getElementById('dp-name').value || 'Stakeholder';
+  }
+
+  function updateSlider(inputId, valId) {
+    document.getElementById(valId).textContent = document.getElementById(inputId).value;
+  }
+
+  function saveDetail() {
+    const sh = data.stakeholders.find(s => s.id === activeId);
+    if (!sh) return;
+    sh.name = document.getElementById('dp-name').value.trim();
+    sh.role = document.getElementById('dp-role').value.trim();
+    sh.stance = document.getElementById('dp-stance').value;
+    sh.power = parseInt(document.getElementById('dp-power').value);
+    sh.interest = parseInt(document.getElementById('dp-interest').value);
+    sh.notes = document.getElementById('dp-notes').value.trim();
+    sh.updatedAt = new Date().toISOString();
+    save(); closeDetail();
+  }
+
+  function deleteStakeholder() {
+    if (!activeId) return;
+    if (!confirm('Remove this stakeholder?')) return;
+    data.stakeholders = data.stakeholders.filter(s => s.id !== activeId);
+    save(); closeDetail();
+  }
+
+  // ── Add modal ────────────────────────────────────────────────────────────────
+
+  function openAddModal(defaultQuadrant) {
+    document.getElementById('am-name').value = '';
+    document.getElementById('am-role').value = '';
+    document.getElementById('am-quadrant').value = defaultQuadrant || 'manage';
+    document.getElementById('add-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('am-name').focus(), 50);
+  }
+  function closeAddModal() { document.getElementById('add-modal-overlay').classList.remove('open'); }
+
+  function saveNewStakeholder() {
+    const name = document.getElementById('am-name').value.trim();
+    if (!name) { document.getElementById('am-name').focus(); return; }
+    const q = document.getElementById('am-quadrant').value;
+    const [p, i] = QUADRANT_DEFAULTS[q] || [3,3];
+    const sh = {
+      id: uid(), name, role: document.getElementById('am-role').value.trim(),
+      stance: 'neutral', power: p, interest: i,
+      projectIds: projectFilter ? [projectFilter] : [],
+      notes: '', createdAt: new Date().toISOString()
+    };
+    data.stakeholders.push(sh);
+    save(); closeAddModal(); openDetail(sh.id);
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    buildProjectFilter();
+    renderGrid();
+    HubBootstrap.start('stakeholder-hub');
+  });
+
+  document.getElementById('add-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('add-modal-overlay')) closeAddModal();
+  });
+</script>
+</body>
+</html>

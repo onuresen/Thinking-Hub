@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+    }
+
+    /* ── Sidebar ───────────────────────────────────────────────── */
+    .sch-sidebar {
+      width: 240px;
+      min-width: 240px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sch-logo {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sch-logo-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #111;
+      font-family: var(--font-display);
+      flex-shrink: 0;
+    }
+
+    .sch-logo-text {
+      font-family: var(--font-display);
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .sch-view-toggle {
+      display: flex;
+      gap: 4px;
+      padding: 12px 12px 8px;
+      flex-shrink: 0;
+    }
+
+    .sch-view-btn {
+      flex: 1;
+      padding: 7px 0;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text2);
+      border-radius: var(--r-sm);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sch-view-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #111;
+      font-weight: 700;
+    }
+
+    .sch-view-btn:not(.active):hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .sch-sidebar-actions {
+      display: flex;
+      gap: 6px;
+      padding: 0 12px 10px;
+      flex-shrink: 0;
+    }
+
+    .sch-add-btn {
+      flex: 1;
+      padding: 8px 0;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--r-sm);
+      color: #111;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .sch-add-btn:hover {
+      opacity: 0.85;
+    }
+
+    .sch-import-btn {
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .sch-import-btn:hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .sch-import-btn .import-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      background: var(--accent);
+      color: #111;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 5px;
+      line-height: 1;
+    }
+
+    .sch-filter {
+      display: flex;
+      gap: 4px;
+      padding: 0 12px 10px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .sch-filter-btn {
+      padding: 4px 8px;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text3);
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .sch-filter-btn.active {
+      border-color: var(--border2);
+      color: var(--text2);
+      background: var(--surface2);
+    }
+
+    .sch-filter-btn:not(.active):hover {
+      color: var(--text2);
+    }
+
+    .sch-item-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px;
+    }
+
+    .sch-item-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sch-item-list::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .sch-list-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: background 0.12s;
+      border-left: 2px solid transparent;
+    }
+
+    .sch-list-row:hover {
+      background: var(--surface2);
+    }
+
+    .sch-list-row.selected {
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+
+    .sch-list-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sch-list-dot.ms-shape {
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    .sch-list-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sch-list-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sch-list-title.done {
+      opacity: 0.45;
+      text-decoration: line-through;
+    }
+
+    .sch-list-dates {
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    .sch-sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 10.5px;
+      color: var(--text3);
+      flex-shrink: 0;
+    }
+
+    .sch-empty-list {
+      padding: 20px 8px;
+      text-align: center;
+      color: var(--text3);
+      font-size: 12px;
+    }
+
+    /* ── Main ──────────────────────────────────────────────────── */
+    .sch-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sch-toolbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    .sch-toolbar-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .sch-toolbar-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      border-radius: var(--r-sm);
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .sch-toolbar-btn:hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .sch-toolbar-btn.active {
+      background: var(--surface2);
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .sch-toolbar-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .sch-toolbar-today {
+      padding: 6px 12px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      border-radius: var(--r-sm);
+      color: var(--accent);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .sch-toolbar-today:hover {
+      background: var(--accent);
+      color: #111;
+    }
+
+    .sch-view-host {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #view-timeline,
+    #view-calendar {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .view-hidden {
+      display: none !important;
+    }
+
+    /* ── Gantt ─────────────────────────────────────────────────── */
+    .gantt-wrap {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .gantt-labels {
+      width: 220px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      z-index: 3;
+      flex-shrink: 0;
+    }
+
+    .gantt-labels-header {
+      height: 44px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .gantt-labels-scroll {
+      flex: 1;
+      overflow-y: scroll;
+      scrollbar-width: none;
+    }
+
+    .gantt-labels-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .gantt-label-row {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px 0 16px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .gantt-label-row:hover {
+      background: var(--surface2);
+    }
+
+    .gantt-label-row.selected {
+      background: var(--accent-dim);
+    }
+
+    .gantt-label-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .gantt-label-dot.ms-shape {
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    .gantt-label-name {
+      flex: 1;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gantt-label-name.done {
+      opacity: 0.45;
+    }
+
+    .gantt-scroll {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .gantt-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .gantt-scroll::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+
+    .gantt-header {
+      display: flex;
+      height: 44px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .gantt-col-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      line-height: 1.3;
+    }
+
+    .gantt-col-header.today-col {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .gantt-col-header.weekend {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .gantt-col-header .col-main {
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .gantt-col-header .col-sub {
+      font-size: 9px;
+      opacity: 0.6;
+    }
+
+    .gantt-body {
+      position: relative;
+    }
+
+    .gantt-row-bg {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 44px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .gantt-row-bg.alt {
+      background: rgba(255, 255, 255, 0.012);
+    }
+
+    .gantt-col-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .gantt-col-weekend {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .gantt-today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+      opacity: 0.55;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .gantt-bar {
+      position: absolute;
+      height: 26px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #111;
+      cursor: pointer;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: filter 0.12s;
+      z-index: 3;
+    }
+
+    .gantt-bar:hover {
+      filter: brightness(1.12);
+    }
+
+    .gantt-bar.done {
+      opacity: 0.38;
+    }
+
+    .gantt-bar.selected {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 3px var(--accent);
+    }
+
+    .gantt-milestone {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      transform: translateX(-50%) rotate(45deg);
+      cursor: pointer;
+      z-index: 3;
+      transition: filter 0.12s;
+    }
+
+    .gantt-milestone:hover {
+      filter: brightness(1.2);
+    }
+
+    .gantt-milestone.done {
+      opacity: 0.38;
+    }
+
+    .gantt-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text3);
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    .gantt-empty-icon {
+      font-size: 32px;
+      opacity: 0.25;
+    }
+
+    /* ── Calendar ──────────────────────────────────────────────── */
+    #view-calendar {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .cal-nav-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .cal-nav-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border);
+      background: transparent;
+      border-radius: var(--r-sm);
+      color: var(--text2);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+      line-height: 1;
+    }
+
+    .cal-nav-btn:hover {
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .cal-week-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .cal-week-label {
+      padding: 8px 4px 6px;
+      text-align: center;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .cal-grid-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 12px 12px;
+    }
+
+    .cal-grid-wrap::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .cal-grid-wrap::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    .cal-day-cell {
+      min-height: 88px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 6px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      overflow: hidden;
+    }
+
+    .cal-day-cell:hover {
+      border-color: var(--border2);
+      background: var(--surface2);
+    }
+
+    .cal-day-cell.today {
+      border-color: var(--accent);
+    }
+
+    .cal-day-cell.out-of-month {
+      opacity: 0.28;
+    }
+
+    .cal-day-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+    }
+
+    .cal-day-cell.today .cal-day-num {
+      color: var(--accent);
+    }
+
+    .cal-pill {
+      display: block;
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 10.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+      cursor: pointer;
+      transition: filter 0.1s;
+    }
+
+    .cal-pill:hover {
+      filter: brightness(1.15);
+    }
+
+    .cal-pill.done {
+      opacity: 0.38;
+    }
+
+    .cal-more {
+      font-size: 10px;
+      color: var(--text3);
+      padding: 1px 4px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── Drawer ────────────────────────────────────────────────── */
+    .sch-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 340px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .sch-drawer.open {
+      transform: translateX(0);
+    }
+
+    .sch-drawer-header {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sch-drawer-title {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .sch-close-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+
+    .sch-close-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .sch-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sch-drawer-body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sch-drawer-body::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .sch-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .sch-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sch-textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    .sch-date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .sch-color-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sch-color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.12s, transform 0.12s;
+    }
+
+    .sch-color-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .sch-color-swatch.selected {
+      border-color: var(--text);
+    }
+
+    .sch-done-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sch-done-row label {
+      font-size: 13px;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .sch-source-badge {
+      display: inline-block;
+      padding: 5px 9px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      line-height: 1.4;
+    }
+
+    .sch-drawer-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sch-save-btn {
+      flex: 1;
+      padding: 10px 0;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--r-sm);
+      color: #111;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.12s;
+    }
+
+    .sch-save-btn:hover {
+      opacity: 0.85;
+    }
+
+    .sch-delete-btn {
+      padding: 10px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text3);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .sch-delete-btn:hover {
+      border-color: #f44;
+      color: #f44;
+    }
+
+    /* ── Import modal ──────────────────────────────────────────── */
+    .sch-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .sch-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .sch-modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      width: 460px;
+      max-width: 95vw;
+      max-height: 78vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sch-modal-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .sch-modal-title {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .sch-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 20px;
+    }
+
+    .sch-modal-body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sch-modal-body::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .sch-modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .sch-modal-note {
+      font-size: 11px;
+      color: var(--text3);
+      margin-left: auto;
+    }
+
+    .sch-import-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sch-import-row:last-child {
+      border-bottom: none;
+    }
+
+    .sch-import-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sch-import-dot.ms-shape {
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    .sch-import-info {
+      flex: 1;
+    }
+
+    .sch-import-title {
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .sch-import-meta {
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    .sch-import-skip {
+      font-size: 10.5px;
+      color: var(--text3);
+      font-style: italic;
+    }
+
+    .sch-modal-empty {
+      text-align: center;
+      padding: 30px;
+      color: var(--text3);
+      font-size: 13px;
+    }
+
+    .sch-btn-primary:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* ── Toast ─────────────────────────────────────────────────── */
+    .sch-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(70px);
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 12.5px;
+      color: var(--text);
+      z-index: 999;
+      transition: transform 0.25s cubic-bezier(.4, 0, .2, 1);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .sch-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══ Sidebar ══════════════════════════════════════════════════ -->
+  <aside class="sch-sidebar">
+    <div class="sch-logo">
+      <div class="sch-logo-mark">▦</div>
+      <span class="sch-logo-text">Schedule</span>
+    </div>
+
+    <div class="sch-view-toggle">
+      <button class="sch-view-btn active" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
+      <button class="sch-view-btn" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+    </div>
+
+    <div class="sch-sidebar-actions">
+      <button class="sch-add-btn" onclick="openDrawer(null)">+ Add Item</button>
+      <button class="sch-import-btn" id="import-btn" onclick="openImportModal()"
+        title="Import tasks &amp; milestones from Project Hub">↓ Import</button>
+    </div>
+
+    <div class="sch-filter">
+      <button class="sch-filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+      <button class="sch-filter-btn" data-filter="task" onclick="setFilter('task')">Tasks</button>
+      <button class="sch-filter-btn" data-filter="milestone" onclick="setFilter('milestone')">Milestones</button>
+      <button class="sch-filter-btn" data-filter="event" onclick="setFilter('event')">Events</button>
+    </div>
+
+    <div class="sch-item-list" id="item-list"></div>
+    <div class="sch-sidebar-footer" id="sidebar-footer">0 items</div>
+  </aside>
+
+  <!-- ══ Main ═════════════════════════════════════════════════════ -->
+  <main class="sch-main">
+    <div class="sch-toolbar">
+      <span class="sch-toolbar-title" id="toolbar-title">Timeline</span>
+      <div id="toolbar-controls"></div>
+    </div>
+
+    <div class="sch-view-host">
+
+      <!-- Timeline / Gantt -->
+      <div id="view-timeline">
+        <div class="gantt-wrap">
+          <div class="gantt-labels">
+            <div class="gantt-labels-header">Items</div>
+            <div class="gantt-labels-scroll" id="gantt-labels-scroll">
+              <div id="gantt-label-rows"></div>
+            </div>
+          </div>
+          <div class="gantt-scroll" id="gantt-scroll">
+            <div class="gantt-header" id="gantt-header"></div>
+            <div class="gantt-body" id="gantt-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div id="view-calendar" class="view-hidden">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
+          <span class="cal-nav-title" id="cal-title"></span>
+          <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
+          <div class="sch-toolbar-sep"></div>
+          <button class="sch-toolbar-btn" id="cal-week-toggle" onclick="toggleCalWeek()">Week</button>
+          <button class="sch-toolbar-today" onclick="calToday()">Today</button>
+        </div>
+        <div class="cal-week-header">
+          <div class="cal-week-label">Mon</div>
+          <div class="cal-week-label">Tue</div>
+          <div class="cal-week-label">Wed</div>
+          <div class="cal-week-label">Thu</div>
+          <div class="cal-week-label">Fri</div>
+          <div class="cal-week-label">Sat</div>
+          <div class="cal-week-label">Sun</div>
+        </div>
+        <div class="cal-grid-wrap">
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ══ Edit Drawer ═══════════════════════════════════════════════ -->
+  <div class="sch-drawer" id="sch-drawer">
+    <div class="sch-drawer-header">
+      <span class="sch-drawer-title" id="drawer-title">Add Item</span>
+      <button class="sch-close-btn" onclick="closeDrawer()">&#10005;</button>
+    </div>
+    <div class="sch-drawer-body">
+      <div id="drawer-badge" style="display:none">
+        <div class="sch-source-badge">Imported from Project Hub — edit the source there to update the origin.</div>
+      </div>
+      <div class="sch-field">
+        <label class="sch-label">Title</label>
+        <input class="sch-input" id="f-title" type="text" placeholder="Item title…" />
+      </div>
+      <div class="sch-field">
+        <label class="sch-label">Type</label>
+        <select class="sch-select" id="f-type">
+          <option value="task">Task</option>
+          <option value="milestone">Milestone</option>
+          <option value="event">Event</option>
+        </select>
+      </div>
+      <div class="sch-date-row">
+        <div class="sch-field">
+          <label class="sch-label">Start</label>
+          <input class="sch-input" id="f-start" type="date" />
+        </div>
+        <div class="sch-field">
+          <label class="sch-label">End</label>
+          <input class="sch-input" id="f-end" type="date" />
+        </div>
+      </div>
+      <div class="sch-field">
+        <label class="sch-label">Color</label>
+        <div class="sch-color-row" id="color-swatches"></div>
+      </div>
+      <div class="sch-field">
+        <label class="sch-label">Project</label>
+        <select class="sch-input" id="f-project">
+          <option value="">— none —</option>
+        </select>
+      </div>
+      <div class="sch-field">
+        <label class="sch-label">Notes</label>
+        <textarea class="sch-textarea" id="f-notes" placeholder="Optional notes…"></textarea>
+      </div>
+      <div class="sch-done-row">
+        <input type="checkbox" id="f-done" />
+        <label for="f-done">Mark as done</label>
+      </div>
+    </div>
+    <div class="sch-drawer-footer">
+      <button class="sch-save-btn" onclick="saveDrawer()">Save</button>
+      <button class="sch-delete-btn" id="drawer-delete-btn" onclick="deleteCurrentItem()"
+        style="display:none">Delete</button>
+    </div>
+  </div>
+
+  <!-- ══ Import Modal ══════════════════════════════════════════════ -->
+  <div class="sch-overlay" id="import-overlay">
+    <div class="sch-modal">
+      <div class="sch-modal-header">
+        <span class="sch-modal-title">Import from Project Hub</span>
+        <button class="sch-close-btn" onclick="closeImportModal()">&#10005;</button>
+      </div>
+      <div class="sch-modal-body" id="import-body"></div>
+      <div class="sch-modal-footer">
+        <button class="sch-btn-primary" id="import-confirm-btn" onclick="executeImport()">Import</button>
+        <button class="sch-btn-ghost" onclick="closeImportModal()">Cancel</button>
+        <span class="sch-modal-note" id="import-note"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="sch-toast" id="sch-toast"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // Date utilities (declared first so TODAY const can use them)
+    // ═══════════════════════════════════════════════════════════════
+
+    const SOURCE_TYPES = {
+      manual: "Manual",
+      project: "Project Task",
+      alignment: "Alignment Decision",
+      kmqt: "KMQT Try",
+      decision: "Decision Log"
+    };
+
+    function isoToDate(s) {
+      return s ? new Date(s + 'T00:00:00') : new Date();
+    }
+
+    function dateToIso(d) {
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+
+    function addDays(iso, n) {
+      const d = isoToDate(iso);
+      d.setDate(d.getDate() + n);
+      return dateToIso(d);
+    }
+
+    function getWeekStart(iso) {
+      const d = isoToDate(iso);
+      const dow = d.getDay(); // 0=Sun
+      d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+      return dateToIso(d);
+    }
+
+    function getDow(iso) {
+      // 0=Mon … 6=Sun
+      const d = isoToDate(iso).getDay();
+      return d === 0 ? 6 : d - 1;
+    }
+
+    function isWeekend(iso) {
+      const d = getDow(iso);
+      return d === 5 || d === 6;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '';
+      return isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function fmtMonth(year, month) {
+      return new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function uid() { return 'si-' + Math.random().toString(36).slice(2, 9); }
+
+    function esc(s) {
+      return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Constants
+    // ═══════════════════════════════════════════════════════════════
+    const STORAGE_KEY = 'schedule-v1';
+    const TODAY = dateToIso(new Date());
+    const ROW_H = 44;
+
+    const PALETTE = [
+      '#b8f033', '#4ade80', '#60a5fa', '#f472b6',
+      '#fb923c', '#a78bfa', '#facc15', '#34d399',
+      '#f87171', '#94a3b8',
+    ];
+
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    // ═══════════════════════════════════════════════════════════════
+    // State
+    // ═══════════════════════════════════════════════════════════════
+    let state;
+    let ui = {
+      activeView: 'timeline',
+      zoom: 'month',
+      calYear: new Date().getFullYear(),
+      calMonth: new Date().getMonth(),
+      calWeekMode: false,
+      filterType: 'all',
+      selectedId: null,
+      drawerItemId: null,
+    };
+    let _pendingImport = [];
+    let _drawerColor = PALETTE[2];
+
+    // ═══════════════════════════════════════════════════════════════
+    // Persistence
+    // ═══════════════════════════════════════════════════════════════
+    function loadState() {
+      try {
+        const saved = HubStorage.get(STORAGE_KEY);
+        if (saved) return saved;
+      } catch { }
+      return { items: [], settings: { defaultZoom: 'month', defaultView: 'timeline' } };
+    }
+
+    function saveState() {
+      HubStorage.set(STORAGE_KEY, state);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Column generation (for Gantt)
+    // ═══════════════════════════════════════════════════════════════
+    function generateColumns() {
+      if (ui.zoom === 'week') {
+        // Day columns: today - 14d to today + 56d
+        const start = addDays(TODAY, -14);
+        const cols = [];
+        for (let i = 0; i < 71; i++) cols.push(addDays(start, i));
+        return cols;
+      } else {
+        // Week (Monday) columns: today - 4 weeks to today + 28 weeks
+        const start = getWeekStart(addDays(TODAY, -28));
+        const cols = [];
+        for (let i = 0; i < 34; i++) cols.push(addDays(start, i * 7));
+        return cols;
+      }
+    }
+
+    function colWidth() { return ui.zoom === 'week' ? 40 : 82; }
+
+    function colIndexForIso(iso, columns) {
+      if (!iso) return -1;
+      if (ui.zoom === 'week') return columns.indexOf(iso);
+      return columns.indexOf(getWeekStart(iso));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Filtered items
+    // ═══════════════════════════════════════════════════════════════
+    function filteredItems() {
+      return state.items.filter(it =>
+        ui.filterType === 'all' || it.type === ui.filterType
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Sidebar
+    // ═══════════════════════════════════════════════════════════════
+    function renderSidebar() {
+      const items = filteredItems();
+      const el = document.getElementById('item-list');
+
+      if (!items.length) {
+        el.innerHTML = `<div class="sch-empty-list">No items yet.<br>Click <b>+ Add Item</b> to start.</div>`;
+      } else {
+        el.innerHTML = items.map(it => {
+          const isSelected = it.id === ui.selectedId;
+          const dateStr = it.start === it.end
+            ? fmtDate(it.start)
+            : `${fmtDate(it.start)} → ${fmtDate(it.end)}`;
+          const msClass = it.type === 'milestone' ? ' ms-shape' : '';
+          const projName = it.projectId
+            ? (HubData.getProject(it.projectId)?.name || it.projectRef || '')
+            : (it.projectRef || '');
+          return `<div class="sch-list-row${isSelected ? ' selected' : ''}"
+          data-id="${it.id}" onclick="selectItem('${it.id}')">
+        <div class="sch-list-dot${msClass}" style="background:${it.color}"></div>
+        <div class="sch-list-info">
+          <div class="sch-list-title${it.done ? ' done' : ''}">${esc(it.title || '(untitled)')}</div>
+          <div class="sch-list-dates">${dateStr}${projName ? ` · ${esc(projName)}` : ''}</div>
+        </div>
+      </div>`;
+        }).join('');
+      }
+
+      document.getElementById('sidebar-footer').textContent =
+        `${state.items.length} item${state.items.length !== 1 ? 's' : ''}`;
+
+      document.querySelectorAll('.sch-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === ui.filterType);
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Gantt / Timeline
+    // ═══════════════════════════════════════════════════════════════
+    function renderTimeline() {
+      const columns = generateColumns();
+      const cw = colWidth();
+      const items = filteredItems();
+      const totalWidth = columns.length * cw;
+
+      // ── Header ──
+      const headerEl = document.getElementById('gantt-header');
+      headerEl.style.width = totalWidth + 'px';
+
+      if (ui.zoom === 'week') {
+        let prevMonthLabel = null;
+        headerEl.innerHTML = columns.map((iso, i) => {
+          const d = isoToDate(iso);
+          const monLabel = d.toLocaleDateString('en-US', { month: 'short' });
+          const showMon = monLabel !== prevMonthLabel;
+          prevMonthLabel = monLabel;
+          const isToday = iso === TODAY;
+          const isWE = isWeekend(iso);
+          return `<div class="gantt-col-header${isToday ? ' today-col' : ''}${isWE ? ' weekend' : ''}"
+        style="width:${cw}px">
+        <div class="col-main">${d.getDate()}</div>
+        <div class="col-sub">${DAY_NAMES[getDow(iso)].slice(0, 1)}${showMon ? ' ' + monLabel : ''}</div>
+      </div>`;
+        }).join('');
+      } else {
+        const curWeek = getWeekStart(TODAY);
+        headerEl.innerHTML = columns.map((iso) => {
+          const d = isoToDate(iso);
+          const mon = d.toLocaleDateString('en-US', { month: 'short' });
+          return `<div class="gantt-col-header${iso === curWeek ? ' today-col' : ''}"
+        style="width:${cw}px">
+        <div class="col-main">${mon} ${d.getDate()}</div>
+      </div>`;
+        }).join('');
+      }
+
+      // ── Body ──
+      const bodyEl = document.getElementById('gantt-body');
+      const labelsEl = document.getElementById('gantt-label-rows');
+
+      if (!items.length) {
+        labelsEl.innerHTML = `<div class="gantt-empty"><div class="gantt-empty-icon">▦</div><div>No items to display</div></div>`;
+        bodyEl.innerHTML = '';
+        bodyEl.style.width = totalWidth + 'px';
+        bodyEl.style.height = '200px';
+        return;
+      }
+
+      // Label rows
+      labelsEl.innerHTML = items.map(it => {
+        const msClass = it.type === 'milestone' ? ' ms-shape' : '';
+        return `<div class="gantt-label-row${it.id === ui.selectedId ? ' selected' : ''}"
+        data-id="${it.id}" onclick="selectItem('${it.id}')" ondblclick="openDrawer('${it.id}')">
+      <div class="gantt-label-dot${msClass}" style="background:${it.color}"></div>
+      <div class="gantt-label-name${it.done ? ' done' : ''}">${esc(it.title || '(untitled)')}</div>
+    </div>`;
+      }).join('');
+
+      // Build body HTML
+      const totalHeight = items.length * ROW_H;
+      bodyEl.style.width = totalWidth + 'px';
+      bodyEl.style.height = totalHeight + 'px';
+
+      let html = '';
+
+      // Row backgrounds
+      items.forEach((_, i) => {
+        html += `<div class="gantt-row-bg${i % 2 ? ' alt' : ''}" style="top:${i * ROW_H}px"></div>`;
+      });
+
+      // Column lines / weekend fills
+      columns.forEach((iso, i) => {
+        if (ui.zoom === 'week' && isWeekend(iso)) {
+          html += `<div class="gantt-col-weekend" style="left:${i * cw}px; width:${cw}px"></div>`;
+        } else {
+          html += `<div class="gantt-col-line" style="left:${i * cw}px"></div>`;
+        }
+      });
+
+      // Today line
+      const todayIdx = colIndexForIso(TODAY, columns);
+      if (todayIdx >= 0) {
+        const lineLeft = ui.zoom === 'week' ? todayIdx * cw : todayIdx * cw + cw / 2;
+        html += `<div class="gantt-today-line" id="today-line" style="left:${lineLeft}px"></div>`;
+      }
+
+      // Bars & milestones
+      items.forEach((it, rowIdx) => {
+        const top = rowIdx * ROW_H;
+        let startIdx = colIndexForIso(it.start, columns);
+        let endIdx = colIndexForIso(it.end, columns);
+
+        if (it.type === 'milestone') {
+          const mIdx = startIdx >= 0 ? startIdx : (endIdx >= 0 ? endIdx : -1);
+          if (mIdx < 0) return;
+          const left = mIdx * cw + cw / 2;
+          const msTop = top + (ROW_H - 14) / 2;
+          html += `<div class="gantt-milestone${it.done ? ' done' : ''}${it.id === ui.selectedId ? ' selected' : ''}"
+        style="left:${left}px; top:${msTop}px; background:${it.color}"
+        data-id="${it.id}" onclick="selectAndEdit('${it.id}')"></div>`;
+        } else {
+          // clamp to visible columns
+          if (startIdx < 0 && endIdx < 0) return;
+          const s = Math.max(0, startIdx >= 0 ? startIdx : 0);
+          const e = Math.min(columns.length - 1, endIdx >= 0 ? endIdx : columns.length - 1);
+          if (s > e) return;
+          if (startIdx >= columns.length || endIdx < 0) return;
+
+          const left = s * cw + 1;
+          const width = (e - s + 1) * cw - 3;
+          const barTop = top + (ROW_H - 26) / 2;
+          const label = (it.title || '').slice(0, 28);
+          html += `<div class="gantt-bar${it.done ? ' done' : ''}${it.id === ui.selectedId ? ' selected' : ''}"
+        style="left:${left}px; top:${barTop}px; width:${width}px; background:${it.color}"
+        data-id="${it.id}" onclick="selectAndEdit('${it.id}')">${esc(label)}</div>`;
+        }
+      });
+
+      bodyEl.innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Calendar
+    // ═══════════════════════════════════════════════════════════════
+    function renderCalendar() {
+      if (ui.calWeekMode) renderCalWeek();
+      else renderCalMonth();
+    }
+
+    function renderCalMonth() {
+      const { calYear: year, calMonth: month } = ui;
+      document.getElementById('cal-title').textContent = fmtMonth(year, month);
+      const items = filteredItems();
+
+      const firstDay = new Date(year, month, 1);
+      const firstDow = firstDay.getDay();
+      const daysBack = firstDow === 0 ? 6 : firstDow - 1;
+
+      const gridStart = new Date(firstDay);
+      gridStart.setDate(gridStart.getDate() - daysBack);
+
+      const lastDay = new Date(year, month + 1, 0);
+      const lastDow = lastDay.getDay();
+      const daysForward = lastDow === 0 ? 0 : 7 - lastDow;
+
+      const gridEnd = new Date(lastDay);
+      gridEnd.setDate(gridEnd.getDate() + daysForward);
+
+      const days = [];
+      const cur = new Date(gridStart);
+      while (cur <= gridEnd) { days.push(dateToIso(cur)); cur.setDate(cur.getDate() + 1); }
+
+      document.getElementById('cal-grid').innerHTML = days.map(iso => {
+        const d = isoToDate(iso);
+        const isThisMonth = d.getMonth() === month;
+        const isToday = iso === TODAY;
+
+        const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
+        const shown = dayItems.slice(0, 3);
+        const overflow = dayItems.length - 3;
+
+        const pills = shown.map(it => {
+          const bg = it.color + '28';
+          const bd = it.color + '88';
+          const cont = it.start !== it.end && it.end > iso ? ' →' : '';
+          return `<span class="cal-pill${it.done ? ' done' : ''}"
+        style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
+        onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
+        title="${esc(it.title)}">${esc((it.title || '').slice(0, 18))}${cont}</span>`;
+        }).join('');
+
+        return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}"
+      onclick="openDrawer(null, '${iso}')">
+      <div class="cal-day-num">${d.getDate()}</div>
+      ${pills}
+      ${overflow > 0 ? `<span class="cal-more">+${overflow} more</span>` : ''}
+    </div>`;
+      }).join('');
+    }
+
+    function renderCalWeek() {
+      const weekStart = getWeekStart(TODAY);
+      const days = [];
+      for (let i = 0; i < 7; i++) days.push(addDays(weekStart, i));
+      const items = filteredItems();
+
+      const d0 = isoToDate(days[0]);
+      const d6 = isoToDate(days[6]);
+      document.getElementById('cal-title').textContent =
+        `${d0.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
+        `${d6.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+      document.getElementById('cal-grid').innerHTML = days.map(iso => {
+        const d = isoToDate(iso);
+        const isToday = iso === TODAY;
+        const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
+
+        const pills = dayItems.map(it => {
+          const bg = it.color + '28';
+          const bd = it.color + '88';
+          return `<span class="cal-pill${it.done ? ' done' : ''}"
+        style="background:${bg}; border:1px solid ${bd}; color:${it.color}; display:block; margin-bottom:3px"
+        onclick="event.stopPropagation(); selectAndEdit('${it.id}')">${esc(it.title || '(untitled)')}</span>`;
+        }).join('');
+
+        return `<div class="cal-day-cell${isToday ? ' today' : ''}" style="min-height:140px"
+      onclick="openDrawer(null, '${iso}')">
+      <div class="cal-day-num">${DAY_NAMES[getDow(iso)]} ${d.getDate()}</div>
+      ${pills}
+    </div>`;
+      }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Toolbar
+    // ═══════════════════════════════════════════════════════════════
+    function renderToolbar() {
+      const titleEl = document.getElementById('toolbar-title');
+      const ctrlEl = document.getElementById('toolbar-controls');
+
+      if (ui.activeView === 'timeline') {
+        titleEl.textContent = 'Timeline';
+        ctrlEl.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="sch-toolbar-btn${ui.zoom === 'week' ? ' active' : ''}" onclick="setZoom('week')">Week</button>
+        <button class="sch-toolbar-btn${ui.zoom === 'month' ? ' active' : ''}" onclick="setZoom('month')">Month</button>
+        <div class="sch-toolbar-sep"></div>
+        <button class="sch-toolbar-today" onclick="scrollToToday()">Today</button>
+      </div>`;
+      } else {
+        titleEl.textContent = 'Calendar';
+        ctrlEl.innerHTML = '';
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Full render
+    // ═══════════════════════════════════════════════════════════════
+    function render() {
+      renderSidebar();
+      renderToolbar();
+      if (ui.activeView === 'timeline') renderTimeline();
+      else renderCalendar();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // View / zoom / filter controls
+    // ═══════════════════════════════════════════════════════════════
+    function switchView(view) {
+      ui.activeView = view;
+      document.getElementById('btn-timeline').classList.toggle('active', view === 'timeline');
+      document.getElementById('btn-calendar').classList.toggle('active', view === 'calendar');
+      document.getElementById('view-timeline').classList.toggle('view-hidden', view !== 'timeline');
+      document.getElementById('view-calendar').classList.toggle('view-hidden', view !== 'calendar');
+      render();
+      if (view === 'timeline') setTimeout(scrollToToday, 60);
+    }
+
+    function setZoom(z) {
+      ui.zoom = z;
+      render();
+      setTimeout(scrollToToday, 60);
+    }
+
+    function setFilter(type) {
+      ui.filterType = type;
+      render();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Selection
+    // ═══════════════════════════════════════════════════════════════
+    function selectItem(id) {
+      ui.selectedId = id === ui.selectedId ? null : id;
+      render();
+    }
+
+    function selectAndEdit(id) {
+      ui.selectedId = id;
+      render();
+      openDrawer(id);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Scroll to today
+    // ═══════════════════════════════════════════════════════════════
+    function scrollToToday() {
+      const line = document.getElementById('today-line');
+      const scrollEl = document.getElementById('gantt-scroll');
+      if (!line || !scrollEl) return;
+      const lineLeft = parseInt(line.style.left, 10);
+      scrollEl.scrollLeft = Math.max(0, lineLeft - scrollEl.clientWidth / 3);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Calendar navigation
+    // ═══════════════════════════════════════════════════════════════
+    function calNav(dir) {
+      if (ui.calWeekMode) return;
+      ui.calMonth += dir;
+      if (ui.calMonth < 0) { ui.calMonth = 11; ui.calYear--; }
+      if (ui.calMonth > 11) { ui.calMonth = 0; ui.calYear++; }
+      renderCalendar();
+    }
+
+    function calToday() {
+      ui.calYear = new Date().getFullYear();
+      ui.calMonth = new Date().getMonth();
+      ui.calWeekMode = false;
+      document.getElementById('cal-week-toggle').classList.remove('active');
+      renderCalendar();
+    }
+
+    function toggleCalWeek() {
+      ui.calWeekMode = !ui.calWeekMode;
+      document.getElementById('cal-week-toggle').classList.toggle('active', ui.calWeekMode);
+      renderCalendar();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Drawer
+    // ═══════════════════════════════════════════════════════════════
+    function buildSwatches(selected) {
+      document.getElementById('color-swatches').innerHTML = PALETTE.map(c =>
+        `<div class="sch-color-swatch${c === selected ? ' selected' : ''}"
+      style="background:${c}" onclick="pickColor('${c}')"></div>`
+      ).join('');
+    }
+
+    function pickColor(c) {
+      _drawerColor = c;
+      buildSwatches(c);
+    }
+
+    function openDrawer(id, prefillDate) {
+      ui.drawerItemId = id;
+      const item = id ? state.items.find(it => it.id === id) : null;
+
+      document.getElementById('drawer-title').textContent = item ? 'Edit Item' : 'Add Item';
+      document.getElementById('drawer-delete-btn').style.display = item ? '' : 'none';
+      document.getElementById('drawer-badge').style.display = (item && item.sourceTool) ? '' : 'none';
+
+      const defaultDate = prefillDate || TODAY;
+      document.getElementById('f-title').value = item ? (item.title || '') : '';
+      document.getElementById('f-type').value = item ? (item.type || 'task') : 'task';
+      document.getElementById('f-start').value = item ? (item.start || defaultDate) : defaultDate;
+      document.getElementById('f-end').value = item ? (item.end || defaultDate) : defaultDate;
+      document.getElementById('f-project').value = item ? (item.projectId || '') : '';
+      document.getElementById('f-notes').value = item ? (item.notes || '') : '';
+      document.getElementById('f-done').checked = item ? !!item.done : false;
+
+      _drawerColor = item ? (item.color || PALETTE[2]) : PALETTE[2];
+      buildSwatches(_drawerColor);
+
+      document.getElementById('sch-drawer').classList.add('open');
+      setTimeout(() => document.getElementById('f-title').focus(), 180);
+    }
+
+    function closeDrawer() {
+      document.getElementById('sch-drawer').classList.remove('open');
+      ui.drawerItemId = null;
+    }
+
+    function saveDrawer() {
+      const title = document.getElementById('f-title').value.trim();
+      if (!title) { showToast('Please enter a title.'); return; }
+
+      const start = document.getElementById('f-start').value || TODAY;
+      let end = document.getElementById('f-end').value || start;
+      if (end < start) end = start;
+
+      const patch = {
+        title,
+        type: document.getElementById('f-type').value,
+        start, end,
+        color: _drawerColor,
+        projectId: document.getElementById('f-project').value || null,
+        projectRef: (() => {
+          const pid = document.getElementById('f-project').value;
+          const proj = pid ? HubData.getProject(pid) : null;
+          return proj ? proj.name : null;
+        })(),
+        notes: document.getElementById('f-notes').value.trim(),
+        done: document.getElementById('f-done').checked,
+      };
+
+      if (ui.drawerItemId) {
+        const idx = state.items.findIndex(it => it.id === ui.drawerItemId);
+        if (idx >= 0) Object.assign(state.items[idx], patch);
+      } else {
+        state.items.push({
+          id: uid(), sourceTool: null, sourceId: null,
+          createdAt: new Date().toISOString(), ...patch,
+        });
+      }
+
+      saveState();
+      closeDrawer();
+      render();
+      showToast(ui.drawerItemId ? 'Item updated.' : 'Item added.');
+    }
+
+    function deleteCurrentItem() {
+      const id = ui.drawerItemId;
+      if (!id || !confirm('Delete this item?')) return;
+      state.items = state.items.filter(it => it.id !== id);
+      if (ui.selectedId === id) ui.selectedId = null;
+      saveState();
+      closeDrawer();
+      render();
+      showToast('Item deleted.');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Import from Project Hub
+    // ═══════════════════════════════════════════════════════════════
+    function openImportModal() {
+      const raw = HubStorage.get('project-hub-v1');
+      if (!raw) {
+        showToast('No Project Hub data found. Create some tasks there first.');
+        return;
+      }
+
+      let phData;
+      try { phData = JSON.parse(raw); }
+      catch { showToast('Could not read Project Hub data.'); return; }
+
+      const existingSourceIds = new Set(
+        state.items.filter(it => it.sourceTool === 'project-hub').map(it => it.sourceId)
+      );
+
+      _pendingImport = [];
+      let html = '';
+      let newCount = 0;
+
+      for (const project of (phData.projects || [])) {
+        for (const task of (project.tasks || [])) {
+          if (!task.due) continue;
+          const skip = existingSourceIds.has(task.id);
+          if (!skip) newCount++;
+          _pendingImport.push({
+            id: uid(), title: task.title || '(untitled)',
+            type: 'task', start: task.due, end: task.due,
+            color: project.color || PALETTE[2],
+            projectId: project.id || null,
+            projectRef: project.name || null,
+            sourceId: task.id, sourceTool: 'project-hub',
+            done: !!task.done, createdAt: new Date().toISOString(), _skip: skip,
+          });
+          const dotClass = '';
+          html += `<div class="sch-import-row">
+        <div class="sch-import-dot" style="background:${project.color || PALETTE[2]}"></div>
+        <div class="sch-import-info">
+          <div class="sch-import-title">${esc(task.title || '(untitled)')}</div>
+          <div class="sch-import-meta">${esc(project.name || 'Project')} &middot; ${fmtDate(task.due)}</div>
+        </div>
+        ${skip ? '<span class="sch-import-skip">already imported</span>' : ''}
+      </div>`;
+        }
+
+        for (const ms of (project.milestones || [])) {
+          if (!ms.date) continue;
+          const skip = existingSourceIds.has(ms.id);
+          if (!skip) newCount++;
+          _pendingImport.push({
+            id: uid(), title: ms.name || '(milestone)',
+            type: 'milestone', start: ms.date, end: ms.date,
+            color: ms.color || PALETTE[1],
+            projectId: project.id || null,
+            projectRef: project.name || null,
+            sourceId: ms.id, sourceTool: 'project-hub',
+            done: false, createdAt: new Date().toISOString(), _skip: skip,
+          });
+          html += `<div class="sch-import-row">
+        <div class="sch-import-dot ms-shape" style="background:${ms.color || PALETTE[1]}"></div>
+        <div class="sch-import-info">
+          <div class="sch-import-title">${esc(ms.name || '(milestone)')}</div>
+          <div class="sch-import-meta">${esc(project.name || 'Project')} &middot; ${fmtDate(ms.date)} &middot; milestone</div>
+        </div>
+        ${skip ? '<span class="sch-import-skip">already imported</span>' : ''}
+      </div>`;
+        }
+      }
+
+      const bodyEl = document.getElementById('import-body');
+      bodyEl.innerHTML = html || `<div class="sch-modal-empty">No tasks or milestones with dates found in Project Hub.</div>`;
+
+      const btn = document.getElementById('import-confirm-btn');
+      btn.disabled = newCount === 0;
+      btn.textContent = newCount > 0 ? `Import ${newCount} item${newCount !== 1 ? 's' : ''}` : 'Nothing new';
+      document.getElementById('import-note').textContent =
+        newCount === 0 ? 'All items already imported.' : '';
+
+      document.getElementById('import-overlay').classList.add('open');
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-overlay').classList.remove('open');
+      _pendingImport = [];
+    }
+
+    function executeImport() {
+      const toAdd = _pendingImport
+        .filter(it => !it._skip)
+        .map(({ _skip, ...rest }) => rest);
+      if (!toAdd.length) return;
+      state.items.push(...toAdd);
+      saveState();
+      closeImportModal();
+      render();
+      showToast(`Imported ${toAdd.length} item${toAdd.length !== 1 ? 's' : ''}.`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Toast
+    // ═══════════════════════════════════════════════════════════════
+    let _toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('sch-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Scroll sync: gantt labels ↔ gantt-scroll vertical
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const gScroll = document.getElementById('gantt-scroll');
+      const lScroll = document.getElementById('gantt-labels-scroll');
+      let syncing = false;
+      gScroll.addEventListener('scroll', () => {
+        if (syncing) return;
+        syncing = true;
+        lScroll.scrollTop = gScroll.scrollTop;
+        syncing = false;
+      });
+      lScroll.addEventListener('scroll', () => {
+        if (syncing) return;
+        syncing = true;
+        gScroll.scrollTop = lScroll.scrollTop;
+        syncing = false;
+      });
+    })();
+
+    // ═══════════════════════════════════════════════════════════════
+    // Keyboard shortcuts
+    // ═══════════════════════════════════════════════════════════════
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('import-overlay').classList.contains('open')) {
+          closeImportModal();
+        } else if (document.getElementById('sch-drawer').classList.contains('open')) {
+          closeDrawer();
+        } else {
+          try { window.parent.postMessage({ type: 'hub-home' }, window.location.origin || '*'); } catch { }
+        }
+        return;
+      }
+      if (e.key === 't' && !e.target.closest('input, textarea, select')) {
+        scrollToToday();
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // Auto-sync imported Project Hub items
+    // ═══════════════════════════════════════════════════════════════
+    function syncFromProjectHub() {
+      const raw = HubStorage.get('project-hub-v1');
+      if (!raw) return;
+      let phData;
+      try { phData = JSON.parse(raw); } catch { return; }
+
+      const taskMap = {};
+      const msMap = {};
+      for (const project of (phData.projects || [])) {
+        for (const task of (project.tasks || [])) {
+          taskMap[task.id] = { task, project };
+        }
+        for (const ms of (project.milestones || [])) {
+          msMap[ms.id] = { ms, project };
+        }
+      }
+
+      let changed = false;
+      state.items.forEach(item => {
+        if (item.sourceTool !== 'project-hub') return;
+        const entry = taskMap[item.sourceId] || msMap[item.sourceId];
+        if (!entry) return;
+        const src = entry.task || entry.ms;
+        const srcTitle = src.title || src.name || '';
+        const srcDate = src.due || src.date || item.start;
+        const srcDone = !!src.done;
+        if (item.title !== srcTitle || item.start !== srcDate || item.end !== srcDate || item.done !== srcDone) {
+          item.title = srcTitle;
+          item.start = srcDate;
+          item.end = srcDate;
+          item.done = srcDone;
+          changed = true;
+        }
+      });
+
+      if (changed) { saveState(); render(); }
+    }
+
+    function updateImportBadge() {
+      const btn = document.getElementById('import-btn');
+      if (!btn) return;
+      const raw = HubStorage.get('project-hub-v1');
+      if (!raw) return;
+      let phData;
+      try { phData = JSON.parse(raw); } catch { return; }
+
+      const existingSourceIds = new Set(
+        state.items.filter(it => it.sourceTool === 'project-hub').map(it => it.sourceId)
+      );
+      let newCount = 0;
+      for (const project of (phData.projects || [])) {
+        for (const task of (project.tasks || [])) {
+          if (task.due && !existingSourceIds.has(task.id)) newCount++;
+        }
+        for (const ms of (project.milestones || [])) {
+          if (ms.date && !existingSourceIds.has(ms.id)) newCount++;
+        }
+      }
+
+      const existing = btn.querySelector('.import-badge');
+      if (newCount > 0) {
+        if (existing) { existing.textContent = newCount; }
+        else { btn.insertAdjacentHTML('beforeend', `<span class="import-badge">${newCount}</span>`); }
+      } else {
+        if (existing) existing.remove();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Project select helpers
+    // ═══════════════════════════════════════════════════════════════
+    function _populateProjectSelect() {
+      const sel = document.getElementById('f-project');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— none —</option>';
+      HubData.getProjects().forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+      if (prev && sel.querySelector('option[value="' + CSS.escape(prev) + '"]')) sel.value = prev;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Init
+    // ═══════════════════════════════════════════════════════════════
+    state = loadState();
+    try {
+      _populateProjectSelect();
+      updateImportBadge();
+      HubData.onChange(() => {
+        _populateProjectSelect();
+        syncFromProjectHub();
+        updateImportBadge();
+      });
+    } catch { }
+    render();
+    setTimeout(scrollToToday, 160);
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      HubBootstrap.start('schedule');
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assumption Tracker</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+    .filter-chips { display: flex; gap: 5px; }
+    .f-chip {
+      padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); font-size: 11px; cursor: pointer;
+      transition: all 0.12s; font-family: var(--font-body);
+    }
+    .f-chip:hover { border-color: var(--accent-glow); color: var(--text2); }
+    .f-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Body ── */
+    .body-wrap {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* ── Swim lanes ── */
+    .lanes {
+      flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 28px;
+    }
+    .lanes::-webkit-scrollbar { width: 4px; }
+    .lanes::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .lane { display: flex; flex-direction: column; gap: 8px; }
+    .lane-header {
+      display: flex; align-items: center; gap: 10px; padding-bottom: 6px;
+      border-bottom: 2px solid;
+    }
+    .lane-header.assumed { border-color: #6366f1; }
+    .lane-header.testing { border-color: #f59e0b; }
+    .lane-header.validated { border-color: var(--accent-like); }
+    .lane-header.invalidated { border-color: var(--accent-nope); }
+
+    .lane-label {
+      font-family: var(--font-display); font-size: 12px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .lane-label.assumed { color: #6366f1; }
+    .lane-label.testing { color: #f59e0b; }
+    .lane-label.validated { color: var(--accent-like); }
+    .lane-label.invalidated { color: var(--accent-nope); }
+    .lane-count { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .lane-spacer { flex: 1; }
+    .lane-add-btn {
+      font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); cursor: pointer; font-family: var(--font-body);
+      transition: all 0.12s;
+    }
+    .lane-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .lane-cards { display: flex; flex-direction: column; gap: 6px; }
+    .lane-empty { font-size: 12px; color: var(--text3); padding: 6px 2px; font-style: italic; }
+
+    /* ── Assumption card ── */
+    .assumption-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start;
+      transition: border-color 0.12s; cursor: pointer;
+    }
+    .assumption-card:hover { border-color: var(--accent-glow); }
+    .assumption-card.invalidated-card { border-left: 3px solid var(--accent-nope); }
+    .assumption-card.review-flag { border-left: 3px solid #f59e0b; }
+
+    .card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .card-statement { font-size: 13px; color: var(--text); line-height: 1.4; font-weight: 500; }
+    .card-why { font-size: 12px; color: var(--text3); line-height: 1.4; }
+    .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .card-decision-link {
+      font-size: 11px; color: var(--accent); cursor: pointer; text-decoration: underline;
+      font-family: var(--font-mono);
+    }
+    .card-decision-link:hover { color: var(--text); }
+    .review-badge {
+      font-size: 10px; background: color-mix(in srgb, #f59e0b 15%, transparent);
+      color: #f59e0b; border: 1px solid #f59e0b40;
+      border-radius: 999px; padding: 2px 8px; font-weight: 600;
+    }
+
+    /* ── Star rating ── */
+    .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+    .star-row { display: flex; gap: 2px; }
+    .star { font-size: 14px; color: var(--border); cursor: default; }
+    .star.lit { color: #f59e0b; }
+    .status-badge {
+      font-size: 10px; border-radius: 999px; padding: 2px 9px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer;
+    }
+    .status-badge.assumed { background: color-mix(in srgb,#6366f1 15%,transparent); color: #6366f1; border: 1px solid #6366f140; }
+    .status-badge.testing { background: color-mix(in srgb,#f59e0b 15%,transparent); color: #f59e0b; border: 1px solid #f59e0b40; }
+    .status-badge.validated { background: color-mix(in srgb,var(--accent-like) 15%,transparent); color: var(--accent-like); border: 1px solid color-mix(in srgb,var(--accent-like) 30%,transparent); }
+    .status-badge.invalidated { background: color-mix(in srgb,var(--accent-nope) 15%,transparent); color: var(--accent-nope); border: 1px solid color-mix(in srgb,var(--accent-nope) 30%,transparent); }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      width: 340px; min-width: 340px; border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+      background: var(--surface);
+    }
+    .detail-panel.hidden { display: none; }
+    .detail-header {
+      padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .detail-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .detail-close {
+      background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px;
+      padding: 2px 4px; transition: color 0.12s;
+    }
+    .detail-close:hover { color: var(--text); }
+    .detail-body { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+    .detail-label { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .detail-input, .detail-textarea, .detail-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .detail-textarea { resize: vertical; min-height: 60px; }
+    .detail-input:focus, .detail-textarea:focus, .detail-select:focus { border-color: var(--accent); }
+    .detail-stars { display: flex; gap: 4px; }
+    .detail-star {
+      font-size: 20px; cursor: pointer; transition: transform 0.1s; color: var(--border);
+    }
+    .detail-star.lit { color: #f59e0b; }
+    .detail-star:hover { transform: scale(1.2); }
+    .detail-footer {
+      padding: 12px 18px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">AT</div>
+  <div class="logo-text">Assumption Tracker</div>
+  <div class="topbar-spacer"></div>
+  <div class="filter-chips" id="filter-chips">
+    <button class="f-chip active" data-filter="all" onclick="setFilter('all')">All</button>
+    <button class="f-chip" data-filter="assumed" onclick="setFilter('assumed')">Assumed</button>
+    <button class="f-chip" data-filter="testing" onclick="setFilter('testing')">Testing</button>
+    <button class="f-chip" data-filter="validated" onclick="setFilter('validated')">Validated</button>
+    <button class="f-chip" data-filter="invalidated" onclick="setFilter('invalidated')">Invalidated</button>
+  </div>
+  <button class="btn btn-primary" onclick="newAssumption()" style="font-size:12px;padding:6px 14px">+ Add assumption</button>
+</div>
+
+<div class="body-wrap">
+  <div class="lanes" id="lanes"></div>
+
+  <!-- Detail panel -->
+  <div class="detail-panel hidden" id="detail-panel">
+    <div class="detail-header">
+      <div class="detail-title" id="dp-title">Assumption</div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div>
+        <div class="detail-label">Statement</div>
+        <textarea class="detail-textarea" id="dp-statement" rows="3" placeholder="We believe that…" oninput="dpChange()"></textarea>
+      </div>
+      <div>
+        <div class="detail-label">Why it matters</div>
+        <textarea class="detail-textarea" id="dp-why" rows="2" placeholder="If wrong, this would…" oninput="dpChange()"></textarea>
+      </div>
+      <div>
+        <div class="detail-label">Confidence (1–5)</div>
+        <div class="detail-stars" id="dp-stars">
+          <span class="detail-star" data-v="1" onclick="setConfidence(1)">★</span>
+          <span class="detail-star" data-v="2" onclick="setConfidence(2)">★</span>
+          <span class="detail-star" data-v="3" onclick="setConfidence(3)">★</span>
+          <span class="detail-star" data-v="4" onclick="setConfidence(4)">★</span>
+          <span class="detail-star" data-v="5" onclick="setConfidence(5)">★</span>
+        </div>
+      </div>
+      <div>
+        <div class="detail-label">Status</div>
+        <select class="detail-select" id="dp-status" onchange="dpChange()">
+          <option value="assumed">Assumed</option>
+          <option value="testing">Testing</option>
+          <option value="validated">Validated</option>
+          <option value="invalidated">Invalidated</option>
+        </select>
+      </div>
+      <div>
+        <div class="detail-label">Linked decision (optional)</div>
+        <select class="detail-select" id="dp-decision" onchange="dpChange()">
+          <option value="">— none —</option>
+        </select>
+      </div>
+      <div>
+        <div class="detail-label">Notes</div>
+        <textarea class="detail-textarea" id="dp-notes" rows="3" placeholder="Evidence, context, updates…" oninput="dpChange()"></textarea>
+      </div>
+    </div>
+    <div class="detail-footer">
+      <button class="btn btn-primary" onclick="saveDetail()">Save</button>
+      <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-danger" onclick="deleteAssumption()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'assumptions-hub-v1';
+  const STATUSES = ['assumed', 'testing', 'validated', 'invalidated'];
+  const STATUS_LABELS = { assumed: 'Assumed', testing: 'Testing', validated: 'Validated ✓', invalidated: 'Invalidated ✗' };
+
+  let data = { assumptions: [] };
+  let activeFilter = 'all';
+  let activeId = null;
+  let decisions = [];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { assumptions: [] };
+    if (!data.assumptions) data.assumptions = [];
+
+    // Load decisions for linking
+    const dh = HubStorage.get('decision-hub-v1');
+    if (dh) {
+      const entries = Array.isArray(dh) ? dh : (dh.entries || []);
+      decisions = entries.map(e => ({ id: e.id, title: e.title || e.statement || 'Decision' }));
+    }
+  }
+
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.f-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+    renderLanes();
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  function renderLanes() {
+    const lanes = document.getElementById('lanes');
+    let visible = data.assumptions;
+    if (activeFilter !== 'all') visible = visible.filter(a => a.status === activeFilter);
+
+    // Check which decisions are linked to invalidated assumptions
+    const invalidatedDecisionIds = new Set(
+      data.assumptions.filter(a => a.status === 'invalidated' && a.linkedDecision)
+        .map(a => a.linkedDecision)
+    );
+
+    lanes.innerHTML = STATUSES.map(status => {
+      if (activeFilter !== 'all' && activeFilter !== status) return '';
+      const items = visible.filter(a => a.status === status);
+      const sorted = items.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+      const cardsHtml = sorted.length
+        ? sorted.map(a => renderCard(a, invalidatedDecisionIds)).join('')
+        : `<div class="lane-empty">No ${status} assumptions</div>`;
+
+      return `<div class="lane">
+        <div class="lane-header ${status}">
+          <div class="lane-label ${status}">${STATUS_LABELS[status]}</div>
+          <div class="lane-count">${items.length}</div>
+          <div class="lane-spacer"></div>
+          <button class="lane-add-btn" onclick="newAssumptionWithStatus('${status}')">+ Add</button>
+        </div>
+        <div class="lane-cards">${cardsHtml}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderCard(a, invalidatedDecisionIds) {
+    const stars = [1,2,3,4,5].map(i => `<span class="star${i <= (a.confidence||0) ? ' lit' : ''}">★</span>`).join('');
+    const decision = a.linkedDecision ? decisions.find(d => d.id === a.linkedDecision) : null;
+    const needsReview = a.status === 'invalidated' && a.linkedDecision;
+    const isInvalidated = a.status === 'invalidated';
+    const reviewLinked = a.linkedDecision && invalidatedDecisionIds.has(a.linkedDecision) && a.status !== 'invalidated';
+
+    return `<div class="assumption-card${isInvalidated ? ' invalidated-card' : ''}${reviewLinked ? ' review-flag' : ''}" onclick="openDetail('${a.id}')">
+      <div class="card-main">
+        <div class="card-statement">${_esc(a.statement || 'No statement')}</div>
+        ${a.why ? `<div class="card-why">${_esc(a.why)}</div>` : ''}
+        <div class="card-meta">
+          ${decision ? `<span class="card-decision-link" onclick="event.stopPropagation();navDecision('${decision.id}')">⟶ ${_esc(decision.title)}</span>` : ''}
+          ${needsReview ? '<span class="review-badge">⚠ Decision needs review</span>' : ''}
+          ${reviewLinked ? '<span class="review-badge">⚠ Linked assumption invalidated</span>' : ''}
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="star-row">${stars}</div>
+        <div class="status-badge ${a.status}" onclick="event.stopPropagation();cycleStatus('${a.id}')">${STATUS_LABELS[a.status]}</div>
+      </div>
+    </div>`;
+  }
+
+  function cycleStatus(id) {
+    const a = data.assumptions.find(x => x.id === id);
+    if (!a) return;
+    const i = STATUSES.indexOf(a.status);
+    a.status = STATUSES[(i + 1) % STATUSES.length];
+    save();
+    renderLanes();
+    if (activeId === id) syncDetailPanel(a);
+  }
+
+  function navDecision(decId) {
+    if (typeof HubLinks !== 'undefined' && HubLinks.navigateTo) {
+      HubLinks.navigateTo('decision-hub', decId);
+    }
+  }
+
+  // ── Detail panel ──────────────────────────────────────────────────────────
+
+  function populateDecisionSelect(selectedId) {
+    const sel = document.getElementById('dp-decision');
+    sel.innerHTML = '<option value="">— none —</option>' +
+      decisions.map(d => `<option value="${d.id}"${d.id === selectedId ? ' selected' : ''}>${_esc(d.title)}</option>`).join('');
+  }
+
+  function openDetail(id) {
+    activeId = id;
+    const a = data.assumptions.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById('detail-panel').classList.remove('hidden');
+    syncDetailPanel(a);
+  }
+
+  function syncDetailPanel(a) {
+    document.getElementById('dp-title').textContent = a.statement ? a.statement.slice(0, 40) : 'Assumption';
+    document.getElementById('dp-statement').value = a.statement || '';
+    document.getElementById('dp-why').value = a.why || '';
+    document.getElementById('dp-status').value = a.status || 'assumed';
+    document.getElementById('dp-notes').value = a.notes || '';
+    populateDecisionSelect(a.linkedDecision || '');
+    updateStars(a.confidence || 0);
+  }
+
+  function updateStars(v) {
+    document.querySelectorAll('#dp-stars .detail-star').forEach(s => {
+      s.classList.toggle('lit', parseInt(s.dataset.v) <= v);
+    });
+  }
+
+  function setConfidence(v) {
+    updateStars(v);
+    const a = data.assumptions.find(x => x.id === activeId);
+    if (a) { a.confidence = v; save(); renderLanes(); }
+  }
+
+  function dpChange() {
+    // Update title preview
+    const stmt = document.getElementById('dp-statement').value;
+    document.getElementById('dp-title').textContent = stmt ? stmt.slice(0, 40) : 'Assumption';
+  }
+
+  function saveDetail() {
+    const a = data.assumptions.find(x => x.id === activeId);
+    if (!a) return;
+    a.statement = document.getElementById('dp-statement').value.trim();
+    a.why = document.getElementById('dp-why').value.trim();
+    a.status = document.getElementById('dp-status').value;
+    a.linkedDecision = document.getElementById('dp-decision').value || null;
+    a.notes = document.getElementById('dp-notes').value.trim();
+    a.updatedAt = new Date().toISOString();
+    save();
+    renderLanes();
+    closeDetail();
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-panel').classList.add('hidden');
+    activeId = null;
+  }
+
+  function deleteAssumption() {
+    if (!activeId) return;
+    if (!confirm('Delete this assumption?')) return;
+    data.assumptions = data.assumptions.filter(x => x.id !== activeId);
+    save();
+    renderLanes();
+    closeDetail();
+  }
+
+  // ── New assumption ────────────────────────────────────────────────────────
+
+  function newAssumption() { newAssumptionWithStatus('assumed'); }
+
+  function newAssumptionWithStatus(status) {
+    const a = {
+      id: uid(),
+      statement: '',
+      why: '',
+      confidence: 3,
+      status,
+      linkedDecision: null,
+      notes: '',
+      createdAt: new Date().toISOString()
+    };
+    data.assumptions.push(a);
+    save();
+    renderLanes();
+    openDetail(a.id);
+    setTimeout(() => document.getElementById('dp-statement').focus(), 50);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    renderLanes();
+    HubBootstrap.start('assumptions-hub');
+  });
+</script>
+</body>
+</html>

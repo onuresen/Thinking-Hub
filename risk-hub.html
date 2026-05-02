@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risk Register</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 8px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+    .tb-filter {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px;
+      padding: 4px 8px; cursor: pointer; outline: none;
+    }
+    .tb-filter:focus { border-color: var(--accent); }
+    .f-chip {
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); font-size: 11px; cursor: pointer;
+      transition: all 0.12s; font-family: var(--font-body);
+    }
+    .f-chip:hover { border-color: var(--accent-glow); color: var(--text2); }
+    .f-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Body ── */
+    .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Left: heat-map + list ── */
+    .left-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── Heat-map ── */
+    .heatmap-section { padding: 14px 20px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .heatmap-title { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+    .heatmap-wrap { display: flex; gap: 4px; align-items: flex-end; }
+    .hm-y-labels { display: flex; flex-direction: column-reverse; gap: 4px; margin-right: 4px; }
+    .hm-y-label { font-size: 9px; font-family: var(--font-mono); color: var(--text3); width: 14px; text-align: right; height: 36px; display: flex; align-items: center; justify-content: flex-end; }
+    .hm-grid { display: flex; flex-direction: column-reverse; gap: 4px; }
+    .hm-row { display: flex; gap: 4px; }
+    .hm-cell {
+      width: 44px; height: 36px; border-radius: 5px; display: flex; align-items: center;
+      justify-content: center; font-size: 10px; font-family: var(--font-mono); font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s; position: relative; flex-shrink: 0;
+    }
+    .hm-cell:hover { opacity: 0.8; }
+    .hm-cell .cell-count {
+      background: rgba(0,0,0,0.35); color: #fff; border-radius: 50%;
+      width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700;
+    }
+    .hm-x-labels { display: flex; gap: 4px; margin-top: 4px; margin-left: 18px; }
+    .hm-x-label { width: 44px; text-align: center; font-size: 9px; font-family: var(--font-mono); color: var(--text3); }
+    .hm-axis-label { font-size: 9px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+    .hm-axes { display: flex; flex-direction: column; gap: 2px; }
+    .hm-axis-row { display: flex; gap: 4px; align-items: center; }
+
+    /* ── Risk list ── */
+    .risk-list-section { flex: 1; overflow-y: auto; }
+    .risk-list-section::-webkit-scrollbar { width: 4px; }
+    .risk-list-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .risk-list-header {
+      padding: 8px 20px 6px; position: sticky; top: 0; background: var(--bg);
+      border-bottom: 1px solid var(--border); z-index: 2;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .rlist-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; flex: 1; }
+    .risk-row {
+      padding: 10px 20px; border-bottom: 1px solid var(--border); cursor: pointer;
+      display: flex; align-items: center; gap: 10px; transition: background 0.1s;
+    }
+    .risk-row:hover { background: var(--surface); }
+    .risk-row.selected { background: var(--surface); border-left: 3px solid var(--accent); padding-left: 17px; }
+    .risk-severity-bar { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+    .risk-info { flex: 1; min-width: 0; }
+    .risk-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .risk-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; display: flex; gap: 8px; }
+    .cat-badge {
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase; font-family: var(--font-mono);
+      padding: 1px 5px; border-radius: 4px;
+    }
+    .cat-badge.technical { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .cat-badge.resource { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .cat-badge.schedule { background: rgba(16,185,129,0.15); color: #34d399; }
+    .cat-badge.external { background: rgba(239,68,68,0.15); color: #f87171; }
+    .status-badge {
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase; font-family: var(--font-mono);
+      padding: 1px 5px; border-radius: 4px;
+    }
+    .status-badge.open { background: rgba(239,68,68,0.12); color: #f87171; }
+    .status-badge.mitigating { background: rgba(245,158,11,0.12); color: #fbbf24; }
+    .status-badge.closed { background: rgba(16,185,129,0.12); color: #34d399; }
+    .risk-score { font-size: 13px; font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; min-width: 28px; text-align: center; }
+
+    /* ── Detail panel ── */
+    .detail-panel {
+      width: 320px; min-width: 320px; border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
+    }
+    .dp-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .dp-title { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dp-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 17px; }
+    .dp-close:hover { color: var(--text); }
+    .dp-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .dp-body::-webkit-scrollbar { width: 4px; }
+    .dp-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .dp-footer { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-shrink: 0; }
+    .dp-footer .spacer { flex: 1; }
+
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input, .field-textarea, .field-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 7px 9px; color: var(--text);
+      font-family: var(--font-body); font-size: 12.5px; outline: none; transition: border-color 0.15s;
+    }
+    .field-textarea { resize: vertical; min-height: 60px; }
+    .field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--accent); }
+
+    .slider-row { display: flex; align-items: center; gap: 8px; }
+    .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+    .slider-val { font-size: 12px; font-family: var(--font-mono); color: var(--accent); min-width: 14px; text-align: center; }
+
+    .score-display { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface2); border-radius: var(--r-sm); border: 1px solid var(--border); }
+    .score-num { font-size: 22px; font-weight: 800; font-family: var(--font-mono); }
+    .score-label { font-size: 11px; color: var(--text3); }
+    .score-band { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .score-band.low { background: rgba(16,185,129,0.15); color: #34d399; }
+    .score-band.medium { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .score-band.high { background: rgba(239,68,68,0.15); color: #f87171; }
+    .score-band.critical { background: rgba(239,68,68,0.25); color: #ef4444; }
+
+    /* ── New risk modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
+      width: 420px; max-width: 94vw; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">◇</div>
+  <div class="logo-text">Risk Register</div>
+  <div class="topbar-spacer"></div>
+  <select class="tb-filter" id="project-filter" onchange="renderAll()">
+    <option value="">All projects</option>
+  </select>
+  <select class="tb-filter" id="status-filter" onchange="renderAll()">
+    <option value="">All statuses</option>
+    <option value="open">Open</option>
+    <option value="mitigating">Mitigating</option>
+    <option value="closed">Closed</option>
+  </select>
+  <button class="btn btn-primary" onclick="openAddModal()" style="font-size:12px;padding:6px 14px">+ Add risk</button>
+</div>
+
+<div class="body-wrap">
+  <div class="left-area">
+
+    <!-- Heat-map -->
+    <div class="heatmap-section">
+      <div class="heatmap-title">Probability × Impact heat-map</div>
+      <div class="heatmap-axes">
+        <div class="hm-axis-row">
+          <div style="width:14px;margin-right:4px"></div>
+          <div class="hm-axis-label" style="flex:1;text-align:center">← Impact →</div>
+        </div>
+      </div>
+      <div class="heatmap-wrap">
+        <div class="hm-y-labels" id="hm-y-labels"></div>
+        <div class="hm-axes">
+          <div class="hm-grid" id="hm-grid"></div>
+          <div class="hm-x-labels">
+            <div class="hm-x-label">1</div>
+            <div class="hm-x-label">2</div>
+            <div class="hm-x-label">3</div>
+            <div class="hm-x-label">4</div>
+            <div class="hm-x-label">5</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--text3);font-family:var(--font-mono);margin-top:4px;margin-left:18px">← Probability (Y axis) · Click a cell to filter</div>
+    </div>
+
+    <!-- Risk list -->
+    <div class="risk-list-section">
+      <div class="risk-list-header">
+        <div class="rlist-label" id="list-label">All risks</div>
+      </div>
+      <div id="risk-list"></div>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="detail-panel" id="detail-panel" style="display:none">
+    <div class="dp-header">
+      <div class="dp-title" id="dp-title">Risk</div>
+      <button class="dp-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dp-body">
+      <div>
+        <div class="field-label">Title</div>
+        <input class="field-input" id="dp-title-input" oninput="dpChange()" />
+      </div>
+      <div>
+        <div class="field-label">Category</div>
+        <select class="field-select" id="dp-category">
+          <option value="technical">Technical</option>
+          <option value="resource">Resource</option>
+          <option value="schedule">Schedule</option>
+          <option value="external">External</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Status</div>
+        <select class="field-select" id="dp-status">
+          <option value="open">Open</option>
+          <option value="mitigating">Mitigating</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Probability (1–5)</div>
+        <div class="slider-row">
+          <input type="range" min="1" max="5" id="dp-probability" oninput="updateSlider('dp-probability','prob-val');updateScore()">
+          <div class="slider-val" id="prob-val">3</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Impact (1–5)</div>
+        <div class="slider-row">
+          <input type="range" min="1" max="5" id="dp-impact" oninput="updateSlider('dp-impact','imp-val');updateScore()">
+          <div class="slider-val" id="imp-val">3</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Risk Score</div>
+        <div class="score-display" id="score-display">
+          <div class="score-num" id="dp-score">9</div>
+          <div style="flex:1"><div class="score-label">Probability × Impact</div></div>
+          <div class="score-band medium" id="dp-band">Medium</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Mitigation plan</div>
+        <textarea class="field-textarea" id="dp-mitigation" placeholder="What steps reduce this risk?"></textarea>
+      </div>
+      <div>
+        <div class="field-label">Project (optional)</div>
+        <select class="field-select" id="dp-project">
+          <option value="">— None —</option>
+        </select>
+      </div>
+    </div>
+    <div class="dp-footer">
+      <button class="btn btn-primary" onclick="saveDetail()">Save</button>
+      <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" onclick="deleteRisk()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add risk modal -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Risk</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Title *</div>
+        <input class="field-input" id="am-title" placeholder="Describe the risk…" />
+      </div>
+      <div>
+        <div class="field-label">Category</div>
+        <select class="field-select" id="am-category">
+          <option value="technical">Technical</option>
+          <option value="resource">Resource</option>
+          <option value="schedule">Schedule</option>
+          <option value="external">External</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveNewRisk()">Add</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'risk-hub-v1';
+  let data = { risks: [] };
+  let activeId = null;
+  let hmFilter = null; // {p, i} cell filter
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { risks: [] };
+    if (!data.risks) data.risks = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  function score(r) { return (parseInt(r.probability)||1) * (parseInt(r.impact)||1); }
+
+  function band(s) {
+    if (s <= 4) return 'low';
+    if (s <= 9) return 'medium';
+    if (s <= 16) return 'high';
+    return 'critical';
+  }
+
+  function bandColor(b) {
+    return { low: '#34d399', medium: '#fbbf24', high: '#f87171', critical: '#ef4444' }[b] || '#888';
+  }
+
+  function cellColor(p, i) {
+    const s = p * i;
+    if (s <= 4)  return 'rgba(52,211,153,0.18)';
+    if (s <= 9)  return 'rgba(251,191,36,0.22)';
+    if (s <= 16) return 'rgba(248,113,113,0.22)';
+    return 'rgba(239,68,68,0.35)';
+  }
+
+  // ── Filters ──────────────────────────────────────────────────────────────────
+
+  function filteredRisks() {
+    const proj = document.getElementById('project-filter').value;
+    const status = document.getElementById('status-filter').value;
+    return data.risks.filter(r => {
+      if (proj && r.projectId !== proj) return false;
+      if (status && r.status !== status) return false;
+      if (hmFilter && (parseInt(r.probability) !== hmFilter.p || parseInt(r.impact) !== hmFilter.i)) return false;
+      return true;
+    }).sort((a,b) => score(b) - score(a));
+  }
+
+  // ── Heat-map ─────────────────────────────────────────────────────────────────
+
+  function renderHeatmap() {
+    const grid = document.getElementById('hm-grid');
+    const yLabels = document.getElementById('hm-y-labels');
+    const proj = document.getElementById('project-filter').value;
+    const status = document.getElementById('status-filter').value;
+
+    let baseRisks = data.risks.filter(r => {
+      if (proj && r.projectId !== proj) return false;
+      if (status && r.status !== status) return false;
+      return true;
+    });
+
+    // Build 5×5 grid (p=1..5 rows, i=1..5 cols)
+    yLabels.innerHTML = [5,4,3,2,1].map(p => `<div class="hm-y-label">${p}</div>`).join('');
+
+    grid.innerHTML = [5,4,3,2,1].map(p =>
+      `<div class="hm-row">${[1,2,3,4,5].map(i => {
+        const count = baseRisks.filter(r => parseInt(r.probability)===p && parseInt(r.impact)===i).length;
+        const bg = cellColor(p, i);
+        const isActive = hmFilter && hmFilter.p === p && hmFilter.i === i;
+        const border = isActive ? '2px solid var(--accent)' : '1px solid transparent';
+        return `<div class="hm-cell" style="background:${bg};border:${border}" onclick="toggleHmFilter(${p},${i})" title="P=${p} × I=${i}: ${count} risk${count!==1?'s':''}">
+          ${count ? `<div class="cell-count">${count}</div>` : ''}
+        </div>`;
+      }).join('')}</div>`
+    ).join('');
+  }
+
+  function toggleHmFilter(p, i) {
+    if (hmFilter && hmFilter.p === p && hmFilter.i === i) {
+      hmFilter = null;
+    } else {
+      hmFilter = {p, i};
+    }
+    renderAll();
+  }
+
+  // ── Risk list ────────────────────────────────────────────────────────────────
+
+  function renderList() {
+    const list = document.getElementById('risk-list');
+    const label = document.getElementById('list-label');
+    const risks = filteredRisks();
+    const total = data.risks.length;
+
+    label.textContent = hmFilter
+      ? `P=${hmFilter.p} × I=${hmFilter.i} — ${risks.length} risk${risks.length!==1?'s':''}`
+      : `${risks.length} of ${total} risk${total!==1?'s':''}`;
+
+    if (!risks.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No risks match current filters.</div>';
+      return;
+    }
+
+    list.innerHTML = risks.map(r => {
+      const s = score(r);
+      const b = band(s);
+      const color = bandColor(b);
+      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" onclick="openDetail('${r.id}')">
+        <div class="risk-severity-bar" style="background:${color}"></div>
+        <div class="risk-info">
+          <div class="risk-title">${_esc(r.title||'Untitled risk')}</div>
+          <div class="risk-meta">
+            <span class="cat-badge ${r.category||'technical'}">${r.category||'technical'}</span>
+            <span class="status-badge ${r.status||'open'}">${r.status||'open'}</span>
+            ${r.projectName ? `<span>${_esc(r.projectName)}</span>` : ''}
+          </div>
+        </div>
+        <div class="risk-score" style="color:${color}">${s}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAll() {
+    renderHeatmap();
+    renderList();
+  }
+
+  // ── Detail panel ─────────────────────────────────────────────────────────────
+
+  function openDetail(id) {
+    activeId = id;
+    const r = data.risks.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('detail-panel').style.display = 'flex';
+    document.getElementById('dp-title').textContent = r.title || 'Risk';
+    document.getElementById('dp-title-input').value = r.title || '';
+    document.getElementById('dp-category').value = r.category || 'technical';
+    document.getElementById('dp-status').value = r.status || 'open';
+
+    const p = parseInt(r.probability)||3, i = parseInt(r.impact)||3;
+    document.getElementById('dp-probability').value = p;
+    document.getElementById('dp-impact').value = i;
+    document.getElementById('prob-val').textContent = p;
+    document.getElementById('imp-val').textContent = i;
+    document.getElementById('dp-mitigation').value = r.mitigation || '';
+
+    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    document.getElementById('dp-project').innerHTML = '<option value="">— None —</option>' +
+      projects.map(proj => `<option value="${_esc(proj.id)}"${proj.id === r.projectId ? ' selected' : ''}>${_esc(proj.name)}</option>`).join('');
+
+    updateScore();
+    renderList();
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-panel').style.display = 'none';
+    activeId = null;
+    renderList();
+  }
+
+  function dpChange() {
+    document.getElementById('dp-title').textContent = document.getElementById('dp-title-input').value || 'Risk';
+  }
+
+  function updateSlider(inputId, valId) {
+    document.getElementById(valId).textContent = document.getElementById(inputId).value;
+  }
+
+  function updateScore() {
+    const p = parseInt(document.getElementById('dp-probability').value)||1;
+    const i = parseInt(document.getElementById('dp-impact').value)||1;
+    const s = p * i;
+    const b = band(s);
+    document.getElementById('dp-score').textContent = s;
+    const bandEl = document.getElementById('dp-band');
+    bandEl.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+    bandEl.className = 'score-band ' + b;
+  }
+
+  function saveDetail() {
+    const r = data.risks.find(x => x.id === activeId);
+    if (!r) return;
+    r.title = document.getElementById('dp-title-input').value.trim();
+    r.category = document.getElementById('dp-category').value;
+    r.status = document.getElementById('dp-status').value;
+    r.probability = parseInt(document.getElementById('dp-probability').value);
+    r.impact = parseInt(document.getElementById('dp-impact').value);
+    r.mitigation = document.getElementById('dp-mitigation').value.trim();
+    const projSel = document.getElementById('dp-project');
+    r.projectId = projSel.value || null;
+    r.projectName = projSel.value ? projSel.options[projSel.selectedIndex].text : null;
+    r.updatedAt = new Date().toISOString();
+    save(); closeDetail(); renderAll();
+  }
+
+  function deleteRisk() {
+    if (!activeId) return;
+    if (!confirm('Delete this risk?')) return;
+    data.risks = data.risks.filter(x => x.id !== activeId);
+    save(); closeDetail(); renderAll();
+  }
+
+  // ── Add modal ────────────────────────────────────────────────────────────────
+
+  function openAddModal() {
+    document.getElementById('am-title').value = '';
+    document.getElementById('am-category').value = 'technical';
+    document.getElementById('add-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('am-title').focus(), 50);
+  }
+  function closeAddModal() { document.getElementById('add-modal-overlay').classList.remove('open'); }
+
+  function saveNewRisk() {
+    const title = document.getElementById('am-title').value.trim();
+    if (!title) { document.getElementById('am-title').focus(); return; }
+    const r = {
+      id: uid(), title,
+      category: document.getElementById('am-category').value,
+      status: 'open', probability: 3, impact: 3,
+      mitigation: '', projectId: null, projectName: null,
+      createdAt: new Date().toISOString()
+    };
+    data.risks.push(r);
+    save(); closeAddModal(); renderAll(); openDetail(r.id);
+  }
+
+  // ── Project filter init ───────────────────────────────────────────────────────
+
+  function initProjectFilter() {
+    const sel = document.getElementById('project-filter');
+    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    sel.innerHTML = '<option value="">All projects</option>' +
+      projects.map(p => `<option value="${_esc(p.id)}">${_esc(p.name)}</option>`).join('');
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    initProjectFilter();
+    renderAll();
+    HubBootstrap.start('risk-hub');
+  });
+
+  document.getElementById('add-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('add-modal-overlay')) closeAddModal();
+  });
+</script>
+</body>
+</html>

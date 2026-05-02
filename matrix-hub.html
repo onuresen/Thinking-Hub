@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Priority Matrix</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 10px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+    .show-done-label { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .show-done-label input { cursor: pointer; accent-color: var(--accent); }
+
+    /* ── Axis labels ── */
+    .matrix-wrap { flex: 1; display: flex; overflow: hidden; padding: 12px 16px; gap: 0; }
+    .y-axis-label {
+      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center;
+      justify-content: center; width: 18px; flex-shrink: 0; user-select: none;
+    }
+    .matrix-inner { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+    .x-axis-row { display: flex; gap: 0; padding-left: 0; }
+    .x-label { flex: 1; text-align: center; font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 4px; user-select: none; }
+    .x-label:first-child { color: var(--text3); }
+    .x-label:last-child { color: var(--text3); }
+    .grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
+    .grid-row + .grid-row { margin-top: 8px; }
+
+    /* ── Quadrants ── */
+    .quadrant {
+      flex: 1; border-radius: var(--r); border: 2px solid; padding: 10px;
+      display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0;
+      transition: background 0.15s;
+    }
+    .quadrant.do-now { border-color: #ef4444; background: rgba(239,68,68,0.04); }
+    .quadrant.schedule { border-color: var(--accent); background: rgba(184,240,51,0.04); }
+    .quadrant.delegate { border-color: #f59e0b; background: rgba(245,158,11,0.04); }
+    .quadrant.eliminate { border-color: var(--border); background: transparent; }
+    .quadrant.drag-over { opacity: 0.75; }
+
+    .q-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .q-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+    .q-title.do-now { color: #ef4444; }
+    .q-title.schedule { color: var(--accent); }
+    .q-title.delegate { color: #f59e0b; }
+    .q-title.eliminate { color: var(--text3); }
+    .q-count { font-size: 10px; font-family: var(--font-mono); color: var(--text3); }
+    .q-spacer { flex: 1; }
+    .q-add-btn {
+      background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer;
+      line-height: 1; padding: 0 2px; transition: color 0.12s;
+    }
+    .q-add-btn:hover { color: var(--text); }
+
+    .q-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+    .q-cards::-webkit-scrollbar { width: 3px; }
+    .q-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Matrix cards ── */
+    .matrix-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 8px 10px; cursor: grab; user-select: none; transition: border-color 0.12s, opacity 0.15s;
+      display: flex; align-items: flex-start; gap: 7px;
+    }
+    .matrix-card:hover { border-color: var(--border2); }
+    .matrix-card.dragging { opacity: 0.45; cursor: grabbing; }
+    .matrix-card.done-card { opacity: 0.45; }
+    .mc-check {
+      width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--border);
+      background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+    }
+    .mc-check.done { border-color: var(--accent); background: var(--accent); }
+    .mc-check.done::after { content: '✓'; font-size: 8px; color: #111; font-weight: 800; }
+    .mc-body { flex: 1; min-width: 0; }
+    .mc-title { font-size: 12.5px; color: var(--text); line-height: 1.35; font-weight: 500; }
+    .mc-title.done { text-decoration: line-through; color: var(--text3); }
+    .mc-meta { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mc-edit-btn {
+      background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer;
+      padding: 1px; opacity: 0; transition: opacity 0.12s;
+    }
+    .matrix-card:hover .mc-edit-btn { opacity: 1; }
+    .mc-edit-btn:hover { color: var(--text); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--r); width: 420px; max-width: 94vw;
+      display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input, .field-textarea, .field-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .field-textarea { resize: vertical; min-height: 60px; }
+    .field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--accent); }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+
+    /* ── Import modal ── */
+    .import-item {
+      display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+      border-radius: var(--r-sm); cursor: pointer; transition: background 0.12s;
+    }
+    .import-item:hover { background: var(--surface2); }
+    .import-item input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+    .import-item-title { font-size: 13px; color: var(--text); flex: 1; }
+    .import-item-project { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .import-list { max-height: 320px; overflow-y: auto; }
+    .import-list::-webkit-scrollbar { width: 3px; }
+    .import-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">⊞</div>
+  <div class="logo-text">Priority Matrix</div>
+  <div class="topbar-spacer"></div>
+  <label class="show-done-label">
+    <input type="checkbox" id="show-done-chk" onchange="renderMatrix()"> Show done
+  </label>
+  <button class="btn btn-ghost" onclick="openImportModal()" style="font-size:12px;padding:6px 12px">↓ Import tasks</button>
+  <button class="btn btn-primary" onclick="openAddModal(null)" style="font-size:12px;padding:6px 14px">+ Add item</button>
+</div>
+
+<div class="matrix-wrap">
+  <div class="y-axis-label">Urgency →</div>
+  <div class="matrix-inner">
+    <div class="x-axis-row">
+      <div class="x-label">Not Important</div>
+      <div class="x-label">Important</div>
+    </div>
+    <div class="grid-row">
+      <!-- Top row: Urgent -->
+      <div class="quadrant delegate" id="q-delegate"
+           ondragover="onDragOver(event,'delegate')" ondrop="onDrop(event,'delegate')" ondragleave="onDragLeave(event)">
+        <div class="q-header">
+          <div class="q-title delegate">Delegate</div>
+          <div class="q-count" id="cnt-delegate"></div>
+          <div class="q-spacer"></div>
+          <button class="q-add-btn" onclick="openAddModal('delegate')" title="Add to Delegate">+</button>
+        </div>
+        <div class="q-cards" id="cards-delegate"></div>
+      </div>
+      <div class="quadrant do-now" id="q-do-now"
+           ondragover="onDragOver(event,'do-now')" ondrop="onDrop(event,'do-now')" ondragleave="onDragLeave(event)">
+        <div class="q-header">
+          <div class="q-title do-now">Do Now</div>
+          <div class="q-count" id="cnt-do-now"></div>
+          <div class="q-spacer"></div>
+          <button class="q-add-btn" onclick="openAddModal('do-now')" title="Add to Do Now">+</button>
+        </div>
+        <div class="q-cards" id="cards-do-now"></div>
+      </div>
+    </div>
+    <div class="grid-row">
+      <!-- Bottom row: Not Urgent -->
+      <div class="quadrant eliminate" id="q-eliminate"
+           ondragover="onDragOver(event,'eliminate')" ondrop="onDrop(event,'eliminate')" ondragleave="onDragLeave(event)">
+        <div class="q-header">
+          <div class="q-title eliminate">Eliminate</div>
+          <div class="q-count" id="cnt-eliminate"></div>
+          <div class="q-spacer"></div>
+          <button class="q-add-btn" onclick="openAddModal('eliminate')" title="Add to Eliminate">+</button>
+        </div>
+        <div class="q-cards" id="cards-eliminate"></div>
+      </div>
+      <div class="quadrant schedule" id="q-schedule"
+           ondragover="onDragOver(event,'schedule')" ondrop="onDrop(event,'schedule')" ondragleave="onDragLeave(event)">
+        <div class="q-header">
+          <div class="q-title schedule">Schedule</div>
+          <div class="q-count" id="cnt-schedule"></div>
+          <div class="q-spacer"></div>
+          <button class="q-add-btn" onclick="openAddModal('schedule')" title="Add to Schedule">+</button>
+        </div>
+        <div class="q-cards" id="cards-schedule"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit modal -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="add-modal-title">New Item</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Title</div>
+        <input class="field-input" id="am-title" placeholder="What needs to be done?" />
+      </div>
+      <div>
+        <div class="field-label">Quadrant</div>
+        <select class="field-select" id="am-quadrant">
+          <option value="do-now">Do Now — Urgent &amp; Important</option>
+          <option value="schedule">Schedule — Important, Not Urgent</option>
+          <option value="delegate">Delegate — Urgent, Not Important</option>
+          <option value="eliminate">Eliminate — Not Urgent, Not Important</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Notes (optional)</div>
+        <textarea class="field-textarea" id="am-notes" placeholder="Context, links, details…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" id="am-delete-btn" onclick="deleteItem()" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import modal -->
+<div class="modal-overlay" id="import-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Import from Project Hub</div>
+      <button class="modal-close" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:8px">
+      <div style="font-size:12px;color:var(--text3)">Select tasks to add to the matrix. Already-imported tasks are skipped.</div>
+      <div class="import-list" id="import-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="doImport()">Import selected</button>
+      <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'matrix-hub-v1';
+  const QUADRANTS = ['do-now','schedule','delegate','eliminate'];
+
+  let data = { items: [] };
+  let editingId = null;
+  let dragItemId = null;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { items: [] };
+    if (!data.items) data.items = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  function showDone() { return document.getElementById('show-done-chk').checked; }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  function renderMatrix() {
+    QUADRANTS.forEach(q => {
+      const cards = document.getElementById('cards-' + q);
+      const cnt = document.getElementById('cnt-' + q);
+      let items = data.items.filter(it => it.quadrant === q);
+      if (!showDone()) items = items.filter(it => !it.done);
+      const allInQ = data.items.filter(it => it.quadrant === q);
+      cnt.textContent = `${allInQ.filter(i=>!i.done).length} / ${allInQ.length}`;
+      cards.innerHTML = items.length
+        ? items.map(it => renderCard(it)).join('')
+        : `<div style="font-size:11px;color:var(--text3);padding:4px 2px;font-style:italic">Drop items here</div>`;
+    });
+  }
+
+  function renderCard(it) {
+    return `<div class="matrix-card${it.done?' done-card':''}" id="mc-${it.id}"
+      draggable="true"
+      ondragstart="onDragStart(event,'${it.id}')"
+      ondragend="onDragEnd(event)">
+      <div class="mc-check${it.done?' done':''}" onclick="toggleDone('${it.id}')"></div>
+      <div class="mc-body">
+        <div class="mc-title${it.done?' done':''}">${_esc(it.title)}</div>
+        ${it.notes ? `<div class="mc-meta">${_esc(it.notes.slice(0,60))}</div>` : ''}
+        ${it.projectName ? `<div class="mc-meta">${_esc(it.projectName)}</div>` : ''}
+      </div>
+      <button class="mc-edit-btn" onclick="openAddModal('${it.quadrant}','${it.id}')" title="Edit">✎</button>
+    </div>`;
+  }
+
+  // ── Drag & drop ──────────────────────────────────────────────────────────────
+
+  function onDragStart(e, id) {
+    dragItemId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => { const el = document.getElementById('mc-' + id); if (el) el.classList.add('dragging'); }, 0);
+  }
+  function onDragEnd(e) {
+    if (dragItemId) { const el = document.getElementById('mc-' + dragItemId); if (el) el.classList.remove('dragging'); }
+    document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('drag-over'));
+  }
+  function onDragOver(e, quadrant) {
+    e.preventDefault();
+    document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('drag-over'));
+    document.getElementById('q-' + quadrant).classList.add('drag-over');
+  }
+  function onDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+  function onDrop(e, quadrant) {
+    e.preventDefault();
+    document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('drag-over'));
+    if (!dragItemId) return;
+    const item = data.items.find(it => it.id === dragItemId);
+    if (item) { item.quadrant = quadrant; save(); renderMatrix(); }
+    dragItemId = null;
+  }
+
+  // ── Interactions ─────────────────────────────────────────────────────────────
+
+  function toggleDone(id) {
+    const item = data.items.find(it => it.id === id);
+    if (!item) return;
+    item.done = !item.done;
+    save(); renderMatrix();
+  }
+
+  // ── Add/Edit modal ───────────────────────────────────────────────────────────
+
+  function openAddModal(defaultQuadrant, id) {
+    editingId = id || null;
+    const item = id ? data.items.find(it => it.id === id) : null;
+    document.getElementById('add-modal-title').textContent = item ? 'Edit Item' : 'New Item';
+    document.getElementById('am-title').value = item ? item.title : '';
+    document.getElementById('am-notes').value = item ? (item.notes || '') : '';
+    document.getElementById('am-quadrant').value = item ? item.quadrant : (defaultQuadrant || 'do-now');
+    document.getElementById('am-delete-btn').style.display = item ? '' : 'none';
+    document.getElementById('add-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('am-title').focus(), 50);
+  }
+
+  function closeAddModal() {
+    document.getElementById('add-modal-overlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function saveItem() {
+    const title = document.getElementById('am-title').value.trim();
+    if (!title) { document.getElementById('am-title').focus(); return; }
+    if (editingId) {
+      const item = data.items.find(it => it.id === editingId);
+      if (item) {
+        item.title = title;
+        item.notes = document.getElementById('am-notes').value.trim();
+        item.quadrant = document.getElementById('am-quadrant').value;
+      }
+    } else {
+      data.items.push({
+        id: uid(), title, notes: document.getElementById('am-notes').value.trim(),
+        quadrant: document.getElementById('am-quadrant').value,
+        done: false, createdAt: new Date().toISOString()
+      });
+    }
+    save(); closeAddModal(); renderMatrix();
+  }
+
+  function deleteItem() {
+    if (!editingId) return;
+    data.items = data.items.filter(it => it.id !== editingId);
+    save(); closeAddModal(); renderMatrix();
+  }
+
+  // ── Import from Project Hub ──────────────────────────────────────────────────
+
+  function openImportModal() {
+    const tasks = (() => { try { return HubData.getAllTasks(); } catch { return []; } })();
+    const existingTaskIds = new Set(data.items.filter(it => it.taskId).map(it => it.taskId));
+    const available = tasks.filter(t => !t.done && !existingTaskIds.has(t.id));
+    const list = document.getElementById('import-list');
+    if (!available.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:12px 10px">No new open tasks found in Project Hub.</div>';
+    } else {
+      list.innerHTML = available.map(t => `<label class="import-item">
+        <input type="checkbox" value="${_esc(t.id)}" data-title="${_esc(t.title)}" data-project="${_esc(t._projectName||'')}" data-pid="${_esc(t._projectId||'')}">
+        <div class="import-item-title">${_esc(t.title)}</div>
+        <div class="import-item-project">${_esc(t._projectName||'')}</div>
+      </label>`).join('');
+    }
+    document.getElementById('import-modal-overlay').classList.add('open');
+  }
+
+  function closeImportModal() { document.getElementById('import-modal-overlay').classList.remove('open'); }
+
+  function doImport() {
+    document.querySelectorAll('#import-list input[type=checkbox]:checked').forEach(chk => {
+      data.items.push({
+        id: uid(), taskId: chk.value,
+        title: chk.dataset.title, notes: '',
+        projectName: chk.dataset.project || null, projectId: chk.dataset.pid || null,
+        quadrant: 'do-now', done: false, createdAt: new Date().toISOString()
+      });
+    });
+    save(); closeImportModal(); renderMatrix();
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    renderMatrix();
+    HubBootstrap.start('matrix-hub');
+  });
+
+  document.getElementById('add-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('add-modal-overlay')) closeAddModal();
+  });
+  document.getElementById('import-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('import-modal-overlay')) closeImportModal();
+  });
+</script>
+</body>
+</html>

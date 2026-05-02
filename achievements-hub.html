@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Achievements</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Page shell ── */
+    .ach-page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* ── Hero ── */
+    .ach-hero {
+      display: flex; align-items: center; gap: 20px;
+      padding: 18px 24px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .ach-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-like));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 20px; font-weight: 800;
+      color: #111; flex-shrink: 0; letter-spacing: -1px;
+    }
+    .ach-identity { flex: 1; min-width: 0; }
+    .ach-username {
+      font-family: var(--font-display); font-size: 16px; font-weight: 800;
+      margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ach-level-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .ach-level-badge {
+      background: var(--accent-dim); color: var(--accent);
+      border: 1px solid var(--accent-glow); border-radius: 20px;
+      font-family: var(--font-mono); font-size: 10px; padding: 2px 10px; font-weight: 500;
+    }
+    .ach-level-title { font-size: 12px; color: var(--text3); }
+    .ach-xp-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ach-xp-bar-wrap {
+      flex: 1; max-width: 240px; height: 6px; border-radius: 3px;
+      background: var(--surface3); overflow: hidden; position: relative;
+      role: progressbar;
+    }
+    .ach-xp-bar-fill {
+      height: 100%; background: var(--accent); border-radius: 3px;
+      width: 0; transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ach-xp-label { font-family: var(--font-mono); font-size: 10px; color: var(--text3); white-space: nowrap; }
+    .ach-hero-summary {
+      text-align: right; flex-shrink: 0;
+    }
+    .ach-unlocked-big {
+      font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--accent);
+      line-height: 1;
+    }
+    .ach-unlocked-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+    /* ── Stats row ── */
+    .ach-stats {
+      display: flex; gap: 10px; padding: 12px 24px;
+      border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+    }
+    .ach-stat-card {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px; min-width: 0;
+    }
+    .ach-stat-val {
+      font-family: var(--font-display); font-size: 22px; font-weight: 800;
+      color: var(--accent); line-height: 1; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ach-stat-label {
+      font-family: var(--font-mono); font-size: 9px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 3px;
+    }
+
+    /* ── Filter tabs ── */
+    .ach-filter-tabs {
+      display: flex; gap: 6px; padding: 10px 24px;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      flex-shrink: 0; overflow-x: auto;
+    }
+    .ach-tab {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text2); font-family: var(--font-body);
+      font-size: 12px; font-weight: 500; padding: 4px 14px; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+    }
+    .ach-tab.active, .ach-tab:hover {
+      background: var(--accent-dim); color: var(--accent); border-color: var(--accent-glow);
+    }
+
+    /* ── Scroll area ── */
+    .ach-scroll-area { flex: 1; overflow-y: auto; padding: 20px 24px 0; }
+
+    /* ── Achievement grid ── */
+    .ach-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+
+    /* ── Badge ── */
+    .ach-badge {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 14px 8px 10px; border-radius: var(--r);
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: default; position: relative; transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
+      user-select: none;
+    }
+    .ach-badge.unlocked {
+      border-color: var(--accent-glow);
+      box-shadow: 0 0 12px var(--accent-dim);
+    }
+    .ach-badge.unlocked:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px var(--accent-glow), 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .ach-badge.locked { opacity: 0.45; filter: grayscale(0.7); }
+    .ach-badge.locked:hover { opacity: 0.7; filter: grayscale(0.3); }
+
+    /* ── Badge ring ── */
+    .ach-badge-ring { position: relative; width: 68px; height: 68px; flex-shrink: 0; }
+    .ach-badge-icon {
+      position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; font-size: 26px; line-height: 1;
+    }
+    .ring-bg { fill: none; stroke: var(--surface3); stroke-width: 4; }
+    .ring-fg {
+      fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round;
+      transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .locked .ring-fg { stroke: var(--text3); }
+
+    .ach-badge-title {
+      font-size: 10px; font-weight: 600; text-align: center; line-height: 1.3;
+      color: var(--text); max-width: 100%;
+    }
+    .ach-badge-xp {
+      font-family: var(--font-mono); font-size: 9px; color: var(--text3);
+    }
+
+    /* ── Tooltip ── */
+    .ach-tooltip {
+      display: none; position: absolute; bottom: calc(100% + 8px);
+      left: 50%; transform: translateX(-50%);
+      background: var(--surface2); color: var(--text); padding: 7px 10px;
+      border-radius: var(--r-sm); font-size: 11px; width: 140px; text-align: center;
+      z-index: 99; pointer-events: none; border: 1px solid var(--accent-glow);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4); line-height: 1.4;
+    }
+    .ach-tooltip small { display: block; margin-top: 4px; color: var(--text3); font-family: var(--font-mono); font-size: 9px; }
+    .ach-badge:hover .ach-tooltip { display: block; }
+
+    /* ── Heatmap section ── */
+    .ach-heatmap-section {
+      padding: 0 0 24px;
+    }
+    .ach-section-title {
+      font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+      letter-spacing: 2px; color: var(--text3); margin-bottom: 10px;
+      border-left: 3px solid var(--accent); padding-left: 8px;
+    }
+    .ach-heatmap-wrap { overflow-x: auto; padding-bottom: 4px; }
+    .ach-heatmap {
+      display: grid;
+      grid-template-rows: repeat(7, 12px);
+      grid-auto-flow: column;
+      gap: 3px;
+      width: max-content;
+    }
+    .ach-cell { width: 12px; height: 12px; border-radius: 2px; }
+    .heat-0 { background: var(--surface2); }
+    .heat-1 { background: rgba(184, 240, 51, 0.2); }
+    .heat-2 { background: rgba(184, 240, 51, 0.5); }
+    .heat-3 { background: var(--accent); }
+
+    /* ── Light mode heat overrides ── */
+    [data-theme="light"] .heat-1 { background: rgba(111, 180, 0, 0.2); }
+    [data-theme="light"] .heat-2 { background: rgba(111, 180, 0, 0.5); }
+    [data-theme="light"] .heat-3 { background: var(--accent); }
+
+    /* ── Empty state ── */
+    .ach-empty {
+      grid-column: 1 / -1; text-align: center; padding: 48px 24px;
+      color: var(--text3); font-size: 14px;
+    }
+    .ach-empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* ── Confetti canvas ── */
+    #ach-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9990; display: none; }
+  </style>
+</head>
+<body>
+<div class="ach-page">
+
+  <!-- Hero -->
+  <div class="ach-hero">
+    <div class="ach-avatar" id="ach-avatar">TH</div>
+    <div class="ach-identity">
+      <div class="ach-username" id="ach-username">Thinking Hub</div>
+      <div class="ach-level-row">
+        <span class="ach-level-badge" id="ach-level-badge">LVL 1</span>
+        <span class="ach-level-title" id="ach-level-title">Newcomer</span>
+      </div>
+      <div class="ach-xp-row">
+        <div class="ach-xp-bar-wrap" role="progressbar" aria-valuemin="0">
+          <div class="ach-xp-bar-fill" id="ach-xp-fill"></div>
+        </div>
+        <span class="ach-xp-label" id="ach-xp-label">0 / 100 XP</span>
+      </div>
+    </div>
+    <div class="ach-hero-summary">
+      <div class="ach-unlocked-big" id="ach-unlocked-count">0</div>
+      <div class="ach-unlocked-sub">of 32 unlocked</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="ach-stats">
+    <div class="ach-stat-card">
+      <div class="ach-stat-val" id="stat-opens">0</div>
+      <div class="ach-stat-label">Tool Opens</div>
+    </div>
+    <div class="ach-stat-card">
+      <div class="ach-stat-val" id="stat-tools">0</div>
+      <div class="ach-stat-label">Tools Explored</div>
+    </div>
+    <div class="ach-stat-card">
+      <div class="ach-stat-val" id="stat-streak">0</div>
+      <div class="ach-stat-label">Day Streak</div>
+    </div>
+    <div class="ach-stat-card">
+      <div class="ach-stat-val" id="stat-decisions">0</div>
+      <div class="ach-stat-label">Decisions Made</div>
+    </div>
+    <div class="ach-stat-card">
+      <div class="ach-stat-val" id="stat-ideas">0</div>
+      <div class="ach-stat-label">Ideas Voted</div>
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="ach-filter-tabs">
+    <button class="ach-tab active" data-cat="all">All</button>
+    <button class="ach-tab" data-cat="explorer">🗺️ Explorer</button>
+    <button class="ach-tab" data-cat="thinker">💡 Thinker</button>
+    <button class="ach-tab" data-cat="builder">🏗️ Builder</button>
+    <button class="ach-tab" data-cat="reflector">📓 Reflector</button>
+    <button class="ach-tab" data-cat="connector">🔗 Connector</button>
+  </div>
+
+  <!-- Scroll area: grid + heatmap -->
+  <div class="ach-scroll-area">
+    <div class="ach-grid" id="ach-grid"></div>
+
+    <div class="ach-heatmap-section">
+      <div class="ach-section-title">Activity — Last 365 Days</div>
+      <div class="ach-heatmap-wrap">
+        <div class="ach-heatmap" id="ach-heatmap"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Confetti -->
+<canvas id="ach-confetti" aria-hidden="true"></canvas>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ────────────────────────────────────────────────────────────
+
+  const ACTIVITY_KEY = 'hub-activity-v1';
+  const ALL_APP_IDS = [
+    'project-hub','schedule','idea-swiper','kmqt-board','decision-hub',
+    'graph-hub','canvas-hub','tool-portfolio','focus-hub','log-hub',
+    'review-hub','retro-hub','assumptions-hub','goals-hub','matrix-hub',
+    'learning-hub','meetings-hub','stakeholder-hub','risk-hub','achievements-hub'
+  ];
+  const TOTAL_APPS = ALL_APP_IDS.length;
+
+  const LEVELS = [
+    { xp: 0,    label: 'Newcomer' },
+    { xp: 100,  label: 'Curious Mind' },
+    { xp: 300,  label: 'Active Thinker' },
+    { xp: 700,  label: 'Builder' },
+    { xp: 1500, label: 'Strategist' },
+    { xp: 3000, label: 'Operator' },
+    { xp: 5050, label: 'Hub Master' },
+  ];
+
+  // ── Data helpers ─────────────────────────────────────────────────────────
+
+  function readActivity() {
+    const d = HubStorage.get(ACTIVITY_KEY);
+    return { log: [], seenAchievements: [], ...d };
+  }
+
+  function distinctDates(log) {
+    return [...new Set(log.map(e => e.ts.slice(0, 10)))].sort();
+  }
+
+  function computeActivityStreak(log) {
+    const dates = distinctDates(log);
+    if (!dates.length) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const last = dates[dates.length - 1];
+    if (last !== today && last !== yesterday) return 0;
+    let streak = 1;
+    for (let i = dates.length - 2; i >= 0; i--) {
+      const diff = (new Date(dates[i + 1]) - new Date(dates[i])) / 86400000;
+      if (diff === 1) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  function computeLogStreak(entries) {
+    const keys = Object.keys(entries).sort();
+    if (!keys.length) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const last = keys[keys.length - 1];
+    if (last !== today && last !== yesterday) return 0;
+    let streak = 1;
+    for (let i = keys.length - 2; i >= 0; i--) {
+      const diff = (new Date(keys[i + 1]) - new Date(keys[i])) / 86400000;
+      if (diff === 1) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  // ── Build context object (read all keys once) ────────────────────────────
+
+  function buildCtx() {
+    const activity  = readActivity();
+    const log       = activity.log;
+    const ideas     = HubStorage.get('ideaswipe_history_v6') || [];
+    const decisions = (HubStorage.get('decision-hub-v1') || {}).decisions || [];
+    const projects  = (HubStorage.get('project-hub-v1') || {}).projects || [];
+    const focusSess = (HubStorage.get('focus-hub-v1') || {}).sessions || [];
+    const logEntries= (HubStorage.get('log-hub-v1') || {}).entries || {};
+    const retros    = (HubStorage.get('retro-hub-v1') || {}).retros || [];
+    const links     = HubStorage.get('hub-links-v1') || [];
+    const stakes    = (HubStorage.get('stakeholder-hub-v1') || {}).stakeholders || [];
+    const meetings  = (HubStorage.get('meetings-hub-v1') || {}).meetings || [];
+    const assump    = (HubStorage.get('assumptions-hub-v1') || {}).assumptions || [];
+    const risks     = (HubStorage.get('risk-hub-v1') || {}).risks || [];
+    const goals     = (HubStorage.get('goals-hub-v1') || {}).objectives || [];
+    const canvas    = (HubStorage.get('canvas-v1') || {}).items || [];
+
+    const uniqueAppIds = new Set(log.map(e => e.appId));
+    const superLikes   = ideas.filter(i => i.vote === 'super').length;
+    const nopeVotes    = ideas.filter(i => i.vote === 'nope').length;
+
+    const allTasks = projects.flatMap(p => p.tasks || []);
+    const completedTasks = allTasks.filter(t => t.done || t.status === 'done').length;
+
+    const focusTotalSecs = focusSess
+      .filter(s => s.completedAt || s.done)
+      .reduce((a, s) => a + (s.duration || s.elapsed || 0), 0);
+
+    const activityStreak = computeActivityStreak(log);
+    const logStreak      = computeLogStreak(logEntries);
+    const moodCount      = Object.values(logEntries).filter(e => e.mood).length;
+
+    const resolvedAssumps = assump.filter(a =>
+      a.status === 'Validated' || a.status === 'Invalidated').length;
+
+    const shippedProject = projects.some(p => {
+      const tasks = p.tasks || [];
+      return tasks.length >= 3 && tasks.every(t => t.done || t.status === 'done');
+    });
+
+    const dayToolMap = {};
+    log.forEach(e => {
+      const d = e.ts.slice(0, 10);
+      if (!dayToolMap[d]) dayToolMap[d] = new Set();
+      dayToolMap[d].add(e.appId);
+    });
+    const hasVarietyDay = Object.values(dayToolMap).some(s => s.size >= 4);
+    const distinctDays  = Object.keys(dayToolMap).length;
+
+    return {
+      log, activity,
+      ideas, superLikes, nopeVotes,
+      decisions, projects, allTasks, completedTasks,
+      focusSess, focusTotalSecs,
+      logEntries, logStreak, moodCount,
+      retros, links, stakes, meetings, assump, resolvedAssumps, risks, goals, canvas,
+      uniqueAppIds, activityStreak, hasVarietyDay, distinctDays,
+      shippedProject,
+    };
+  }
+
+  // ── Achievement definitions ──────────────────────────────────────────────
+
+  function makeAch(id, emoji, title, cat, xp, hint, evalFn) {
+    return { id, emoji, title, cat, xp, hint, evaluate: evalFn };
+  }
+
+  const ACHIEVEMENTS = [
+    // ── Explorer ──
+    makeAch('exp-first-step', '🚀', 'First Step',   'explorer', 50,  'Open any tool to start',
+      ctx => ({ unlocked: ctx.log.length >= 1, progress: Math.min(ctx.log.length, 1), total: 1 })),
+
+    makeAch('exp-tourist', '🗺️', 'Tourist',         'explorer', 100, 'Open 5 different tools',
+      ctx => ({ unlocked: ctx.uniqueAppIds.size >= 5, progress: ctx.uniqueAppIds.size, total: 5 })),
+
+    makeAch('exp-explorer', '🧭', 'Full Explorer',  'explorer', 200, `Open all ${TOTAL_APPS} tools`,
+      ctx => ({ unlocked: ctx.uniqueAppIds.size >= TOTAL_APPS, progress: ctx.uniqueAppIds.size, total: TOTAL_APPS })),
+
+    makeAch('exp-habitual', '📆', 'Regular',        'explorer', 100, 'Use the hub on 7 different days',
+      ctx => ({ unlocked: ctx.distinctDays >= 7, progress: ctx.distinctDays, total: 7 })),
+
+    makeAch('exp-committed', '🔥', 'Committed',     'explorer', 200, 'Use the hub 14 days in a row',
+      ctx => ({ unlocked: ctx.activityStreak >= 14, progress: ctx.activityStreak, total: 14 })),
+
+    makeAch('exp-fanatic', '💥', 'Hub Fanatic',     'explorer', 500, 'Maintain a 30-day streak',
+      ctx => ({ unlocked: ctx.activityStreak >= 30, progress: ctx.activityStreak, total: 30 })),
+
+    makeAch('exp-variety', '🎲', 'Variety Pack',    'explorer', 100, 'Use 4+ tools in a single day',
+      ctx => ({ unlocked: ctx.hasVarietyDay, progress: ctx.hasVarietyDay ? 1 : 0, total: 1 })),
+
+    // ── Thinker ──
+    makeAch('thi-first-idea', '💡', 'Spark',        'thinker', 50,  'Vote on your first idea',
+      ctx => ({ unlocked: ctx.ideas.length >= 1, progress: Math.min(ctx.ideas.length, 1), total: 1 })),
+
+    makeAch('thi-idea-machine', '⚡', 'Idea Machine','thinker', 100, 'Vote on 50 ideas',
+      ctx => ({ unlocked: ctx.ideas.length >= 50, progress: ctx.ideas.length, total: 50 })),
+
+    makeAch('thi-super-fan', '🌟', 'Super Fan',     'thinker', 200, 'Give 10 super-likes',
+      ctx => ({ unlocked: ctx.superLikes >= 10, progress: ctx.superLikes, total: 10 })),
+
+    makeAch('thi-tough-judge', '❌', 'Tough Judge', 'thinker', 100, 'Reject 20 ideas (nope)',
+      ctx => ({ unlocked: ctx.nopeVotes >= 20, progress: ctx.nopeVotes, total: 20 })),
+
+    makeAch('thi-first-decision', '⚖️', 'Decided',  'thinker', 50,  'Log your first decision',
+      ctx => ({ unlocked: ctx.decisions.length >= 1, progress: Math.min(ctx.decisions.length, 1), total: 1 })),
+
+    makeAch('thi-decider', '🏛️', 'The Decider',    'thinker', 200, 'Log 10 decisions',
+      ctx => ({ unlocked: ctx.decisions.length >= 10, progress: ctx.decisions.length, total: 10 })),
+
+    makeAch('thi-canvas-painter', '🎨', 'Canvas Painter','thinker', 100, 'Add something to Spatial Canvas',
+      ctx => ({ unlocked: ctx.canvas.length >= 1, progress: Math.min(ctx.canvas.length, 1), total: 1 })),
+
+    // ── Builder ──
+    makeAch('bld-first-project', '🏗️', 'Groundbreaker','builder', 50, 'Create your first project',
+      ctx => ({ unlocked: ctx.projects.length >= 1, progress: Math.min(ctx.projects.length, 1), total: 1 })),
+
+    makeAch('bld-first-task', '✅', 'First Task',   'builder', 50,  'Complete your first task',
+      ctx => ({ unlocked: ctx.completedTasks >= 1, progress: Math.min(ctx.completedTasks, 1), total: 1 })),
+
+    makeAch('bld-task-master', '🏆', 'Task Master', 'builder', 200, 'Complete 25 tasks',
+      ctx => ({ unlocked: ctx.completedTasks >= 25, progress: ctx.completedTasks, total: 25 })),
+
+    makeAch('bld-project-done', '🎉', 'Ship It',    'builder', 500, 'Complete all tasks in a project (3+ tasks)',
+      ctx => ({ unlocked: ctx.shippedProject, progress: ctx.shippedProject ? 1 : 0, total: 1 })),
+
+    makeAch('bld-goal-setter', '🎯', 'Goal Setter', 'builder', 50,  'Set an objective in Goals Hub',
+      ctx => ({ unlocked: ctx.goals.length >= 1, progress: Math.min(ctx.goals.length, 1), total: 1 })),
+
+    makeAch('bld-focused', '⏱️', 'Deep Focus',      'builder', 100, 'Complete a focus timer session',
+      ctx => {
+        const done = ctx.focusSess.filter(s => s.completedAt || s.done).length;
+        return { unlocked: done >= 1, progress: Math.min(done, 1), total: 1 };
+      }),
+
+    makeAch('bld-focus-marathon', '🏃', 'Marathon',  'builder', 500, 'Accumulate 10 hours of focus time',
+      ctx => ({ unlocked: ctx.focusTotalSecs >= 36000, progress: Math.round(ctx.focusTotalSecs / 3600 * 10) / 10, total: 10 })),
+
+    makeAch('bld-risk-aware', '⚠️', 'Risk Aware',   'builder', 100, 'Log 5 risks in Risk Register',
+      ctx => ({ unlocked: ctx.risks.length >= 5, progress: ctx.risks.length, total: 5 })),
+
+    // ── Reflector ──
+    makeAch('ref-first-log', '📓', 'Dear Diary',    'reflector', 50,  'Write your first daily log entry',
+      ctx => {
+        const count = Object.keys(ctx.logEntries).length;
+        return { unlocked: count >= 1, progress: Math.min(count, 1), total: 1 };
+      }),
+
+    makeAch('ref-week-streak', '📅', 'Week Warrior', 'reflector', 200, 'Log every day for 7 days straight',
+      ctx => ({ unlocked: ctx.logStreak >= 7, progress: ctx.logStreak, total: 7 })),
+
+    makeAch('ref-mood-tracker', '😊', 'Mood Watcher','reflector', 100, 'Log your mood for 14 days',
+      ctx => ({ unlocked: ctx.moodCount >= 14, progress: ctx.moodCount, total: 14 })),
+
+    makeAch('ref-first-retro', '🔄', 'Retrospector', 'reflector', 100, 'Run your first retrospective',
+      ctx => ({ unlocked: ctx.retros.length >= 1, progress: Math.min(ctx.retros.length, 1), total: 1 })),
+
+    makeAch('ref-three-retros', '🔁', 'Iteration Loop','reflector', 200, 'Run 3 retrospectives',
+      ctx => ({ unlocked: ctx.retros.length >= 3, progress: ctx.retros.length, total: 3 })),
+
+    // ── Connector ──
+    makeAch('con-first-link', '🔗', 'Linked Up',    'connector', 50,  'Create a cross-tool link',
+      ctx => ({ unlocked: ctx.links.length >= 1, progress: Math.min(ctx.links.length, 1), total: 1 })),
+
+    makeAch('con-linker', '🕸️', 'Web Weaver',       'connector', 200, 'Create 10 cross-tool links',
+      ctx => ({ unlocked: ctx.links.length >= 10, progress: ctx.links.length, total: 10 })),
+
+    makeAch('con-stakeholder', '👥', 'Team Player',  'connector', 50,  'Add a stakeholder',
+      ctx => ({ unlocked: ctx.stakes.length >= 1, progress: Math.min(ctx.stakes.length, 1), total: 1 })),
+
+    makeAch('con-meeting-notes', '📋', 'Meeting Maker','connector', 100, 'Log 5 meetings',
+      ctx => ({ unlocked: ctx.meetings.length >= 5, progress: ctx.meetings.length, total: 5 })),
+
+    makeAch('con-assumption', '🔍', 'Assumption Buster','connector', 200, 'Resolve 3 assumptions (Validated or Invalidated)',
+      ctx => ({ unlocked: ctx.resolvedAssumps >= 3, progress: ctx.resolvedAssumps, total: 3 })),
+  ];
+
+  // ── Level system ─────────────────────────────────────────────────────────
+
+  function getLevel(xp) {
+    let level = 0;
+    for (let i = LEVELS.length - 1; i >= 0; i--) {
+      if (xp >= LEVELS[i].xp) { level = i; break; }
+    }
+    const isMax = level === LEVELS.length - 1;
+    const floor = LEVELS[level].xp;
+    const ceil  = isMax ? LEVELS[level].xp : LEVELS[level + 1].xp;
+    const pct   = isMax ? 100 : Math.round((xp - floor) / (ceil - floor) * 100);
+    return { level: level + 1, label: LEVELS[level].label, floor, ceil, pct, isMax };
+  }
+
+  // ── Count-up animation ───────────────────────────────────────────────────
+
+  function animateCount(el, target, duration, fmt) {
+    const start = performance.now();
+    const from  = 0;
+    function tick(now) {
+      const t    = Math.min(1, (now - start) / duration);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const val  = Math.round(from + ease * (target - from));
+      el.textContent = fmt ? fmt(val) : val;
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ── Render hero ──────────────────────────────────────────────────────────
+
+  function renderHero(achievements) {
+    const xp      = achievements.filter(a => a.unlocked).reduce((s, a) => s + a.xp, 0);
+    const lvl     = getLevel(xp);
+    const unlocked = achievements.filter(a => a.unlocked).length;
+
+    const session  = HubStorage.get('hub-session-v1') || {};
+    const name     = session.sessionName || 'Thinking Hub';
+    const initials = name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'TH';
+
+    document.getElementById('ach-avatar').textContent    = initials;
+    document.getElementById('ach-username').textContent  = name;
+    document.getElementById('ach-level-badge').textContent = `LVL ${lvl.level}`;
+    document.getElementById('ach-level-title').textContent = lvl.label;
+    document.getElementById('ach-xp-label').textContent  =
+      lvl.isMax ? `${xp} XP — Max Level!` : `${xp} / ${lvl.ceil} XP`;
+    document.getElementById('ach-unlocked-count').textContent = unlocked;
+
+    requestAnimationFrame(() => {
+      document.getElementById('ach-xp-fill').style.width = lvl.pct + '%';
+    });
+  }
+
+  // ── Render stats ─────────────────────────────────────────────────────────
+
+  function renderStats(ctx, achievements) {
+    animateCount(document.getElementById('stat-opens'),     ctx.log.length,           700);
+    animateCount(document.getElementById('stat-tools'),     ctx.uniqueAppIds.size,    600);
+    animateCount(document.getElementById('stat-streak'),    ctx.activityStreak,       500);
+    animateCount(document.getElementById('stat-decisions'), ctx.decisions.length,     600);
+    animateCount(document.getElementById('stat-ideas'),     ctx.ideas.length,         700);
+  }
+
+  // ── Build badge DOM ──────────────────────────────────────────────────────
+
+  function buildBadge(ach) {
+    const r   = 28;
+    const circ = 2 * Math.PI * r;
+    const pct  = ach.total > 0 ? Math.min(1, ach.progress / ach.total) : (ach.unlocked ? 1 : 0);
+    const dash = pct * circ;
+
+    const div = document.createElement('div');
+    div.className = 'ach-badge ' + (ach.unlocked ? 'unlocked' : 'locked');
+    div.setAttribute('tabindex', '0');
+    div.setAttribute('role', 'img');
+    div.setAttribute('aria-label',
+      ach.title + (ach.unlocked ? ' — unlocked' : ' — locked: ' + ach.hint));
+
+    const progressText = (ach.total > 1 && !ach.unlocked)
+      ? `<small>${ach.progress} / ${ach.total}</small>`
+      : '';
+
+    div.innerHTML = `
+      <div class="ach-badge-ring">
+        <svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
+          <circle class="ring-bg" cx="34" cy="34" r="${r}" />
+          <circle class="ring-fg" cx="34" cy="34" r="${r}"
+            stroke-dasharray="${circ.toFixed(1)}"
+            stroke-dashoffset="${(circ - dash).toFixed(1)}"
+            transform="rotate(-90 34 34)" />
+        </svg>
+        <div class="ach-badge-icon">${ach.emoji}</div>
+      </div>
+      <div class="ach-badge-title">${ach.title}</div>
+      <div class="ach-badge-xp">+${ach.xp} XP</div>
+      <div class="ach-tooltip">${ach.unlocked ? '✓ Unlocked' : ach.hint}${progressText}</div>
+    `;
+
+    // Animate ring in after paint
+    requestAnimationFrame(() => {
+      const fg = div.querySelector('.ring-fg');
+      if (fg) {
+        fg.style.strokeDashoffset = (circ - dash).toFixed(1);
+      }
+    });
+
+    return div;
+  }
+
+  // ── Render grid ──────────────────────────────────────────────────────────
+
+  let _allAchievements = [];
+
+  function renderGrid(filter) {
+    const grid = document.getElementById('ach-grid');
+    grid.innerHTML = '';
+
+    const list = filter === 'all'
+      ? _allAchievements
+      : _allAchievements.filter(a => a.cat === filter);
+
+    if (!list.length) {
+      grid.innerHTML = '<div class="ach-empty"><div class="ach-empty-icon">🔍</div>No achievements in this category.</div>';
+      return;
+    }
+
+    // Unlocked first, then by XP desc
+    const sorted = [...list].sort((a, b) => {
+      if (a.unlocked !== b.unlocked) return b.unlocked - a.unlocked;
+      return b.xp - a.xp;
+    });
+
+    sorted.forEach(a => grid.appendChild(buildBadge(a)));
+  }
+
+  // ── Render heatmap ───────────────────────────────────────────────────────
+
+  function renderHeatmap(log) {
+    const heatmap = document.getElementById('ach-heatmap');
+    heatmap.innerHTML = '';
+
+    const counts = {};
+    log.forEach(e => {
+      const d = e.ts.slice(0, 10);
+      counts[d] = (counts[d] || 0) + 1;
+    });
+
+    const today = new Date();
+    // Start from the Sunday that is >= 364 days ago
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      const key   = d.toISOString().slice(0, 10);
+      const count = counts[key] || 0;
+      const cell  = document.createElement('div');
+      cell.className = 'ach-cell ' + (count === 0 ? 'heat-0' : count <= 2 ? 'heat-1' : count <= 5 ? 'heat-2' : 'heat-3');
+      cell.title = `${key}: ${count} open${count !== 1 ? 's' : ''}`;
+      heatmap.appendChild(cell);
+    }
+  }
+
+  // ── Confetti ─────────────────────────────────────────────────────────────
+
+  function burstConfetti(count) {
+    count = Math.min(count, 200);
+    const canvas = document.getElementById('ach-confetti');
+    canvas.style.display = 'block';
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx2 = canvas.getContext('2d');
+
+    const COLORS = ['#b8f033','#2ecc7a','#f5a623','#e8455a','#89b4fa','#ffffff'];
+    const particles = Array.from({ length: count }, () => ({
+      x: Math.random() * canvas.width, y: -10,
+      r: 4 + Math.random() * 5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      vx: (Math.random() - 0.5) * 5,
+      vy: 2 + Math.random() * 4,
+      spin: (Math.random() - 0.5) * 0.25,
+      angle: Math.random() * Math.PI * 2,
+      rect: Math.random() > 0.5,
+    }));
+
+    const DURATION = 3000;
+    let last = performance.now();
+    let elapsed = 0;
+    let raf;
+
+    function tick(now) {
+      const dt = now - last; last = now; elapsed += dt;
+      if (elapsed > DURATION) {
+        canvas.style.display = 'none';
+        cancelAnimationFrame(raf);
+        return;
+      }
+      ctx2.clearRect(0, 0, canvas.width, canvas.height);
+      const alpha = Math.max(0, 1 - elapsed / DURATION);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.angle += p.spin;
+        ctx2.save();
+        ctx2.globalAlpha = alpha;
+        ctx2.translate(p.x, p.y);
+        ctx2.rotate(p.angle);
+        ctx2.fillStyle = p.color;
+        if (p.rect) ctx2.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+        else { ctx2.beginPath(); ctx2.arc(0, 0, p.r / 2, 0, Math.PI * 2); ctx2.fill(); }
+        ctx2.restore();
+      });
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  // ── New unlock detection ─────────────────────────────────────────────────
+
+  function checkNewUnlocks(achievements) {
+    const activity = readActivity();
+    const seen     = new Set(activity.seenAchievements || []);
+    const fresh    = achievements.filter(a => a.unlocked && !seen.has(a.id));
+
+    if (!fresh.length) return;
+
+    fresh.forEach(a => seen.add(a.id));
+    activity.seenAchievements = [...seen];
+    HubStorage.set(ACTIVITY_KEY, activity);
+
+    setTimeout(() => burstConfetti(fresh.length * 45), 350);
+  }
+
+  // ── Filter tab wiring ─────────────────────────────────────────────────────
+
+  document.querySelectorAll('.ach-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderGrid(tab.dataset.cat);
+    });
+  });
+
+  // ── Main init ─────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const ctx          = buildCtx();
+    const evaluated    = ACHIEVEMENTS.map(ach => {
+      const res = ach.evaluate(ctx);
+      return { ...ach, ...res };
+    });
+
+    _allAchievements = evaluated;
+
+    renderHero(evaluated);
+    renderStats(ctx, evaluated);
+    renderGrid('all');
+    renderHeatmap(ctx.log);
+    checkNewUnlocks(evaluated);
+
+    HubBootstrap.start('achievements-hub');
+  });
+
+})();
+</script>
+</body>
+</html>

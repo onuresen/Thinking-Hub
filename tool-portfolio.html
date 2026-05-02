@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Portfolio Hub</title>
+    <script src="hub-storage.js"></script>
+    <script src="hub-links.js"></script>
+    <script src="hub-data.js"></script>
+    <script src="hub-bootstrap.js"></script>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ───────────────────────────── */
+        .sidebar {
+            width: 260px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 14px;
+            gap: 10px;
+        }
+
+        .sidebar-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        /* ── Sidebar search ─────────────────────── */
+        .sidebar-search-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-search {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            padding: 6px 28px 6px 10px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .sidebar-search:focus { border-color: var(--accent); }
+        .sidebar-search::placeholder { color: var(--text3); }
+        .sidebar-search-clear {
+            position: absolute; right: 8px;
+            background: none; border: none; color: var(--text3);
+            cursor: pointer; font-size: 14px; line-height: 1;
+            display: none;
+        }
+        .sidebar-search-clear.visible { display: block; }
+        .sidebar-search-clear:hover { color: var(--text); }
+
+        /* Category grouping */
+        .tool-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 2px;
+        }
+
+        .cat-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .cat-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.15);
+            user-select: none;
+        }
+
+        .cat-title {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            color: var(--text3);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cat-count {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text3);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 1px 7px;
+        }
+
+        .cat-drop-hint {
+            font-size: 10px;
+            color: var(--text3);
+            opacity: 0.85;
+            margin-left: 6px;
+            display: none;
+        }
+
+        .cat-header.drag-over .cat-drop-hint {
+            display: inline;
+        }
+
+        .cat-items {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-left: 2px;
+        }
+
+        /* Tool row */
+        .tool-item {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+        }
+
+        .tool-item.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+        }
+
+        .tool-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tool-item.dragging {
+            opacity: 0.35;
+        }
+
+        .tool-item.drag-over {
+            border-color: rgba(184, 240, 51, 0.55);
+            box-shadow: 0 0 0 2px rgba(184, 240, 51, 0.12);
+        }
+
+        .drag-handle {
+            width: 16px;
+            text-align: center;
+            color: var(--text3);
+            opacity: 0.6;
+            cursor: grab;
+            user-select: none;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .tool-item:hover .drag-handle {
+            opacity: 1;
+        }
+
+        .tool-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .tool-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* ── Main ───────────────────────────── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border);
+            gap: 10px;
+        }
+
+        .topbar-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .field-label {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text3);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--text3);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">Tool Portfolio</div>
+        <button class="btn primary" onclick="createTool()">＋ Add Tool</button>
+        <div class="sidebar-search-wrap">
+            <input class="sidebar-search" id="sidebar-search" type="text" placeholder="Filter tools…" oninput="onSearchInput()" />
+            <button class="sidebar-search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+        </div>
+        <div class="tool-list" id="tool-list"></div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <div class="topbar-title" id="topbar-title">Select a tool</div>
+        </div>
+
+        <div class="content" id="content">
+            <div class="empty">Select a tool or add a new one.</div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'tool-portfolio-v1';
+        let tools = [];
+        let currentId = null;
+
+        // Drag state
+        let dragId = null;
+        let dragCat = null;
+
+        function normCat(s) {
+            const v = (s || '').trim();
+            return v ? v : 'OTHER';
+        }
+
+        function load() {
+            tools = HubStorage.get(STORAGE_KEY) || [];
+            ensureOrderFields();
+            renderList();
+            renderDetail();
+        }
+
+        function save() {
+            HubStorage.set(STORAGE_KEY, tools);
+            renderList();
+        }
+
+        // Ensure tools have stable ordering inside each category
+        function ensureOrderFields() {
+            // Add order if missing (preserve existing order if present)
+            let changed = false;
+
+            // group current tools by category
+            const groups = {};
+            tools.forEach(t => {
+                const cat = normCat(t.category);
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(t);
+            });
+
+            Object.keys(groups).forEach(cat => {
+                const list = groups[cat];
+                // sort by existing order; fallback to creation-like id order
+                list.sort((a, b) => (a.order ?? 1e15) - (b.order ?? 1e15));
+                let i = 1;
+                list.forEach(t => {
+                    if (typeof t.order !== 'number') {
+                        t.order = i;
+                        changed = true;
+                    }
+                    i++;
+                });
+            });
+
+            if (changed) HubStorage.set(STORAGE_KEY, tools);
+        }
+
+        function createTool() {
+            const t = {
+                id: 'tool-' + Date.now().toString(36),
+                name: 'New Tool',
+                icon: '🛠',
+                url: '',
+                status: 'exploring',
+                category: '',
+                note: '',
+                order: 999999 // appended at end of its category
+            };
+            tools.push(t);
+            normalizeOrdersInCategory(normCat(t.category));
+            save();
+            openTool(t.id);
+        }
+
+        function openTool(id) {
+            currentId = id;
+            renderList();
+            renderDetail();
+        }
+
+        function deleteTool() {
+            if (!currentId) return;
+            if (!confirm('Delete this tool?')) return;
+            const deleted = tools.find(t => t.id === currentId);
+            const cat = deleted ? normCat(deleted.category) : null;
+
+            tools = tools.filter(t => t.id !== currentId);
+            currentId = null;
+
+            if (cat) normalizeOrdersInCategory(cat);
+            save();
+            renderDetail();
+        }
+
+        function updateField(key, value) {
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+
+            // If category changes, we must re-normalize ordering in both old+new category
+            if (key === 'category') {
+                const oldCat = normCat(t.category);
+                t[key] = value;
+                const newCat = normCat(t.category);
+                // put it at end of new category
+                t.order = 999999;
+                normalizeOrdersInCategory(oldCat);
+                normalizeOrdersInCategory(newCat);
+                save();
+                renderDetail();
+                document.getElementById('topbar-title').textContent = t.name;
+                return;
+            }
+
+            t[key] = value;
+            save();
+            document.getElementById('topbar-title').textContent = t.name;
+        }
+
+        // Normalize sequential order for a category (1..n)
+        function normalizeOrdersInCategory(cat) {
+            const list = tools
+                .filter(t => normCat(t.category) === cat)
+                .sort((a, b) => (a.order ?? 999999) - (b.order ?? 999999));
+
+            list.forEach((t, idx) => t.order = idx + 1);
+        }
+
+        // Reorder within category: draggedId dropped onto targetId (insert before target)
+        function reorderWithinCategory(cat, draggedId, targetId) {
+            const list = tools
+                .filter(t => normCat(t.category) === cat)
+                .sort((a, b) => (a.order ?? 999999) - (b.order ?? 999999));
+
+            const fromIdx = list.findIndex(t => t.id === draggedId);
+            const toIdx = list.findIndex(t => t.id === targetId);
+            if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+
+            const [moved] = list.splice(fromIdx, 1);
+            list.splice(toIdx, 0, moved);
+
+            // write back sequential order
+            list.forEach((t, idx) => t.order = idx + 1);
+        }
+
+        // Move dragged tool to end of category (optional nice UX)
+        function moveToCategoryEnd(newCat, draggedId) {
+            const t = tools.find(x => x.id === draggedId);
+            if (!t) return;
+
+            const oldCat = normCat(t.category);
+            t.category = (newCat === 'OTHER') ? '' : newCat; // keep OTHER as empty
+            t.order = 999999;
+
+            normalizeOrdersInCategory(oldCat);
+            normalizeOrdersInCategory(normCat(t.category));
+        }
+
+        let _searchQuery = '';
+
+        function onSearchInput() {
+            _searchQuery = (document.getElementById('sidebar-search').value || '').toLowerCase().trim();
+            document.getElementById('search-clear').classList.toggle('visible', _searchQuery.length > 0);
+            renderList();
+        }
+
+        function clearSearch() {
+            document.getElementById('sidebar-search').value = '';
+            _searchQuery = '';
+            document.getElementById('search-clear').classList.remove('visible');
+            renderList();
+        }
+
+        function renderList() {
+            const listEl = document.getElementById('tool-list');
+            listEl.innerHTML = '';
+
+            // Filter by search query
+            const filtered = _searchQuery
+                ? tools.filter(t =>
+                    (t.name || '').toLowerCase().includes(_searchQuery) ||
+                    (t.category || '').toLowerCase().includes(_searchQuery) ||
+                    (t.description || '').toLowerCase().includes(_searchQuery))
+                : tools;
+
+            if (_searchQuery && !filtered.length) {
+                listEl.innerHTML = `<div class="empty" style="margin-top:12px;font-style:italic">No tools match "${escapeHtml(_searchQuery)}"</div>`;
+                return;
+            }
+
+            // Group tools by category
+            const groups = {};
+            filtered.forEach(t => {
+                const cat = normCat(t.category);
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(t);
+            });
+
+            // Sort categories (OTHER last)
+            const cats = Object.keys(groups).sort((a, b) => {
+                if (a === 'OTHER' && b !== 'OTHER') return 1;
+                if (b === 'OTHER' && a !== 'OTHER') return -1;
+                return a.localeCompare(b);
+            });
+
+            cats.forEach(cat => {
+                const items = groups[cat].sort((a, b) => (a.order ?? 999999) - (b.order ?? 999999));
+
+                const section = document.createElement('div');
+                section.className = 'cat-section';
+
+                const header = document.createElement('div');
+                header.className = 'cat-header';
+                header.dataset.cat = cat;
+                header.innerHTML = `
+        <div class="cat-title">${escapeHtml(cat)}</div>
+        <span class="cat-drop-hint">Drop to move here</span>
+        <div class="cat-count">${items.length}</div>
+      `;
+
+                // Allow dropping on category header (moves dragged tool to end of that category)
+                header.addEventListener('dragover', (e) => {
+                    if (!dragId) return;
+                    e.preventDefault();
+                    header.classList.add('drag-over');
+                });
+                header.addEventListener('dragleave', () => header.classList.remove('drag-over'));
+                header.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    header.classList.remove('drag-over');
+                    if (!dragId) return;
+
+                    // If dropped on header of same category, just append to end
+                    moveToCategoryEnd(cat, dragId);
+                    save();
+                    dragId = null;
+                    dragCat = null;
+                });
+
+                const itemsWrap = document.createElement('div');
+                itemsWrap.className = 'cat-items';
+
+                items.forEach(t => {
+                    const row = document.createElement('div');
+                    row.className = 'tool-item' + (t.id === currentId ? ' active' : '');
+                    row.dataset.id = t.id;
+                    row.dataset.cat = cat;
+                    row.draggable = true;
+
+                    row.innerHTML = `
+          <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+          <div class="tool-icon">${escapeHtml(t.icon || '🛠')}</div>
+          <div class="tool-name">${escapeHtml(t.name)}</div>
+        `;
+
+                    // Click = open (but ignore click immediately after drag)
+                    row.addEventListener('click', () => openTool(t.id));
+
+                    // Drag events
+                    row.addEventListener('dragstart', (e) => {
+                        dragId = t.id;
+                        dragCat = cat;
+                        row.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        try { e.dataTransfer.setData('text/plain', t.id); } catch { }
+                    });
+
+                    row.addEventListener('dragend', () => {
+                        dragId = null;
+                        dragCat = null;
+                        row.classList.remove('dragging');
+                        document.querySelectorAll('.tool-item.drag-over').forEach(x => x.classList.remove('drag-over'));
+                        document.querySelectorAll('.cat-header.drag-over').forEach(x => x.classList.remove('drag-over'));
+                    });
+
+                    row.addEventListener('dragover', (e) => {
+                        // Only allow reorder inside same category
+                        if (!dragId || dragCat !== cat) return;
+                        e.preventDefault();
+                        row.classList.add('drag-over');
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+
+                    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+
+                    row.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        row.classList.remove('drag-over');
+
+                        if (!dragId || dragCat !== cat) return;
+                        if (dragId === t.id) return;
+
+                        reorderWithinCategory(cat, dragId, t.id);
+                        save();
+                    });
+
+                    itemsWrap.appendChild(row);
+                });
+
+                section.appendChild(header);
+                section.appendChild(itemsWrap);
+                listEl.appendChild(section);
+            });
+
+            if (!tools.length) {
+                listEl.innerHTML = `<div class="empty" style="margin-top:12px">No tools yet.</div>`;
+            }
+        }
+
+        function renderDetail() {
+            const c = document.getElementById('content');
+            const title = document.getElementById('topbar-title');
+
+            if (!currentId) {
+                title.textContent = 'Select a tool';
+                c.innerHTML = '<div class="empty">Select a tool or add a new one.</div>';
+                return;
+            }
+
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+
+            title.textContent = t.name;
+
+            const openBtn = t.url
+                ? '<a class="btn" href="' + t.url + '" target="_blank">Open</a>'
+                : '';
+
+            c.innerHTML = `
+      <div class="card">
+        <div class="label">Basic</div>
+        <div class="row">
+          <div class="field">
+            <div class="field-label">Tool name</div>
+            <input class="input"
+              value="${escapeAttr(t.name)}"
+              placeholder="e.g. Autodesk Revit"
+              oninput="updateField('name', this.value)"
+            />
+            <div class="field-hint">Human-readable product or platform name</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Icon</div>
+            <input class="input"
+              value="${escapeAttr(t.icon)}"
+              placeholder="e.g. 🏗️ 🤖 🧰"
+              oninput="updateField('icon', this.value)"
+            />
+            <div class="field-hint">Emoji works best for now</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Details</div>
+        <div class="row">
+          <div class="field">
+            <div class="field-label">Status</div>
+            <select class="select" onchange="updateField('status', this.value)">
+              <option ${t.status === 'exploring' ? 'selected' : ''}>exploring</option>
+              <option ${t.status === 'piloting' ? 'selected' : ''}>piloting</option>
+              <option ${t.status === 'using' ? 'selected' : ''}>using</option>
+              <option ${t.status === 'retired' ? 'selected' : ''}>retired</option>
+            </select>
+            <div class="field-hint">Current lifecycle stage</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Category</div>
+            <input class="input"
+              value="${escapeAttr(t.category)}"
+              placeholder="BIM / AI / Platform / Infra"
+              oninput="updateField('category', this.value)"
+            />
+            <div class="field-hint">Used for listing and grouping</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <div class="field-label">URL</div>
+          <input class="input"
+            value="${escapeAttr(t.url)}"
+            placeholder="https://..."
+            oninput="updateField('url', this.value)"
+          />
+          <div class="field-hint">Official site, docs, or landing page</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Why it matters</div>
+        <textarea class="textarea" oninput="updateField('note', this.value)">${escapeHtml(t.note || '')}</textarea>
+      </div>
+
+      <div class="actions">
+        ${openBtn}
+        <button class="btn danger" onclick="deleteTool()">Delete</button>
+      </div>
+    `;
+        }
+
+        // ── Hub Search integration ─────────────────
+        HubLinks.resolveItems = (function (orig) {
+            return function (toolId) {
+                if (toolId === 'tool-portfolio') {
+                    const data = HubStorage.get(STORAGE_KEY) || [];
+                    return data.map(t => ({
+                        id: t.id,
+                        label: t.name,
+                        subtitle: normCat(t.category) + ' · ' + (t.status || 'tool')
+                    }));
+                }
+                return orig(toolId);
+            };
+        })(HubLinks.resolveItems);
+
+        // ── Helpers ───────────────────────────────
+        function escapeHtml(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeAttr(s) {
+            // safer for value=""
+            return escapeHtml(s).replace(/`/g, '&#096;');
+        }
+
+        load();
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            HubBootstrap.start('tool-portfolio');
+        });
+    </script>
+</body>
+
+</html>

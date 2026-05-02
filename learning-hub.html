@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learning Log</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 10px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+
+    /* ── Body ── */
+    .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 280px; min-width: 280px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
+    }
+    .sidebar-filters { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+    .search-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 6px 10px; color: var(--text); font-family: var(--font-body); font-size: 12.5px; outline: none;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .filter-row { display: flex; gap: 4px; flex-wrap: wrap; }
+    .f-chip {
+      padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); font-size: 11px; cursor: pointer;
+      transition: all 0.12s; font-family: var(--font-body);
+    }
+    .f-chip:hover { border-color: var(--accent-glow); color: var(--text2); }
+    .f-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    .sidebar-list { flex: 1; overflow-y: auto; }
+    .sidebar-list::-webkit-scrollbar { width: 4px; }
+    .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .list-item {
+      padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer;
+      transition: background 0.1s; display: flex; gap: 9px; align-items: flex-start;
+    }
+    .list-item:hover { background: var(--surface2); }
+    .list-item.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 11px; }
+    .li-type-badge {
+      font-size: 9.5px; font-family: var(--font-mono); font-weight: 700; text-transform: uppercase;
+      padding: 2px 5px; border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+    }
+    .li-type-badge.book { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .li-type-badge.article { background: rgba(16,185,129,0.15); color: #34d399; }
+    .li-type-badge.course { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .li-type-badge.video { background: rgba(239,68,68,0.15); color: #f87171; }
+    .li-body { flex: 1; min-width: 0; }
+    .li-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .li-author { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .li-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .li-status-dot.to-read { background: var(--text3); }
+    .li-status-dot.reading { background: var(--accent); }
+    .li-status-dot.done { background: var(--accent-like); }
+
+    .sidebar-add-btn {
+      padding: 12px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+
+    /* ── Detail panel ── */
+    .detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .detail-empty {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--text3); gap: 8px;
+    }
+    .detail-empty-icon { font-size: 28px; opacity: 0.35; }
+    .detail-empty-text { font-size: 13px; }
+
+    .detail-header {
+      padding: 14px 20px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 12px; flex-shrink: 0;
+    }
+    .detail-title-wrap { flex: 1; min-width: 0; }
+    .detail-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; line-height: 1.25; }
+    .detail-author { font-size: 12px; color: var(--text3); margin-top: 3px; }
+    .detail-meta-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+    .type-pill {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; font-family: var(--font-mono);
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .type-pill.book { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .type-pill.article { background: rgba(16,185,129,0.15); color: #34d399; }
+    .type-pill.course { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .type-pill.video { background: rgba(239,68,68,0.15); color: #f87171; }
+    .status-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-size: 11.5px; padding: 3px 8px; cursor: pointer; outline: none;
+      font-family: var(--font-body);
+    }
+    .status-select:focus { border-color: var(--accent); }
+    .url-link { font-size: 11.5px; color: var(--accent); text-decoration: none; font-family: var(--font-mono); }
+    .url-link:hover { text-decoration: underline; }
+    .tag-wrap { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .tag-pill {
+      font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--surface2);
+      border: 1px solid var(--border); color: var(--text3); cursor: pointer;
+    }
+    .tag-pill:hover { border-color: var(--accent-nope); color: var(--accent-nope); }
+    .tag-add-input {
+      font-size: 11px; background: transparent; border: 1px dashed var(--border); border-radius: 999px;
+      color: var(--text); padding: 2px 7px; outline: none; width: 80px; font-family: var(--font-body);
+    }
+    .tag-add-input:focus { border-color: var(--accent); }
+    .detail-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .detail-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+    .detail-body::-webkit-scrollbar { width: 4px; }
+    .detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+
+    /* ── Highlights ── */
+    .highlight-list { display: flex; flex-direction: column; gap: 6px; }
+    .highlight-item {
+      background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: 8px 12px; display: flex; gap: 8px; align-items: flex-start;
+    }
+    .highlight-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.45; }
+    .highlight-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .hl-btn {
+      background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px;
+      padding: 1px 3px; transition: color 0.12s;
+    }
+    .hl-btn:hover { color: var(--text); }
+    .hl-btn.send:hover { color: var(--accent); }
+    .hl-btn.del:hover { color: var(--accent-nope); }
+    .add-highlight-row { display: flex; gap: 6px; }
+    .add-highlight-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 7px 10px; color: var(--text); font-family: var(--font-body); font-size: 13px; outline: none;
+    }
+    .add-highlight-input:focus { border-color: var(--accent); }
+
+    /* ── Notes ── */
+    .notes-textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 13px;
+      outline: none; resize: vertical; min-height: 100px; transition: border-color 0.15s;
+    }
+    .notes-textarea:focus { border-color: var(--accent); }
+
+    /* ── Add/Edit modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
+      width: 480px; max-width: 94vw; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input, .field-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .field-input:focus, .field-select:focus { border-color: var(--accent); }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">◈</div>
+  <div class="logo-text">Learning Log</div>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-primary" onclick="openAddModal(null)" style="font-size:12px;padding:6px 14px">+ Add item</button>
+</div>
+
+<div class="body-wrap">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-filters">
+      <input class="search-input" id="search-input" placeholder="Search…" oninput="renderList()">
+      <div class="filter-row" id="status-filters">
+        <button class="f-chip active" data-status="all" onclick="setStatusFilter('all')">All</button>
+        <button class="f-chip" data-status="to-read" onclick="setStatusFilter('to-read')">To Read</button>
+        <button class="f-chip" data-status="reading" onclick="setStatusFilter('reading')">Reading</button>
+        <button class="f-chip" data-status="done" onclick="setStatusFilter('done')">Done</button>
+      </div>
+      <div class="filter-row" id="type-filters">
+        <button class="f-chip active" data-type="all" onclick="setTypeFilter('all')">All types</button>
+        <button class="f-chip" data-type="book" onclick="setTypeFilter('book')">Books</button>
+        <button class="f-chip" data-type="article" onclick="setTypeFilter('article')">Articles</button>
+        <button class="f-chip" data-type="course" onclick="setTypeFilter('course')">Courses</button>
+        <button class="f-chip" data-type="video" onclick="setTypeFilter('video')">Videos</button>
+      </div>
+    </div>
+    <div class="sidebar-list" id="sidebar-list"></div>
+    <div class="sidebar-add-btn">
+      <button class="btn btn-ghost" onclick="openAddModal(null)" style="width:100%;font-size:12px">+ Add item</button>
+    </div>
+  </aside>
+
+  <!-- Detail -->
+  <div class="detail" id="detail">
+    <div class="detail-empty" id="detail-empty">
+      <div class="detail-empty-icon">◈</div>
+      <div class="detail-empty-text">Select an item to view details</div>
+    </div>
+    <div id="detail-content" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit modal -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="add-modal-title">Add Item</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Title *</div>
+        <input class="field-input" id="am-title" placeholder="Book / article / course title" />
+      </div>
+      <div>
+        <div class="field-label">Author / Source</div>
+        <input class="field-input" id="am-author" placeholder="Author or publisher" />
+      </div>
+      <div>
+        <div class="field-label">Type</div>
+        <select class="field-select" id="am-type">
+          <option value="book">Book</option>
+          <option value="article">Article</option>
+          <option value="course">Course</option>
+          <option value="video">Video</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Status</div>
+        <select class="field-select" id="am-status">
+          <option value="to-read">To Read</option>
+          <option value="reading">Reading</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">URL (optional)</div>
+        <input class="field-input" id="am-url" placeholder="https://…" type="url" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" id="am-delete-btn" onclick="deleteItem()" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'learning-hub-v1';
+  let data = { items: [] };
+  let activeId = null;
+  let editingId = null;
+  let statusFilter = 'all';
+  let typeFilter = 'all';
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { items: [] };
+    if (!data.items) data.items = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  // ── Filters ──────────────────────────────────────────────────────────────────
+
+  function setStatusFilter(f) {
+    statusFilter = f;
+    document.querySelectorAll('#status-filters .f-chip').forEach(c => c.classList.toggle('active', c.dataset.status === f));
+    renderList();
+  }
+  function setTypeFilter(f) {
+    typeFilter = f;
+    document.querySelectorAll('#type-filters .f-chip').forEach(c => c.classList.toggle('active', c.dataset.type === f));
+    renderList();
+  }
+
+  function filteredItems() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    return data.items.filter(it => {
+      if (statusFilter !== 'all' && it.status !== statusFilter) return false;
+      if (typeFilter !== 'all' && it.type !== typeFilter) return false;
+      if (q && !it.title.toLowerCase().includes(q) && !(it.author||'').toLowerCase().includes(q) && !(it.tags||[]).join(' ').toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a,b) => {
+      const order = { reading: 0, 'to-read': 1, done: 2 };
+      return (order[a.status]??1) - (order[b.status]??1) || (b.createdAt||'').localeCompare(a.createdAt||'');
+    });
+  }
+
+  // ── Sidebar list ─────────────────────────────────────────────────────────────
+
+  function renderList() {
+    const list = document.getElementById('sidebar-list');
+    const items = filteredItems();
+    if (!items.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No items found.</div>';
+      return;
+    }
+    list.innerHTML = items.map(it => `<div class="list-item${it.id === activeId ? ' active' : ''}" onclick="openDetail('${it.id}')">
+      <div class="li-type-badge ${it.type}">${it.type}</div>
+      <div class="li-body">
+        <div class="li-title">${_esc(it.title)}</div>
+        ${it.author ? `<div class="li-author">${_esc(it.author)}</div>` : ''}
+      </div>
+      <div class="li-status-dot ${it.status}" title="${it.status}"></div>
+    </div>`).join('');
+  }
+
+  // ── Detail ───────────────────────────────────────────────────────────────────
+
+  function openDetail(id) {
+    activeId = id;
+    renderList();
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const item = data.items.find(it => it.id === activeId);
+    const empty = document.getElementById('detail-empty');
+    const content = document.getElementById('detail-content');
+
+    if (!item) { empty.style.display = 'flex'; content.style.display = 'none'; return; }
+    empty.style.display = 'none';
+    content.style.display = 'flex';
+
+    const tags = (item.tags || []).map(t =>
+      `<span class="tag-pill" onclick="removeTag('${_esc(t)}')" title="Remove">${_esc(t)} ✕</span>`
+    ).join('');
+
+    const highlights = (item.highlights || []).map(h => `<div class="highlight-item" id="hl-${h.id}">
+      <div class="highlight-text">${_esc(h.text)}</div>
+      <div class="highlight-actions">
+        <button class="hl-btn send" onclick="sendToSwiper('${h.id}')" title="Send to Idea Swiper">→ Swiper</button>
+        <button class="hl-btn del" onclick="removeHighlight('${h.id}')" title="Delete">✕</button>
+      </div>
+    </div>`).join('');
+
+    content.innerHTML = `
+      <div class="detail-header">
+        <div class="detail-title-wrap">
+          <div class="detail-title">${_esc(item.title)}</div>
+          ${item.author ? `<div class="detail-author">${_esc(item.author)}</div>` : ''}
+          <div class="detail-meta-row">
+            <span class="type-pill ${item.type}">${item.type}</span>
+            <select class="status-select" onchange="updateStatus(this.value)">
+              <option value="to-read"${item.status==='to-read'?' selected':''}>To Read</option>
+              <option value="reading"${item.status==='reading'?' selected':''}>Reading</option>
+              <option value="done"${item.status==='done'?' selected':''}>Done</option>
+            </select>
+            ${item.url ? `<a class="url-link" href="${_esc(item.url)}" target="_blank" rel="noopener">↗ Open</a>` : ''}
+          </div>
+          <div class="detail-meta-row" style="margin-top:6px">
+            <div class="tag-wrap">
+              ${tags}
+              <input class="tag-add-input" id="tag-input" placeholder="+ tag" onkeydown="handleTagKey(event)">
+            </div>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-ghost" onclick="openAddModal('${item.id}')" style="font-size:12px;padding:5px 10px">Edit</button>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div>
+          <div class="section-label">Highlights & Key Insights</div>
+          <div class="highlight-list" id="highlight-list">${highlights}</div>
+          <div class="add-highlight-row" style="margin-top:6px">
+            <input class="add-highlight-input" id="hl-input" placeholder="Add a highlight or key insight…" onkeydown="handleHLKey(event)">
+            <button class="btn btn-ghost" onclick="addHighlight()" style="font-size:12px;padding:6px 10px">Add</button>
+          </div>
+        </div>
+        <div>
+          <div class="section-label">Notes</div>
+          <textarea class="notes-textarea" id="notes-textarea" placeholder="Personal notes, reflections, to-do from reading…" onblur="saveNotes()">${_esc(item.notes||'')}</textarea>
+        </div>
+      </div>`;
+  }
+
+  function updateStatus(val) {
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    item.status = val;
+    if (val === 'done') item.completedAt = new Date().toISOString();
+    save(); renderList();
+  }
+
+  function saveNotes() {
+    const item = data.items.find(it => it.id === activeId);
+    const ta = document.getElementById('notes-textarea');
+    if (item && ta) { item.notes = ta.value; save(); }
+  }
+
+  // ── Tags ─────────────────────────────────────────────────────────────────────
+
+  function handleTagKey(e) {
+    if (e.key !== 'Enter') return;
+    const inp = document.getElementById('tag-input');
+    const tag = inp.value.trim();
+    if (!tag) return;
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    if (!item.tags) item.tags = [];
+    if (!item.tags.includes(tag)) { item.tags.push(tag); save(); renderDetail(); }
+    inp.value = '';
+  }
+
+  function removeTag(tag) {
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    item.tags = (item.tags||[]).filter(t => t !== tag);
+    save(); renderDetail();
+  }
+
+  // ── Highlights ───────────────────────────────────────────────────────────────
+
+  function handleHLKey(e) { if (e.key === 'Enter') addHighlight(); }
+
+  function addHighlight() {
+    const inp = document.getElementById('hl-input');
+    const text = inp.value.trim();
+    if (!text) return;
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    if (!item.highlights) item.highlights = [];
+    item.highlights.push({ id: uid(), text, createdAt: new Date().toISOString() });
+    save(); inp.value = ''; renderDetail();
+  }
+
+  function removeHighlight(hlId) {
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    item.highlights = (item.highlights||[]).filter(h => h.id !== hlId);
+    save(); renderDetail();
+  }
+
+  function sendToSwiper(hlId) {
+    const item = data.items.find(it => it.id === activeId);
+    if (!item) return;
+    const hl = (item.highlights||[]).find(h => h.id === hlId);
+    if (!hl) return;
+    const swRaw = HubStorage.get('ideaswipe_history_v6');
+    let swData = { ideas: [] };
+    if (swRaw) { try { swData = typeof swRaw === 'string' ? JSON.parse(swRaw) : swRaw; } catch {} }
+    if (!swData.ideas) swData.ideas = [];
+    swData.ideas.push({
+      id: uid(), text: hl.text, source: `Learning: ${item.title}`,
+      status: 'pending', createdAt: new Date().toISOString()
+    });
+    HubStorage.set('ideaswipe_history_v6', swData);
+    if (typeof HubLinks !== 'undefined' && HubLinks.toast) {
+      HubLinks.toast('Sent to Idea Swiper');
+    }
+  }
+
+  // ── Add/Edit modal ───────────────────────────────────────────────────────────
+
+  function openAddModal(id) {
+    editingId = id;
+    const item = id ? data.items.find(it => it.id === id) : null;
+    document.getElementById('add-modal-title').textContent = item ? 'Edit Item' : 'Add Item';
+    document.getElementById('am-title').value = item ? item.title : '';
+    document.getElementById('am-author').value = item ? (item.author||'') : '';
+    document.getElementById('am-type').value = item ? item.type : 'book';
+    document.getElementById('am-status').value = item ? item.status : 'to-read';
+    document.getElementById('am-url').value = item ? (item.url||'') : '';
+    document.getElementById('am-delete-btn').style.display = item ? '' : 'none';
+    document.getElementById('add-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('am-title').focus(), 50);
+  }
+
+  function closeAddModal() {
+    document.getElementById('add-modal-overlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function saveItem() {
+    const title = document.getElementById('am-title').value.trim();
+    if (!title) { document.getElementById('am-title').focus(); return; }
+    if (editingId) {
+      const item = data.items.find(it => it.id === editingId);
+      if (item) {
+        item.title = title;
+        item.author = document.getElementById('am-author').value.trim();
+        item.type = document.getElementById('am-type').value;
+        item.status = document.getElementById('am-status').value;
+        item.url = document.getElementById('am-url').value.trim();
+      }
+    } else {
+      const newItem = {
+        id: uid(), title,
+        author: document.getElementById('am-author').value.trim(),
+        type: document.getElementById('am-type').value,
+        status: document.getElementById('am-status').value,
+        url: document.getElementById('am-url').value.trim(),
+        tags: [], highlights: [], notes: '',
+        createdAt: new Date().toISOString()
+      };
+      data.items.push(newItem);
+      activeId = newItem.id;
+    }
+    save(); closeAddModal(); renderList(); renderDetail();
+  }
+
+  function deleteItem() {
+    if (!editingId) return;
+    if (!confirm('Delete this item and all its highlights?')) return;
+    if (activeId === editingId) { activeId = null; }
+    data.items = data.items.filter(it => it.id !== editingId);
+    save(); closeAddModal(); renderList(); renderDetail();
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    renderList();
+    renderDetail();
+    HubBootstrap.start('learning-hub');
+  });
+
+  document.getElementById('add-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('add-modal-overlay')) closeAddModal();
+  });
+</script>
+</body>
+</html>

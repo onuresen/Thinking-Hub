@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Review</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 14px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+    .week-nav { display: flex; align-items: center; gap: 8px; }
+    .week-label {
+      font-family: var(--font-mono); font-size: 12px; color: var(--text2);
+      min-width: 130px; text-align: center;
+    }
+    .week-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+      background: transparent; color: var(--text2); cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+    }
+    .week-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .week-btn:disabled { opacity: 0.3; cursor: default; }
+    .save-chip {
+      font-size: 11px; color: var(--accent-like); opacity: 0; transition: opacity 0.3s;
+    }
+    .save-chip.show { opacity: 1; }
+
+    /* ── Three-column layout ── */
+    .columns {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    .col {
+      flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .col:last-child { border-right: none; }
+
+    .col-header {
+      padding: 16px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .col-title {
+      font-family: var(--font-display); font-size: 13px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .col-title.done-color { color: var(--accent-like); }
+    .col-title.capture-color { color: var(--accent); }
+    .col-title.next-color { color: #a78bfa; }
+    .col-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+    .col-body {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    /* ── Done column ── */
+    .task-pull {
+      border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 8px 10px; display: flex; align-items: flex-start; gap: 8px;
+      background: var(--surface); cursor: pointer; transition: all 0.12s;
+    }
+    .task-pull:hover { border-color: var(--accent-like); background: var(--surface2); }
+    .task-pull.pinned { border-color: var(--accent-like); background: color-mix(in srgb, var(--accent-like) 8%, transparent); }
+    .task-pull-check {
+      width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent-like);
+      flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--accent-like);
+    }
+    .task-pull.pinned .task-pull-check { background: var(--accent-like); color: #111; }
+    .task-pull-info { flex: 1; min-width: 0; }
+    .task-pull-title { font-size: 13px; color: var(--text); line-height: 1.3; }
+    .task-pull-meta { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: var(--font-mono); }
+
+    .done-empty { font-size: 12px; color: var(--text3); padding: 8px 4px; }
+    .refresh-done {
+      font-size: 11px; color: var(--text3); cursor: pointer; padding: 4px 6px;
+      border-radius: 4px; border: 1px solid var(--border); background: transparent;
+      font-family: var(--font-body); transition: all 0.12s; align-self: flex-start;
+    }
+    .refresh-done:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Capture column ── */
+    .capture-section { display: flex; flex-direction: column; gap: 6px; }
+    .capture-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .capture-textarea {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 12px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; line-height: 1.6;
+      resize: none; outline: none; transition: border-color 0.15s; min-height: 80px;
+    }
+    .capture-textarea:focus { border-color: var(--accent); }
+    .capture-textarea::placeholder { color: var(--text3); font-style: italic; }
+
+    /* ── Next week column ── */
+    .big-rocks-header {
+      font-size: 11px; color: var(--text3); padding: 4px 0 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .big-rocks-count { font-family: var(--font-mono); }
+
+    .rock-slot {
+      border: 2px dashed var(--border); border-radius: var(--r-sm);
+      padding: 10px 12px; min-height: 52px; display: flex; align-items: center;
+      gap: 10px; transition: all 0.15s; position: relative;
+    }
+    .rock-slot.has-rock { border-style: solid; border-color: #a78bfa40; background: color-mix(in srgb, #a78bfa 6%, transparent); }
+    .rock-slot.drag-over { border-color: #a78bfa; background: color-mix(in srgb, #a78bfa 12%, transparent); }
+    .rock-num {
+      font-family: var(--font-display); font-size: 22px; font-weight: 800;
+      color: var(--border); flex-shrink: 0; line-height: 1; transition: color 0.15s;
+    }
+    .rock-slot.has-rock .rock-num { color: #a78bfa; }
+    .rock-content { flex: 1; min-width: 0; }
+    .rock-title { font-size: 13px; color: var(--text); line-height: 1.3; }
+    .rock-remove {
+      font-size: 14px; color: var(--text3); cursor: pointer; opacity: 0;
+      transition: opacity 0.12s; background: none; border: none; padding: 2px 4px;
+    }
+    .rock-slot:hover .rock-remove { opacity: 1; }
+    .rock-slot.empty-slot { cursor: pointer; }
+    .rock-slot.empty-slot:hover { border-color: #a78bfa80; }
+    .rock-empty-hint { font-size: 12px; color: var(--text3); font-style: italic; }
+
+    .open-tasks-section { margin-top: 4px; }
+    .open-tasks-title { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .open-task-chip {
+      display: flex; align-items: center; gap: 7px; padding: 7px 9px;
+      border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+      cursor: pointer; transition: all 0.12s; margin-bottom: 5px;
+    }
+    .open-task-chip:hover { border-color: #a78bfa80; background: var(--surface2); }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; flex-shrink: 0; }
+    .chip-title { font-size: 12px; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip-project { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    .chip-add { font-size: 11px; color: #a78bfa; flex-shrink: 0; }
+
+    /* ── Scrollbar ── */
+    .col-body::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">WR</div>
+  <div class="logo-text">Weekly Review</div>
+  <div class="topbar-spacer"></div>
+  <div class="week-nav">
+    <button class="week-btn" id="prev-btn" onclick="shiftWeek(-1)">‹</button>
+    <div class="week-label" id="week-label">…</div>
+    <button class="week-btn" id="next-btn" onclick="shiftWeek(1)">›</button>
+  </div>
+  <div class="save-chip" id="save-chip">Saved ✓</div>
+</div>
+
+<div class="columns">
+  <!-- Done this week -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-title done-color">✓ Done this week</div>
+      <div class="col-sub">Tasks completed · click to highlight</div>
+    </div>
+    <div class="col-body" id="done-col">
+      <div class="done-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Capture -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-title capture-color">◎ Capture</div>
+      <div class="col-sub">Wins · learnings · blockers · notes</div>
+    </div>
+    <div class="col-body">
+      <div class="capture-section">
+        <div class="capture-label">Wins 🏆</div>
+        <textarea class="capture-textarea" id="cap-wins" rows="4" placeholder="What went well this week?" oninput="autosave()"></textarea>
+      </div>
+      <div class="capture-section">
+        <div class="capture-label">Learnings 💡</div>
+        <textarea class="capture-textarea" id="cap-learn" rows="4" placeholder="What did you learn or discover?" oninput="autosave()"></textarea>
+      </div>
+      <div class="capture-section">
+        <div class="capture-label">Blockers 🚧</div>
+        <textarea class="capture-textarea" id="cap-block" rows="3" placeholder="What slowed you down?" oninput="autosave()"></textarea>
+      </div>
+      <div class="capture-section">
+        <div class="capture-label">Free notes</div>
+        <textarea class="capture-textarea" id="cap-notes" rows="4" placeholder="Anything else on your mind…" oninput="autosave()"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next week -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-title next-color">→ Next week</div>
+      <div class="col-sub">Big rocks · drag tasks to pin</div>
+    </div>
+    <div class="col-body">
+      <div class="big-rocks-header">
+        <span>Top 3 big rocks</span>
+        <span class="big-rocks-count" id="rocks-count">0 / 3</span>
+      </div>
+      <div id="rocks-slots"></div>
+
+      <div class="open-tasks-section">
+        <div class="open-tasks-title">Open tasks — click to add as big rock</div>
+        <div id="open-tasks-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'review-hub-v1';
+
+  // weekOffset: 0 = current week, -1 = last week, etc.
+  let weekOffset = 0;
+  let reviewData = {}; // keyed by week string 'YYYY-Www'
+  let saveTimer = null;
+
+  // ── Date helpers ──────────────────────────────────────────────────────────
+
+  function getMondayOfWeek(offset) {
+    const d = new Date();
+    const day = d.getDay(); // 0=Sun
+    const diff = (day === 0 ? -6 : 1 - day); // Monday of current week
+    d.setDate(d.getDate() + diff + offset * 7);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function weekKey(monday) {
+    // ISO week: YYYY-Www
+    const jan4 = new Date(monday.getFullYear(), 0, 4);
+    const week = Math.ceil(((monday - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+    return `${monday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+  }
+
+  function weekRange(monday) {
+    const sun = new Date(monday);
+    sun.setDate(sun.getDate() + 6);
+    const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `${fmt(monday)} – ${fmt(sun)}`;
+  }
+
+  function isoDate(d) { return d.toISOString().slice(0, 10); }
+
+  // ── Storage ───────────────────────────────────────────────────────────────
+
+  function loadAll() {
+    reviewData = HubStorage.get(STORAGE_KEY) || {};
+  }
+
+  function getWeekData(key) {
+    if (!reviewData[key]) reviewData[key] = { wins: '', learn: '', block: '', notes: '', rocks: [] };
+    return reviewData[key];
+  }
+
+  function saveAll() {
+    HubStorage.set(STORAGE_KEY, reviewData);
+    const chip = document.getElementById('save-chip');
+    chip.classList.add('show');
+    clearTimeout(chip._t);
+    chip._t = setTimeout(() => chip.classList.remove('show'), 1800);
+  }
+
+  function autosave() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    wd.wins = document.getElementById('cap-wins').value;
+    wd.learn = document.getElementById('cap-learn').value;
+    wd.block = document.getElementById('cap-block').value;
+    wd.notes = document.getElementById('cap-notes').value;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveAll, 1200);
+  }
+
+  // ── Done column ───────────────────────────────────────────────────────────
+
+  function renderDoneCol() {
+    const monday = getMondayOfWeek(weekOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const monStr = isoDate(monday);
+    const sunStr = isoDate(sunday);
+
+    const col = document.getElementById('done-col');
+    const allTasks = HubData.getAllTasks ? HubData.getAllTasks() : [];
+    const projects = HubData.getProjects ? HubData.getProjects() : [];
+    const projectMap = {};
+    projects.forEach(p => projectMap[p.id] = p.name);
+
+    const done = allTasks.filter(t => {
+      if (!t.done && t.status !== 'done') return false;
+      const completedAt = t.completedAt || t.updatedAt || '';
+      return completedAt >= monStr && completedAt <= sunStr + 'T23:59:59';
+    });
+
+    if (!done.length) {
+      col.innerHTML = `<div class="done-empty">No completed tasks found for this week.</div>
+        <button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>`;
+      return;
+    }
+
+    col.innerHTML = done.map(t => {
+      const proj = t.projectId ? (projectMap[t.projectId] || '') : '';
+      return `<div class="task-pull" onclick="highlightTask('${t.id}')">
+        <div class="task-pull-check">✓</div>
+        <div class="task-pull-info">
+          <div class="task-pull-title">${_esc(t.title || t.text || 'Task')}</div>
+          ${proj ? `<div class="task-pull-meta">${_esc(proj)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('') + `<button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>`;
+  }
+
+  function highlightTask(taskId) {
+    if (typeof HubLinks !== 'undefined' && HubLinks.navigateTo) {
+      HubLinks.navigateTo('project-hub', taskId);
+    }
+  }
+
+  // ── Big rocks ─────────────────────────────────────────────────────────────
+
+  function renderRocks() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    const rocks = wd.rocks || [];
+
+    const slots = document.getElementById('rocks-slots');
+    slots.innerHTML = [0, 1, 2].map(i => {
+      const rock = rocks[i];
+      if (rock) {
+        return `<div class="rock-slot has-rock" ondragover="e.preventDefault()" ondrop="dropOnSlot(event,${i})">
+          <div class="rock-num">${i + 1}</div>
+          <div class="rock-content">
+            <div class="rock-title">${_esc(rock.title)}</div>
+          </div>
+          <button class="rock-remove" onclick="removeRock(${i})">✕</button>
+        </div>`;
+      }
+      return `<div class="rock-slot empty-slot" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="dropOnSlot(event,${i})">
+        <div class="rock-num">${i + 1}</div>
+        <div class="rock-empty-hint">Drop a task here or click below</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('rocks-count').textContent = `${rocks.filter(Boolean).length} / 3`;
+  }
+
+  function removeRock(i) {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    wd.rocks = wd.rocks || [];
+    wd.rocks.splice(i, 1);
+    saveAll();
+    renderRocks();
+  }
+
+  function addRock(task) {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    wd.rocks = wd.rocks || [];
+    if (wd.rocks.length >= 3) return;
+    if (wd.rocks.some(r => r && r.id === task.id)) return;
+    wd.rocks.push({ id: task.id, title: task.title || task.text || 'Task' });
+    saveAll();
+    renderRocks();
+    renderOpenTasks();
+  }
+
+  // drag-and-drop
+  let dragTask = null;
+  function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+  function dropOnSlot(e, i) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (!dragTask) return;
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    wd.rocks = wd.rocks || [];
+    wd.rocks[i] = { id: dragTask.id, title: dragTask.title || dragTask.text || 'Task' };
+    saveAll();
+    renderRocks();
+    renderOpenTasks();
+    dragTask = null;
+  }
+
+  // ── Open tasks ────────────────────────────────────────────────────────────
+
+  function renderOpenTasks() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    const rockIds = new Set((wd.rocks || []).filter(Boolean).map(r => r.id));
+
+    const allTasks = HubData.getAllTasks ? HubData.getAllTasks() : [];
+    const projects = HubData.getProjects ? HubData.getProjects() : [];
+    const projectMap = {};
+    projects.forEach(p => projectMap[p.id] = p.name);
+
+    const open = allTasks.filter(t => !t.done && t.status !== 'done' && !rockIds.has(t.id));
+
+    const el = document.getElementById('open-tasks-list');
+    if (!open.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3)">No open tasks</div>';
+      return;
+    }
+
+    el.innerHTML = open.slice(0, 30).map(t => {
+      const proj = t.projectId ? (projectMap[t.projectId] || '') : '';
+      return `<div class="open-task-chip" draggable="true"
+        ondragstart="dragTask={id:'${t.id}',title:${JSON.stringify(t.title || t.text || 'Task')}}"
+        onclick="addRock({id:'${t.id}',title:${JSON.stringify(t.title || t.text || 'Task')}})">
+        <div class="chip-dot"></div>
+        <div class="chip-title">${_esc(t.title || t.text || 'Task')}</div>
+        ${proj ? `<div class="chip-project">${_esc(proj)}</div>` : ''}
+        <div class="chip-add">+ rock</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Week navigation ───────────────────────────────────────────────────────
+
+  function shiftWeek(delta) {
+    weekOffset += delta;
+    document.getElementById('next-btn').disabled = weekOffset >= 0;
+    render();
+  }
+
+  function render() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+
+    document.getElementById('week-label').textContent = weekRange(monday);
+    document.getElementById('next-btn').disabled = weekOffset >= 0;
+
+    document.getElementById('cap-wins').value = wd.wins || '';
+    document.getElementById('cap-learn').value = wd.learn || '';
+    document.getElementById('cap-block').value = wd.block || '';
+    document.getElementById('cap-notes').value = wd.notes || '';
+
+    renderDoneCol();
+    renderRocks();
+    renderOpenTasks();
+  }
+
+  // ── Escape util ───────────────────────────────────────────────────────────
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAll();
+    render();
+    HubData.onChange && HubData.onChange(() => renderDoneCol());
+    HubBootstrap.start('review-hub');
+  });
+</script>
+</body>
+</html>

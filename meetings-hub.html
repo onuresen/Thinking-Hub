@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting Notes</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 10px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+
+    /* ── Body layout ── */
+    .body-wrap { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Left: meeting list ── */
+    .meeting-list-panel {
+      width: 260px; min-width: 260px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
+    }
+    .list-search { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .search-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 6px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 12.5px; outline: none;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .meeting-list { flex: 1; overflow-y: auto; }
+    .meeting-list::-webkit-scrollbar { width: 4px; }
+    .meeting-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .meeting-row {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .meeting-row:hover { background: var(--surface2); }
+    .meeting-row.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 11px; }
+    .mr-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mr-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; display: flex; gap: 8px; }
+    .mr-action-count {
+      font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700;
+      background: var(--accent-dim); color: var(--accent); font-family: var(--font-mono);
+    }
+    .list-new-btn { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+    /* ── Right: meeting detail ── */
+    .detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .detail-empty {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--text3); gap: 8px;
+    }
+    .detail-empty-icon { font-size: 28px; opacity: 0.35; }
+    .detail-empty-text { font-size: 13px; }
+
+    .detail-header {
+      padding: 14px 20px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .detail-title-input {
+      width: 100%; background: transparent; border: none; outline: none;
+      font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text);
+    }
+    .detail-title-input::placeholder { color: var(--text3); }
+    .detail-meta-row {
+      display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap;
+    }
+    .meta-label { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .meta-input {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px; padding: 3px 8px;
+      outline: none; transition: border-color 0.15s;
+    }
+    .meta-input:focus { border-color: var(--accent); }
+    .meta-date { font-family: var(--font-mono); }
+    .project-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px; padding: 3px 8px;
+      outline: none; cursor: pointer;
+    }
+    .project-select:focus { border-color: var(--accent); }
+    .detail-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .save-indicator { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+
+    /* ── Notes area ── */
+    .notes-area { flex: 1; display: flex; overflow: hidden; }
+    .notes-col, .agenda-col {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+    }
+    .notes-col { border-left: 1px solid var(--border); }
+    .col-header {
+      padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .col-textarea {
+      flex: 1; width: 100%; background: transparent; border: none; outline: none;
+      resize: none; color: var(--text); font-family: var(--font-body); font-size: 13.5px;
+      line-height: 1.65; padding: 14px 16px;
+    }
+    .col-textarea::placeholder { color: var(--text3); }
+
+    /* ── Action items ── */
+    .actions-panel {
+      border-top: 1px solid var(--border); flex-shrink: 0;
+      max-height: 220px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .actions-header {
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .actions-title { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; flex: 1; }
+    .add-action-btn {
+      font-size: 11px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px;
+      background: none; color: var(--text3); cursor: pointer; font-family: var(--font-body);
+      transition: all 0.12s;
+    }
+    .add-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .actions-list { flex: 1; overflow-y: auto; padding: 6px 12px; display: flex; flex-direction: column; gap: 5px; }
+    .actions-list::-webkit-scrollbar { width: 4px; }
+    .actions-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .action-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+    }
+    .action-check {
+      width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--border);
+      flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.12s;
+    }
+    .action-check.done { border-color: var(--accent-like); background: var(--accent-like); }
+    .action-check.done::after { content: '✓'; font-size: 8px; color: #111; font-weight: 800; }
+    .action-text { flex: 1; font-size: 12.5px; color: var(--text); }
+    .action-text.done { text-decoration: line-through; color: var(--text3); }
+    .action-send-btn {
+      font-size: 10.5px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px;
+      background: none; color: var(--text3); cursor: pointer; font-family: var(--font-mono);
+      white-space: nowrap; transition: all 0.12s;
+    }
+    .action-send-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-send-btn.sent { border-color: var(--accent-like); color: var(--accent-like); cursor: default; }
+    .action-del-btn {
+      background: none; border: none; color: var(--text3); cursor: pointer;
+      font-size: 13px; padding: 0 2px; transition: color 0.12s;
+    }
+    .action-del-btn:hover { color: var(--accent-nope); }
+
+    /* ── Project picker modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
+      width: 380px; max-width: 94vw; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .field-input:focus { border-color: var(--accent); }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">▦</div>
+  <div class="logo-text">Meeting Notes</div>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+ New meeting</button>
+</div>
+
+<div class="body-wrap">
+
+  <!-- Left panel: list -->
+  <div class="meeting-list-panel">
+    <div class="list-search">
+      <input class="search-input" id="list-search" placeholder="Search meetings…" oninput="renderList()">
+    </div>
+    <div class="meeting-list" id="meeting-list"></div>
+    <div class="list-new-btn">
+      <button class="btn btn-ghost" onclick="newMeeting()" style="width:100%;font-size:12px">+ New meeting</button>
+    </div>
+  </div>
+
+  <!-- Right panel: detail -->
+  <div class="detail" id="detail">
+    <div class="detail-empty" id="detail-empty">
+      <div class="detail-empty-icon">▦</div>
+      <div class="detail-empty-text">Select or create a meeting to start</div>
+    </div>
+    <div id="detail-content" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+  </div>
+</div>
+
+<!-- Add action item modal -->
+<div class="modal-overlay" id="action-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Action Item</div>
+      <button class="modal-close" onclick="closeActionModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Action item</div>
+        <input class="field-input" id="action-input" placeholder="What needs to happen?" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveAction()">Add</button>
+      <button class="btn btn-ghost" onclick="closeActionModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'meetings-hub-v1';
+  let data = { meetings: [] };
+  let activeId = null;
+  let saveTimer = null;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { meetings: [] };
+    if (!data.meetings) data.meetings = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  function activeMeeting() { return data.meetings.find(m => m.id === activeId) || null; }
+
+  // ── List ─────────────────────────────────────────────────────────────────────
+
+  function renderList() {
+    const q = (document.getElementById('list-search').value || '').toLowerCase();
+    const list = document.getElementById('meeting-list');
+    let items = data.meetings.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+    if (q) items = items.filter(m => (m.title||'').toLowerCase().includes(q) || (m.attendees||'').toLowerCase().includes(q));
+    if (!items.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No meetings yet.</div>';
+      return;
+    }
+    list.innerHTML = items.map(m => {
+      const openActions = (m.actionItems||[]).filter(a => !a.done && !a.taskCreated).length;
+      const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
+        <div class="mr-title">${_esc(m.title || 'Untitled meeting')}</div>
+        <div class="mr-meta">
+          <span>${dateLabel}</span>
+          ${m.projectName ? `<span>${_esc(m.projectName)}</span>` : ''}
+          ${openActions ? `<span class="mr-action-count">${openActions} action${openActions!==1?'s':''}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Detail ───────────────────────────────────────────────────────────────────
+
+  function openMeeting(id) {
+    flushCurrentDetail();
+    activeId = id;
+    renderList();
+    renderDetail();
+  }
+
+  function renderDetail() {
+    const m = activeMeeting();
+    const empty = document.getElementById('detail-empty');
+    const content = document.getElementById('detail-content');
+
+    if (!m) { empty.style.display = 'flex'; content.style.display = 'none'; return; }
+    empty.style.display = 'none';
+    content.style.display = 'flex';
+
+    // Build project options
+    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    const projOpts = `<option value="">— No project —</option>` +
+      projects.map(p => `<option value="${_esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
+
+    const actionsHtml = (m.actionItems || []).map(a => `<div class="action-item" id="ai-${a.id}">
+      <div class="action-check${a.done?' done':''}" onclick="toggleAction('${a.id}')"></div>
+      <div class="action-text${a.done?' done':''}">${_esc(a.text)}</div>
+      ${!a.taskCreated
+        ? `<button class="action-send-btn" onclick="sendActionToProjectHub('${a.id}')" title="Create task in Project Hub">→ Project Hub</button>`
+        : `<span class="action-send-btn sent">✓ Task created</span>`}
+      <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
+    </div>`).join('');
+
+    content.innerHTML = `
+      <div class="detail-header">
+        <input class="detail-title-input" id="dt-title" placeholder="Meeting title…" value="${_esc(m.title||'')}" oninput="scheduleSave()">
+        <div class="detail-meta-row">
+          <span class="meta-label">Date</span>
+          <input class="meta-input meta-date" id="dt-date" type="date" value="${_esc(m.date||'')}" onchange="scheduleSave()">
+          <span class="meta-label">Attendees</span>
+          <input class="meta-input" id="dt-attendees" placeholder="Names, comma-separated" value="${_esc(m.attendees||'')}" style="width:200px" oninput="scheduleSave()">
+          <span class="meta-label">Project</span>
+          <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select>
+        </div>
+        <div class="detail-actions-row">
+          <span class="save-indicator" id="save-indicator"></span>
+          <div style="flex:1"></div>
+          <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete meeting</button>
+        </div>
+      </div>
+
+      <div class="notes-area">
+        <div class="agenda-col">
+          <div class="col-header">Agenda</div>
+          <textarea class="col-textarea" id="dt-agenda" placeholder="Meeting agenda, topics to cover…" oninput="scheduleSave()">${_esc(m.agenda||'')}</textarea>
+        </div>
+        <div class="notes-col">
+          <div class="col-header">Notes</div>
+          <textarea class="col-textarea" id="dt-notes" placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${_esc(m.notes||'')}</textarea>
+        </div>
+      </div>
+
+      <div class="actions-panel">
+        <div class="actions-header">
+          <div class="actions-title">Action Items (${(m.actionItems||[]).length})</div>
+          <button class="add-action-btn" onclick="openActionModal()">+ Add action</button>
+        </div>
+        <div class="actions-list">${actionsHtml || '<div style="font-size:12px;color:var(--text3);padding:6px 4px">No action items yet.</div>'}</div>
+      </div>`;
+  }
+
+  function flushCurrentDetail() {
+    if (!activeId) return;
+    const m = activeMeeting();
+    if (!m) return;
+    const titleEl = document.getElementById('dt-title');
+    const dateEl = document.getElementById('dt-date');
+    const attendeesEl = document.getElementById('dt-attendees');
+    const agendaEl = document.getElementById('dt-agenda');
+    const notesEl = document.getElementById('dt-notes');
+    if (titleEl) m.title = titleEl.value;
+    if (dateEl) m.date = dateEl.value;
+    if (attendeesEl) m.attendees = attendeesEl.value;
+    if (agendaEl) m.agenda = agendaEl.value;
+    if (notesEl) m.notes = notesEl.value;
+    save();
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    const ind = document.getElementById('save-indicator');
+    if (ind) ind.textContent = 'saving…';
+    saveTimer = setTimeout(() => {
+      flushCurrentDetail();
+      const ind = document.getElementById('save-indicator');
+      if (ind) { ind.textContent = 'saved'; setTimeout(() => { if (ind) ind.textContent = ''; }, 1500); }
+      renderList();
+    }, 600);
+  }
+
+  function changeProject(sel) {
+    const m = activeMeeting(); if (!m) return;
+    m.projectId = sel.value || null;
+    const opt = sel.options[sel.selectedIndex];
+    m.projectName = sel.value ? opt.text : null;
+    save(); renderList();
+  }
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+
+  function toggleAction(id) {
+    const m = activeMeeting(); if (!m) return;
+    const a = (m.actionItems||[]).find(x => x.id === id);
+    if (a) { a.done = !a.done; save(); renderDetail(); }
+  }
+
+  function deleteAction(id) {
+    const m = activeMeeting(); if (!m) return;
+    m.actionItems = (m.actionItems||[]).filter(a => a.id !== id);
+    save(); renderDetail(); renderList();
+  }
+
+  function sendActionToProjectHub(actionId) {
+    const m = activeMeeting(); if (!m) return;
+    const a = (m.actionItems||[]).find(x => x.id === actionId);
+    if (!a) return;
+
+    const phRaw = HubStorage.get('project-hub-v1');
+    let ph = { projects: [] };
+    if (phRaw) { try { ph = typeof phRaw === 'string' ? JSON.parse(phRaw) : phRaw; } catch {} }
+    if (!ph.projects) ph.projects = [];
+
+    const taskId = uid();
+    const task = {
+      id: taskId, title: a.text, done: false, status: 'open',
+      priority: 'med', notes: `From meeting: ${m.title||''}`, createdAt: new Date().toISOString()
+    };
+
+    let added = false;
+    if (m.projectId && ph.projects.length) {
+      const proj = ph.projects.find(p => p.id === m.projectId);
+      if (proj) { if (!proj.tasks) proj.tasks = []; proj.tasks.push(task); added = true; }
+    }
+    if (!added && ph.projects.length) {
+      if (!ph.projects[0].tasks) ph.projects[0].tasks = [];
+      ph.projects[0].tasks.push(task);
+      added = true;
+    }
+    if (!added) {
+      ph.projects.push({ id: uid(), name: 'From Meetings', color: '#b8f033', tasks: [task], createdAt: new Date().toISOString() });
+    }
+
+    HubStorage.set('project-hub-v1', ph);
+    a.taskCreated = true; a.taskId = taskId;
+    save(); renderDetail(); renderList();
+  }
+
+  function openActionModal() {
+    document.getElementById('action-input').value = '';
+    document.getElementById('action-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('action-input').focus(), 50);
+  }
+  function closeActionModal() { document.getElementById('action-modal-overlay').classList.remove('open'); }
+  function saveAction() {
+    const text = document.getElementById('action-input').value.trim();
+    if (!text) return;
+    const m = activeMeeting(); if (!m) return;
+    if (!m.actionItems) m.actionItems = [];
+    m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, createdAt: new Date().toISOString() });
+    save(); closeActionModal(); renderDetail(); renderList();
+  }
+
+  // ── New / Delete meeting ──────────────────────────────────────────────────────
+
+  function newMeeting() {
+    flushCurrentDetail();
+    const m = {
+      id: uid(), title: '', date: new Date().toISOString().split('T')[0],
+      attendees: '', projectId: null, projectName: null,
+      agenda: '', notes: '', actionItems: [], createdAt: new Date().toISOString()
+    };
+    data.meetings.unshift(m);
+    save(); activeId = m.id; renderList(); renderDetail();
+    setTimeout(() => { const t = document.getElementById('dt-title'); if (t) t.focus(); }, 80);
+  }
+
+  function deleteMeeting() {
+    if (!activeId) return;
+    if (!confirm('Delete this meeting and all its notes?')) return;
+    data.meetings = data.meetings.filter(m => m.id !== activeId);
+    activeId = data.meetings.length ? data.meetings[0].id : null;
+    save(); renderList(); renderDetail();
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    if (data.meetings.length) activeId = data.meetings[0].id;
+    renderList();
+    renderDetail();
+    HubBootstrap.start('meetings-hub');
+  });
+
+  document.getElementById('action-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('action-modal-overlay')) closeActionModal();
+  });
+  document.getElementById('action-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveAction();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thinking Hub</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="theme.css">
+
+  <script src="hub-storage.js"></script>
+  <script src="hub-tutorial.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-search.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <style>
+    html,
+    body {
+      height: 100%;
+
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+    }
+
+    /* ── Sidebar ────────────────────────────────────── */
+    .sidebar {
+      width: 210px;
+      min-width: 210px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #111;
+      font-family: var(--font-display);
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-text {
+      font-family: var(--font-display);
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      color: var(--text);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .nav-group {
+      margin-bottom: 6px;
+    }
+
+    .nav-group-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 10px 8px 5px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.1s, color 0.1s;
+      line-height: 1;
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .nav-item.active .nav-icon {
+      opacity: 1;
+    }
+
+    .nav-icon {
+      font-size: 14px;
+      opacity: 0.55;
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+
+    .nav-item.active .nav-icon,
+    .nav-item:hover .nav-icon {
+      opacity: 1;
+    }
+
+    .sidebar-footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      line-height: 1.6;
+      flex-shrink: 0;
+    }
+
+    /* ── Cloud connection panel ─────────────────────────────────────── */
+    .cloud-status-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .cloud-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .cloud-status-dot.local {
+      background: var(--text3);
+    }
+
+    .cloud-status-dot.syncing {
+      background: #f0b040;
+      animation: cloud-pulse 1.2s infinite;
+    }
+
+    .cloud-status-dot.cloud {
+      background: var(--accent);
+    }
+
+    .cloud-status-dot.error {
+      background: #e8455a;
+    }
+
+    @keyframes cloud-pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.35
+      }
+    }
+
+    .cloud-status-text {
+      flex: 1;
+      font-size: 10px;
+      color: var(--text3);
+    }
+
+    .cloud-connect-btn {
+      background: transparent;
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      color: var(--text2);
+      font-size: 10px;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      transition: color 0.1s, border-color 0.1s;
+    }
+
+    .cloud-connect-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .cloud-workspace-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 7px;
+    }
+
+    .cloud-ws-label {
+      font-size: 9px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      flex-shrink: 0;
+    }
+
+    .cloud-ws-code {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      background: var(--surface2);
+      padding: 1px 5px;
+      border-radius: 4px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text2);
+    }
+
+    .cloud-copy-btn {
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.1s, background 0.1s;
+      flex-shrink: 0;
+    }
+
+    .cloud-copy-btn:hover {
+      color: var(--accent);
+      background: rgba(184, 240, 51, 0.08);
+    }
+
+    /* ── Main area ──────────────────────────────────── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Session bar ────────────────────────────────── */
+    .session-bar {
+      height: 44px;
+      min-height: 44px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+
+    .session-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #session-name {
+      flex: 1;
+      max-width: 300px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid transparent;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      outline: none;
+      padding: 2px 0;
+      transition: border-color 0.15s;
+    }
+
+    #session-name::placeholder {
+      color: var(--text3);
+    }
+
+    #session-name:focus {
+      border-bottom-color: var(--accent);
+    }
+
+    .session-spacer {
+      flex: 1;
+    }
+
+    #breadcrumb {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    /* ── Content host ───────────────────────────────── */
+    .content-host {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Home dashboard ─────────────────────────────── */
+    #home-dashboard {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 36px 40px 48px;
+    }
+
+    .home-greeting {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .home-sub {
+      font-size: 13px;
+      color: var(--text3);
+      margin-bottom: 28px;
+    }
+
+    .home-section-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .recent-strip {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      min-height: 30px;
+    }
+
+    .recent-pill {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: color 0.1s, border-color 0.1s, background 0.1s;
+    }
+
+    .recent-pill:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .app-card:hover {
+      border-color: rgba(184, 240, 51, 0.35);
+      background: var(--accent-dim);
+    }
+
+    .app-card-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .app-card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+
+    .app-card:hover .app-card-icon {
+      background: rgba(184, 240, 51, 0.12);
+      border-color: rgba(184, 240, 51, 0.3);
+    }
+
+    .app-card-group {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    .app-card-name {
+      font-family: var(--font-display);
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+
+    .app-card-desc {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    /* ── Status widgets ─────────────────────────────── */
+    #status-section {
+      margin-bottom: 8px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(184, 240, 51, 0.35);
+      background: var(--accent-dim);
+    }
+
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card-icon {
+      font-size: 14px;
+      opacity: 0.7;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .stat-card-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.1px;
+      flex: 1;
+    }
+
+    .stat-count {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--accent);
+      background: rgba(184, 240, 51, 0.1);
+      border: 1px solid rgba(184, 240, 51, 0.2);
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .stat-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 68px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.35;
+      overflow: hidden;
+    }
+
+    .stat-item-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .stat-item-text {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stat-item-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .stat-item[data-item-id] {
+      cursor: pointer;
+      border-radius: 5px;
+      padding: 1px 4px;
+      margin: 0 -4px;
+      transition: background 0.1s;
+    }
+
+    .stat-item[data-item-id]:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .stat-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .stat-badge.decision {
+      background: rgba(184, 240, 51, 0.12);
+      color: var(--accent);
+    }
+
+    .stat-badge.risk {
+      background: rgba(255, 80, 80, 0.12);
+      color: #ff9090;
+    }
+
+    .stat-badge.note {
+      background: rgba(150, 150, 200, 0.1);
+      color: #9999cc;
+    }
+
+    .stat-badge.open {
+      background: rgba(255, 180, 0, 0.1);
+      color: #ffb833;
+    }
+
+    .stat-card-footer {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── iframe ─────────────────────────────────────── */
+    #app-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+    }
+
+    /* ── Loading progress bar (4D) ─────────────────── */
+    @keyframes progress-run {
+      0%   { transform: translateX(-100%); }
+      60%  { transform: translateX(20%); }
+      100% { transform: translateX(110%); }
+    }
+    #load-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    #load-bar.active { opacity: 1; }
+    #load-bar::after {
+      content: '';
+      display: block;
+      height: 100%;
+      width: 60%;
+      background: var(--accent);
+      animation: progress-run 0.9s ease infinite;
+    }
+
+    /* ── Data Modal ─────────────────────────────────── */
+    .data-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .data-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      width: 400px;
+      max-width: 90vw;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .data-modal-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .data-modal-desc {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .data-size {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      margin-bottom: 20px;
+      padding: 6px 12px;
+      background: var(--accent-dim);
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .data-btn-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .data-btn {
+      flex: 1;
+      padding: 10px 0;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .data-btn.primary {
+      background: var(--accent);
+      color: #111;
+    }
+
+    .data-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    .data-btn.secondary {
+      background: var(--surface2);
+      color: var(--text2);
+      border-color: var(--border2);
+    }
+
+    .data-btn.secondary:hover {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .data-modal-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      text-align: right;
+    }
+
+    .close-modal-btn {
+      background: none;
+      border: none;
+      font-size: 13px;
+      color: var(--text3);
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+
+    .close-modal-btn:hover {
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <a href="#home-dashboard" class="skip-link">Skip to main content</a>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo" onclick="goHome()" title="Home">
+      <div class="sidebar-logo-mark">TH</div>
+      <div class="sidebar-logo-text">Thinking Hub</div>
+    </div>
+
+    <div class="sidebar-nav" id="sidebar-nav"></div>
+
+    <div class="sidebar-footer" id="cloud-footer">
+      <div class="cloud-status-row">
+        <span id="cloud-dot" class="cloud-status-dot local"></span>
+        <span id="cloud-text" class="cloud-status-text">Local only</span>
+        <button id="cloud-btn" class="cloud-connect-btn">Connect</button>
+      </div>
+      <div id="cloud-ws-row" class="cloud-workspace-row" style="display:none">
+        <span class="cloud-ws-label">WS</span>
+        <code id="cloud-ws-id" class="cloud-ws-code"></code>
+        <button id="cloud-copy-btn" class="cloud-copy-btn" title="Copy invite link">⧉</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main area -->
+  <div class="main-area">
+
+    <!-- Session bar -->
+    <div class="session-bar">
+      <span class="session-label">Session</span>
+      <input id="session-name" type="text" placeholder="Name this session…" autocomplete="off" spellcheck="false">
+      <div class="session-spacer"></div>
+      <button
+        style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:8px;font-family:var(--font-mono);"
+        onclick="openDataModal()" title="Data & Backup" aria-label="Data &amp; Backup">⚙️</button>
+      <button
+        style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:10px;font-family:var(--font-mono);"
+        onclick="startTour()" title="Interactive Tour" aria-label="Interactive Tour">?</button>
+      <button id="theme-toggle-btn" style="
+    background:transparent;
+    border:none;
+    color:var(--text3);
+    cursor:pointer;
+    font-size:15px;
+    margin-right:8px;
+    font-family:var(--font-mono);
+  " title="Toggle theme" aria-label="Toggle theme">
+        🌙
+      </button>
+      <span id="breadcrumb"></span>
+    </div>
+
+    <!-- Content host -->
+    <div class="content-host">
+
+      <!-- Home dashboard -->
+      <div id="home-dashboard">
+        <div class="home-greeting" id="greeting">Good morning.</div>
+        <div class="home-sub">What are we working on?</div>
+
+        <div id="status-section" style="display:none">
+          <div class="home-section-label">Overview</div>
+          <div class="status-grid" id="status-grid"></div>
+        </div>
+
+        <div class="home-section-label" id="recent-label" style="display:none">Recent</div>
+        <div class="recent-strip" id="recent-strip"></div>
+
+        <div class="home-section-label">Tools</div>
+        <div class="app-grid" id="app-grid"></div>
+      </div>
+
+      <!-- Loading progress bar -->
+      <div id="load-bar"></div>
+      <!-- App iframe -->
+      <iframe id="app-frame" src="about:blank" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- Data Backup Modal -->
+  <div id="data-modal" class="data-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="data-modal-title"
+    onclick="if(event.target===this) closeDataModal()">
+    <div class="data-modal">
+      <div class="data-modal-title" id="data-modal-title">Data & Backup</div>
+      <div class="data-modal-desc">Download a complete snapshot of all your local Thinking Hub data (projects, tasks,
+        ideas, decisions, schedule).</div>
+      <div class="data-size" id="data-size-str">0 KB in local storage</div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Obsidian Vault Name</div>
+        <input id="obsidian-vault-name" placeholder="e.g. My Vault" oninput="saveVaultSetting(this.value)"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 10px;font-size:13px;font-family:var(--font-body);outline:none;box-sizing:border-box">
+        <div style="font-size:11px;color:var(--text3);margin-top:5px">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
+      </div>
+
+      <div class="data-btn-row">
+        <button class="data-btn primary" onclick="exportHubData()">Export Backup (.json)</button>
+        <button class="data-btn secondary" onclick="triggerImport()">Import Backup</button>
+      </div>
+      <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
+
+      <div class="data-modal-footer">
+        <button class="close-modal-btn" onclick="closeDataModal()">Close</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // ── App registry ──────────────────────────────────────────────────────────────
+
+    const APPS = [
+      {
+        id: 'project-hub',
+        label: 'Project Hub',
+        group: 'PLAN',
+        icon: '◈',
+        file: 'project-hub.html',
+        desc: 'Track milestones, tasks and workstreams across a project'
+      },
+      {
+        id: 'schedule',
+        label: 'Schedule',
+        group: 'PLAN',
+        icon: '▦',
+        file: 'schedule.html',
+        desc: 'Timeline and calendar views for tasks, milestones and events'
+      },
+      {
+        id: 'idea-swiper',
+        label: 'Idea Swiper',
+        group: 'THINK',
+        icon: '⟳',
+        file: 'idea-swiper.html',
+        desc: 'Rapid triage — keep, park, or discard ideas'
+      },
+      {
+        id: 'kmqt-board',
+        label: 'KMQT Board',
+        group: 'THINK',
+        icon: '⊞',
+        file: 'kmqt-board.html',
+        desc: 'Known / Messy / Questions / Thinking structured board'
+      },
+      {
+        id: 'decision-hub',
+        label: 'Decision Hub',
+        group: 'DECIDE',
+        icon: '◎',
+        file: 'decision-hub.html',
+        desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment'
+      },
+      {
+        id: 'graph-hub',
+        label: 'Dependency Graph',
+        group: 'THINK',
+        icon: '🕸️',
+        file: 'graph-hub.html',
+        desc: 'Visual map of your tasks, decisions, and ideas'
+      },
+      {
+        id: 'canvas-hub',
+        label: 'Spatial Canvas',
+        group: 'THINK',
+        icon: '✏️',
+        file: 'canvas-hub.html',
+        desc: 'Unstructured spatial notes for limitless ideation'
+      },
+      {
+        id: 'tool-portfolio',
+        label: 'Tool Portfolio',
+        group: 'SENSE',
+        icon: '🧰',
+        file: 'tool-portfolio.html',
+        desc: 'Curated map of tools, platforms, and vendors'
+      },
+      {
+        id: 'focus-hub',
+        label: 'Focus Timer',
+        group: 'DO',
+        icon: '◉',
+        file: 'focus-hub.html',
+        desc: 'Pomodoro-style focus sessions linked to your tasks'
+      },
+      {
+        id: 'log-hub',
+        label: 'Daily Log',
+        group: 'DO',
+        icon: '◷',
+        file: 'log-hub.html',
+        desc: 'Private daily journal with mood tracking and streak calendar'
+      },
+      {
+        id: 'review-hub',
+        label: 'Weekly Review',
+        group: 'DO',
+        icon: '◈',
+        file: 'review-hub.html',
+        desc: 'Structured weekly ritual — done, capture, next week big rocks'
+      },
+      {
+        id: 'retro-hub',
+        label: 'Retro Board',
+        group: 'TEAM',
+        icon: '⟳',
+        file: 'retro-hub.html',
+        desc: 'Async retrospectives with emoji reactions and markdown export'
+      },
+      {
+        id: 'assumptions-hub',
+        label: 'Assumption Tracker',
+        group: 'DECIDE',
+        icon: '◇',
+        file: 'assumptions-hub.html',
+        desc: 'Track key assumptions through their lifecycle — from assumed to validated'
+      },
+      {
+        id: 'goals-hub',
+        label: 'Goals Hub',
+        group: 'PLAN',
+        icon: '◎',
+        file: 'goals-hub.html',
+        desc: 'Quarterly OKRs — connect daily work to strategic objectives'
+      },
+      {
+        id: 'matrix-hub',
+        label: 'Priority Matrix',
+        group: 'PLAN',
+        icon: '⊞',
+        file: 'matrix-hub.html',
+        desc: 'Eisenhower matrix — sort tasks by urgency and importance'
+      },
+      {
+        id: 'learning-hub',
+        label: 'Learning Log',
+        group: 'THINK',
+        icon: '◈',
+        file: 'learning-hub.html',
+        desc: 'Track books, articles, and courses with highlights and key insights'
+      },
+      {
+        id: 'meetings-hub',
+        label: 'Meeting Notes',
+        group: 'PLAN',
+        icon: '▦',
+        file: 'meetings-hub.html',
+        desc: 'Structured meeting notes with action items that flow into Project Hub'
+      },
+      {
+        id: 'stakeholder-hub',
+        label: 'Stakeholder Map',
+        group: 'TEAM',
+        icon: '◇',
+        file: 'stakeholder-hub.html',
+        desc: 'Power/interest grid for mapping and managing project stakeholders'
+      },
+      {
+        id: 'risk-hub',
+        label: 'Risk Register',
+        group: 'DECIDE',
+        icon: '◈',
+        file: 'risk-hub.html',
+        desc: 'Track project risks with probability/impact heat-map and mitigation plans'
+      },
+      {
+        id: 'achievements-hub',
+        label: 'Achievements',
+        group: 'ME',
+        icon: '🏅',
+        file: 'achievements-hub.html',
+        desc: 'Your productivity profile — badges, streaks & activity heatmap'
+      }
+    ];
+
+    // ── Session state ─────────────────────────────────────────────────────────────
+
+    const SESSION_KEY = 'hub-session-v1';
+
+    function loadSession() {
+      try {
+        return JSON.parse(localStorage.getItem(SESSION_KEY)) || { sessionName: '', recentApps: [] };
+      } catch {
+        return { sessionName: '', recentApps: [] };
+      }
+    }
+
+    function saveSession(patch) {
+      const s = loadSession();
+      Object.assign(s, patch);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    }
+
+    // ── Sidebar ───────────────────────────────────────────────────────────────────
+
+    function buildSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      nav.innerHTML = '';
+
+      const groups = [...new Set(APPS.map(a => a.group))];
+      groups.forEach(group => {
+        const appsInGroup = APPS.filter(a => a.group === group);
+        const groupEl = document.createElement('div');
+        groupEl.className = 'nav-group';
+        groupEl.innerHTML = `<div class="nav-group-label">${group}</div>`;
+
+        appsInGroup.forEach(app => {
+          const btn = document.createElement('button');
+          btn.className = 'nav-item';
+          btn.dataset.app = app.id;
+          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.label}`;
+          btn.addEventListener('click', () => openApp(app.id));
+          groupEl.appendChild(btn);
+        });
+
+        nav.appendChild(groupEl);
+      });
+    }
+
+    function setActiveNav(id) {
+      document.querySelectorAll('.nav-item').forEach(el =>
+        el.classList.toggle('active', el.dataset.app === id));
+    }
+
+    // ── Home dashboard ────────────────────────────────────────────────────────────
+
+    function buildHomeDashboard() {
+      const grid = document.getElementById('app-grid');
+      grid.innerHTML = '';
+      APPS.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'app-card';
+        card.dataset.app = app.id;
+        card.innerHTML = `
+      <div class="app-card-top">
+        <div class="app-card-icon">${app.icon}</div>
+        <div>
+          <div class="app-card-group">${app.group}</div>
+          <div class="app-card-name">${app.label}</div>
+        </div>
+      </div>
+      <div class="app-card-desc">${app.desc}</div>
+    `;
+        card.addEventListener('click', () => openApp(app.id));
+        grid.appendChild(card);
+      });
+    }
+
+    function refreshRecentStrip() {
+      const { recentApps } = loadSession();
+      const strip = document.getElementById('recent-strip');
+      const label = document.getElementById('recent-label');
+      strip.innerHTML = '';
+
+      if (!recentApps.length) {
+        label.style.display = 'none';
+        return;
+      }
+      label.style.display = '';
+
+      recentApps.forEach(id => {
+        const app = APPS.find(a => a.id === id);
+        if (!app) return;
+        const btn = document.createElement('button');
+        btn.className = 'recent-pill';
+        btn.innerHTML = `${app.icon} ${app.label}`;
+        btn.addEventListener('click', () => openApp(id));
+        strip.appendChild(btn);
+      });
+    }
+
+    // ── App loading ───────────────────────────────────────────────────────────────
+
+    let activeAppId = null;
+
+    function openApp(id) {
+      const app = APPS.find(a => a.id === id);
+      if (!app) return;
+
+      // Update recent apps
+      const s = loadSession();
+      s.recentApps = [id, ...s.recentApps.filter(r => r !== id)].slice(0, 5);
+      saveSession(s);
+
+      // Track tool open for achievements heatmap
+      (function trackAppOpen(appId) {
+        try {
+          const data = HubStorage.get('hub-activity-v1') || { log: [], seenAchievements: [] };
+          if (!Array.isArray(data.log)) data.log = [];
+          if (!Array.isArray(data.seenAchievements)) data.seenAchievements = [];
+          data.log.push({ appId, ts: new Date().toISOString() });
+          if (data.log.length > 10000) data.log = data.log.slice(1000);
+          HubStorage.set('hub-activity-v1', data);
+        } catch (e) {}
+      })(id);
+
+      // Load iframe
+      const frame = document.getElementById('app-frame');
+      const loadBar = document.getElementById('load-bar');
+      loadBar.classList.add('active');
+      frame.src = app.file;
+      frame.style.display = 'block';
+
+      // Send highlight once the tool finishes loading
+      frame.onload = () => {
+        loadBar.classList.remove('active');
+        if (_pendingHighlight) {
+          frame.contentWindow.postMessage({ type: 'hub-highlight', itemId: _pendingHighlight }, window.location.origin || '*');
+          _pendingHighlight = null;
+        }
+        // Sync theme into iframe
+        const theme = document.documentElement.getAttribute('data-theme');
+        if (theme) {
+          frame.contentDocument.documentElement.setAttribute('data-theme', theme);
+        }
+      };
+
+      // Hide dashboard
+      document.getElementById('home-dashboard').style.display = 'none';
+
+      // Update nav + breadcrumb
+      setActiveNav(id);
+      document.getElementById('breadcrumb').textContent = app.label;
+
+      activeAppId = id;
+    }
+
+    function goHome() {
+      const frame = document.getElementById('app-frame');
+      frame.style.display = 'none';
+      // Delay clearing src to avoid flash
+      setTimeout(() => { if (frame.style.display === 'none') frame.src = 'about:blank'; }, 300);
+
+      document.getElementById('home-dashboard').style.display = '';
+      setActiveNav(null);
+      document.getElementById('breadcrumb').textContent = '';
+      refreshRecentStrip();
+      buildStatusWidgets();
+      activeAppId = null;
+    }
+
+    // ── Greeting ──────────────────────────────────────────────────────────────────
+
+    function setGreeting() {
+      const h = new Date().getHours();
+      const s = loadSession();
+      const time = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+      const name = s.sessionName ? ` — ${s.sessionName}` : '.';
+      document.getElementById('greeting').textContent = time + (s.sessionName ? name : '.');
+    }
+
+    // ── Session name ──────────────────────────────────────────────────────────────
+
+    function initSession() {
+      const s = loadSession();
+      document.getElementById('session-name').value = s.sessionName || '';
+    }
+
+    document.getElementById('session-name').addEventListener('input', function () {
+      saveSession({ sessionName: this.value });
+      setGreeting();
+    });
+
+    // ── Cross-tool navigation (postMessage from tools) ────────────────────────────
+
+    let _pendingHighlight = null;
+
+    window.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'hub-navigate') return;
+      const { tool, itemId } = e.data;
+      if (!tool) return;
+      _pendingHighlight = itemId || null;
+      openApp(tool);
+    });
+
+    // ── Keyboard shortcut (Escape → home) ────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('data-modal').style.display === 'flex') { closeDataModal(); return; }
+        if (activeAppId && document.activeElement.tagName !== 'INPUT') goHome();
+      }
+    });
+
+    // ── Status widgets ────────────────────────────────────────────────────────────
+
+    function _esc(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function buildStatusWidgets() {
+      const grid = document.getElementById('status-grid');
+      const section = document.getElementById('status-section');
+      if (!grid || !section) return;
+
+      const widgets = [];
+
+      // ── Projects (project-hub-v1) ──────────────────────────────────────────────
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        const projects = ph.projects || [];
+        if (projects.length) {
+          const shown = projects.slice(0, 3);
+          const rows = shown.map(p => {
+            const open = (p.tasks || []).filter(t => !t.done).length;
+            const all = (p.tasks || []).length;
+            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(p.id || '')}">
+          <div class="stat-item-dot" style="background:${p.color || 'var(--text3)'}"></div>
+          <div class="stat-item-text">${_esc(p.name)}</div>
+          <div class="stat-item-meta">${open} / ${all} open</div>
+        </div>`;
+          }).join('');
+          widgets.push({
+            id: 'project-hub', icon: '◈', title: 'Project Hub',
+            count: `${projects.length} project${projects.length !== 1 ? 's' : ''}`,
+            body: rows,
+            more: projects.length > 3 ? `+${projects.length - 3} more` : ''
+          });
+        }
+      } catch { }
+
+      // ── Schedule this week (schedule-v1) ──────────────────────────────────────
+      try {
+        const sc = JSON.parse(localStorage.getItem('schedule-v1') || '{}');
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+        const upcoming = (sc.items || [])
+          .filter(it => { const d = new Date(it.start); return !it.done && d >= today && d <= weekEnd; })
+          .sort((a, b) => a.start.localeCompare(b.start));
+        if (upcoming.length) {
+          const shown = upcoming.slice(0, 3);
+          const rows = shown.map(it => {
+            const label = new Date(it.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `<div class="stat-item" data-tool="schedule" data-item-id="${_esc(it.id || '')}">
+          <div class="stat-item-dot" style="background:${it.color || 'var(--text3)'}"></div>
+          <div class="stat-item-text">${_esc(it.title)}</div>
+          <div class="stat-item-meta">${label}</div>
+        </div>`;
+          }).join('');
+          widgets.push({
+            id: 'schedule', icon: '▦', title: 'Schedule',
+            count: `${upcoming.length} this week`,
+            body: rows,
+            more: upcoming.length > 3 ? `+${upcoming.length - 3} more` : ''
+          });
+        }
+      } catch { }
+
+      // ── Decision Hub (decision-hub-v1) ────────────────────────────────────────
+      try {
+        const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const entries = Array.isArray(dl) ? dl : (dl.entries || []);
+        if (entries.length) {
+          const shown = entries.slice(0, 3);
+          const rows = shown.map(e => `<div class="stat-item" data-tool="decision-hub" data-item-id="${_esc(e.id || '')}">
+        <span class="stat-badge ${_esc(e.type || 'note')}">${_esc(e.type || 'note')}</span>
+        <div class="stat-item-text">${_esc(e.title || '(untitled)')}</div>
+      </div>`).join('');
+          widgets.push({
+            id: 'decision-hub', icon: '◎', title: 'Decision Hub',
+            count: `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`,
+            body: rows,
+            more: entries.length > 3 ? `+${entries.length - 3} more` : ''
+          });
+        }
+      } catch { }
+
+      // ── Open Questions (kmqt_current_v2) ──────────────────────────────────────
+      try {
+        const km = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
+        const questions = (km.columns && km.columns.Q) || [];
+        if (questions.length) {
+          const qLabel = (km.labels && km.labels.Q) || 'Question';
+          const shown = questions.slice(0, 3);
+          const rows = shown.map(q => `<div class="stat-item" data-tool="kmqt-board" data-item-id="${_esc(q.id || '')}">
+        <div class="stat-item-dot" style="background:var(--accent);opacity:.45"></div>
+        <div class="stat-item-text">${_esc(q.text || '')}</div>
+      </div>`).join('');
+          widgets.push({
+            id: 'kmqt-board', icon: '⊞', title: `${_esc(qLabel)}s`,
+            count: `${questions.length} open`,
+            body: rows,
+            more: questions.length > 3 ? `+${questions.length - 3} more` : ''
+          });
+        }
+      } catch { }
+
+      // ── Goals Hub (goals-hub-v1) ──────────────────────────────────────────────
+      try {
+        const gh = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
+        const quarters = (gh.quarters || []).filter(q => !q.archived);
+        if (quarters.length) {
+          const qtr = quarters[quarters.length - 1];
+          const objs = qtr.objectives || [];
+          if (objs.length) {
+            const pct = objs.length
+              ? Math.round(objs.reduce((s, o) => {
+                  const krs = o.keyResults || [];
+                  const op = krs.length ? Math.round(krs.reduce((ks, kr) => {
+                    if (kr.type === 'checkbox') return ks + (kr.done ? 100 : 0);
+                    return ks + Math.min(100, Math.round(((parseFloat(kr.current)||0) / (parseFloat(kr.target)||1)) * 100));
+                  }, 0) / krs.length) : 0;
+                  return s + op;
+                }, 0) / objs.length)
+              : 0;
+            const shown = objs.slice(0, 3);
+            const rows = shown.map(o => `<div class="stat-item" data-tool="goals-hub" data-item-id="${_esc(o.id || '')}">
+              <div class="stat-item-dot" style="background:${o.color || 'var(--accent)'}"></div>
+              <div class="stat-item-text">${_esc(o.title || 'Objective')}</div>
+              <div class="stat-item-meta">${(o.keyResults||[]).length} KR</div>
+            </div>`).join('');
+            widgets.push({
+              id: 'goals-hub', icon: '◎', title: `Goals — ${_esc(qtr.label || '')}`,
+              count: `${pct}% overall`,
+              body: rows,
+              more: objs.length > 3 ? `+${objs.length - 3} more` : ''
+            });
+          }
+        }
+      } catch { }
+
+      if (!widgets.length) { section.style.display = 'none'; return; }
+
+      section.style.display = '';
+      grid.innerHTML = '';
+      widgets.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `
+      <div class="stat-card-header">
+        <span class="stat-card-icon">${w.icon}</span>
+        <span class="stat-card-title">${w.title}</span>
+        <span class="stat-count">${w.count}</span>
+      </div>
+      <div class="stat-card-body">${w.body}</div>
+      <div class="stat-card-footer">
+        <span>${w.more}</span>
+        <span>Open →</span>
+      </div>`;
+        card.addEventListener('click', e => {
+          const item = e.target.closest('.stat-item[data-item-id]');
+          if (item && item.dataset.itemId) {
+            e.stopPropagation();
+            _pendingHighlight = item.dataset.itemId;
+            openApp(item.dataset.tool);
+          } else {
+            openApp(w.id);
+          }
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    // ── Cloud panel ───────────────────────────────────────────────────────────────
+
+    // Collaboration keys: shared work content that should sync across collaborators.
+    // UI state keys (hub-session-v1, panel sizes, etc.) are intentionally excluded.
+    const COLLABORATION_KEYS = [
+      'project-hub-v1',
+      'hub-links-v1',
+      'decision-log-v1',
+      'ideaswipe_history_v6',
+      'schedule-v1',
+      'kmqt_current_v2',
+      'dw-title-v1',
+      'dw-problem-v1',
+      'dw-canvas-v1',
+      'dw-options-v1',
+      'decisionjam_myVotes_v1',
+      'decisionjam_imports_v1',
+    ];
+
+    function initCloudPanel() {
+      HubStorage.onStatusChange(updateCloudUI);
+      document.getElementById('cloud-copy-btn').addEventListener('click', copyWorkspaceLink);
+      updateCloudUI(HubStorage.getStatus());
+      _checkHashForWorkspace();
+
+      // Live-refresh dashboard widgets when remote changes arrive
+      HubStorage.subscribe('project-hub-v1', () => { buildStatusWidgets(); refreshRecentStrip(); });
+      HubStorage.subscribe('kmqt_current_v2', buildStatusWidgets);
+      HubStorage.subscribe('decision-log-v1', buildStatusWidgets);
+      HubStorage.subscribe('schedule-v1', buildStatusWidgets);
+      HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
+    }
+
+    function updateCloudUI(status) {
+      const dot = document.getElementById('cloud-dot');
+      const text = document.getElementById('cloud-text');
+      const btn = document.getElementById('cloud-btn');
+      const wsRow = document.getElementById('cloud-ws-row');
+      const wsCode = document.getElementById('cloud-ws-id');
+
+      if (status.mode === 'cloud') {
+        dot.className = 'cloud-status-dot cloud';
+        text.textContent = 'Cloud sync';
+        btn.textContent = 'Disconnect';
+        btn.onclick = () => { HubStorage.disconnect(); };
+        wsRow.style.display = 'flex';
+        wsCode.textContent = status.workspaceId || '';
+      } else {
+        dot.className = 'cloud-status-dot local';
+        text.textContent = 'Local only';
+        btn.textContent = 'Connect';
+        btn.onclick = promptConnect;
+        wsRow.style.display = 'none';
+      }
+    }
+
+    function promptConnect() {
+      const url = prompt('Supabase Project URL:\n(e.g. https://xxxx.supabase.co)');
+      if (!url || !url.trim()) return;
+      const key = prompt('Supabase Anon Key:');
+      if (!key || !key.trim()) return;
+      const wsInput = prompt('Workspace ID (leave blank to create a new workspace):');
+
+      const dot = document.getElementById('cloud-dot');
+      dot.className = 'cloud-status-dot syncing';
+
+      HubStorage.useSupabase(url.trim(), key.trim(), wsInput ? wsInput.trim() : null)
+        .then(() => {
+          return HubStorage.migrateToCloud(COLLABORATION_KEYS);
+        })
+        .then(() => {
+          updateCloudUI(HubStorage.getStatus());
+        })
+        .catch(err => {
+          dot.className = 'cloud-status-dot error';
+          alert('Connection failed: ' + (err.message || err));
+          setTimeout(() => updateCloudUI(HubStorage.getStatus()), 2500);
+        });
+    }
+
+    function copyWorkspaceLink() {
+      const status = HubStorage.getStatus();
+      if (!status.workspaceId) return;
+      try {
+        const cfg = JSON.parse(localStorage.getItem('hub-cloud-config-v1') || '{}');
+        const params = new URLSearchParams({
+          ws: status.workspaceId,
+          url: cfg.url || '',
+          key: cfg.key || ''
+        });
+        const shareUrl = location.href.split('#')[0] + '#' + params.toString();
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          const btn = document.getElementById('cloud-copy-btn');
+          btn.textContent = '✓';
+          setTimeout(() => { btn.textContent = '⧉'; }, 1800);
+        });
+      } catch (e) {
+        alert('Could not copy link: ' + e.message);
+      }
+    }
+
+    function _checkHashForWorkspace() {
+      if (!location.hash || location.hash.length < 5) return;
+      try {
+        const params = new URLSearchParams(location.hash.slice(1));
+        const ws = params.get('ws');
+        const url = params.get('url');
+        const key = params.get('key');
+        if (!ws || !url || !key) return;
+
+        const ok = confirm(
+          'Join shared workspace?\n\nWorkspace: ' + ws +
+          '\nServer: ' + url +
+          '\n\nThis will replace your local data with the shared workspace data.'
+        );
+        if (!ok) return;
+
+        // Clear hash to avoid re-triggering on refresh
+        history.replaceState(null, '', location.pathname);
+
+        const dot = document.getElementById('cloud-dot');
+        dot.className = 'cloud-status-dot syncing';
+
+        HubStorage.useSupabase(url, key, ws)
+          .then(() => HubStorage.pullFromCloud())
+          .then(() => {
+            updateCloudUI(HubStorage.getStatus());
+            buildStatusWidgets();
+            refreshRecentStrip();
+          })
+          .catch(err => {
+            dot.className = 'cloud-status-dot error';
+            alert('Failed to join workspace: ' + (err.message || err));
+            setTimeout(() => updateCloudUI(HubStorage.getStatus()), 2500);
+          });
+      } catch { }
+    }
+
+    function startTour() {
+      goHome();
+      setTimeout(() => {
+        HubTutorial.start([
+          {
+            element: '.home-greeting',
+            title: 'Welcome to Thinking Hub',
+            text: 'This is your connected workspace — 8 specialised tools that share data, link to each other, and build on your work across sessions.'
+          },
+          {
+            element: '[data-app="project-hub"]',
+            title: '1 — Plan: Project Hub',
+            text: 'Start by creating a project and adding tasks with due dates. Those tasks flow automatically into Schedule, and you can promote ideas from Idea Swiper directly into tasks here.'
+          },
+          {
+            element: '[data-app="idea-swiper"]',
+            title: '2 — Think: Idea Swiper → KMQT',
+            text: 'Dump every idea into Idea Swiper and swipe to sort (Like / Super / Nope). Strong ideas land in Project Hub. Messy ones go to the KMQT Board to be unpacked into Known facts, Questions, and next Tries.'
+          },
+          {
+            element: '[data-app="decision-hub"]',
+            title: '3 — Decide: Decision Hub',
+            text: 'Log decisions with problem framing, option mapping, and stakeholder alignment votes. Link decisions to tasks and ideas — open questions can be sent straight to the KMQT Q-column.'
+          },
+          {
+            element: '[data-app="graph-hub"]',
+            title: '4 — See Everything: Graph + Search',
+            text: 'The Dependency Graph shows how all your items connect across tools. Press ⌘K (or Ctrl+K) anywhere to instantly search across every project, idea, decision, and note.'
+          }
+        ]);
+      }, 100);
+    }
+
+    // ── Data Export / Import ──────────────────────────────────────────────────────
+
+    let _modalTrigger = null;
+    function saveVaultSetting(v) {
+      const s = HubStorage.get('hub-settings-v1') || {};
+      HubStorage.set('hub-settings-v1', { ...s, obsidianVault: v.trim() });
+    }
+
+    function openDataModal() {
+      _modalTrigger = document.activeElement;
+      document.getElementById('data-modal').style.display = 'flex';
+      const s = HubStorage.get('hub-settings-v1') || {};
+      document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
+      // Move focus inside the modal
+      const firstBtn = document.querySelector('#data-modal .data-btn');
+      if (firstBtn) setTimeout(() => firstBtn.focus(), 50);
+
+      let kb = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const item = localStorage.getItem(key);
+        kb += (item.length * 2) / 1024;
+      }
+      document.getElementById('data-size-str').textContent = kb.toFixed(1) + ' KB in local storage';
+    }
+
+    function closeDataModal() {
+      document.getElementById('data-modal').style.display = 'none';
+      document.getElementById('import-file').value = '';
+      // Return focus to the element that opened the modal
+      if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
+    }
+
+    function exportHubData() {
+      const db = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        db[k] = localStorage.getItem(k);
+      }
+      const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `thinking-hub-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Backup exported', 'success');
+    }
+
+    function triggerImport() {
+      document.getElementById('import-file').click();
+    }
+
+    function handleImportFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const db = JSON.parse(ev.target.result);
+          if (!confirm('This will OVERWRITE your current local data with the backup.\\nAre you sure you want to proceed?')) return;
+
+          for (const k in db) {
+            if (db.hasOwnProperty(k)) {
+              localStorage.setItem(k, db[k]);
+            }
+          }
+          showToast('Import successful — reloading…', 'success');
+          setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+          showToast('Failed to parse backup file: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────────
+
+    initSession();
+    buildSidebar();
+    buildHomeDashboard();
+    buildStatusWidgets();
+    refreshRecentStrip();
+    setGreeting();
+    initCloudPanel();
+
+    // Auto-start tutorial on first run
+    if (!HubStorage.get('tutorial-seen-v1')) {
+      HubStorage.set('tutorial-seen-v1', true);
+      setTimeout(startTour, 300);
+    }
+  </script>
+  <script>
+    /* =========================
+       THEME TOGGLE (GLOBAL)
+       ========================= */
+
+    const THEME_KEY = 'th-theme';
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem(THEME_KEY, theme);
+
+      const btn = document.getElementById('theme-toggle-btn');
+      if (btn) {
+        btn.textContent = theme === 'light' ? '🌞' : '🌙';
+      }
+    }
+
+    // Load persisted theme
+    (function initTheme() {
+      const saved = localStorage.getItem(THEME_KEY) || 'dark';
+      applyTheme(saved);
+    })();
+
+    // Toggle handler
+    document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      HubBootstrap.start('hub');
+    });
+  </script>
+</body>
+
+</html>

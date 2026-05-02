@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spatial Canvas - Thinking Hub</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="theme.css">
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      color: var(--text);
+      font-family: var(--font-body);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Viewport ───────────────────────────────────────────── */
+    .viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+      background-size: 20px 20px;
+      background-position: 0 0;
+      cursor: grab;
+    }
+
+    .viewport.panning {
+      cursor: grabbing;
+    }
+
+    .viewport.connect-mode {
+      cursor: crosshair;
+    }
+
+    #canvas-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      transform-origin: 0 0;
+    }
+
+    /* SVG edge layer — inside canvas-layer, overflow:visible so lines reach anywhere */
+    #edges-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    /* ── Help text ──────────────────────────────────────────── */
+    .help-text {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--text3);
+      font-size: 11px;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    /* ── Controls ───────────────────────────────────────────── */
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    /* ── Nodes ──────────────────────────────────────────────── */
+    .node {
+      position: absolute;
+      width: 180px;
+      min-height: 80px;
+      background: #2a2a30;
+      border: 1px solid #444;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      cursor: grab;
+      transition: box-shadow 0.15s;
+    }
+
+    .node:active {
+      cursor: grabbing;
+    }
+
+    .node.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(184, 240, 51, 0.25), 0 4px 16px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+
+    .node.connect-source {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3), 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .node-header {
+      height: 12px;
+      border-radius: 8px 8px 0 0;
+      background: rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+    }
+
+    .node-body {
+      padding: 10px;
+      flex: 1;
+      outline: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: #edece4;
+      line-height: 1.45;
+      word-wrap: break-word;
+      overflow-y: hidden;
+      cursor: text;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .node-body:empty::before {
+      content: 'Type here…';
+      color: #55545c;
+      pointer-events: none;
+    }
+
+    /* Node color variants */
+    .node.c-gray {
+      background: var(--node-gray);
+      border-color: var(--border-gray);
+    }
+
+    .node.c-yellow {
+      background: var(--node-yellow);
+      border-color: var(--border-yellow);
+    }
+
+    .node.c-green {
+      background: var(--node-green);
+      border-color: var(--border-green);
+    }
+
+    .node.c-blue {
+      background: var(--node-blue);
+      border-color: var(--border-blue);
+    }
+
+    .node.c-red {
+      background: var(--node-red);
+      border-color: var(--border-red);
+    }
+
+    .node.c-purple {
+      background: var(--node-purple);
+      border-color: var(--border-purple);
+    }
+
+    /* ── Node action bar ────────────────────────────────────── */
+    .node-actions {
+      position: absolute;
+      top: -34px;
+      left: 0;
+      display: none;
+      gap: 3px;
+      background: var(--surface2);
+      padding: 4px 5px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .node.selected .node-actions {
+      display: flex;
+    }
+
+    .na-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .na-btn:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    .na-btn.del:hover {
+      background: rgba(232, 69, 90, 0.15);
+      color: #e8455a;
+    }
+
+    .na-btn.active-color {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-radius: 50%;
+    }
+
+    .na-sep {
+      width: 1px;
+      background: var(--border);
+      margin: 2px 2px;
+    }
+
+    .color-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      pointer-events: none;
+    }
+
+    /* ── Mini-map ───────────────────────────────────────────── */
+    #minimap {
+      position: absolute;
+      bottom: 68px;
+      right: 20px;
+      width: 160px;
+      height: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      display: none;
+    }
+
+    #minimap-canvas {
+      display: block;
+    }
+
+    #minimap-label {
+      position: absolute;
+      top: 5px;
+      left: 8px;
+      font-size: 9px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="help-text" id="help-text">Double-click canvas to create · Space+Drag to pan · Scroll to zoom</div>
+
+  <div class="viewport" id="viewport">
+    <div id="canvas-layer">
+      <svg id="edges-svg"></svg>
+    </div>
+  </div>
+
+  <!-- Mini-map -->
+  <div id="minimap">
+    <div id="minimap-label">Overview</div>
+    <canvas id="minimap-canvas" width="160" height="100"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="btn" onclick="zoomIn()">＋ Zoom</button>
+    <button class="btn" onclick="zoomOut()">－ Zoom</button>
+    <button class="btn" onclick="resetView()">Reset View</button>
+    <button class="btn" id="connect-btn" onclick="toggleConnectMode()"
+      title="Draw connections between nodes">Connect</button>
+    <button class="btn" onclick="exportPNG()" title="Export canvas as PNG">Export PNG</button>
+  </div>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────
+
+    const STORAGE_KEY = 'canvas-v1';
+    const NODE_W = 180;
+    const NODE_H = 80; // approximate height for edge anchoring
+
+    const COLORS = [
+      { id: 'c-gray', dot: '#666' },
+      { id: 'c-yellow', dot: '#b29245' },
+      { id: 'c-green', dot: '#4a9465' },
+      { id: 'c-blue', dot: '#3a6ea8' },
+      { id: 'c-red', dot: '#a84040' },
+      { id: 'c-purple', dot: '#7a4aa8' },
+    ];
+
+    // ── State ────────────────────────────────────────────────
+
+    let db = {
+      nodes: [],
+      edges: [],
+      panX: window.innerWidth / 2,
+      panY: window.innerHeight / 2,
+      zoom: 1
+    };
+
+    const viewport = document.getElementById('viewport');
+    const layer = document.getElementById('canvas-layer');
+
+    try {
+      const stored = HubStorage.get(STORAGE_KEY);
+      if (stored && stored.nodes) {
+        db = { edges: [], ...stored };
+      }
+    } catch { }
+
+    if (!db.nodes.length) {
+      db.panX = window.innerWidth / 2;
+      db.panY = window.innerHeight / 2;
+    }
+
+    // ── Persistence ──────────────────────────────────────────
+
+    let _saveTimer;
+    function pulseSave() {
+      clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(() => HubStorage.set(STORAGE_KEY, db), 500);
+    }
+
+    HubStorage.subscribe(STORAGE_KEY, () => {
+      const stored = HubStorage.get(STORAGE_KEY);
+      if (stored) { db = { edges: [], ...stored }; renderAll(); updateTransform(); }
+    });
+
+    // ── Viewport transform ───────────────────────────────────
+
+    function updateTransform() {
+      layer.style.transform = `translate(${db.panX}px, ${db.panY}px) scale(${db.zoom})`;
+      viewport.style.backgroundPosition = `${db.panX}px ${db.panY}px`;
+      viewport.style.backgroundSize = `${20 * db.zoom}px ${20 * db.zoom}px`;
+      renderMinimap();
+    }
+
+    function zoomIn() { applyZoom(1.2, viewport.offsetWidth / 2, viewport.offsetHeight / 2); }
+    function zoomOut() { applyZoom(1 / 1.2, viewport.offsetWidth / 2, viewport.offsetHeight / 2); }
+    function resetView() {
+      db.zoom = 1; db.panX = window.innerWidth / 2; db.panY = window.innerHeight / 2;
+      updateTransform(); pulseSave();
+    }
+
+    function applyZoom(factor, cx, cy) {
+      const newZoom = Math.min(Math.max(0.15, db.zoom * factor), 4);
+      db.panX = cx - (cx - db.panX) * (newZoom / db.zoom);
+      db.panY = cy - (cy - db.panY) * (newZoom / db.zoom);
+      db.zoom = newZoom;
+      updateTransform(); pulseSave();
+    }
+
+    // ── Pan ──────────────────────────────────────────────────
+
+    let isPanning = false, startPanX = 0, startPanY = 0;
+    let spacePressed = false;
+
+    viewport.addEventListener('mousedown', e => {
+      if (e.target !== viewport && !spacePressed) return;
+      if (e.button !== 0 && e.button !== 1) return;
+      isPanning = true;
+      startPanX = e.clientX - db.panX;
+      startPanY = e.clientY - db.panY;
+      viewport.classList.add('panning');
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (isPanning) {
+        db.panX = e.clientX - startPanX;
+        db.panY = e.clientY - startPanY;
+        updateTransform();
+      }
+      if (isDraggingNode && dragState) {
+        const dx = (e.clientX - dragState.startMouseX) / db.zoom;
+        const dy = (e.clientY - dragState.startMouseY) / db.zoom;
+        dragState.node.x = dragState.startX + dx;
+        dragState.node.y = dragState.startY + dy;
+        dragState.el.style.left = dragState.node.x + 'px';
+        dragState.el.style.top = dragState.node.y + 'px';
+        renderEdges(); // keep edges attached while dragging
+        renderMinimap();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isPanning) { isPanning = false; viewport.classList.remove('panning'); pulseSave(); }
+      if (isDraggingNode) { isDraggingNode = false; dragState = null; pulseSave(); }
+    });
+
+    viewport.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      applyZoom(Math.exp(-e.deltaY * 0.001), e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: false });
+
+    // ── Keyboard ─────────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' && document.activeElement.tagName !== 'DIV') {
+        e.preventDefault();
+        spacePressed = true;
+        if (!connectMode) viewport.style.cursor = 'grab';
+      }
+      if (e.key === 'Escape') {
+        if (connectMode) { toggleConnectMode(); return; }
+        selectNode(null);
+      }
+      if ((e.key === 'Backspace' || e.key === 'Delete') &&
+        selectedNodeId && document.activeElement.tagName !== 'DIV') {
+        deleteNode(selectedNodeId);
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      if (e.code === 'Space') {
+        spacePressed = false;
+        if (!connectMode) viewport.style.cursor = '';
+      }
+    });
+
+    // ── Node selection & drag ────────────────────────────────
+
+    let selectedNodeId = null;
+    let isDraggingNode = false;
+    let dragState = null;
+
+    function selectNode(id) {
+      selectedNodeId = id;
+      document.querySelectorAll('.node').forEach(el =>
+        el.classList.toggle('selected', el.dataset.id === id)
+      );
+    }
+
+    // ── Connect mode ─────────────────────────────────────────
+
+    let connectMode = false;
+    let connectSource = null;
+
+    function toggleConnectMode() {
+      connectMode = !connectMode;
+      connectSource = null;
+      document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
+      const btn = document.getElementById('connect-btn');
+      btn.classList.toggle('active', connectMode);
+      viewport.classList.toggle('connect-mode', connectMode);
+      const help = document.getElementById('help-text');
+      help.textContent = connectMode
+        ? 'Click a source node, then click a target node — click empty space or Esc to cancel'
+        : 'Double-click canvas to create · Space+Drag to pan · Scroll to zoom';
+    }
+
+    // ── Edge management ──────────────────────────────────────
+
+    function createEdge(fromId, toId) {
+      if (!db.edges) db.edges = [];
+      const dup = db.edges.some(e =>
+        (e.from === fromId && e.to === toId) ||
+        (e.from === toId && e.to === fromId)
+      );
+      if (dup) return;
+      db.edges.push({ id: 'e-' + Date.now().toString(36), from: fromId, to: toId });
+      pulseSave();
+      renderEdges();
+    }
+
+    function renderEdges() {
+      const svg = document.getElementById('edges-svg');
+      svg.innerHTML = '';
+      if (!db.edges || !db.edges.length) return;
+
+      db.edges.forEach(edge => {
+        const fn = db.nodes.find(n => n.id === edge.from);
+        const tn = db.nodes.find(n => n.id === edge.to);
+        if (!fn || !tn) return;
+
+        // Center anchors
+        const x1 = fn.x + NODE_W / 2, y1 = fn.y + NODE_H / 2;
+        const x2 = tn.x + NODE_W / 2, y2 = tn.y + NODE_H / 2;
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+        // Visual line
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+        line.setAttribute('stroke', 'rgba(184,240,51,0.28)');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('stroke-dasharray', '5 4');
+        line.style.pointerEvents = 'none';
+        g.appendChild(line);
+
+        // Wider invisible hit area
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
+        hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
+        hit.setAttribute('stroke', 'transparent');
+        hit.setAttribute('stroke-width', '12');
+        hit.style.pointerEvents = 'stroke';
+        hit.style.cursor = 'pointer';
+        hit.addEventListener('mouseenter', () => line.setAttribute('stroke', 'rgba(232,69,90,0.6)'));
+        hit.addEventListener('mouseleave', () => line.setAttribute('stroke', 'rgba(184,240,51,0.28)'));
+        hit.addEventListener('click', e => {
+          e.stopPropagation();
+          db.edges = db.edges.filter(ed => ed.id !== edge.id);
+          pulseSave(); renderEdges(); renderMinimap();
+        });
+        g.appendChild(hit);
+
+        svg.appendChild(g);
+      });
+
+      // re-enable pointer events on SVG so hit lines work
+      svg.style.pointerEvents = 'all';
+    }
+
+    // ── Node CRUD ────────────────────────────────────────────
+
+    viewport.addEventListener('dblclick', e => {
+      if (e.target !== viewport) return;
+      const rect = viewport.getBoundingClientRect();
+      const x = (e.clientX - rect.left - db.panX) / db.zoom;
+      const y = (e.clientY - rect.top - db.panY) / db.zoom;
+      createNode(x, y);
+    });
+
+    viewport.addEventListener('click', e => {
+      if (e.target === viewport) {
+        if (connectMode) {
+          // Cancel connect
+          connectSource = null;
+          document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
+          return;
+        }
+        selectNode(null);
+      }
+    });
+
+    function createNode(x, y) {
+      const id = 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const node = { id, x, y, text: '', color: 'c-gray' };
+      db.nodes.push(node);
+      pulseSave();
+      const el = buildNodeEl(node);
+      layer.appendChild(el);
+      selectNode(id);
+      setTimeout(() => el.querySelector('.node-body').focus(), 50);
+      renderMinimap();
+    }
+
+    function deleteNode(id) {
+      db.nodes = db.nodes.filter(n => n.id !== id);
+      db.edges = (db.edges || []).filter(e => e.from !== id && e.to !== id);
+      selectNode(null);
+      renderAll();
+      pulseSave();
+    }
+
+    function setColor(id, colorId) {
+      const node = db.nodes.find(n => n.id === id);
+      if (!node) return;
+      node.color = colorId;
+      const el = document.querySelector(`.node[data-id="${id}"]`);
+      if (el) {
+        el.className = `node selected ${colorId}`;
+        // Rebuild action bar to update active-color indicator
+        const actions = el.querySelector('.node-actions');
+        if (actions) rebuildActionBar(actions, node);
+      }
+      pulseSave();
+    }
+
+    // ── Render ───────────────────────────────────────────────
+
+    function renderAll() {
+      // Remove nodes but keep the SVG edge layer
+      layer.querySelectorAll('.node').forEach(el => el.remove());
+      db.nodes.forEach(n => layer.appendChild(buildNodeEl(n)));
+      renderEdges();
+      renderMinimap();
+    }
+
+    function rebuildActionBar(actions, node) {
+      actions.innerHTML = '';
+
+      // Color swatches
+      COLORS.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'na-btn' + (node.color === c.id ? ' active-color' : '');
+        btn.title = c.id.replace('c-', '');
+        btn.innerHTML = `<div class="color-dot" style="background:${c.dot}"></div>`;
+        btn.onmousedown = e => { e.stopPropagation(); setColor(node.id, c.id); };
+        actions.appendChild(btn);
+      });
+
+      // Separator
+      const sep = document.createElement('div');
+      sep.className = 'na-sep';
+      actions.appendChild(sep);
+
+      // Link button
+      const linkBtn = document.createElement('button');
+      linkBtn.className = 'na-btn hl-btn';
+      linkBtn.innerHTML = '🔗';
+      linkBtn.title = 'Link to hub items';
+      linkBtn.onmousedown = e => {
+        e.stopPropagation();
+        const text = (node.text || 'Canvas Node').replace(/<[^>]*>/gm, '').slice(0, 30);
+        HubLinks.openModal('canvas-hub', node.id, text);
+      };
+      actions.appendChild(linkBtn);
+
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'na-btn del';
+      delBtn.innerHTML = '✕';
+      delBtn.title = 'Delete node';
+      delBtn.onmousedown = e => { e.stopPropagation(); deleteNode(node.id); };
+      actions.appendChild(delBtn);
+    }
+
+    function buildNodeEl(node) {
+      const el = document.createElement('div');
+      el.className = `node ${node.color || 'c-gray'}`;
+      if (node.id === selectedNodeId) el.classList.add('selected');
+      el.dataset.id = node.id;
+      el.style.left = Math.round(node.x) + 'px';
+      el.style.top = Math.round(node.y) + 'px';
+
+      // Action bar
+      const actions = document.createElement('div');
+      actions.className = 'node-actions';
+      rebuildActionBar(actions, node);
+      el.appendChild(actions);
+
+      // Colour header strip (purely decorative — reflects node colour class)
+      const header = document.createElement('div');
+      header.className = 'node-header';
+      el.appendChild(header);
+
+      // Editable body
+      const body = document.createElement('div');
+      body.className = 'node-body';
+      body.contentEditable = true;
+      body.innerHTML = node.text || '';
+      body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); });
+      body.addEventListener('mousedown', e => e.stopPropagation()); // don't start drag from text
+      el.appendChild(body);
+
+      // Link badge
+      const hlBadge = document.createElement('div');
+      hlBadge.className = 'hl-badge-container';
+      hlBadge.style.cssText = 'position:absolute;bottom:-10px;right:10px;';
+      el.appendChild(hlBadge);
+
+      function renderLinkBadge() {
+        hlBadge.innerHTML = '';
+        const links = HubLinks.getLinksFor('canvas-hub', node.id);
+        if (!links.length) return;
+        const badge = document.createElement('button');
+        badge.className = 'hl-badge';
+        badge.innerHTML = `🔗 ${links.length}`;
+        badge.onclick = e => { e.stopPropagation(); HubLinks.showLinksPopover('canvas-hub', node.id, badge); };
+        hlBadge.appendChild(badge);
+      }
+      renderLinkBadge();
+
+      // Drag
+      el.addEventListener('mousedown', e => {
+        if (e.target === body || spacePressed) return;
+        if (connectMode) {
+          // Connect mode: first click = source, second click = target
+          e.stopPropagation();
+          if (!connectSource) {
+            connectSource = node.id;
+            el.classList.add('connect-source');
+          } else if (connectSource !== node.id) {
+            createEdge(connectSource, node.id);
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('connect-source'));
+            connectSource = null;
+          }
+          return;
+        }
+        e.stopPropagation();
+        selectNode(node.id);
+        isDraggingNode = true;
+        dragState = {
+          node, el,
+          startX: node.x, startY: node.y,
+          startMouseX: e.clientX, startMouseY: e.clientY
+        };
+      });
+
+      el.addEventListener('click', e => {
+        if (!connectMode) e.stopPropagation();
+      });
+
+      // Link-change hook to refresh badge
+      const prevHook = window.__hl_onLinkChange;
+      window.__hl_onLinkChange = function () {
+        if (prevHook) prevHook();
+        renderLinkBadge();
+      };
+
+      return el;
+    }
+
+    // ── Mini-map ─────────────────────────────────────────────
+
+    function renderMinimap() {
+      const container = document.getElementById('minimap');
+      const canvas = document.getElementById('minimap-canvas');
+      if (!canvas || !db.nodes.length) { container.style.display = 'none'; return; }
+      container.style.display = '';
+
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#18181c';
+      ctx.fillRect(0, 0, W, H);
+
+      const pad = 50;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      db.nodes.forEach(n => {
+        minX = Math.min(minX, n.x - pad);
+        minY = Math.min(minY, n.y - pad);
+        maxX = Math.max(maxX, n.x + NODE_W + pad);
+        maxY = Math.max(maxY, n.y + NODE_H + pad);
+      });
+
+      const scale = Math.min(W / (maxX - minX), H / (maxY - minY));
+      const toMM = (cx, cy) => [(cx - minX) * scale, (cy - minY) * scale];
+
+      // Edges
+      if (db.edges && db.edges.length) {
+        ctx.strokeStyle = 'rgba(184,240,51,0.18)';
+        ctx.lineWidth = 0.8;
+        db.edges.forEach(edge => {
+          const f = db.nodes.find(n => n.id === edge.from);
+          const t = db.nodes.find(n => n.id === edge.to);
+          if (!f || !t) return;
+          const [fx, fy] = toMM(f.x + NODE_W / 2, f.y + NODE_H / 2);
+          const [tx, ty] = toMM(t.x + NODE_W / 2, t.y + NODE_H / 2);
+          ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
+        });
+      }
+
+      // Nodes
+      const colorFill = {
+        'c-gray': '#2a2a30', 'c-yellow': '#3d3318', 'c-green': '#1a3626',
+        'c-blue': '#1a2e42', 'c-red': '#3a1e1e', 'c-purple': '#2e1e3a'
+      };
+      db.nodes.forEach(n => {
+        const [mx, my] = toMM(n.x, n.y);
+        const nw = Math.max(NODE_W * scale, 3);
+        const nh = Math.max(NODE_H * scale, 3);
+        ctx.fillStyle = colorFill[n.color || 'c-gray'];
+        ctx.fillRect(mx, my, nw, nh);
+        ctx.strokeStyle = n.id === selectedNodeId ? '#b8f033' : 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = n.id === selectedNodeId ? 1.2 : 0.5;
+        ctx.strokeRect(mx, my, nw, nh);
+      });
+
+      // Viewport rectangle
+      const vpW = viewport.offsetWidth, vpH = viewport.offsetHeight;
+      const vx = -db.panX / db.zoom, vy = -db.panY / db.zoom;
+      const vw = vpW / db.zoom, vh = vpH / db.zoom;
+      const [mmx, mmy] = toMM(vx, vy);
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(mmx, mmy, vw * scale, vh * scale);
+    }
+
+    // ── PNG Export ───────────────────────────────────────────
+
+    function exportPNG() {
+      const btn = document.querySelector('[onclick="exportPNG()"]');
+      btn.textContent = 'Exporting…';
+      btn.disabled = true;
+
+      html2canvas(viewport, {
+        backgroundColor: '#111',
+        scale: window.devicePixelRatio || 1,
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `canvas-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }).finally(() => {
+        btn.textContent = 'Export PNG';
+        btn.disabled = false;
+      });
+    }
+
+    // ── Hub Search resolver ──────────────────────────────────
+
+    HubLinks.resolveItems = (function (old) {
+      return function (toolId) {
+        if (toolId === 'canvas-hub') {
+          const stored = HubStorage.get(STORAGE_KEY) || { nodes: [] };
+          return stored.nodes.map(n => ({
+            id: n.id,
+            label: (n.text || '').replace(/<[^>]*>/gm, '').slice(0, 50) || '(empty node)',
+            subtitle: 'canvas note'
+          }));
+        }
+        return old(toolId);
+      };
+    })(HubLinks.resolveItems);
+
+    // ── Init ─────────────────────────────────────────────────
+
+    updateTransform();
+    renderAll();
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      HubBootstrap.start('canvas-hub');
+    });
+
+    window.addEventListener('message', (e) => {
+      if (!e.data || e.data.type !== 'hub-highlight') return;
+      const nodeId = e.data.itemId;
+      if (!nodeId) return;
+      const node = db.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      // Pan canvas so the node is centred in the viewport
+      const vw = document.getElementById('canvas-wrap').clientWidth;
+      const vh = document.getElementById('canvas-wrap').clientHeight;
+      offsetX = vw / 2 - node.x * scale;
+      offsetY = vh / 2 - node.y * scale;
+      updateTransform();
+
+      // Flash the node element
+      const el = document.querySelector(`.node[data-id="${nodeId}"]`);
+      if (el) {
+        el.style.transition = 'box-shadow 0.15s';
+        el.style.boxShadow = '0 0 0 3px var(--accent)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+      }
+    });
+  </script>
+</body>
+
+</html>

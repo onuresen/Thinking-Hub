@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goals Hub</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 10px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+    .topbar-spacer { flex: 1; }
+    .quarter-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 13px;
+      padding: 5px 10px; cursor: pointer; outline: none;
+    }
+    .quarter-select:focus { border-color: var(--accent); }
+    .overall-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .overall-label { font-size: 11px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; }
+    .overall-bar { width: 80px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .overall-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s; }
+    .overall-pct { font-size: 11px; color: var(--accent); font-family: var(--font-mono); min-width: 30px; }
+
+    /* ── Main ── */
+    .main { flex: 1; overflow-y: auto; padding: 20px; }
+    .main::-webkit-scrollbar { width: 4px; }
+    .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Quarter empty state ── */
+    .empty-quarter {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 240px; gap: 10px; color: var(--text3);
+    }
+    .empty-quarter-icon { font-size: 28px; opacity: 0.4; }
+    .empty-quarter-text { font-size: 13px; }
+
+    /* ── Objectives grid ── */
+    .objectives-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;
+    }
+
+    /* ── Objective card ── */
+    .obj-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      overflow: hidden; transition: border-color 0.15s;
+    }
+    .obj-card:hover { border-color: var(--accent-glow); }
+    .obj-card-header {
+      padding: 14px 16px 10px; display: flex; align-items: flex-start; gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .obj-color-bar { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+    .obj-card-title-wrap { flex: 1; min-width: 0; }
+    .obj-card-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .obj-card-why { font-size: 11.5px; color: var(--text3); margin-top: 3px; line-height: 1.4; }
+    .obj-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .obj-action-btn {
+      background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px;
+      padding: 2px 4px; border-radius: 4px; transition: color 0.12s;
+    }
+    .obj-action-btn:hover { color: var(--text); }
+
+    /* ── Progress summary in card header ── */
+    .obj-progress-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .obj-progress-bar { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .obj-progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .obj-progress-pct { font-size: 11px; font-family: var(--font-mono); color: var(--text3); min-width: 32px; text-align: right; }
+
+    /* ── Key results ── */
+    .obj-krs { padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .kr-row { display: flex; align-items: center; gap: 8px; }
+    .kr-check {
+      width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border);
+      background: transparent; cursor: pointer; flex-shrink: 0; display: flex;
+      align-items: center; justify-content: center; transition: all 0.12s;
+    }
+    .kr-check.done { border-color: var(--accent); background: var(--accent); }
+    .kr-check.done::after { content: '✓'; font-size: 9px; color: #111; font-weight: 800; }
+    .kr-title { flex: 1; font-size: 12.5px; color: var(--text2); line-height: 1.3; }
+    .kr-title.done { text-decoration: line-through; color: var(--text3); }
+    .kr-progress-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .kr-bar { width: 60px; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+    .kr-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .kr-value-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; }
+
+    /* ── Add KR / add obj buttons ── */
+    .obj-add-kr-btn {
+      width: 100%; padding: 6px; border: 1px dashed var(--border); border-radius: var(--r-sm);
+      background: transparent; color: var(--text3); font-size: 11.5px; cursor: pointer;
+      transition: all 0.12s; font-family: var(--font-body); margin-top: 2px;
+    }
+    .obj-add-kr-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .add-obj-card {
+      border: 2px dashed var(--border); border-radius: var(--r); background: transparent;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 32px; color: var(--text3); cursor: pointer; transition: all 0.12s;
+      font-size: 13px;
+    }
+    .add-obj-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Archived section ── */
+    .archived-section { margin-top: 28px; }
+    .archived-toggle {
+      display: flex; align-items: center; gap: 8px; background: none; border: none;
+      color: var(--text3); font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.07em; padding: 4px 0;
+    }
+    .archived-toggle:hover { color: var(--text); }
+    .archived-toggle .arrow { transition: transform 0.2s; }
+    .archived-toggle.open .arrow { transform: rotate(90deg); }
+    .archived-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .archived-quarter-row {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    }
+    .archived-q-label { font-size: 13px; font-weight: 600; flex: 1; color: var(--text2); }
+    .archived-q-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .archived-q-restore {
+      font-size: 11px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px;
+      background: none; color: var(--text3); cursor: pointer; font-family: var(--font-body);
+    }
+    .archived-q-restore:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--r); width: 520px; max-width: 94vw; max-height: 88vh;
+      display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .modal-header {
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .modal-title { font-family: var(--font-display); font-size: 15px; font-weight: 800; flex: 1; }
+    .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .field-input, .field-textarea, .field-select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .field-textarea { resize: vertical; min-height: 54px; }
+    .field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--accent); }
+    .color-row { display: flex; gap: 6px; }
+    .color-dot {
+      width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent;
+      transition: border-color 0.12s, transform 0.12s;
+    }
+    .color-dot:hover, .color-dot.selected { border-color: var(--text); transform: scale(1.15); }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .modal-footer .spacer { flex: 1; }
+
+    /* ── KR editor inside modal ── */
+    .kr-editor-list { display: flex; flex-direction: column; gap: 6px; }
+    .kr-editor-row {
+      display: flex; align-items: center; gap: 6px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px;
+    }
+    .kr-editor-title { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font-body); font-size: 13px; outline: none; }
+    .kr-editor-title::placeholder { color: var(--text3); }
+    .kr-editor-type { background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; color: var(--text2); font-size: 11px; padding: 2px 6px; cursor: pointer; outline: none; font-family: var(--font-body); }
+    .kr-editor-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; }
+    .kr-editor-del:hover { color: var(--accent-nope); }
+    .kr-numeric-fields { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .kr-num-input {
+      width: 54px; background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-size: 11px; padding: 3px 5px;
+      text-align: center; outline: none; font-family: var(--font-mono);
+    }
+    .kr-num-input:focus { border-color: var(--accent); }
+    .kr-unit-input {
+      width: 40px; background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-size: 11px; padding: 3px 4px;
+      outline: none; font-family: var(--font-mono);
+    }
+    .add-kr-row-btn {
+      width: 100%; padding: 6px; border: 1px dashed var(--border); border-radius: var(--r-sm);
+      background: transparent; color: var(--text3); font-size: 11.5px; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.12s;
+    }
+    .add-kr-row-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Quarter modal ── */
+    .quarter-modal { width: 380px; }
+
+    /* ── KR inline progress edit ── */
+    .kr-inline-input {
+      width: 54px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-size: 11px; padding: 2px 5px;
+      text-align: center; outline: none; font-family: var(--font-mono);
+    }
+    .kr-inline-input:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">◎</div>
+  <div class="logo-text">Goals Hub</div>
+  <div class="topbar-sep"></div>
+  <select class="quarter-select" id="quarter-sel" onchange="selectQuarter(this.value)"></select>
+  <div class="topbar-spacer"></div>
+  <div class="overall-bar-wrap" id="overall-wrap" style="display:none">
+    <div class="overall-label">Quarter</div>
+    <div class="overall-bar"><div class="overall-bar-fill" id="overall-fill" style="width:0%"></div></div>
+    <div class="overall-pct" id="overall-pct">0%</div>
+  </div>
+  <button class="btn btn-ghost" onclick="openQuarterModal(null)" style="font-size:12px;padding:6px 12px">+ Quarter</button>
+  <button class="btn btn-primary" onclick="openObjModal(null)" style="font-size:12px;padding:6px 14px">+ Objective</button>
+</div>
+
+<div class="main" id="main"></div>
+
+<!-- Objective modal -->
+<div class="modal-overlay" id="obj-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="obj-modal-title">New Objective</div>
+      <button class="modal-close" onclick="closeObjModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Objective</div>
+        <input class="field-input" id="om-title" placeholder="What do you want to achieve?" />
+      </div>
+      <div>
+        <div class="field-label">Why it matters</div>
+        <textarea class="field-textarea" id="om-why" placeholder="What impact does reaching this create?"></textarea>
+      </div>
+      <div>
+        <div class="field-label">Color</div>
+        <div class="color-row" id="om-color-row"></div>
+      </div>
+      <div>
+        <div class="field-label">Key Results</div>
+        <div class="kr-editor-list" id="om-kr-list"></div>
+        <button class="add-kr-row-btn" onclick="addKRRow()">+ Add Key Result</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveObj()">Save</button>
+      <button class="btn btn-ghost" onclick="closeObjModal()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" id="obj-delete-btn" onclick="deleteObj()" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quarter modal -->
+<div class="modal-overlay" id="q-modal-overlay">
+  <div class="modal quarter-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="q-modal-title">New Quarter</div>
+      <button class="modal-close" onclick="closeQuarterModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Label</div>
+        <input class="field-input" id="qm-label" placeholder="e.g. Q2 2026" />
+      </div>
+      <div>
+        <div class="field-label">Start date</div>
+        <input class="field-input" id="qm-start" type="date" />
+      </div>
+      <div>
+        <div class="field-label">End date</div>
+        <input class="field-input" id="qm-end" type="date" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveQuarter()">Save</button>
+      <button class="btn btn-ghost" onclick="closeQuarterModal()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-danger" id="q-archive-btn" onclick="archiveQuarter()" style="display:none">Archive</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'goals-hub-v1';
+  const OBJ_COLORS = ['#b8f033','#38bdf8','#f59e0b','#f472b6','#a78bfa','#34d399','#fb923c','#94a3b8'];
+
+  let data = { quarters: [] };
+  let activeQId = null;
+  let editingObjId = null;
+  let editingQId = null;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { quarters: [] };
+    if (!data.quarters) data.quarters = [];
+  }
+  function save() { HubStorage.set(STORAGE_KEY, data); }
+
+  // ── Quarter helpers ──────────────────────────────────────────────────────────
+
+  function currentQuarterLabel() {
+    const now = new Date();
+    const q = Math.ceil((now.getMonth() + 1) / 3);
+    return `Q${q} ${now.getFullYear()}`;
+  }
+
+  function activeQuarters() { return data.quarters.filter(q => !q.archived); }
+  function archivedQuarters() { return data.quarters.filter(q => q.archived); }
+
+  function getQuarter(id) { return data.quarters.find(q => q.id === id); }
+
+  function ensureDefaultQuarter() {
+    if (data.quarters.length === 0) {
+      const now = new Date();
+      const q = Math.ceil((now.getMonth() + 1) / 3);
+      const year = now.getFullYear();
+      const startMonth = (q - 1) * 3;
+      const start = new Date(year, startMonth, 1);
+      const end = new Date(year, startMonth + 3, 0);
+      data.quarters.push({
+        id: uid(), label: `Q${q} ${year}`, archived: false,
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+        objectives: []
+      });
+      save();
+    }
+  }
+
+  // ── Progress ─────────────────────────────────────────────────────────────────
+
+  function krProgress(kr) {
+    if (kr.type === 'checkbox') return kr.done ? 100 : 0;
+    const cur = parseFloat(kr.current) || 0;
+    const tgt = parseFloat(kr.target) || 1;
+    return Math.min(100, Math.round((cur / tgt) * 100));
+  }
+
+  function objProgress(obj) {
+    if (!obj.keyResults || !obj.keyResults.length) return 0;
+    const total = obj.keyResults.reduce((s, kr) => s + krProgress(kr), 0);
+    return Math.round(total / obj.keyResults.length);
+  }
+
+  function quarterProgress(qtr) {
+    if (!qtr.objectives || !qtr.objectives.length) return 0;
+    const total = qtr.objectives.reduce((s, o) => s + objProgress(o), 0);
+    return Math.round(total / qtr.objectives.length);
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  function buildQuarterSelect() {
+    const sel = document.getElementById('quarter-sel');
+    const active = activeQuarters();
+    if (!active.length) { sel.innerHTML = '<option value="">No quarters</option>'; return; }
+    sel.innerHTML = active.map(q => `<option value="${q.id}"${q.id === activeQId ? ' selected' : ''}>${_esc(q.label)}</option>`).join('');
+    if (!activeQId || !active.find(q => q.id === activeQId)) {
+      activeQId = active[active.length - 1].id;
+      sel.value = activeQId;
+    }
+  }
+
+  function renderMain() {
+    buildQuarterSelect();
+    const main = document.getElementById('main');
+    const qtr = getQuarter(activeQId);
+
+    if (!qtr) { main.innerHTML = '<div class="empty-quarter"><div class="empty-quarter-icon">◎</div><div class="empty-quarter-text">No quarter selected. Create one to start.</div></div>'; return; }
+
+    const pct = quarterProgress(qtr);
+    const overallWrap = document.getElementById('overall-wrap');
+    const overallFill = document.getElementById('overall-fill');
+    const overallPct = document.getElementById('overall-pct');
+    if (qtr.objectives && qtr.objectives.length) {
+      overallWrap.style.display = 'flex';
+      overallFill.style.width = pct + '%';
+      overallPct.textContent = pct + '%';
+    } else {
+      overallWrap.style.display = 'none';
+    }
+
+    const objs = qtr.objectives || [];
+    const cardsHtml = objs.map(obj => renderObjCard(obj)).join('');
+    const addCard = `<div class="add-obj-card" onclick="openObjModal(null)"><span>+</span><span>Add Objective</span></div>`;
+
+    const archivedList = archivedQuarters();
+    let archivedHtml = '';
+    if (archivedList.length) {
+      archivedHtml = `<div class="archived-section">
+        <button class="archived-toggle" id="archived-toggle-btn" onclick="toggleArchived()"><span class="arrow">▶</span> Archived Quarters (${archivedList.length})</button>
+        <div class="archived-list" id="archived-list" style="display:none">
+          ${archivedList.map(q => {
+            const pct = quarterProgress(q);
+            const nObj = (q.objectives||[]).length;
+            return `<div class="archived-quarter-row">
+              <div class="archived-q-label">${_esc(q.label)}</div>
+              <div class="archived-q-meta">${nObj} obj · ${pct}%</div>
+              <button class="archived-q-restore" onclick="restoreQuarter('${q.id}')">Restore</button>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
+
+    main.innerHTML = `<div class="objectives-grid">${cardsHtml}${addCard}</div>${archivedHtml}`;
+  }
+
+  function renderObjCard(obj) {
+    const pct = objProgress(obj);
+    const color = obj.color || OBJ_COLORS[0];
+    const fillColor = color;
+    const krsHtml = (obj.keyResults || []).map(kr => {
+      const p = krProgress(kr);
+      const checkCls = (kr.type === 'checkbox' && kr.done) ? 'done' : (kr.type !== 'checkbox' ? '' : '');
+      const isDone = kr.type === 'checkbox' ? kr.done : false;
+      let progressEl = '';
+      if (kr.type === 'number') {
+        progressEl = `<div class="kr-progress-wrap">
+          <div class="kr-bar"><div class="kr-bar-fill" style="width:${p}%;background:${fillColor}"></div></div>
+          <input class="kr-inline-input" type="number" value="${parseFloat(kr.current)||0}" min="0"
+            onchange="updateKRProgress('${obj.id}','${kr.id}',this.value)"
+            onclick="event.stopPropagation()"
+            title="Current / ${parseFloat(kr.target)||0} ${kr.unit||''}"/>
+        </div>`;
+      }
+      return `<div class="kr-row">
+        <div class="kr-check${isDone?' done':''}" onclick="toggleKR('${obj.id}','${kr.id}')" title="Toggle done"></div>
+        <div class="kr-title${isDone?' done':''}">${_esc(kr.title||'Key Result')}</div>
+        ${progressEl}
+        ${kr.type === 'number' ? `<div class="kr-value-label">${Math.round(parseFloat(kr.target)||0)} ${_esc(kr.unit||'')}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    return `<div class="obj-card">
+      <div class="obj-card-header">
+        <div class="obj-color-bar" style="background:${color}"></div>
+        <div class="obj-card-title-wrap">
+          <div class="obj-card-title">${_esc(obj.title||'Objective')}</div>
+          ${obj.why ? `<div class="obj-card-why">${_esc(obj.why)}</div>` : ''}
+          <div class="obj-progress-row">
+            <div class="obj-progress-bar"><div class="obj-progress-fill" style="width:${pct}%;background:${color}"></div></div>
+            <div class="obj-progress-pct">${pct}%</div>
+          </div>
+        </div>
+        <div class="obj-card-actions">
+          <button class="obj-action-btn" onclick="openObjModal('${obj.id}')" title="Edit">✎</button>
+        </div>
+      </div>
+      <div class="obj-krs">
+        ${krsHtml}
+        ${(obj.keyResults||[]).length < 6 ? `<button class="obj-add-kr-btn" onclick="openObjModal('${obj.id}')">+ Add Key Result</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ── Interactions ─────────────────────────────────────────────────────────────
+
+  function selectQuarter(id) {
+    activeQId = id;
+    renderMain();
+  }
+
+  function toggleKR(objId, krId) {
+    const qtr = getQuarter(activeQId);
+    if (!qtr) return;
+    const obj = qtr.objectives.find(o => o.id === objId);
+    if (!obj) return;
+    const kr = obj.keyResults.find(k => k.id === krId);
+    if (!kr) return;
+    if (kr.type === 'checkbox') kr.done = !kr.done;
+    save(); renderMain();
+  }
+
+  function updateKRProgress(objId, krId, val) {
+    const qtr = getQuarter(activeQId);
+    if (!qtr) return;
+    const obj = qtr.objectives.find(o => o.id === objId);
+    if (!obj) return;
+    const kr = obj.keyResults.find(k => k.id === krId);
+    if (!kr) return;
+    kr.current = parseFloat(val) || 0;
+    save(); renderMain();
+  }
+
+  function toggleArchived() {
+    const btn = document.getElementById('archived-toggle-btn');
+    const list = document.getElementById('archived-list');
+    if (!btn || !list) return;
+    const open = list.style.display !== 'none';
+    list.style.display = open ? 'none' : 'flex';
+    btn.classList.toggle('open', !open);
+  }
+
+  function restoreQuarter(id) {
+    const q = data.quarters.find(x => x.id === id);
+    if (q) { q.archived = false; save(); activeQId = id; renderMain(); }
+  }
+
+  // ── Quarter modal ────────────────────────────────────────────────────────────
+
+  function openQuarterModal(id) {
+    editingQId = id;
+    const qtr = id ? getQuarter(id) : null;
+    document.getElementById('q-modal-title').textContent = qtr ? 'Edit Quarter' : 'New Quarter';
+    document.getElementById('qm-label').value = qtr ? qtr.label : currentQuarterLabel();
+    document.getElementById('qm-start').value = qtr ? (qtr.startDate || '') : '';
+    document.getElementById('qm-end').value = qtr ? (qtr.endDate || '') : '';
+    document.getElementById('q-archive-btn').style.display = qtr ? '' : 'none';
+    document.getElementById('q-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('qm-label').focus(), 50);
+  }
+
+  function closeQuarterModal() {
+    document.getElementById('q-modal-overlay').classList.remove('open');
+    editingQId = null;
+  }
+
+  function saveQuarter() {
+    const label = document.getElementById('qm-label').value.trim();
+    if (!label) return;
+    if (editingQId) {
+      const q = getQuarter(editingQId);
+      if (q) { q.label = label; q.startDate = document.getElementById('qm-start').value; q.endDate = document.getElementById('qm-end').value; }
+    } else {
+      const newQ = { id: uid(), label, archived: false, startDate: document.getElementById('qm-start').value, endDate: document.getElementById('qm-end').value, objectives: [] };
+      data.quarters.push(newQ);
+      activeQId = newQ.id;
+    }
+    save(); closeQuarterModal(); renderMain();
+  }
+
+  function archiveQuarter() {
+    if (!editingQId) return;
+    const q = getQuarter(editingQId);
+    if (!q) return;
+    if (!confirm(`Archive "${q.label}"? It will be moved to the archive.`)) return;
+    q.archived = true;
+    const active = activeQuarters();
+    activeQId = active.length ? active[active.length - 1].id : null;
+    save(); closeQuarterModal(); renderMain();
+  }
+
+  // ── Objective modal ──────────────────────────────────────────────────────────
+
+  let modalKRs = [];
+
+  function openObjModal(id) {
+    editingObjId = id;
+    const qtr = getQuarter(activeQId);
+    if (!qtr) return;
+    const obj = id ? qtr.objectives.find(o => o.id === id) : null;
+    document.getElementById('obj-modal-title').textContent = obj ? 'Edit Objective' : 'New Objective';
+    document.getElementById('om-title').value = obj ? (obj.title || '') : '';
+    document.getElementById('om-why').value = obj ? (obj.why || '') : '';
+    document.getElementById('obj-delete-btn').style.display = obj ? '' : 'none';
+
+    // Color picker
+    const colorRow = document.getElementById('om-color-row');
+    const selectedColor = obj ? (obj.color || OBJ_COLORS[0]) : OBJ_COLORS[0];
+    colorRow.innerHTML = OBJ_COLORS.map(c =>
+      `<div class="color-dot${c === selectedColor ? ' selected' : ''}" style="background:${c}" data-color="${c}" onclick="selectColor('${c}')"></div>`
+    ).join('');
+
+    // KRs
+    modalKRs = obj ? JSON.parse(JSON.stringify(obj.keyResults || [])) : [];
+    renderModalKRs();
+
+    document.getElementById('obj-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('om-title').focus(), 50);
+  }
+
+  function closeObjModal() {
+    document.getElementById('obj-modal-overlay').classList.remove('open');
+    editingObjId = null;
+    modalKRs = [];
+  }
+
+  function selectColor(c) {
+    document.querySelectorAll('#om-color-row .color-dot').forEach(d => d.classList.toggle('selected', d.dataset.color === c));
+  }
+
+  function getSelectedColor() {
+    const sel = document.querySelector('#om-color-row .color-dot.selected');
+    return sel ? sel.dataset.color : OBJ_COLORS[0];
+  }
+
+  function renderModalKRs() {
+    const list = document.getElementById('om-kr-list');
+    list.innerHTML = modalKRs.map((kr, i) => {
+      const numFields = kr.type === 'number'
+        ? `<div class="kr-numeric-fields">
+            <input class="kr-num-input" type="number" value="${kr.current||0}" min="0" placeholder="cur" onchange="updateModalKR(${i},'current',this.value)" title="Current value"/>
+            <span style="color:var(--text3);font-size:11px">/</span>
+            <input class="kr-num-input" type="number" value="${kr.target||100}" min="1" placeholder="tgt" onchange="updateModalKR(${i},'target',this.value)" title="Target value"/>
+            <input class="kr-unit-input" type="text" value="${kr.unit||''}" placeholder="unit" onchange="updateModalKR(${i},'unit',this.value)" title="Unit (%, pts, …)"/>
+           </div>`
+        : '';
+      return `<div class="kr-editor-row">
+        <input class="kr-editor-title" type="text" placeholder="Key result…" value="${_esc(kr.title||'')}" onchange="updateModalKR(${i},'title',this.value)"/>
+        <select class="kr-editor-type" onchange="updateModalKR(${i},'type',this.value)">
+          <option value="checkbox"${kr.type==='checkbox'?' selected':''}>✓ check</option>
+          <option value="number"${kr.type==='number'?' selected':''}>% num</option>
+        </select>
+        ${numFields}
+        <button class="kr-editor-del" onclick="removeModalKR(${i})" title="Remove">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  function addKRRow() {
+    modalKRs.push({ id: uid(), title: '', type: 'checkbox', done: false, current: 0, target: 100, unit: '' });
+    renderModalKRs();
+  }
+
+  function updateModalKR(i, field, val) {
+    if (!modalKRs[i]) return;
+    modalKRs[i][field] = val;
+    if (field === 'type') renderModalKRs();
+  }
+
+  function removeModalKR(i) {
+    modalKRs.splice(i, 1);
+    renderModalKRs();
+  }
+
+  function saveObj() {
+    const title = document.getElementById('om-title').value.trim();
+    if (!title) { document.getElementById('om-title').focus(); return; }
+    const qtr = getQuarter(activeQId);
+    if (!qtr) return;
+
+    // Sync KR titles from inputs (oninput not fired if not blurred)
+    document.querySelectorAll('#om-kr-list .kr-editor-title').forEach((inp, i) => {
+      if (modalKRs[i]) modalKRs[i].title = inp.value;
+    });
+
+    const obj = {
+      id: editingObjId || uid(),
+      title,
+      why: document.getElementById('om-why').value.trim(),
+      color: getSelectedColor(),
+      keyResults: modalKRs.filter(kr => kr.title.trim()),
+      createdAt: new Date().toISOString()
+    };
+
+    if (editingObjId) {
+      const idx = qtr.objectives.findIndex(o => o.id === editingObjId);
+      if (idx !== -1) {
+        obj.createdAt = qtr.objectives[idx].createdAt;
+        qtr.objectives[idx] = obj;
+      }
+    } else {
+      qtr.objectives.push(obj);
+    }
+    save(); closeObjModal(); renderMain();
+  }
+
+  function deleteObj() {
+    if (!editingObjId) return;
+    const qtr = getQuarter(activeQId);
+    if (!qtr) return;
+    if (!confirm('Delete this objective and all its key results?')) return;
+    qtr.objectives = qtr.objectives.filter(o => o.id !== editingObjId);
+    save(); closeObjModal(); renderMain();
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    ensureDefaultQuarter();
+    activeQId = activeQuarters().length ? activeQuarters()[activeQuarters().length - 1].id : null;
+    renderMain();
+    HubBootstrap.start('goals-hub');
+  });
+
+  document.getElementById('obj-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('obj-modal-overlay')) closeObjModal();
+  });
+  document.getElementById('q-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('q-modal-overlay')) closeQuarterModal();
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { HubBootstrap.start('goals-hub'); });
+</script>
+</body>
+</html>

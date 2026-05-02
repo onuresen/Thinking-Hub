@@ -1,0 +1,3218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Hub</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    /* ONLY styles unique to this tool go here */
+    .special-button {
+      background: var(--surface2);
+      /* Uses global variable */
+      border-radius: var(--r);
+      /* Uses global variable */
+    }
+  </style>
+  <style>
+    body {
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────────────────── */
+    .sidebar {
+      width: 228px;
+      min-width: 228px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      padding: 18px 16px 14px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #0b0b0d;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-version {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      margin-left: auto;
+    }
+
+    .sidebar-group {
+      padding: 20px 10px 6px;
+    }
+
+    .sidebar-group-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 0 8px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 18px 8px 18px;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text2);
+      transition: color 0.12s, background 0.12s;
+      border-radius: 0;
+      margin: 1px 8px;
+      border-radius: 8px;
+      user-select: none;
+      position: relative;
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.7;
+    }
+
+    .nav-item.active .nav-icon {
+      opacity: 1;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      background: var(--surface3);
+      padding: 1px 7px;
+      border-radius: 20px;
+      font-weight: 400;
+    }
+
+    .nav-item.active .nav-badge {
+      background: rgba(184, 240, 51, 0.12);
+      color: var(--accent);
+    }
+
+    /* sidebar team section */
+    .sidebar-team {
+      border-top: 1px solid var(--border);
+      padding: 14px 10px 10px;
+    }
+
+    .sidebar-team-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-team-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .sidebar-team-add {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--surface3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text3);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .sidebar-team-add:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+      margin-bottom: 2px;
+    }
+
+    .user-pill:hover {
+      background: var(--surface2);
+    }
+
+    .user-pill.selected {
+      background: var(--surface2);
+    }
+
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+    }
+
+    .user-pill-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-pill-name {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text2);
+    }
+
+    .user-pill.selected .user-pill-name {
+      color: var(--text);
+    }
+
+    .user-pill-role {
+      font-size: 10px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    .filter-active-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── MAIN ────────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .topbar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .topbar-sep {
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* ── STATS ROW ───────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stat-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text3);
+    }
+
+    .stat-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -1px;
+      font-family: var(--font-mono);
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: -4px;
+    }
+
+    .stat-card.c-accent {
+      border-color: var(--accent-border);
+      background: var(--accent-dim);
+    }
+
+    .stat-card.c-accent .stat-value {
+      color: var(--accent);
+    }
+
+    .stat-card.c-accent .stat-icon {
+      background: rgba(184, 240, 51, 0.12);
+    }
+
+    .stat-card.c-red .stat-icon {
+      background: rgba(240, 67, 107, 0.1);
+    }
+
+    .stat-card.c-red .stat-value {
+      color: var(--accent3);
+    }
+
+    /* ── SECTION HEADER ──────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .section-action {
+      font-size: 11px;
+      color: var(--text3);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 5px;
+      transition: all 0.12s;
+    }
+
+    .section-action:hover {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── PROJECT GRID ────────────────────────────────────────── */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .project-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-border);
+    }
+
+    .project-card.drag-src {
+      opacity: 0.4;
+      transform: scale(0.97);
+      box-shadow: none;
+    }
+
+    .project-card.drag-over {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-border), 0 12px 32px rgba(0, 0, 0, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .project-card-stripe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    .project-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      margin-top: 6px;
+    }
+
+    .project-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .project-status {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .project-desc {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 16px;
+      line-height: 1.65;
+    }
+
+    .project-progress-wrap {
+      margin-bottom: 14px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .project-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .avatar-stack {
+      display: flex;
+    }
+
+    .avatar-stack .avatar {
+      margin-right: -5px;
+      border: 2px solid var(--surface);
+      width: 22px;
+      height: 22px;
+      font-size: 8.5px;
+    }
+
+    .project-task-count {
+      margin-left: auto;
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    /* ── DETAIL PANEL ────────────────────────────────────────── */
+    .detail-panel {
+      width: 420px;
+      min-width: 420px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      transition: width 0.25s ease, min-width 0.25s ease;
+    }
+
+    .detail-panel.hidden {
+      width: 0;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .panel-color-bar {
+      width: 3px;
+      border-radius: 2px;
+      min-height: 36px;
+      align-self: stretch;
+      flex-shrink: 0;
+    }
+
+    .panel-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .panel-project-name {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .panel-project-desc {
+      font-size: 11.5px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .panel-close {
+      background: var(--surface3);
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+
+    .panel-close:hover {
+      background: var(--border2);
+      color: var(--text);
+    }
+
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 14px;
+      gap: 2px;
+    }
+
+    .panel-tab {
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text3);
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s;
+      margin-bottom: -1px;
+    }
+
+    .panel-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .panel-tab:hover:not(.active) {
+      color: var(--text2);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+    }
+
+    /* ── MILESTONES ──────────────────────────────────────────── */
+    .milestone-item {
+      margin-bottom: 14px;
+    }
+
+    .milestone-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .milestone-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .milestone-name {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .milestone-date {
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+    }
+
+    .milestone-progress {
+      height: 3px;
+      background: var(--border2);
+      border-radius: 2px;
+      margin-bottom: 6px;
+    }
+
+    .milestone-progress-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .milestone-stats {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .milestone-stat {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+    }
+
+    /* ── TASKS ───────────────────────────────────────────────── */
+    .task-group {
+      margin-bottom: 16px;
+    }
+
+    .task-group-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 6px;
+      padding: 0 2px;
+    }
+
+    /* ── Overview / All-Tasks filter bar ───────────────────── */
+    .ov-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      padding: 2px 0 14px;
+    }
+
+    .ov-filter-search {
+      flex: 1;
+      min-width: 150px;
+      max-width: 220px;
+      font-size: 0.82rem;
+      padding: 5px 10px;
+    }
+
+    .ov-filter-chips {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ov-chip {
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      color: var(--text2);
+      white-space: nowrap;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ov-chip:hover { background: var(--surface3); }
+
+    .ov-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .ov-chip-av {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      font-size: 0.58rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ov-filter-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .ov-filter-sort {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .ov-filter-sort:focus { border-color: var(--accent); }
+
+    .ov-filter-count {
+      margin-left: auto;
+      font-size: 0.72rem;
+      color: var(--text3);
+      white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+
+    /* ── Task filter bar ────────────────────────────────────── */
+    .task-filter-bar {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .tf-chip {
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text3);
+      font-size: 11px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .tf-chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .tf-chip:not(.active):hover {
+      border-color: var(--border2);
+      color: var(--text2);
+    }
+
+    .tf-sep {
+      width: 1px;
+      height: 14px;
+      background: var(--border);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    .tf-compact {
+      margin-left: auto;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text3);
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .tf-compact.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── Compact task mode ───────────────────────────────────── */
+    .compact-mode .task-item {
+      padding: 5px 10px;
+      align-items: center;
+    }
+
+    .compact-mode .task-meta {
+      display: none;
+    }
+
+    .compact-mode .task-title {
+      font-size: 12.5px;
+    }
+
+    .compact-mode .task-item-actions {
+      display: flex;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-bottom: 5px;
+      border: 1px solid transparent;
+      transition: border-color 0.12s;
+    }
+
+    .task-item:hover {
+      border-color: var(--border);
+    }
+
+    .task-check {
+      width: 15px;
+      height: 15px;
+      border-radius: 4px;
+      border: 1.5px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .task-check:hover {
+      border-color: var(--accent);
+    }
+
+    .task-check.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0b0b0d;
+      font-size: 9px;
+    }
+
+    .task-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .task-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .task-title.done {
+      text-decoration: line-through;
+      color: var(--text3);
+      font-weight: 400;
+    }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-priority {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .task-assignee {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .task-due {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      margin-left: auto;
+    }
+
+    .task-due.overdue {
+      color: var(--accent3);
+    }
+
+    /* ── MODAL ───────────────────────────────────────────────── */
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .modal-sub {
+      font-size: 12.5px;
+      color: var(--text2);
+      margin-bottom: 22px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 22px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 5px 8px;
+      border-radius: 6px;
+    }
+
+    .checkbox-item:hover {
+      background: var(--surface3);
+    }
+
+    .checkbox-item input {
+      accent-color: var(--accent);
+    }
+
+    .checkbox-item label {
+      font-size: 12.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── STATUS/PRIORITY BADGES ──────────────────────────────── */
+    .s-active {
+      background: rgba(184, 240, 51, 0.1);
+      color: var(--accent);
+    }
+
+    .s-planning {
+      background: rgba(56, 200, 235, 0.1);
+      color: var(--accent2);
+    }
+
+    .s-onhold {
+      background: rgba(240, 67, 107, 0.1);
+      color: var(--accent3);
+    }
+
+    .s-done {
+      background: rgba(100, 100, 130, 0.1);
+      color: var(--text2);
+    }
+
+    .p-high {
+      background: rgba(240, 67, 107, 0.1);
+      color: var(--accent3);
+    }
+
+    .p-medium {
+      background: rgba(240, 176, 64, 0.1);
+      color: var(--amber);
+    }
+
+    .p-low {
+      background: rgba(56, 200, 235, 0.1);
+      color: var(--accent2);
+    }
+
+    /* ── GOALS ───────────────────────────────────────────────── */
+    .goal-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 8px;
+      border: 1px solid transparent;
+    }
+
+    .goal-item:hover {
+      border-color: var(--border);
+    }
+
+    .goal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .goal-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .goal-desc {
+      font-size: 11.5px;
+      color: var(--text2);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .goal-progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      margin-bottom: 5px;
+    }
+
+    .goal-bar {
+      height: 3px;
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .goal-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+    }
+
+    /* ── PEOPLE ──────────────────────────────────────────────── */
+    .person-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .person-info {
+      flex: 1;
+    }
+
+    .person-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .person-role {
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    .person-task-count {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    /* ── KANBAN ──────────────────────────────────────────────── */
+    .kanban-board {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      align-items: flex-start;
+    }
+
+    .kanban-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 280px;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 180px);
+    }
+
+    .kanban-col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .kanban-col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .kanban-col-title {
+      font-size: 12px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .kanban-col-count {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      background: var(--surface3);
+      padding: 1px 7px;
+      border-radius: 20px;
+    }
+
+    .kanban-col-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-height: 60px;
+    }
+
+    .kanban-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 11px 12px;
+      cursor: grab;
+      transition: border-color 0.12s, box-shadow 0.12s;
+      user-select: none;
+    }
+
+    .kanban-card:active {
+      cursor: grabbing;
+    }
+
+    .kanban-card:hover {
+      border-color: var(--border2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .kanban-card.drag-src {
+      opacity: 0.35;
+    }
+
+    .kanban-col-body.drag-over {
+      background: var(--accent-dim);
+      border-radius: 8px;
+    }
+
+    .kanban-card-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
+
+    .kanban-card-title.done {
+      text-decoration: line-through;
+      color: var(--text3);
+    }
+
+    .kanban-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .kanban-card-proj {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      background: var(--surface3);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .kanban-col-add {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      font-size: 12px;
+      color: var(--text3);
+      cursor: pointer;
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      transition: color 0.12s, background 0.12s;
+      flex-shrink: 0;
+    }
+
+    .kanban-col-add:hover {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── INLINE EDIT ─────────────────────────────────────────── */
+    .task-title-input {
+      background: var(--surface3);
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 2px 6px;
+      outline: none;
+      width: 100%;
+    }
+
+    .task-item-actions {
+      display: none;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .task-item:hover .task-item-actions {
+      display: flex;
+    }
+
+    .task-action-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all 0.1s;
+      font-family: var(--font-ui);
+    }
+
+    .task-action-btn.edit:hover {
+      background: var(--surface3);
+      color: var(--accent);
+    }
+
+    .task-action-btn.del:hover {
+      background: rgba(240, 67, 107, 0.12);
+      color: var(--accent3);
+    }
+
+    .task-action-btn.obsidian:hover {
+      background: var(--surface3);
+      color: var(--text2);
+    }
+
+    .obsidian-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: var(--surface3);
+      color: var(--text3);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      text-decoration: none;
+      flex-shrink: 0;
+      line-height: 1.4;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .obsidian-badge:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    /* ── VIEW TOGGLE ─────────────────────────────────────────── */
+    .view-toggle {
+      display: flex;
+      gap: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .view-toggle-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text3);
+      transition: all 0.12s;
+      border: none;
+      background: transparent;
+      font-family: var(--font-ui);
+    }
+
+    .view-toggle-btn.active {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    /* ── TOAST ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 12.5px;
+      color: var(--text2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.22s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── ANIMATION ───────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeUp 0.2s ease forwards;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">H</div>
+      <span class="logo-text">Project Hub</span>
+      <span class="logo-version">v1.1</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">Views</div>
+        <div class="nav-item active" onclick="setView('overview')">
+          <span class="nav-icon">▦</span> Overview
+          <span class="nav-badge" id="badge-overview">0</span>
+        </div>
+        <div class="nav-item" onclick="setView('tasks')">
+          <span class="nav-icon">✓</span> All Tasks
+          <span class="nav-badge" id="badge-tasks">0</span>
+        </div>
+        <div class="nav-item" onclick="setView('milestones')">
+          <span class="nav-icon">◎</span> Milestones
+          <span class="nav-badge" id="badge-milestones">0</span>
+        </div>
+        <div class="nav-item" onclick="setView('goals')">
+          <span class="nav-icon">◇</span> Goals
+          <span class="nav-badge" id="badge-goals">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-team">
+      <div class="sidebar-team-header">
+        <span class="sidebar-team-label">Team</span>
+        <div class="sidebar-team-add" onclick="openMemberModal()" title="Add member">+</div>
+      </div>
+      <div id="sidebar-users"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-breadcrumb">
+        <div class="topbar-title" id="topbar-title">Overview</div>
+      </div>
+      <div class="view-toggle" id="view-toggle" style="display:none">
+        <button class="view-toggle-btn active" id="toggle-list" onclick="setSubView('list')">List</button>
+        <button class="view-toggle-btn" id="toggle-kanban" onclick="setSubView('kanban')">Kanban</button>
+      </div>
+      <button class="btn btn-ghost" onclick="showAddProject()">+ Project</button>
+      <button class="btn btn-primary" id="main-action-btn" onclick="handleMainAction()">+ Task</button>
+      <button class="btn btn-ghost" onclick="exportJSON()" title="Download a JSON backup">Export</button>
+      <button class="btn btn-ghost" onclick="importJSON()" title="Restore from a JSON backup">Import</button>
+      <button class="btn btn-danger" onclick="resetToDefault()"
+        title="Clear local data and restore defaults">Reset</button>
+      <input type="file" id="import-file" accept="application/json" style="display:none" />
+    </div>
+    <div class="content" id="main-content"></div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel hidden" id="detail-panel">
+    <div class="panel-header">
+      <div class="panel-color-bar" id="panel-color-bar"></div>
+      <div class="panel-header-info">
+        <div class="panel-project-name" id="panel-project-name"></div>
+        <div class="panel-project-desc" id="panel-project-desc"></div>
+      </div>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="setTab('tasks')" id="tab-tasks">Tasks</div>
+      <div class="panel-tab" onclick="setTab('milestones')" id="tab-milestones">Milestones</div>
+      <div class="panel-tab" onclick="setTab('goals')" id="tab-goals">Goals</div>
+      <div class="panel-tab" onclick="setTab('people')" id="tab-people">People</div>
+      <div class="panel-tab" onclick="setTab('settings')" id="tab-settings">Settings</div>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+  </div>
+
+  <!-- MODALS -->
+  <div class="ui-modal-overlay" id="modal-project" onclick="closeModal('modal-project')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">New Project</div>
+      <div class="modal-sub">Set up a new project workspace</div>
+      <div class="form-group">
+        <label class="form-label">Project Name</label>
+        <input class="form-input" id="proj-name" placeholder="e.g. Architectural Redesign">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="proj-desc" placeholder="What is this project about?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="proj-status">
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="onhold">On Hold</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <select class="form-select" id="proj-color">
+            <option value="#c8f03e">Lime</option>
+            <option value="#3ecdf0">Cyan</option>
+            <option value="#f03e6e">Red</option>
+            <option value="#f0b43e">Amber</option>
+            <option value="#9b3ef0">Purple</option>
+            <option value="#3ef09b">Mint</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Team Members</label>
+        <div class="checkbox-group" id="proj-members"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-project')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProject()">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-modal-overlay" id="modal-task" onclick="closeModal('modal-task')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">New Task</div>
+      <div class="modal-sub">Add a task to the project</div>
+      <div class="form-group">
+        <label class="form-label">Task Title</label>
+        <input class="form-input" id="task-title" placeholder="What needs to be done?">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Project</label>
+          <select class="form-select" id="task-project"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Milestone</label>
+          <select class="form-select" id="task-milestone">
+            <option value="">— none —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Assignee</label>
+          <select class="form-select" id="task-assignee"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-select" id="task-priority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input class="form-input" type="date" id="task-due">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="task-status">
+            <option value="todo">To Do</option>
+            <option value="inprogress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Obsidian Note</label>
+        <input class="form-input" id="task-obsidian" placeholder="Optional: path/to/note.md">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-task')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTask()">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-modal-overlay" id="modal-milestone" onclick="closeModal('modal-milestone')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">New Milestone</div>
+      <div class="modal-sub">Define a key milestone for this project</div>
+      <div class="form-group">
+        <label class="form-label">Milestone Name</label>
+        <input class="form-input" id="ms-name" placeholder="e.g. Design Approval">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Target Date</label>
+          <input class="form-input" type="date" id="ms-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color</label>
+          <select class="form-select" id="ms-color">
+            <option value="#c8f03e">Lime</option>
+            <option value="#3ecdf0">Cyan</option>
+            <option value="#f03e6e">Red</option>
+            <option value="#f0b43e">Amber</option>
+            <option value="#9b3ef0">Purple</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-milestone')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMilestone()">Add Milestone</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-modal-overlay" id="modal-goal" onclick="closeModal('modal-goal')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">New Goal</div>
+      <div class="modal-sub">Define a high-level goal for this project</div>
+      <div class="form-group">
+        <label class="form-label">Goal Title</label>
+        <input class="form-input" id="goal-name" placeholder="e.g. Ship MVP by Q3">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="goal-desc" placeholder="What does success look like?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-goal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveGoal()">Add Goal</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-modal-overlay" id="modal-member" onclick="closeModal('modal-member')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Add Team Member</div>
+      <div class="modal-sub">Add someone to the workspace</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" id="member-name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <input class="form-input" id="member-role" placeholder="e.g. Architect">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avatar Color</label>
+        <select class="form-select" id="member-color">
+          <option value="#c8f03e,#111">Lime</option>
+          <option value="#3ecdf0,#111">Cyan</option>
+          <option value="#f03e6e,#fff">Red</option>
+          <option value="#f0b43e,#111">Amber</option>
+          <option value="#9b3ef0,#fff">Purple</option>
+          <option value="#3ef09b,#111">Mint</option>
+          <option value="#f09b3e,#111">Orange</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-member')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMember()">Add Member</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── DEFAULTS ────────────────────────────────────────────────────────────────
+    const DEFAULT_STATE = {
+      members: [
+        { id: 'm0', name: 'Sato', role: 'Lead', color: '#c8f03e,#111' },
+        { id: 'm1', name: 'Onur', role: 'Engineer', color: '#c8f03e,#111' },
+        { id: 'm2', name: 'Sarah', role: 'Architect', color: '#3ecdf0,#111' },
+
+      ],
+      projects: [
+        {
+          id: 'p1', name: 'TPM', desc: 'Technical Appraisal and Portfoilio Management',
+          status: 'active', color: '#c8f03e', members: ['m1', 'm2', 'm3'],
+          goals: [
+            { id: 'g1', name: 'Complete Framework', desc: 'Stalegate is complete, reference available.', progress: 70 },
+            { id: 'g2', name: 'Solution List', desc: 'Complete list of potential solutions.', progress: 30 },
+          ],
+          milestones: [
+            { id: 'ms1', name: 'Team verification', date: '2026-05-15', color: '#c8f03e' },
+            { id: 'ms2', name: 'Manager validation', date: '2026-07-01', color: '#3ecdf0' },
+          ],
+          tasks: [
+            { id: 't1', title: 'Stalegate update', milestoneId: 'ms1', assigneeId: 'm1', priority: 'high', done: false, due: '2026-04-20', status: 'todo' },
+            { id: 't2', title: 'Framework reference', milestoneId: 'ms1', assigneeId: 'm2', priority: 'medium', done: true, due: '2026-04-15', status: 'done' },
+            { id: 't3', title: 'Manual update', milestoneId: 'ms2', assigneeId: 'm3', priority: 'high', done: false, due: '2026-06-10', status: 'inprogress' },
+            { id: 't4', title: 'Excel list update', milestoneId: '', assigneeId: 'm1', priority: 'low', done: false, due: '2026-05-01', status: 'todo' },
+          ]
+        },
+        {
+          id: 'p2', name: 'MCP Server', desc: 'Integration via Model Context Protocol',
+          status: 'active', color: '#9b3ef0', members: ['m1'],
+          goals: [
+            { id: 'g3', name: 'Phase 1: Read-only Vault Access', desc: 'Claude can query  model data via MCP tools.', progress: 85 },
+            { id: 'g4', name: 'Phase 2: Semantic data integration', desc: 'Typed objects flow through middleware.', progress: 10 },
+          ],
+          milestones: [
+            { id: 'ms3', name: 'Working Prototype', date: '2026-04-30', color: '#9b3ef0' },
+          ],
+          tasks: [
+            { id: 't5', title: 'Wrap  API in MCP tool schema', milestoneId: 'ms3', assigneeId: 'm1', priority: 'high', done: true, due: '2026-04-10', status: 'done' },
+            { id: 't6', title: 'Graphic override tool implementation', milestoneId: 'ms3', assigneeId: 'm1', priority: 'medium', done: false, due: '2026-04-25', status: 'inprogress' },
+            { id: 't7', title: 'Write SCHEMA.md contract', milestoneId: '', assigneeId: 'm1', priority: 'low', done: false, due: '2026-05-05', status: 'todo' },
+          ]
+        }
+      ],
+    };
+
+    // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+    const STORAGE_KEY = 'project-hub-v1';
+
+    function loadState() {
+      try {
+        const saved = HubStorage.get(STORAGE_KEY);
+        if (saved) {
+          saved.projects?.forEach(p => p.tasks?.forEach(t => {
+            if (!t.status) t.status = t.done ? 'done' : 'todo';
+          }));
+          return saved;
+        }
+      } catch (e) { console.warn('Could not load state:', e); }
+      return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    }
+
+    function saveState() {
+      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects });
+    }
+
+    // ─── STATE ───────────────────────────────────────────────────────────────────
+    const persisted = loadState();
+    let state = {
+      ...persisted,
+      selectedProject: null,
+      overviewFilter: { members: [], status: 'all', search: '', sort: 'manual' },
+      allTasksFilter: { members: [], status: 'all', priority: 'all' },
+      currentView: 'overview',
+      currentSubView: 'list',
+      currentTab: 'tasks',
+      taskFilter: { status: 'all', priority: 'all' },
+      compactMode: false,
+    };
+
+    // ─── UTILS ───────────────────────────────────────────────────────────────────
+    const uid = () => Math.random().toString(36).slice(2, 9);
+    const getMember = id => state.members.find(m => m.id === id);
+    const getProject = id => state.projects.find(p => p.id === id);
+
+    function avatarColors(colorStr) { const [bg, fg] = colorStr.split(','); return { bg, fg }; }
+    function initials(name) { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
+    function statusClass(s) { return { active: 's-active', planning: 's-planning', onhold: 's-onhold', done: 's-done' }[s] || 's-planning'; }
+    function statusLabel(s) { return { active: 'Active', planning: 'Planning', onhold: 'On Hold', done: 'Done' }[s] || s; }
+    function priorityClass(p) { return { high: 'p-high', medium: 'p-medium', low: 'p-low' }[p] || ''; }
+    function projectProgress(proj) {
+      if (!proj.tasks.length) return 0;
+      return Math.round((proj.tasks.filter(t => t.done).length / proj.tasks.length) * 100);
+    }
+    function isOverdue(d) { return d ? new Date(d) < new Date() : false; }
+    function formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // ─── TOAST ───────────────────────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.innerHTML = msg; el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+
+
+    // ─── BACKUP / RESTORE (JSON) ─────────────────────────────────────────────────
+    // Exports/imports the same persisted shape as localStorage: { members, projects }
+    // NOTE: This is per-browser storage. Export gives you portability/backups.
+
+    function exportJSON() {
+      try {
+        const payload = {
+          version: 1,
+          app: 'Project Hub',
+          storageKey: STORAGE_KEY,
+          exportedAt: new Date().toISOString(),
+          data: { members: state.members, projects: state.projects },
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `project-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+        showToast('Exported JSON backup');
+      } catch (e) {
+        console.warn('Export failed:', e);
+        showToast('Export failed');
+      }
+    }
+
+    function importJSON() {
+      const input = document.getElementById('import-file');
+      if (!input) { showToast('Import input not found'); return; }
+
+      input.value = ''; // allow importing same file twice
+      input.click();
+
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+
+          // Accept either {data:{members,projects}} or raw {members,projects}
+          const incoming = parsed && parsed.data ? parsed.data : parsed;
+
+          if (!incoming || !Array.isArray(incoming.members) || !Array.isArray(incoming.projects)) {
+            showToast('Invalid JSON: missing members/projects');
+            return;
+          }
+
+          // Normalize (compatibility / defensive)
+          incoming.projects.forEach(p => {
+            p.goals = Array.isArray(p.goals) ? p.goals : [];
+            p.milestones = Array.isArray(p.milestones) ? p.milestones : [];
+            p.tasks = Array.isArray(p.tasks) ? p.tasks : [];
+            p.tasks.forEach(t => {
+              if (!t.status) t.status = t.done ? 'done' : 'todo';
+              if (typeof t.done !== 'boolean') t.done = t.status === 'done';
+            });
+          });
+
+          const ok = confirm(
+            `Import will REPLACE your current local data.\n\n` +
+            `File: ${file.name}\nProjects: ${incoming.projects.length}\nMembers: ${incoming.members.length}\n\nContinue?`
+          );
+          if (!ok) return;
+
+          // Apply imported data
+          state.members = incoming.members;
+          state.projects = incoming.projects;
+
+          // Reset transient UI state
+          state.selectedProject = null;
+          state.overviewFilter = { members: [], status: 'all', search: '', sort: 'manual' };
+          state.allTasksFilter = { members: [], status: 'all', priority: 'all' };
+          state.currentTab = 'tasks';
+
+          // Close any open modals
+          document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+
+          saveState();
+          renderSidebarUsers();
+          closePanel();
+          renderContent();
+
+          showToast('Imported JSON backup');
+        } catch (e) {
+          console.warn('Import failed:', e);
+          showToast('Import failed (invalid JSON)');
+        }
+      };
+    }
+
+    function resetToDefault() {
+      const ok = confirm(
+        'Reset will clear ALL local data in this browser and restore the default sample content.\n\nContinue?'
+      );
+      if (!ok) return;
+
+      HubStorage.set(STORAGE_KEY, null);
+
+      // Deep-clone defaults so mutations don't affect DEFAULT_STATE
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      state = {
+        ...fresh,
+        selectedProject: null,
+        overviewFilter: { members: [], status: 'all', search: '', sort: 'manual' },
+        allTasksFilter: { members: [], status: 'all', priority: 'all' },
+        currentView: 'overview',
+        currentSubView: 'list',
+        currentTab: 'tasks',
+      };
+
+      renderSidebarUsers();
+      closePanel();
+      setView('overview');
+      showToast('Reset to default');
+    }
+
+    // ─── SIDEBAR USERS ───────────────────────────────────────────────────────────
+    function renderSidebarUsers() {
+      const container = document.getElementById('sidebar-users');
+      container.innerHTML = '';
+      state.members.forEach(m => {
+        const { bg, fg } = avatarColors(m.color);
+        const selected = state.overviewFilter.members.includes(m.id);
+        const div = document.createElement('div');
+        div.className = 'user-pill' + (selected ? ' selected' : '');
+        div.style.position = 'relative';
+        div.innerHTML = `
+      <div class="avatar" style="background:${bg};color:${fg};cursor:pointer" onclick="toggleOverviewMember('${m.id}')">${initials(m.name)}</div>
+      <div class="user-pill-info" style="cursor:pointer;flex:1" onclick="toggleOverviewMember('${m.id}')">
+        <div class="user-pill-name">${m.name}</div>
+        <div class="user-pill-role">${m.role}</div>
+      </div>
+      ${selected ? `<div class="filter-active-dot" style="background:${bg}"></div>` : ''}
+      <div class="user-pill-actions" style="display:flex;gap:2px;opacity:0;transition:opacity 0.15s">
+        <button class="task-action-btn edit" title="Edit member" onclick="openEditMember('${m.id}')">✎</button>
+        <button class="task-action-btn del" title="Delete member" onclick="deleteMember('${m.id}')">✕</button>
+      </div>
+    `;
+        div.addEventListener('mouseenter', () => div.querySelector('.user-pill-actions').style.opacity = '1');
+        div.addEventListener('mouseleave', () => div.querySelector('.user-pill-actions').style.opacity = '0');
+        container.appendChild(div);
+      });
+    }
+
+    function toggleOverviewMember(id) {
+      const idx = state.overviewFilter.members.indexOf(id);
+      if (idx === -1) state.overviewFilter.members.push(id);
+      else state.overviewFilter.members.splice(idx, 1);
+      renderSidebarUsers(); renderContent();
+    }
+
+    function toggleAllTasksMember(id) {
+      const idx = state.allTasksFilter.members.indexOf(id);
+      if (idx === -1) state.allTasksFilter.members.push(id);
+      else state.allTasksFilter.members.splice(idx, 1);
+      renderContent();
+    }
+
+    // ─── BADGES ──────────────────────────────────────────────────────────────────
+    function updateBadges() {
+      const allTasks = state.projects.flatMap(p => p.tasks);
+      document.getElementById('badge-overview').textContent = state.projects.length;
+      document.getElementById('badge-tasks').textContent = allTasks.filter(t => !t.done).length;
+      document.getElementById('badge-milestones').textContent = state.projects.flatMap(p => p.milestones).length;
+      document.getElementById('badge-goals').textContent = state.projects.flatMap(p => p.goals).length;
+    }
+
+    // ─── VIEW ROUTING ─────────────────────────────────────────────────────────────
+    function setView(view) {
+      state.currentView = view;
+      state.selectedProject = null;
+      closePanel();
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
+      });
+      const titles = { overview: 'Overview', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals' };
+      document.getElementById('topbar-title').textContent = titles[view] || view;
+      const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal' };
+      document.getElementById('main-action-btn').textContent = btnLabels[view];
+      document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
+      renderContent();
+    }
+
+    function setSubView(sv) {
+      state.currentSubView = sv;
+      document.getElementById('toggle-list').classList.toggle('active', sv === 'list');
+      document.getElementById('toggle-kanban').classList.toggle('active', sv === 'kanban');
+      renderContent();
+    }
+
+    function handleMainAction() {
+      if (state.currentView === 'milestones') {
+        if (!state.selectedProject && state.projects.length) state.selectedProject = state.projects[0].id;
+        openMilestoneModal();
+      } else if (state.currentView === 'goals') {
+        if (!state.selectedProject && state.projects.length) state.selectedProject = state.projects[0].id;
+        openGoalModal();
+      } else { showAddTask(); }
+    }
+
+    // ─── RENDER CONTENT ───────────────────────────────────────────────────────────
+    function renderContent() {
+      const c = document.getElementById('main-content');
+      c.innerHTML = '';
+      updateBadges();
+      if (state.currentView === 'overview') renderOverview(c);
+      else if (state.currentView === 'tasks') {
+        if (state.currentSubView === 'kanban') renderKanban(c);
+        else renderAllTasks(c);
+      }
+      else if (state.currentView === 'milestones') renderAllMilestones(c);
+      else if (state.currentView === 'goals') renderAllGoals(c);
+    }
+
+    // ─── OVERVIEW ────────────────────────────────────────────────────────────────
+    function renderOverview(container) {
+      const allTasks = state.projects.flatMap(p => p.tasks);
+      const open = allTasks.filter(t => !t.done);
+      const overdue = open.filter(t => isOverdue(t.due));
+      const of = state.overviewFilter;
+      const filteredMembers = of.members;
+      const myTasks = filteredMembers.length > 0 ? open.filter(t => filteredMembers.includes(t.assigneeId)) : open;
+
+      const statsDiv = document.createElement('div');
+      statsDiv.className = 'stats-row animate-in';
+      const memberLabel = filteredMembers.length === 1
+        ? 'assigned to ' + getMember(filteredMembers[0])?.name
+        : filteredMembers.length > 1
+          ? `assigned to ${filteredMembers.length} members`
+          : 'across all projects';
+      statsDiv.innerHTML = `
+    <div class="stat-card c-accent">
+      <div class="stat-card-top"><div class="stat-label">Open Tasks</div><div class="stat-icon">✓</div></div>
+      <div class="stat-value">${myTasks.length}</div>
+      <div class="stat-sub">${memberLabel}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top"><div class="stat-label">Projects</div><div class="stat-icon" style="background:var(--surface3)">▦</div></div>
+      <div class="stat-value">${state.projects.length}</div>
+      <div class="stat-sub">${state.projects.filter(p => p.status === 'active').length} active</div>
+    </div>
+    <div class="stat-card c-red">
+      <div class="stat-card-top"><div class="stat-label">Overdue</div><div class="stat-icon">!</div></div>
+      <div class="stat-value">${overdue.length}</div>
+      <div class="stat-sub">need attention</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top"><div class="stat-label">Completed</div><div class="stat-icon" style="background:var(--surface3)">◉</div></div>
+      <div class="stat-value">${allTasks.filter(t => t.done).length}</div>
+      <div class="stat-sub">of ${allTasks.length} total</div>
+    </div>
+  `;
+      container.appendChild(statsDiv);
+
+      // ── Overview filter bar ──
+      const filterBar = document.createElement('div');
+      filterBar.className = 'ov-filter-bar animate-in';
+
+      // Search input
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'input ov-filter-search';
+      searchInput.placeholder = 'Search projects…';
+      searchInput.value = of.search;
+      searchInput.oninput = e => { state.overviewFilter.search = e.target.value; renderContent(); };
+      filterBar.appendChild(searchInput);
+
+      // Member chips
+      if (state.members.length) {
+        const memberWrap = document.createElement('div');
+        memberWrap.className = 'ov-filter-chips';
+        const allMemberChip = document.createElement('button');
+        allMemberChip.className = 'ov-chip' + (filteredMembers.length === 0 ? ' active' : '');
+        allMemberChip.textContent = 'All';
+        allMemberChip.title = 'Show all members';
+        allMemberChip.onclick = () => { state.overviewFilter.members = []; renderSidebarUsers(); renderContent(); };
+        memberWrap.appendChild(allMemberChip);
+        state.members.forEach(m => {
+          const { bg, fg } = avatarColors(m.color);
+          const sel = filteredMembers.includes(m.id);
+          const chip = document.createElement('button');
+          chip.className = 'ov-chip member-chip' + (sel ? ' active' : '');
+          chip.title = m.name;
+          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${m.name}`;
+          chip.onclick = () => toggleOverviewMember(m.id);
+          memberWrap.appendChild(chip);
+        });
+        filterBar.appendChild(memberWrap);
+      }
+
+      // Separator
+      const sep1 = document.createElement('span'); sep1.className = 'ov-filter-sep'; filterBar.appendChild(sep1);
+
+      // Status chips
+      const statusWrap = document.createElement('div');
+      statusWrap.className = 'ov-filter-chips';
+      [{ val: 'all', label: 'All' }, { val: 'active', label: 'Active' }, { val: 'planning', label: 'Planning' }, { val: 'onhold', label: 'On Hold' }, { val: 'done', label: 'Done' }].forEach(s => {
+        const chip = document.createElement('button');
+        chip.className = 'ov-chip' + (of.status === s.val ? ' active' : '');
+        chip.textContent = s.label;
+        chip.onclick = () => { state.overviewFilter.status = s.val; renderContent(); };
+        statusWrap.appendChild(chip);
+      });
+      filterBar.appendChild(statusWrap);
+
+      // Sort select
+      const sortSel = document.createElement('select');
+      sortSel.className = 'ov-filter-sort';
+      sortSel.title = 'Sort projects';
+      [{ val: 'manual', label: '⇅ Manual' }, { val: 'name', label: 'A–Z Name' }, { val: 'status', label: 'By Status' }, { val: 'tasks', label: 'Open Tasks' }].forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.val; opt.textContent = o.label; opt.selected = of.sort === o.val;
+        sortSel.appendChild(opt);
+      });
+      sortSel.onchange = e => { state.overviewFilter.sort = e.target.value; renderContent(); };
+      filterBar.appendChild(sortSel);
+
+      container.appendChild(filterBar);
+
+      const hdr = document.createElement('div');
+      hdr.innerHTML = `<div class="ui-section-header"><div class="ui-section-title">Projects</div><div class="ui-section-line"></div><div class="ui-section-action" onclick="showAddProject()">+ New</div></div>`; container.appendChild(hdr);
+
+      const grid = document.createElement('div');
+      grid.className = 'project-grid animate-in';
+
+      // ── Apply filters & sort ──
+      let visible = [...state.projects];
+      if (filteredMembers.length > 0)
+        visible = visible.filter(p => filteredMembers.some(m => p.members.includes(m)));
+      if (of.status !== 'all')
+        visible = visible.filter(p => p.status === of.status);
+      if (of.search.trim()) {
+        const q = of.search.trim().toLowerCase();
+        visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q));
+      }
+      if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
+      else if (of.sort === 'status') {
+        const ord = { active: 0, planning: 1, onhold: 2, done: 3 };
+        visible.sort((a, b) => (ord[a.status] ?? 9) - (ord[b.status] ?? 9));
+      } else if (of.sort === 'tasks')
+        visible.sort((a, b) => b.tasks.filter(t => !t.done).length - a.tasks.filter(t => !t.done).length);
+
+      // Count badge
+      const countEl = document.createElement('div');
+      countEl.className = 'ov-filter-count';
+      const isFiltered = filteredMembers.length > 0 || of.status !== 'all' || of.search.trim();
+      countEl.textContent = isFiltered ? `${visible.length} of ${state.projects.length} projects` : `${state.projects.length} project${state.projects.length !== 1 ? 's' : ''}`;
+      filterBar.appendChild(countEl);
+
+      if (!visible.length) {
+        const emptyMsg = state.projects.length === 0 ? 'Click "+ Project" to create one' : 'No projects match your filters';
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">◈</div><div class="e-title">${state.projects.length === 0 ? 'No projects yet' : 'No matches'}</div><div class="e-sub">${emptyMsg}</div></div>`;
+      }
+      visible.forEach(proj => {
+        const card = document.createElement('div');
+        card.className = 'project-card' + (state.selectedProject === proj.id ? ' selected' : '');
+        card.draggable = true;
+
+        card.addEventListener('dragstart', e => {
+          projDragSrc = proj.id;
+          card.classList.add('drag-src');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('drag-src');
+          projDragSrc = null;
+          document.querySelectorAll('.project-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (projDragSrc && projDragSrc !== proj.id) card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', e => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          if (!projDragSrc || projDragSrc === proj.id) return;
+          const fromIdx = state.projects.findIndex(p => p.id === projDragSrc);
+          const toIdx = state.projects.findIndex(p => p.id === proj.id);
+          if (fromIdx === -1 || toIdx === -1) return;
+          const [moved] = state.projects.splice(fromIdx, 1);
+          state.projects.splice(toIdx, 0, moved);
+          projDragSrc = null;
+          saveState();
+          renderContent();
+          showToast('Project order updated');
+        });
+
+        card.onclick = () => { if (!projDragSrc) openProject(proj.id); };
+        const prog = projectProgress(proj);
+        const avatars = proj.members.map(mid => {
+          const m = getMember(mid); if (!m) return '';
+          const { bg, fg } = avatarColors(m.color);
+          return `<div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:8.5px">${initials(m.name)}</div>`;
+        }).join('');
+        card.innerHTML = `
+      <div class="project-card-stripe" style="background:${proj.color}"></div>
+      <div class="project-card-header">
+        <div class="project-name">${proj.name}</div>
+        <div class="project-status ${statusClass(proj.status)}">${statusLabel(proj.status)}</div>
+      </div>
+      <div class="project-desc">${proj.desc}</div>
+      <div class="project-progress-wrap">
+        <div class="progress-label"><span>Progress</span><span>${prog}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
+      </div>
+      <div class="project-meta">
+        <div class="avatar-stack">${avatars}</div>
+        <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
+      </div>
+    `;
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    }
+
+    // ─── ALL TASKS (LIST) ─────────────────────────────────────────────────────────
+    function renderAllTasks(container) {
+      const atf = state.allTasksFilter;
+      let tasks = state.projects.flatMap(p => p.tasks.map(t => ({ ...t, projectId: p.id, projectName: p.name, projectColor: p.color })));
+
+      // ── All Tasks filter bar ──
+      const filterBar = document.createElement('div');
+      filterBar.className = 'ov-filter-bar animate-in';
+      filterBar.style.marginBottom = '12px';
+
+      // Member chips
+      if (state.members.length) {
+        const memberWrap = document.createElement('div');
+        memberWrap.className = 'ov-filter-chips';
+        const allChip = document.createElement('button');
+        allChip.className = 'ov-chip' + (atf.members.length === 0 ? ' active' : '');
+        allChip.textContent = 'All';
+        allChip.onclick = () => { state.allTasksFilter.members = []; renderContent(); };
+        memberWrap.appendChild(allChip);
+        state.members.forEach(m => {
+          const { bg, fg } = avatarColors(m.color);
+          const sel = atf.members.includes(m.id);
+          const chip = document.createElement('button');
+          chip.className = 'ov-chip member-chip' + (sel ? ' active' : '');
+          chip.title = m.name;
+          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${m.name}`;
+          chip.onclick = () => toggleAllTasksMember(m.id);
+          memberWrap.appendChild(chip);
+        });
+        filterBar.appendChild(memberWrap);
+        const sep = document.createElement('span'); sep.className = 'ov-filter-sep'; filterBar.appendChild(sep);
+      }
+
+      // Status chips
+      const statusWrap = document.createElement('div');
+      statusWrap.className = 'ov-filter-chips';
+      [{ val: 'all', label: 'All' }, { val: 'open', label: 'Open' }, { val: 'done', label: 'Done' }].forEach(s => {
+        const chip = document.createElement('button');
+        chip.className = 'ov-chip' + (atf.status === s.val ? ' active' : '');
+        chip.textContent = s.label;
+        chip.onclick = () => { state.allTasksFilter.status = s.val; renderContent(); };
+        statusWrap.appendChild(chip);
+      });
+      filterBar.appendChild(statusWrap);
+      const sep2 = document.createElement('span'); sep2.className = 'ov-filter-sep'; filterBar.appendChild(sep2);
+
+      // Priority chips
+      const prioWrap = document.createElement('div');
+      prioWrap.className = 'ov-filter-chips';
+      [{ val: 'all', label: 'Any' }, { val: 'high', label: '↑ High' }, { val: 'medium', label: '– Med' }, { val: 'low', label: '↓ Low' }].forEach(p => {
+        const chip = document.createElement('button');
+        chip.className = 'ov-chip' + (atf.priority === p.val ? ' active' : '');
+        chip.textContent = p.label;
+        chip.onclick = () => { state.allTasksFilter.priority = p.val; renderContent(); };
+        prioWrap.appendChild(chip);
+      });
+      filterBar.appendChild(prioWrap);
+      container.appendChild(filterBar);
+
+      // ── Apply filters ──
+      if (atf.members.length > 0) tasks = tasks.filter(t => atf.members.includes(t.assigneeId));
+      if (atf.status === 'open') tasks = tasks.filter(t => !t.done);
+      else if (atf.status === 'done') tasks = tasks.filter(t => t.done);
+      if (atf.priority !== 'all') tasks = tasks.filter(t => t.priority === atf.priority);
+
+      const open = tasks.filter(t => !t.done);
+      const done = tasks.filter(t => t.done);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'animate-in';
+      if (!open.length && !done.length) {
+        wrap.innerHTML = `<div class="empty-state"><div class="e-icon">☐</div><div class="e-title">No tasks match</div><div class="e-sub">Try adjusting your filters</div></div>`;
+      } else {
+        if (open.length) {
+          const g = document.createElement('div'); g.className = 'task-group';
+          g.innerHTML = `<div class="task-group-label">Open · ${open.length}</div>`;
+          open.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML(t, true)));
+          wrap.appendChild(g);
+        }
+        if (done.length) {
+          const g = document.createElement('div'); g.className = 'task-group'; g.style.marginTop = '8px';
+          g.innerHTML = `<div class="task-group-label">Completed · ${done.length}</div>`;
+          done.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML(t, true)));
+          wrap.appendChild(g);
+        }
+      }
+      container.appendChild(wrap);
+    }
+
+    // ─── KANBAN ───────────────────────────────────────────────────────────────────
+    const KANBAN_COLS = [
+      { id: 'todo', label: 'To Do', color: '#787895' },
+      { id: 'inprogress', label: 'In Progress', color: '#38c8eb' },
+      { id: 'done', label: 'Done', color: '#b8f033' },
+    ];
+    let dragSrc = null;
+    let projDragSrc = null;
+
+    function renderKanban(container) {
+      let allTasks = state.projects.flatMap(p => p.tasks.map(t => ({ ...t, projectId: p.id, projectName: p.name, projectColor: p.color })));
+      const atf = state.allTasksFilter;
+      if (atf.members.length > 0) allTasks = allTasks.filter(t => atf.members.includes(t.assigneeId));
+      if (atf.priority !== 'all') allTasks = allTasks.filter(t => t.priority === atf.priority);
+
+      const board = document.createElement('div');
+      board.className = 'kanban-board animate-in';
+
+      KANBAN_COLS.forEach(col => {
+        const colTasks = allTasks.filter(t => (t.status || (t.done ? 'done' : 'todo')) === col.id);
+        const colEl = document.createElement('div');
+        colEl.className = 'kanban-col';
+
+        colEl.innerHTML = `
+      <div class="kanban-col-header">
+        <div class="kanban-col-dot" style="background:${col.color}"></div>
+        <div class="kanban-col-title">${col.label}</div>
+        <div class="kanban-col-count">${colTasks.length}</div>
+      </div>
+    `;
+
+        const body = document.createElement('div');
+        body.className = 'kanban-col-body';
+        body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
+        body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+        body.addEventListener('drop', e => {
+          e.preventDefault(); body.classList.remove('drag-over');
+          if (!dragSrc) return;
+          const { taskId, projectId } = dragSrc;
+          const proj = getProject(projectId);
+          const task = proj?.tasks.find(t => t.id === taskId);
+          if (task && task.status !== col.id) {
+            task.status = col.id;
+            task.done = col.id === 'done';
+            saveState(); renderContent();
+            showToast(`Moved to <span style="color:${col.color};font-weight:600">${col.label}</span>`);
+          }
+          dragSrc = null;
+        });
+
+        colTasks.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'kanban-card';
+          card.draggable = true;
+          const assignee = getMember(t.assigneeId);
+          const { bg, fg } = assignee ? avatarColors(assignee.color) : { bg: '#333', fg: '#999' };
+          const overdue = !t.done && isOverdue(t.due);
+          card.innerHTML = `
+        <div class="kanban-card-title ${t.done ? 'done' : ''}">${t.title}</div>
+        <div class="kanban-card-meta">
+          <span class="task-priority ${priorityClass(t.priority)}">${t.priority}</span>
+          <span class="kanban-card-proj" style="border-left:2px solid ${t.projectColor};padding-left:5px">${t.projectName}</span>
+          ${assignee ? `<div class="avatar" style="background:${bg};color:${fg};width:18px;height:18px;font-size:8px;margin-left:auto">${initials(assignee.name)}</div>` : ''}
+          ${t.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${formatDate(t.due)}</span>` : ''}
+        </div>
+      `;
+          card.addEventListener('dragstart', () => { dragSrc = { taskId: t.id, projectId: t.projectId }; card.classList.add('drag-src'); });
+          card.addEventListener('dragend', () => { card.classList.remove('drag-src'); dragSrc = null; });
+          body.appendChild(card);
+        });
+
+        colEl.appendChild(body);
+
+        const addBtn = document.createElement('div');
+        addBtn.className = 'kanban-col-add';
+        addBtn.innerHTML = `<span style="font-size:15px;line-height:1">+</span> Add task`;
+        addBtn.onclick = () => showAddTask(null, col.id);
+        colEl.appendChild(addBtn);
+
+        board.appendChild(colEl);
+      });
+      container.appendChild(board);
+    }
+
+    // ─── TASK HTML ────────────────────────────────────────────────────────────────
+    function _getObsidianVault() {
+      return (HubStorage.get('hub-settings-v1') || {}).obsidianVault || '';
+    }
+
+    function promptObsidianNote(e, taskId, projectId) {
+      e.stopPropagation();
+      const task = findTask(taskId, projectId);
+      if (!task) return;
+      const input = prompt('Obsidian note path (e.g. Projects/MyNote.md):\nLeave blank to remove the link.', task.obsidianNote || '');
+      if (input === null) return;
+      task.obsidianNote = input.trim();
+      saveState();
+      renderContent();
+      if (state.selectedProject === task.projectId) renderPanel(state.selectedProject);
+    }
+
+    function taskHTML(task, showProject = false) {
+      const assignee = getMember(task.assigneeId);
+      const { bg, fg } = assignee ? avatarColors(assignee.color) : { bg: '#333', fg: '#999' };
+      const overdue = !task.done && isOverdue(task.due);
+      const projBadge = showProject && task.projectName
+        ? `<span style="font-size:10px;font-family:var(--font-mono);color:var(--text3);padding:1px 6px;background:var(--surface3);border-radius:4px;border-left:2px solid ${task.projectColor}">${task.projectName}</span>`
+        : '';
+      const safeTitle = (task.title || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      const linkCount = typeof HubLinks !== 'undefined' ? HubLinks.getLinksFor('project-hub', task.id).length : 0;
+      const linkBadge = linkCount > 0
+        ? `<button class="hl-badge" onclick="event.stopPropagation();HubLinks.showLinksPopover('project-hub','${task.id}',this)">🔗 ${linkCount}</button>`
+        : '';
+      const vault = _getObsidianVault();
+      const obsidianBadge = (task.obsidianNote && vault)
+        ? `<a class="obsidian-badge" href="obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(task.obsidianNote)}" title="Open in Obsidian" onclick="event.stopPropagation()">⟡ Note</a>`
+        : '';
+      return `
+    <div class="task-item" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
+      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(event,'${task.id}','${task.projectId || ''}')">${task.done ? '✓' : ''}</div>
+      <div class="task-body">
+        <div class="task-title ${task.done ? 'done' : ''}">${task.title}</div>
+        <div class="task-meta">
+          <span class="task-priority ${priorityClass(task.priority)}">${task.priority}</span>
+          ${projBadge}
+          ${assignee ? `<span class="task-assignee"><div class="avatar" style="background:${bg};color:${fg};width:16px;height:16px;font-size:8px">${initials(assignee.name)}</div>${assignee.name}</span>` : ''}
+          ${task.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${formatDate(task.due)}</span>` : ''}
+          ${linkBadge}
+          ${obsidianBadge}
+        </div>
+      </div>
+      <div class="task-item-actions">
+        <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
+        <button class="task-action-btn obsidian" title="Link Obsidian note" onclick="promptObsidianNote(event,'${task.id}','${task.projectId || ''}')">⟡</button>
+        <button class="task-action-btn edit" title="Rename" onclick="startInlineEdit(event,'${task.id}','${task.projectId || ''}')">✎</button>
+        <button class="task-action-btn del" title="Delete" onclick="deleteTask(event,'${task.id}','${task.projectId || ''}')">✕</button>
+      </div>
+    </div>
+  `;
+    }
+
+    // ─── INLINE EDIT ─────────────────────────────────────────────────────────────
+    function findTask(taskId, projectId) {
+      if (projectId) return getProject(projectId)?.tasks.find(t => t.id === taskId);
+      for (const p of state.projects) { const t = p.tasks.find(t => t.id === taskId); if (t) return t; }
+      return null;
+    }
+
+    function startInlineEdit(e, taskId, projectId) {
+      e.stopPropagation();
+      const taskEl = e.target.closest('.task-item');
+      const titleEl = taskEl.querySelector('.task-title');
+      const original = titleEl.textContent;
+      const input = document.createElement('input');
+      input.className = 'task-title-input';
+      input.value = original;
+      titleEl.replaceWith(input);
+      input.focus(); input.select();
+
+      let committed = false;
+      const commit = () => {
+        if (committed) return; committed = true;
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== original) {
+          const task = findTask(taskId, projectId);
+          if (task) { task.title = newTitle; saveState(); showToast('Task renamed'); }
+        }
+        renderContent();
+        if (state.selectedProject) renderPanel(state.selectedProject);
+      };
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') { committed = true; renderContent(); if (state.selectedProject) renderPanel(state.selectedProject); }
+      });
+      input.addEventListener('blur', commit);
+    }
+
+    function deleteTask(e, taskId, projectId) {
+      e.stopPropagation();
+      if (projectId) {
+        const proj = getProject(projectId);
+        if (proj) proj.tasks = proj.tasks.filter(t => t.id !== taskId);
+      } else {
+        state.projects.forEach(p => { p.tasks = p.tasks.filter(t => t.id !== taskId); });
+      }
+      saveState(); showToast('Task deleted');
+      renderContent();
+      if (state.selectedProject) renderPanel(state.selectedProject);
+    }
+
+    function toggleTask(e, taskId, projectId) {
+      e.stopPropagation();
+      const task = findTask(taskId, projectId);
+      if (task) {
+        task.done = !task.done;
+        task.status = task.done ? 'done' : 'todo';
+        saveState();
+      }
+      renderContent();
+      if (state.selectedProject) renderPanel(state.selectedProject);
+    }
+
+    function addProjectMember(projId, memberId) {
+      const proj = getProject(projId);
+      if (!proj) return;
+
+      if (!proj.members.includes(memberId)) {
+        proj.members.push(memberId);
+        saveState();
+        renderContent();
+        renderPanel(projId);
+        showToast('Member added to project');
+      }
+    }
+
+    function removeProjectMember(projId, memberId) {
+      const proj = getProject(projId);
+      if (!proj) return;
+
+      const member = getMember(memberId);
+      const name = member ? member.name : memberId;
+
+      // Remove from project membership
+      proj.members = proj.members.filter(id => id !== memberId);
+
+      // Auto-unassign tasks
+      const affected = proj.tasks.filter(t => t.assigneeId === memberId);
+      affected.forEach(t => { t.assigneeId = ''; });
+
+      saveState();
+      renderContent();
+      renderPanel(projId);
+
+      showToast(`Removed ${name} (unassigned ${affected.length} tasks)`);
+    }
+
+    // ─── ALL MILESTONES ───────────────────────────────────────────────────────────
+    function renderAllMilestones(container) {
+      const wrap = document.createElement('div'); wrap.className = 'animate-in';
+      state.projects.forEach(proj => {
+        if (!proj.milestones.length) return;
+        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${proj.name}</div><div class="ui-section-line"></div></div>`;
+        proj.milestones.forEach(ms => {
+          const msTasks = proj.tasks.filter(t => t.milestoneId === ms.id);
+          const doneCount = msTasks.filter(t => t.done).length;
+          const pct = msTasks.length ? Math.round((doneCount / msTasks.length) * 100) : 0;
+          wrap.innerHTML += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+          <div class="milestone-header"><div class="milestone-dot" style="background:${ms.color}"></div><div class="milestone-name">${ms.name}</div><div class="milestone-date">${formatDate(ms.date)}</div></div>
+          <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${ms.color}"></div></div>
+          <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
+        </div>`;
+        });
+      });
+      if (!wrap.innerHTML) wrap.innerHTML = `<div class="empty-state"><div class="e-icon">◎</div><div class="e-title">No milestones</div></div>`;
+      container.appendChild(wrap);
+    }
+
+    // ─── ALL GOALS ────────────────────────────────────────────────────────────────
+    function renderAllGoals(container) {
+      const wrap = document.createElement('div'); wrap.className = 'animate-in';
+      state.projects.forEach(proj => {
+        if (!proj.goals.length) return;
+        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${proj.name}</div><div class="ui-section-line"></div></div>`;
+        proj.goals.forEach(g => {
+          wrap.innerHTML += `<div class="goal-item"><div class="goal-header"><div class="goal-name">${g.name}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span></div><div class="goal-desc">${g.desc}</div><div class="goal-bar"><div class="goal-fill" style="width:${g.progress}%"></div></div></div>`;
+        });
+      });
+      if (!wrap.innerHTML) wrap.innerHTML = `<div class="empty-state"><div class="e-icon">◇</div><div class="e-title">No goals defined</div></div>`;
+      container.appendChild(wrap);
+    }
+
+    // ─── DETAIL PANEL ────────────────────────────────────────────────────────────
+    function openProject(projId) {
+      state.selectedProject = projId;
+      document.getElementById('detail-panel').classList.remove('hidden');
+      renderPanel(projId); renderContent();
+    }
+
+    function closePanel() {
+      state.selectedProject = null;
+      document.getElementById('detail-panel').classList.add('hidden');
+      renderContent();
+    }
+
+    function setTab(tab) {
+      state.currentTab = tab;
+      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (state.selectedProject) renderPanel(state.selectedProject);
+    }
+
+    function renderPanel(projId) {
+      const proj = getProject(projId); if (!proj) return;
+      document.getElementById('panel-project-name').textContent = proj.name;
+      document.getElementById('panel-project-desc').textContent = proj.desc;
+      const bar = document.getElementById('panel-color-bar');
+      if (bar) bar.style.background = proj.color;
+
+      const body = document.getElementById('panel-body');
+      body.innerHTML = '';
+
+      if (state.currentTab === 'tasks') {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-ghost';
+        addBtn.style.cssText = 'width:100%;margin-bottom:12px;font-size:12px;justify-content:center';
+        addBtn.textContent = '+ Add Task';
+        addBtn.onclick = () => showAddTask(projId);
+        body.appendChild(addBtn);
+
+        // ── Filter bar ──
+        const tf = state.taskFilter;
+        const filterBar = document.createElement('div');
+        filterBar.className = 'task-filter-bar';
+        const statusChips = [
+          { val: 'all', label: 'All' },
+          { val: 'open', label: 'Open' },
+          { val: 'done', label: 'Done' },
+        ];
+        const prioChips = [
+          { val: 'all', label: 'Any priority' },
+          { val: 'high', label: '↑ High' },
+          { val: 'medium', label: '– Med' },
+          { val: 'low', label: '↓ Low' },
+        ];
+        statusChips.forEach(c => {
+          const btn = document.createElement('button');
+          btn.className = 'tf-chip' + (tf.status === c.val ? ' active' : '');
+          btn.textContent = c.label;
+          btn.onclick = () => { state.taskFilter.status = c.val; renderPanel(projId); };
+          filterBar.appendChild(btn);
+        });
+        const sep = document.createElement('span'); sep.className = 'tf-sep';
+        filterBar.appendChild(sep);
+        prioChips.forEach(c => {
+          const btn = document.createElement('button');
+          btn.className = 'tf-chip' + (tf.priority === c.val ? ' active' : '');
+          btn.textContent = c.label;
+          btn.onclick = () => { state.taskFilter.priority = c.val; renderPanel(projId); };
+          filterBar.appendChild(btn);
+        });
+        const compactBtn = document.createElement('button');
+        compactBtn.className = 'tf-compact' + (state.compactMode ? ' active' : '');
+        compactBtn.textContent = state.compactMode ? '⊟ Compact' : '⊟ Compact';
+        compactBtn.onclick = () => { state.compactMode = !state.compactMode; renderPanel(projId); };
+        filterBar.appendChild(compactBtn);
+        body.appendChild(filterBar);
+
+        if (state.compactMode) body.classList.add('compact-mode');
+        else body.classList.remove('compact-mode');
+
+        // ── Apply filters ──
+        let tasks = proj.tasks;
+        if (state.overviewFilter.members.length > 0) tasks = tasks.filter(t => state.overviewFilter.members.includes(t.assigneeId));
+        if (tf.status === 'open') tasks = tasks.filter(t => !t.done);
+        else if (tf.status === 'done') tasks = tasks.filter(t => t.done);
+        if (tf.priority !== 'all') tasks = tasks.filter(t => t.priority === tf.priority);
+
+        const open = tasks.filter(t => !t.done);
+        const done = tasks.filter(t => t.done);
+
+        if (!tasks.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">☐</div><div class="e-title">No tasks match</div></div>`); return; }
+        if (tf.status !== 'done' && open.length) {
+          const g = document.createElement('div'); g.className = 'task-group';
+          g.innerHTML = `<div class="task-group-label">Open</div>`;
+          open.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
+          body.appendChild(g);
+        }
+        if (tf.status !== 'open' && done.length) {
+          const g = document.createElement('div'); g.className = 'task-group'; g.style.marginTop = '12px';
+          g.innerHTML = `<div class="task-group-label">Done</div>`;
+          done.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
+          body.appendChild(g);
+        }
+      }
+
+      else if (state.currentTab === 'milestones') {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-ghost';
+        addBtn.style.cssText = 'width:100%;margin-bottom:12px;font-size:12px;justify-content:center';
+        addBtn.textContent = '+ Add Milestone';
+        addBtn.onclick = () => openMilestoneModal();
+        body.appendChild(addBtn);
+
+        if (!proj.milestones.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">◎</div><div class="e-title">No milestones</div></div>`); }
+        proj.milestones.forEach(ms => {
+          const msTasks = proj.tasks.filter(t => t.milestoneId === ms.id);
+          const doneCount = msTasks.filter(t => t.done).length;
+          const pct = msTasks.length ? Math.round((doneCount / msTasks.length) * 100) : 0;
+          const el = document.createElement('div'); el.className = 'milestone-item';
+          el.innerHTML = `
+        <div class="milestone-header" style="display:flex;align-items:center;gap:6px">
+          <div class="milestone-dot" style="background:${ms.color}"></div>
+          <div class="milestone-name" style="flex:1">${ms.name}</div>
+          <div class="milestone-date">${formatDate(ms.date)}</div>
+          <button class="task-action-btn edit" title="Edit milestone" style="margin-left:4px" onclick="openEditMilestone('${ms.id}','${projId}')">✎</button>
+          <button class="task-action-btn del" title="Delete milestone" onclick="deleteMilestone('${ms.id}','${projId}')">✕</button>
+        </div>
+        <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${ms.color}"></div></div>
+        <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
+        ${msTasks.map(t => taskHTML({ ...t, projectId: projId })).join('')}
+      `;
+          body.appendChild(el);
+        });
+        const unassigned = proj.tasks.filter(t => !t.milestoneId);
+        if (unassigned.length) {
+          const el = document.createElement('div'); el.className = 'milestone-item'; el.style.marginTop = '12px';
+          el.innerHTML = `<div class="task-group-label" style="margin-bottom:8px">No Milestone</div>${unassigned.map(t => taskHTML({ ...t, projectId: projId })).join('')}`;
+          body.appendChild(el);
+        }
+      }
+
+      else if (state.currentTab === 'goals') {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-ghost';
+        addBtn.style.cssText = 'width:100%;margin-bottom:12px;font-size:12px;justify-content:center';
+        addBtn.textContent = '+ Add Goal';
+        addBtn.onclick = () => openGoalModal();
+        body.appendChild(addBtn);
+
+        if (!proj.goals.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">◇</div><div class="e-title">No goals yet</div></div>`); }
+        proj.goals.forEach(g => {
+          const el = document.createElement('div'); el.className = 'goal-item';
+          el.innerHTML = `
+        <div class="goal-header" style="display:flex;align-items:center;gap:6px">
+          <div class="goal-name" style="flex:1">${g.name}</div>
+          <span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span>
+          <button class="task-action-btn edit" title="Edit goal" onclick="openEditGoal('${g.id}','${projId}')">✎</button>
+          <button class="task-action-btn del" title="Delete goal" onclick="deleteGoal('${g.id}','${projId}')">✕</button>
+        </div>
+        <div class="goal-desc">${g.desc}</div>
+        <div class="goal-progress-label"><span>Progress</span><span>${g.progress}%</span></div>
+        <div class="goal-bar"><div class="goal-fill" style="width:${g.progress}%"></div></div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+          <input type="range" min="0" max="100" value="${g.progress}" style="flex:1;accent-color:var(--accent)" data-gid="${g.id}">
+          <span style="font-size:11px;font-family:var(--font-mono);color:var(--text3);width:32px" id="glabel-${g.id}">${g.progress}%</span>
+        </div>
+      `;
+          el.querySelector('input[type=range]').addEventListener('input', function () {
+            document.getElementById('glabel-' + g.id).textContent = this.value + '%';
+          });
+          el.querySelector('input[type=range]').addEventListener('change', function () {
+            const g2 = proj.goals.find(x => x.id === g.id);
+            if (g2) { g2.progress = parseInt(this.value); saveState(); renderPanel(projId); renderContent(); }
+          });
+          body.appendChild(el);
+        });
+      }
+
+      else if (state.currentTab === 'people') {
+        const projMembers = proj.members.map(mid => getMember(mid)).filter(Boolean);
+        if (!projMembers.length) { body.innerHTML = `<div class="empty-state"><div class="e-icon">◯</div><div class="e-title">No members</div></div>`; return; }
+        projMembers.forEach(m => {
+          const { bg, fg } = avatarColors(m.color);
+          const assigned = proj.tasks.filter(t => t.assigneeId === m.id);
+          const openCount = assigned.filter(t => !t.done).length;
+          const el = document.createElement('div'); el.className = 'person-item';
+          el.innerHTML = `
+        <div class="avatar" style="background:${bg};color:${fg};width:36px;height:36px;font-size:13px">${initials(m.name)}</div>
+        <div class="person-info"><div class="person-name">${m.name}</div><div class="person-role">${m.role}</div></div>
+        <div class="person-task-count">${openCount} open<br><span style="color:var(--text3);font-size:10px">${assigned.length} total</span></div>
+      `;
+          body.appendChild(el);
+        });
+      }
+
+      else if (state.currentTab === 'settings') {
+        const wrap = document.createElement('div');
+
+        const assigned = proj.members
+          .map(mid => getMember(mid))
+          .filter(Boolean);
+
+        const available = state.members
+          .filter(m => !proj.members.includes(m.id));
+
+        const assignedHTML = assigned.length
+          ? assigned.map(m => {
+            const { bg, fg } = avatarColors(m.color);
+            return `
+        <div class="person-item" style="padding:10px;margin-bottom:6px">
+          <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
+          <div class="person-info">
+            <div class="person-name" style="font-size:12.5px">${m.name}</div>
+            <div class="person-role">${m.role}</div>
+          </div>
+          <button class="btn btn-ghost" style="padding:5px 10px"
+            onclick="removeProjectMember('${proj.id}','${m.id}')">Remove</button>
+        </div>
+      `;
+          }).join('')
+          : `<div class="empty-state" style="padding:16px 10px">
+       <div class="e-title">No members assigned</div>
+       <div class="e-sub">Add members below</div>
+     </div>`;
+
+        const availableHTML = available.length
+          ? available.map(m => {
+            const { bg, fg } = avatarColors(m.color);
+            return `
+        <div class="person-item" style="padding:10px;margin-bottom:6px">
+          <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
+          <div class="person-info">
+            <div class="person-name" style="font-size:12.5px">${m.name}</div>
+            <div class="person-role">${m.role}</div>
+          </div>
+          <button class="btn btn-primary" style="padding:5px 10px"
+            onclick="addProjectMember('${proj.id}','${m.id}')">Add</button>
+        </div>
+      `;
+          }).join('')
+          : `<div class="empty-state" style="padding:16px 10px">
+       <div class="e-title">No available members</div>
+       <div class="e-sub">Create members from the sidebar +</div>
+     </div>`;
+
+        wrap.innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Project Name</label>
+          <input class="form-input" id="ps-name" value="${proj.name}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="ps-desc">${proj.desc}</textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="ps-status">
+              <option value="planning">Planning</option>
+              <option value="active">Active</option>
+              <option value="onhold">On Hold</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <input class="form-input" id="ps-color" value="${proj.color}">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%"
+          onclick="saveProjectSettings('${proj.id}')">
+          Save Changes
+        </button>
+
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-label">Project Members</div>
+
+        <div style="margin:8px 0 14px">
+          <div class="form-label" style="letter-spacing:0.6px">Assigned</div>
+          ${assignedHTML}
+        </div>
+
+        <div style="margin:8px 0 0">
+          <div class="form-label" style="letter-spacing:0.6px">Available</div>
+          ${availableHTML}
+        </div>
+
+        <hr style="margin:16px 0;border-color:var(--border)">
+
+        <div class="form-label" style="color:var(--accent3)">Danger Zone</div>
+        <button class="btn btn-danger" style="width:100%"
+          onclick="deleteProject('${proj.id}')">
+          Delete Project
+        </button>
+      `;
+        body.appendChild(wrap);
+        document.getElementById('ps-status').value = proj.status;
+      }
+    }
+
+    // ─── MODALS ───────────────────────────────────────────────────────────────────
+    function openModal(id) { document.getElementById(id).classList.add('is-open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('is-open'); }
+
+    function showAddProject() {
+      const c = document.getElementById('proj-members');
+      c.innerHTML = state.members.map(m => {
+        const { bg, fg } = avatarColors(m.color);
+        return `<div class="checkbox-item"><input type="checkbox" id="pm-${m.id}" value="${m.id}" checked><label for="pm-${m.id}"><div class="avatar" style="background:${bg};color:${fg};width:20px;height:20px;font-size:9px">${initials(m.name)}</div>${m.name} <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${m.role}</span></label></div>`;
+      }).join('');
+      document.getElementById('proj-name').value = '';
+      document.getElementById('proj-desc').value = '';
+      openModal('modal-project');
+    }
+
+    function saveProject() {
+      const name = document.getElementById('proj-name').value.trim(); if (!name) return;
+      const members = [...document.querySelectorAll('#proj-members input:checked')].map(cb => cb.value);
+      state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [] });
+      saveState(); closeModal('modal-project'); showToast('Project created'); renderContent();
+    }
+
+    function showAddTask(preProjectId, preStatus) {
+      const sel = document.getElementById('task-project');
+      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === preProjectId ? 'selected' : ''}>${p.name}</option>`).join('');
+      populateTaskProjectDependents(preProjectId || state.projects[0]?.id);
+      sel.onchange = () => populateTaskProjectDependents(sel.value);
+      document.getElementById('task-title').value = '';
+      document.getElementById('task-due').value = '';
+      document.getElementById('task-obsidian').value = '';
+      const statusSel = document.getElementById('task-status');
+      if (statusSel && preStatus) statusSel.value = preStatus;
+      else if (statusSel) statusSel.value = 'todo';
+      openModal('modal-task');
+    }
+
+    function populateTaskProjectDependents(projId) {
+      const proj = getProject(projId);
+      document.getElementById('task-milestone').innerHTML = `<option value="">— none —</option>` + (proj?.milestones || []).map(ms => `<option value="${ms.id}">${ms.name}</option>`).join('');
+      const members = (proj && proj.members && proj.members.length)
+        ? proj.members.map(id => getMember(id)).filter(Boolean)
+        : state.members;
+      document.getElementById('task-assignee').innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    }
+
+    function saveTask() {
+      const title = document.getElementById('task-title').value.trim(); if (!title) return;
+      const projId = document.getElementById('task-project').value;
+      const proj = getProject(projId); if (!proj) return;
+      const statusVal = document.getElementById('task-status')?.value || 'todo';
+      proj.tasks.push({ id: uid(), title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+      saveState(); closeModal('modal-task'); showToast('Task added');
+      renderContent();
+      if (state.selectedProject === projId) renderPanel(projId);
+    }
+
+    // ─── EDIT STATE ──────────────────────────────────────────────────────────────
+    let _editingMsId = null, _editingMsProjId = null;
+    let _editingGoalId = null, _editingGoalProjId = null;
+    let _editingMemberId = null;
+
+    function openMilestoneModal() {
+      _editingMsId = null; _editingMsProjId = null;
+      document.getElementById('ms-name').value = '';
+      document.getElementById('ms-date').value = '';
+      document.getElementById('ms-color').value = '#c8f03e';
+      document.querySelector('#modal-milestone .modal-title').textContent = 'New Milestone';
+      document.querySelector('#modal-milestone .modal-sub').textContent = 'Define a key milestone for this project';
+      document.querySelector('#modal-milestone .btn-primary').textContent = 'Add Milestone';
+      openModal('modal-milestone');
+    }
+
+    function openEditMilestone(msId, projId) {
+      const proj = getProject(projId); if (!proj) return;
+      const ms = proj.milestones.find(m => m.id === msId); if (!ms) return;
+      _editingMsId = msId; _editingMsProjId = projId;
+      document.getElementById('ms-name').value = ms.name;
+      document.getElementById('ms-date').value = ms.date;
+      document.getElementById('ms-color').value = ms.color;
+      document.querySelector('#modal-milestone .modal-title').textContent = 'Edit Milestone';
+      document.querySelector('#modal-milestone .modal-sub').textContent = 'Update this milestone';
+      document.querySelector('#modal-milestone .btn-primary').textContent = 'Save Changes';
+      openModal('modal-milestone');
+    }
+
+    function saveMilestone() {
+      const name = document.getElementById('ms-name').value.trim(); if (!name) return;
+      const projId = _editingMsProjId || state.selectedProject || state.projects[0]?.id;
+      const proj = getProject(projId); if (!proj) return;
+      if (_editingMsId) {
+        const ms = proj.milestones.find(m => m.id === _editingMsId);
+        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; ms.color = document.getElementById('ms-color').value; }
+        _editingMsId = null; _editingMsProjId = null;
+        saveState(); closeModal('modal-milestone'); showToast('Milestone updated');
+      } else {
+        proj.milestones.push({ id: uid(), name, date: document.getElementById('ms-date').value, color: document.getElementById('ms-color').value });
+        saveState(); closeModal('modal-milestone'); showToast('Milestone added');
+      }
+      renderContent(); if (state.selectedProject) renderPanel(projId);
+    }
+
+    function deleteMilestone(msId, projId) {
+      if (!confirm('Delete this milestone? Tasks linked to it will become unassigned.')) return;
+      const proj = getProject(projId); if (!proj) return;
+      proj.milestones = proj.milestones.filter(m => m.id !== msId);
+      proj.tasks.forEach(t => { if (t.milestoneId === msId) t.milestoneId = null; });
+      saveState(); renderContent(); if (state.selectedProject) renderPanel(projId); showToast('Milestone deleted');
+    }
+
+    function openGoalModal() {
+      _editingGoalId = null; _editingGoalProjId = null;
+      document.getElementById('goal-name').value = '';
+      document.getElementById('goal-desc').value = '';
+      document.querySelector('#modal-goal .modal-title').textContent = 'New Goal';
+      document.querySelector('#modal-goal .modal-sub').textContent = 'Define a high-level goal for this project';
+      document.querySelector('#modal-goal .btn-primary').textContent = 'Add Goal';
+      openModal('modal-goal');
+    }
+
+    function openEditGoal(goalId, projId) {
+      const proj = getProject(projId); if (!proj) return;
+      const g = proj.goals.find(x => x.id === goalId); if (!g) return;
+      _editingGoalId = goalId; _editingGoalProjId = projId;
+      document.getElementById('goal-name').value = g.name;
+      document.getElementById('goal-desc').value = g.desc || '';
+      document.querySelector('#modal-goal .modal-title').textContent = 'Edit Goal';
+      document.querySelector('#modal-goal .modal-sub').textContent = 'Update this goal';
+      document.querySelector('#modal-goal .btn-primary').textContent = 'Save Changes';
+      openModal('modal-goal');
+    }
+
+    function saveGoal() {
+      const name = document.getElementById('goal-name').value.trim(); if (!name) return;
+      const projId = _editingGoalProjId || state.selectedProject || state.projects[0]?.id;
+      const proj = getProject(projId); if (!proj) return;
+      if (_editingGoalId) {
+        const g = proj.goals.find(x => x.id === _editingGoalId);
+        if (g) { g.name = name; g.desc = document.getElementById('goal-desc').value.trim(); }
+        _editingGoalId = null; _editingGoalProjId = null;
+        saveState(); closeModal('modal-goal'); showToast('Goal updated');
+      } else {
+        proj.goals.push({ id: uid(), name, desc: document.getElementById('goal-desc').value.trim(), progress: 0 });
+        saveState(); closeModal('modal-goal'); showToast('Goal added');
+      }
+      renderContent(); if (state.selectedProject) renderPanel(projId);
+    }
+
+    function deleteGoal(goalId, projId) {
+      if (!confirm('Delete this goal?')) return;
+      const proj = getProject(projId); if (!proj) return;
+      proj.goals = proj.goals.filter(g => g.id !== goalId);
+      saveState(); renderContent(); if (state.selectedProject) renderPanel(projId); showToast('Goal deleted');
+    }
+
+    function openMemberModal() {
+      _editingMemberId = null;
+      document.getElementById('member-name').value = '';
+      document.getElementById('member-role').value = '';
+      document.getElementById('member-color').value = '#c8f03e,#111';
+      document.querySelector('#modal-member .modal-title').textContent = 'Add Team Member';
+      document.querySelector('#modal-member .modal-sub').textContent = 'Add someone to the workspace';
+      document.querySelector('#modal-member .btn-primary').textContent = 'Add Member';
+      openModal('modal-member');
+    }
+
+    function openEditMember(memberId) {
+      const m = getMember(memberId); if (!m) return;
+      _editingMemberId = memberId;
+      document.getElementById('member-name').value = m.name;
+      document.getElementById('member-role').value = m.role;
+      document.getElementById('member-color').value = m.color;
+      document.querySelector('#modal-member .modal-title').textContent = 'Edit Member';
+      document.querySelector('#modal-member .modal-sub').textContent = 'Update this team member';
+      document.querySelector('#modal-member .btn-primary').textContent = 'Save Changes';
+      openModal('modal-member');
+    }
+
+    function saveMember() {
+      const name = document.getElementById('member-name').value.trim(); if (!name) return;
+      if (_editingMemberId) {
+        const m = getMember(_editingMemberId);
+        if (m) { m.name = name; m.role = document.getElementById('member-role').value.trim() || 'Team'; m.color = document.getElementById('member-color').value; }
+        _editingMemberId = null;
+        saveState(); closeModal('modal-member'); showToast('Member updated');
+      } else {
+        state.members.push({ id: uid(), name, role: document.getElementById('member-role').value.trim() || 'Team', color: document.getElementById('member-color').value });
+        saveState(); closeModal('modal-member'); showToast('Member added');
+      }
+      renderSidebarUsers(); renderContent();
+    }
+
+    function deleteMember(memberId) {
+      const m = getMember(memberId); if (!m) return;
+      if (!confirm(`Delete member "${m.name}"? They will be unassigned from all tasks.`)) return;
+      state.members = state.members.filter(x => x.id !== memberId);
+      state.projects.forEach(p => {
+        p.members = p.members.filter(id => id !== memberId);
+        p.tasks.forEach(t => { if (t.assigneeId === memberId) t.assigneeId = ''; });
+      });
+      state.overviewFilter.members = state.overviewFilter.members.filter(id => id !== memberId);
+      state.allTasksFilter.members = state.allTasksFilter.members.filter(id => id !== memberId);
+      saveState(); renderSidebarUsers(); renderContent();
+      if (state.selectedProject) renderPanel(state.selectedProject);
+      showToast('Member deleted');
+    }
+
+    function saveProjectSettings(projId) {
+      const p = getProject(projId);
+      if (!p) return;
+
+      p.name = document.getElementById('ps-name').value.trim();
+      p.desc = document.getElementById('ps-desc').value.trim();
+      p.status = document.getElementById('ps-status').value;
+      p.color = document.getElementById('ps-color').value;
+
+      saveState();
+      renderContent();
+      renderPanel(projId);
+      showToast('Project updated');
+    }
+
+    function deleteProject(projId) {
+      const p = getProject(projId);
+      if (!p) return;
+
+      const ok = confirm(
+        `Delete project "${p.name}"?\n\nAll tasks, milestones and goals will be removed.`
+      );
+      if (!ok) return;
+
+      state.projects = state.projects.filter(x => x.id !== projId);
+      closePanel();
+      saveState();
+      renderContent();
+
+      showToast('Project deleted');
+    }
+
+    // ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const open = document.querySelector('.modal-overlay.open');
+        if (open) { open.classList.remove('open'); return; }
+        closePanel();
+      }
+    });
+
+    // ─── HUB HIGHLIGHT ────────────────────────────────────────────────────────────
+    // Handles navigation from Decision Log (or any tool) to a specific task/project.
+    window.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'hub-highlight' || !e.data.itemId) return;
+      const itemId = e.data.itemId;
+
+      // Try task ID first
+      for (const p of state.projects) {
+        const task = (p.tasks || []).find(t => t.id === itemId);
+        if (task) {
+          state.selectedProject = p.id;
+          state.currentTab = 'tasks';
+          renderContent();
+          renderPanel(p.id);
+          setTimeout(() => {
+            const el = document.querySelector(`[data-task-id="${itemId}"]`);
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.transition = 'box-shadow 0.2s';
+            el.style.boxShadow = '0 0 0 2px var(--accent)';
+            setTimeout(() => { el.style.boxShadow = ''; }, 1400);
+          }, 60);
+          return;
+        }
+      }
+
+      // Try project ID
+      const proj = state.projects.find(p => p.id === itemId);
+      if (proj) {
+        state.selectedProject = proj.id;
+        renderContent();
+        renderPanel(proj.id);
+      }
+    });
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────────
+    renderSidebarUsers();
+    renderContent();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      HubBootstrap.start('project-hub');
+    });
+  </script>
+</body>
+
+</html>

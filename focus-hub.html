@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus Timer</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; }
+
+    /* ── Layout ── */
+    .sidebar {
+      width: 260px; min-width: 260px; height: 100vh;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .sidebar-logo {
+      height: 54px; display: flex; align-items: center; gap: 9px;
+      padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #111; font-family: var(--font-display);
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; overflow: hidden; }
+
+    /* ── Timer ring ── */
+    .timer-wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    .ring-container { position: relative; width: 220px; height: 220px; }
+    .ring-svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 10; }
+    .ring-fg { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.5s linear; }
+    .ring-fg.urgent { stroke: var(--accent-nope); }
+    .ring-center {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px;
+    }
+    .timer-display {
+      font-family: var(--font-mono); font-size: 42px; font-weight: 500;
+      color: var(--text); letter-spacing: 2px; line-height: 1;
+    }
+    .timer-label { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+
+    /* ── Duration selector ── */
+    .duration-chips { display: flex; gap: 6px; }
+    .dur-chip {
+      padding: 5px 14px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); font-size: 12px; font-family: var(--font-body);
+      cursor: pointer; transition: all 0.12s;
+    }
+    .dur-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .dur-chip:not(.active):hover { border-color: var(--border2); color: var(--text); }
+
+    /* ── Task picker ── */
+    .task-picker {
+      width: 340px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .task-picker-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+    .task-picker select {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text); padding: 7px 10px;
+      font-family: var(--font-body); font-size: 13px; cursor: pointer;
+    }
+    .task-picker select:focus { outline: 1px solid var(--accent); }
+    .current-task-card {
+      width: 340px; background: var(--surface2); border: 1px solid var(--accent-glow);
+      border-radius: var(--r); padding: 14px 16px;
+    }
+    .current-task-label { font-size: 10px; font-family: var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    .current-task-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .current-task-project { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--font-mono); }
+
+    /* ── Controls ── */
+    .timer-controls { display: flex; gap: 10px; align-items: center; }
+    .ctrl-btn {
+      padding: 10px 24px; border-radius: var(--r-sm); border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-family: var(--font-body);
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s;
+    }
+    .ctrl-btn:hover { border-color: var(--border2); background: var(--surface3); }
+    .ctrl-btn.primary { background: var(--accent); border-color: var(--accent); color: #111; }
+    .ctrl-btn.primary:hover { opacity: 0.85; }
+    .ctrl-btn.danger { color: var(--accent-nope); }
+    .ctrl-btn.danger:hover { border-color: var(--accent-nope); }
+
+    /* ── Session log (sidebar) ── */
+    .session-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .session-list::-webkit-scrollbar { width: 4px; }
+    .session-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .session-empty { padding: 20px; text-align: center; color: var(--text3); font-size: 12px; }
+    .session-row {
+      padding: 9px 10px; border-radius: var(--r-sm); margin-bottom: 4px;
+      background: var(--surface2); border: 1px solid transparent;
+    }
+    .session-row.completed { border-color: rgba(184,240,51,0.15); }
+    .session-task { font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .session-meta { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; display: flex; gap: 8px; }
+    .session-badge {
+      font-size: 9.5px; font-family: var(--font-mono); padding: 1px 5px;
+      border-radius: 4px; font-weight: 600;
+    }
+    .session-badge.done { background: var(--accent-dim); color: var(--accent); }
+    .session-badge.abandoned { background: rgba(255,80,80,0.1); color: var(--accent-nope); }
+
+    /* ── Histogram ── */
+    .histogram-wrap { padding: 12px 12px 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .histogram-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .histogram-bars { display: flex; gap: 4px; align-items: flex-end; height: 36px; }
+    .hbar { flex: 1; background: var(--accent-dim); border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; position: relative; }
+    .hbar:hover::after {
+      content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%;
+      transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; font-size: 10px; font-family: var(--font-mono);
+      color: var(--text); white-space: nowrap; z-index: 10;
+    }
+    .hbar.today { background: var(--accent); }
+    .histogram-days { display: flex; gap: 4px; margin-top: 3px; }
+    .hday { flex: 1; text-align: center; font-size: 9px; font-family: var(--font-mono); color: var(--text3); }
+    .hday.today { color: var(--accent); }
+
+    /* ── Done modal ── */
+    .done-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .done-overlay.open { opacity: 1; pointer-events: all; }
+    .done-modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--r); padding: 28px 32px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .done-icon { font-size: 36px; }
+    .done-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+    .done-sub { font-size: 13px; color: var(--text3); }
+    .done-actions { display: flex; gap: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">⏱</div>
+      <span class="logo-text">Focus Timer</span>
+    </div>
+    <div class="session-list" id="session-list">
+      <div class="session-empty">No sessions yet.<br>Start your first focus block.</div>
+    </div>
+    <div class="histogram-wrap">
+      <div class="histogram-label">This week (min)</div>
+      <div class="histogram-bars" id="histogram-bars"></div>
+      <div class="histogram-days" id="histogram-days"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="timer-wrap">
+
+      <div class="ring-container">
+        <svg class="ring-svg" width="220" height="220" viewBox="0 0 220 220">
+          <circle class="ring-bg" cx="110" cy="110" r="100"/>
+          <circle class="ring-fg" id="ring-fg" cx="110" cy="110" r="100"
+            stroke-dasharray="628.318" stroke-dashoffset="0"/>
+        </svg>
+        <div class="ring-center">
+          <div class="timer-display" id="timer-display">25:00</div>
+          <div class="timer-label" id="timer-label">Ready</div>
+        </div>
+      </div>
+
+      <div class="duration-chips" id="dur-chips">
+        <button class="dur-chip active" data-min="25" onclick="setDuration(25,this)">25 min</button>
+        <button class="dur-chip" data-min="50" onclick="setDuration(50,this)">50 min</button>
+        <button class="dur-chip" data-min="5" onclick="setDuration(5,this)">5 min break</button>
+      </div>
+
+      <div id="task-area"></div>
+
+      <div class="timer-controls">
+        <button class="ctrl-btn primary" id="start-btn" onclick="startTimer()">Start</button>
+        <button class="ctrl-btn" id="pause-btn" onclick="pauseTimer()" style="display:none">Pause</button>
+        <button class="ctrl-btn danger" id="stop-btn" onclick="stopTimer()" style="display:none">End Session</button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Done modal -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-modal">
+      <div class="done-icon">🎯</div>
+      <div class="done-title">Session complete!</div>
+      <div class="done-sub" id="done-sub">25 minutes focused.</div>
+      <div class="done-actions">
+        <button class="ctrl-btn primary" onclick="markTaskDone()">Mark task done ✓</button>
+        <button class="ctrl-btn" onclick="closeDoneModal()">Keep it open</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'focus-hub-v1';
+    const CIRCUMFERENCE = 2 * Math.PI * 100; // 628.318
+
+    let data = { sessions: [] };
+    let timerState = {
+      running: false, paused: false,
+      totalSec: 25 * 60, remainSec: 25 * 60,
+      duration: 25, intervalId: null,
+      taskId: null, taskTitle: null, taskProjectId: null, taskProjectName: null,
+      sessionStarted: null,
+    };
+
+    function loadData() {
+      try { data = HubStorage.get(STORAGE_KEY) || { sessions: [] }; } catch { data = { sessions: [] }; }
+      if (!data.sessions) data.sessions = [];
+    }
+    function saveData() { HubStorage.set(STORAGE_KEY, data); }
+
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ── Duration ──
+    function setDuration(min, btn) {
+      if (timerState.running) return;
+      timerState.duration = min;
+      timerState.totalSec = min * 60;
+      timerState.remainSec = min * 60;
+      document.querySelectorAll('.dur-chip').forEach(b => b.classList.toggle('active', b === btn));
+      updateDisplay();
+    }
+
+    // ── Task selection ──
+    function renderTaskArea() {
+      const area = document.getElementById('task-area');
+      if (timerState.running || timerState.paused) {
+        if (timerState.taskTitle) {
+          area.innerHTML = `<div class="current-task-card">
+            <div class="current-task-label">Focusing on</div>
+            <div class="current-task-title">${esc(timerState.taskTitle)}</div>
+            ${timerState.taskProjectName ? `<div class="current-task-project">${esc(timerState.taskProjectName)}</div>` : ''}
+          </div>`;
+        } else {
+          area.innerHTML = '';
+        }
+        return;
+      }
+      const tasks = (() => { try { return HubData.getAllTasks(); } catch { return []; } })();
+      const openTasks = tasks.filter(t => !t.done);
+      if (!openTasks.length) { area.innerHTML = ''; return; }
+      const opts = openTasks.map(t =>
+        `<option value="${t.id}" data-project="${esc(t._projectName||'')}" data-pid="${t._projectId||''}">${esc(t.title)} — ${esc(t._projectName||'')}</option>`
+      ).join('');
+      area.innerHTML = `<div class="task-picker">
+        <div class="task-picker-label">Focus on task</div>
+        <select id="task-select"><option value="">— No specific task —</option>${opts}</select>
+      </div>`;
+      const sel = document.getElementById('task-select');
+      if (timerState.taskId) sel.value = timerState.taskId;
+      sel.onchange = () => {
+        const opt = sel.options[sel.selectedIndex];
+        timerState.taskId = sel.value || null;
+        timerState.taskTitle = sel.value ? opt.text.split(' — ')[0] : null;
+        timerState.taskProjectName = sel.value ? opt.dataset.project : null;
+        timerState.taskProjectId = sel.value ? opt.dataset.pid : null;
+      };
+    }
+
+    // ── Ring ──
+    function updateDisplay() {
+      const m = Math.floor(timerState.remainSec / 60);
+      const s = timerState.remainSec % 60;
+      document.getElementById('timer-display').textContent =
+        String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      const pct = timerState.remainSec / timerState.totalSec;
+      const offset = CIRCUMFERENCE * (1 - pct);
+      const ring = document.getElementById('ring-fg');
+      ring.style.strokeDashoffset = offset;
+      ring.classList.toggle('urgent', timerState.remainSec <= 60 && timerState.running);
+      const lbl = document.getElementById('timer-label');
+      if (timerState.running) lbl.textContent = 'Focusing…';
+      else if (timerState.paused) lbl.textContent = 'Paused';
+      else lbl.textContent = 'Ready';
+    }
+
+    // ── Controls ──
+    function startTimer() {
+      if (timerState.paused) {
+        timerState.paused = false;
+        timerState.running = true;
+        tick();
+        return;
+      }
+      timerState.running = true;
+      timerState.paused = false;
+      timerState.remainSec = timerState.totalSec;
+      timerState.sessionStarted = new Date().toISOString();
+      renderTaskArea();
+      showControls('running');
+      tick();
+    }
+
+    function pauseTimer() {
+      clearInterval(timerState.intervalId);
+      timerState.running = false;
+      timerState.paused = true;
+      showControls('paused');
+      updateDisplay();
+    }
+
+    function stopTimer() {
+      clearInterval(timerState.intervalId);
+      const elapsed = timerState.totalSec - timerState.remainSec;
+      recordSession(false, elapsed);
+      resetTimer();
+    }
+
+    function resetTimer() {
+      clearInterval(timerState.intervalId);
+      timerState.running = false;
+      timerState.paused = false;
+      timerState.remainSec = timerState.totalSec;
+      showControls('idle');
+      renderTaskArea();
+      updateDisplay();
+    }
+
+    function tick() {
+      clearInterval(timerState.intervalId);
+      timerState.intervalId = setInterval(() => {
+        timerState.remainSec--;
+        updateDisplay();
+        if (timerState.remainSec <= 0) {
+          clearInterval(timerState.intervalId);
+          timerState.running = false;
+          recordSession(true, timerState.totalSec);
+          resetTimer();
+          openDoneModal();
+        }
+      }, 1000);
+    }
+
+    function showControls(mode) {
+      document.getElementById('start-btn').style.display  = mode === 'idle' ? '' : (mode === 'paused' ? '' : 'none');
+      document.getElementById('start-btn').textContent = mode === 'paused' ? 'Resume' : 'Start';
+      document.getElementById('pause-btn').style.display  = mode === 'running' ? '' : 'none';
+      document.getElementById('stop-btn').style.display   = (mode === 'running' || mode === 'paused') ? '' : 'none';
+      document.querySelectorAll('.dur-chip').forEach(b => b.disabled = mode !== 'idle');
+    }
+
+    // ── Session recording ──
+    function recordSession(completed, durationSec) {
+      data.sessions.unshift({
+        id: 's-' + Date.now().toString(36),
+        taskId: timerState.taskId, taskTitle: timerState.taskTitle,
+        projectName: timerState.taskProjectName, projectId: timerState.taskProjectId,
+        durationMin: timerState.duration, elapsedSec: durationSec,
+        completed, startedAt: timerState.sessionStarted, endedAt: new Date().toISOString(),
+      });
+      data.sessions = data.sessions.slice(0, 100);
+      saveData();
+      renderSessionList();
+      renderHistogram();
+    }
+
+    // ── Done modal ──
+    function openDoneModal() {
+      document.getElementById('done-sub').textContent = `${timerState.duration} minutes focused. Nice work!`;
+      document.getElementById('done-overlay').classList.add('open');
+    }
+    function closeDoneModal() { document.getElementById('done-overlay').classList.remove('open'); }
+    function markTaskDone() {
+      const tid = timerState.taskId;
+      if (tid) {
+        const phRaw = HubStorage.get('project-hub-v1');
+        if (phRaw) {
+          try {
+            const ph = JSON.parse(phRaw);
+            for (const proj of (ph.projects||[])) {
+              const t = (proj.tasks||[]).find(t => t.id === tid);
+              if (t) { t.done = true; t.status = 'done'; break; }
+            }
+            HubStorage.set('project-hub-v1', ph);
+          } catch {}
+        }
+      }
+      closeDoneModal();
+    }
+
+    // ── Session list ──
+    function renderSessionList() {
+      const el = document.getElementById('session-list');
+      if (!data.sessions.length) {
+        el.innerHTML = '<div class="session-empty">No sessions yet.<br>Start your first focus block.</div>';
+        return;
+      }
+      el.innerHTML = data.sessions.slice(0, 30).map(s => {
+        const badge = s.completed
+          ? `<span class="session-badge done">✓ done</span>`
+          : `<span class="session-badge abandoned">stopped</span>`;
+        const elapsed = s.completed ? `${s.durationMin}m` : `${Math.floor((s.elapsedSec||0)/60)}m`;
+        const dateStr = s.startedAt ? new Date(s.startedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+        return `<div class="session-row${s.completed?' completed':''}">
+          <div class="session-task">${esc(s.taskTitle || '(no task)')}</div>
+          <div class="session-meta">${badge} <span>${elapsed}</span> <span>${dateStr}</span></div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Histogram ──
+    function renderHistogram() {
+      const barsEl = document.getElementById('histogram-bars');
+      const daysEl = document.getElementById('histogram-days');
+      const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const today = new Date(); today.setHours(0,0,0,0);
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        days.push(d);
+      }
+      const maxMin = 120;
+      const minByDay = days.map(d => {
+        const iso = d.toISOString().split('T')[0];
+        return data.sessions
+          .filter(s => s.completed && s.startedAt && s.startedAt.startsWith(iso))
+          .reduce((sum, s) => sum + (s.durationMin || 0), 0);
+      });
+      const peak = Math.max(...minByDay, 1);
+      barsEl.innerHTML = minByDay.map((min, i) => {
+        const isToday = i === 6;
+        const pct = Math.max(4, (min / peak) * 100);
+        return `<div class="hbar${isToday?' today':''}" style="height:${pct}%" data-tip="${min}m"></div>`;
+      }).join('');
+      daysEl.innerHTML = days.map((d, i) => {
+        const isToday = i === 6;
+        return `<div class="hday${isToday?' today':''}">${DAY_NAMES[d.getDay()].slice(0,1)}</div>`;
+      }).join('');
+    }
+
+    // ── Init ──
+    loadData();
+    updateDisplay();
+    renderTaskArea();
+    renderSessionList();
+    renderHistogram();
+    try { HubData.onChange(() => { if (!timerState.running && !timerState.paused) renderTaskArea(); }); } catch {}
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => { HubBootstrap.start('focus-hub'); });
+  </script>
+</body>
+</html>

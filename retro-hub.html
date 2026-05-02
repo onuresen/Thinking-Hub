@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retrospective Board</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 54px; display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display); flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; }
+    .topbar-spacer { flex: 1; }
+
+    .retro-selector { display: flex; align-items: center; gap: 8px; }
+    .retro-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px; padding: 5px 8px;
+      outline: none; cursor: pointer;
+    }
+    .retro-select:focus { border-color: var(--accent); }
+
+    /* ── Columns ── */
+    .board {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    .col {
+      flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .col:last-child { border-right: none; }
+    .col-header {
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .col-icon { font-size: 18px; }
+    .col-title-wrap { flex: 1; }
+    .col-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+    .col-title.went-well { color: var(--accent-like); }
+    .col-title.improve { color: #f59e0b; }
+    .col-title.actions { color: #a78bfa; }
+    .col-count { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+
+    .col-body {
+      flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .col-body::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Add item ── */
+    .add-form { display: flex; gap: 6px; }
+    .add-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 7px 10px; color: var(--text);
+      font-family: var(--font-body); font-size: 12px; outline: none; transition: border-color 0.15s;
+    }
+    .add-input:focus { border-color: var(--accent); }
+    .add-input::placeholder { color: var(--text3); }
+    .add-btn {
+      width: 30px; height: 30px; border-radius: var(--r-sm); border: 1px solid var(--border);
+      background: transparent; color: var(--text2); cursor: pointer; font-size: 18px; line-height: 1;
+      display: flex; align-items: center; justify-content: center; transition: all 0.12s; flex-shrink: 0;
+    }
+    .add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Retro card ── */
+    .retro-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: border-color 0.12s;
+    }
+    .retro-card:hover { border-color: var(--border); }
+    .card-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+    .card-footer { display: flex; align-items: center; gap: 4px; }
+    .reaction-btn {
+      display: flex; align-items: center; gap: 3px; padding: 3px 7px;
+      border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; font-size: 12px;
+      transition: all 0.12s; font-family: var(--font-body);
+      color: var(--text2);
+    }
+    .reaction-btn:hover { background: var(--surface2); border-color: var(--accent-glow); }
+    .reaction-btn.reacted { background: var(--accent-dim); border-color: var(--accent-glow); }
+    .reaction-count { font-size: 11px; font-family: var(--font-mono); }
+    .card-spacer { flex: 1; }
+    .card-delete {
+      background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px;
+      opacity: 0; transition: opacity 0.12s; padding: 2px 4px;
+    }
+    .retro-card:hover .card-delete { opacity: 1; }
+    .card-delete:hover { color: var(--accent-nope); }
+
+    /* ── Empty state ── */
+    .col-empty { font-size: 12px; color: var(--text3); padding: 8px 4px; font-style: italic; }
+
+    /* ── Export button ── */
+    .export-btn {
+      padding: 5px 12px; border-radius: var(--r-sm); border: 1px solid var(--border);
+      background: transparent; color: var(--text2); font-size: 12px; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.12s;
+    }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── New retro modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 900;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 24px; width: 380px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .modal-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; }
+    .modal-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+    .modal-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 12px; color: var(--text);
+      font-family: var(--font-body); font-size: 13px; outline: none;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-mark">RB</div>
+  <div class="logo-text">Retrospective Board</div>
+  <div class="topbar-spacer"></div>
+  <div class="retro-selector">
+    <select class="retro-select" id="retro-select" onchange="switchRetro(this.value)"></select>
+    <button class="btn btn-ghost" onclick="openNewRetroModal()" style="font-size:12px;padding:5px 12px">+ New retro</button>
+  </div>
+  <button class="export-btn" onclick="exportMarkdown()">↓ Export</button>
+</div>
+
+<div class="board">
+  <!-- Went Well -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-icon">🌟</div>
+      <div class="col-title-wrap">
+        <div class="col-title went-well">Went Well</div>
+        <div class="col-count" id="count-well">0 items</div>
+      </div>
+    </div>
+    <div class="col-body" id="col-well">
+      <div class="add-form">
+        <input class="add-input" id="input-well" placeholder="What went well?" onkeydown="if(event.key==='Enter')addItem('well')">
+        <button class="add-btn" onclick="addItem('well')">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Improve -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-icon">🔧</div>
+      <div class="col-title-wrap">
+        <div class="col-title improve">Improve</div>
+        <div class="col-count" id="count-improve">0 items</div>
+      </div>
+    </div>
+    <div class="col-body" id="col-improve">
+      <div class="add-form">
+        <input class="add-input" id="input-improve" placeholder="What could be improved?" onkeydown="if(event.key==='Enter')addItem('improve')">
+        <button class="add-btn" onclick="addItem('improve')">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="col">
+    <div class="col-header">
+      <div class="col-icon">⚡</div>
+      <div class="col-title-wrap">
+        <div class="col-title actions">Actions</div>
+        <div class="col-count" id="count-actions">0 items</div>
+      </div>
+    </div>
+    <div class="col-body" id="col-actions">
+      <div class="add-form">
+        <input class="add-input" id="input-actions" placeholder="What will we do differently?" onkeydown="if(event.key==='Enter')addItem('actions')">
+        <button class="add-btn" onclick="addItem('actions')">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New retro modal -->
+<div class="modal-overlay hidden" id="new-retro-modal">
+  <div class="modal-box">
+    <div class="modal-title">New Retrospective</div>
+    <div>
+      <div class="modal-label">Name</div>
+      <input class="modal-input" id="new-retro-name" placeholder="e.g. Sprint 14 Retro" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeNewRetroModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createRetro()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'retro-hub-v1';
+  const REACTIONS = ['👍', '❤️', '🔥'];
+  const COLS = ['well', 'improve', 'actions'];
+
+  let data = { retros: [], activeId: null };
+  let myId = 'user-' + Math.random().toString(36).slice(2, 8);
+
+  function load() {
+    data = HubStorage.get(STORAGE_KEY) || { retros: [], activeId: null };
+    if (!data.retros) data.retros = [];
+  }
+
+  function save() {
+    HubStorage.set(STORAGE_KEY, data);
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function getActive() {
+    if (!data.retros.length) return null;
+    return data.retros.find(r => r.id === data.activeId) || data.retros[data.retros.length - 1];
+  }
+
+  // ── Retro management ──────────────────────────────────────────────────────
+
+  function switchRetro(id) {
+    data.activeId = id;
+    save();
+    renderBoard();
+  }
+
+  function openNewRetroModal() {
+    document.getElementById('new-retro-modal').classList.remove('hidden');
+    document.getElementById('new-retro-name').value = '';
+    document.getElementById('new-retro-name').focus();
+  }
+
+  function closeNewRetroModal() {
+    document.getElementById('new-retro-modal').classList.add('hidden');
+  }
+
+  function createRetro() {
+    const name = document.getElementById('new-retro-name').value.trim();
+    if (!name) return;
+    const retro = {
+      id: uid(),
+      name,
+      createdAt: new Date().toISOString(),
+      items: { well: [], improve: [], actions: [] }
+    };
+    data.retros.push(retro);
+    data.activeId = retro.id;
+    save();
+    closeNewRetroModal();
+    renderSelectAndBoard();
+  }
+
+  // ── Items ─────────────────────────────────────────────────────────────────
+
+  function addItem(col) {
+    const input = document.getElementById('input-' + col);
+    const text = input.value.trim();
+    if (!text) return;
+    const retro = getActive();
+    if (!retro) return;
+    if (!retro.items[col]) retro.items[col] = [];
+    retro.items[col].push({
+      id: uid(),
+      text,
+      reactions: {},
+      createdAt: new Date().toISOString()
+    });
+    input.value = '';
+    save();
+    renderCol(col, retro);
+  }
+
+  function deleteItem(col, itemId) {
+    const retro = getActive();
+    if (!retro) return;
+    retro.items[col] = (retro.items[col] || []).filter(i => i.id !== itemId);
+    save();
+    renderCol(col, retro);
+  }
+
+  function react(col, itemId, emoji) {
+    const retro = getActive();
+    if (!retro) return;
+    const item = (retro.items[col] || []).find(i => i.id === itemId);
+    if (!item) return;
+    if (!item.reactions) item.reactions = {};
+    if (!item.reactions[emoji]) item.reactions[emoji] = [];
+    const idx = item.reactions[emoji].indexOf(myId);
+    if (idx >= 0) {
+      item.reactions[emoji].splice(idx, 1);
+    } else {
+      item.reactions[emoji].push(myId);
+    }
+    save();
+    renderCol(col, retro);
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  function renderCol(col, retro) {
+    const items = retro ? (retro.items[col] || []) : [];
+    const container = document.getElementById('col-' + col);
+    const addForm = container.querySelector('.add-form');
+
+    // Render items before the add form
+    const cards = items.slice().reverse().map(item => {
+      const reactionHTML = REACTIONS.map(emoji => {
+        const reacters = (item.reactions && item.reactions[emoji]) || [];
+        const reacted = reacters.includes(myId);
+        return `<button class="reaction-btn${reacted ? ' reacted' : ''}" onclick="react('${col}','${item.id}','${emoji}')">
+          ${emoji} <span class="reaction-count">${reacters.length || ''}</span>
+        </button>`;
+      }).join('');
+      return `<div class="retro-card">
+        <div class="card-text">${_esc(item.text)}</div>
+        <div class="card-footer">
+          ${reactionHTML}
+          <div class="card-spacer"></div>
+          <button class="card-delete" onclick="deleteItem('${col}','${item.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('') || `<div class="col-empty">No items yet — add the first one above</div>`;
+
+    // Rebuild inner HTML while preserving add form
+    container.innerHTML = '';
+    container.appendChild(addForm);
+    const div = document.createElement('div');
+    div.innerHTML = cards;
+    while (div.firstChild) container.appendChild(div.firstChild);
+
+    const countEl = document.getElementById('count-' + col);
+    if (countEl) countEl.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
+  }
+
+  function renderBoard() {
+    const retro = getActive();
+    COLS.forEach(col => renderCol(col, retro));
+  }
+
+  function renderSelectAndBoard() {
+    const sel = document.getElementById('retro-select');
+    const active = getActive();
+    sel.innerHTML = data.retros.length
+      ? data.retros.map(r => `<option value="${r.id}"${r.id === (active && active.id) ? ' selected' : ''}>${_esc(r.name)}</option>`).join('')
+      : '<option disabled>No retros yet</option>';
+    renderBoard();
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────────
+
+  function exportMarkdown() {
+    const retro = getActive();
+    if (!retro) return;
+    let md = `# ${retro.name}\n\n`;
+    const labels = { well: '🌟 Went Well', improve: '🔧 Improve', actions: '⚡ Actions' };
+    COLS.forEach(col => {
+      md += `## ${labels[col]}\n`;
+      (retro.items[col] || []).forEach(item => {
+        const total = REACTIONS.reduce((s, e) => s + ((item.reactions && item.reactions[e] && item.reactions[e].length) || 0), 0);
+        md += `- ${item.text}${total ? ` _(${total} reactions)_` : ''}\n`;
+      });
+      md += '\n';
+    });
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `retro-${retro.name.replace(/\s+/g, '-').toLowerCase()}.md`;
+    a.click();
+  }
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    if (!data.retros.length) {
+      data.retros.push({
+        id: uid(), name: 'First Retro',
+        createdAt: new Date().toISOString(),
+        items: { well: [], improve: [], actions: [] }
+      });
+      data.activeId = data.retros[0].id;
+      save();
+    }
+    renderSelectAndBoard();
+    HubBootstrap.start('retro-hub');
+  });
+</script>
+</body>
+</html>
