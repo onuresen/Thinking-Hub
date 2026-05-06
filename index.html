@@ -12,6 +12,7 @@
   <script src="hub-storage.js"></script>
   <script src="hub-tutorial.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-obsidian.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-search.js"></script>
   <script src="hub-toast.js"></script>
@@ -926,6 +927,15 @@
         <div style="font-size:11px;color:var(--text3);margin-top:5px">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
       </div>
 
+      <div id="obsidian-vault-picker" style="display:none;margin-bottom:20px">
+        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Obsidian Vault Index</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="pickObsidianVault()" style="font-size:12px">📁 Pick Vault Folder</button>
+          <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()" style="font-size:12px;display:none">↻ Re-index</button>
+        </div>
+        <div id="obsidian-index-status" style="font-size:11px;color:var(--text3);margin-top:6px">Pick your vault folder to enable note autocomplete in Project Hub &amp; Decision Hub</div>
+      </div>
+
       <div class="export-scope-label">Export scope</div>
       <div class="export-scope-options">
         <label class="export-scope-option">
@@ -1726,6 +1736,29 @@
       HubStorage.set('hub-settings-v1', { ...s, obsidianVault: v.trim() });
     }
 
+    async function pickObsidianVault() {
+      const ok = await HubObsidian.pickVault();
+      if (ok) updateObsidianIndexUI();
+    }
+    async function reindexObsidianVault() {
+      await HubObsidian.indexVault();
+      updateObsidianIndexUI();
+    }
+    function updateObsidianIndexUI() {
+      const el = document.getElementById('obsidian-index-status');
+      const btn = document.getElementById('obsidian-reindex-btn');
+      if (!el) return;
+      const at = HubObsidian.getIndexedAt();
+      const count = HubObsidian.getIndex().length;
+      if (at) {
+        const mins = Math.round((Date.now() - new Date(at)) / 60000);
+        el.textContent = `${count} notes indexed · ${mins < 1 ? 'just now' : mins + 'm ago'}`;
+        if (btn) btn.style.display = '';
+      } else {
+        el.textContent = 'Pick your vault folder to enable note autocomplete in Project Hub & Decision Hub';
+      }
+    }
+
     function updateExportSizeEstimate() {
       const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
       let storageKeys, toolLabel;
@@ -1754,6 +1787,10 @@
       document.getElementById('data-modal').style.display = 'flex';
       const s = HubStorage.get('hub-settings-v1') || {};
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
+      if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
+        document.getElementById('obsidian-vault-picker').style.display = '';
+        updateObsidianIndexUI();
+      }
       // Show which tool "Current Tool" scope would export
       const currentApp = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
       document.getElementById('export-current-tool-label').textContent =
