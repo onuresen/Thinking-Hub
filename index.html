@@ -764,6 +764,69 @@
     .close-modal-btn:hover {
       color: var(--text);
     }
+
+    /* ── Export Scope Selector ───────────────────── */
+    .export-scope-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 8px;
+    }
+
+    .export-scope-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .export-scope-option {
+      cursor: pointer;
+    }
+
+    .export-scope-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .export-scope-card {
+      padding: 10px 8px;
+      border-radius: var(--r-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+      cursor: pointer;
+    }
+
+    .export-scope-option input:checked + .export-scope-card {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .export-scope-card:hover {
+      border-color: var(--border2);
+    }
+
+    .export-scope-option input:checked + .export-scope-card:hover {
+      border-color: var(--accent);
+    }
+
+    .export-scope-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .export-scope-desc {
+      font-size: 10px;
+      color: var(--text3);
+      line-height: 1.4;
+    }
   </style>
 </head>
 
@@ -853,8 +916,7 @@
     onclick="if(event.target===this) closeDataModal()">
     <div class="data-modal">
       <div class="data-modal-title" id="data-modal-title">Data & Backup</div>
-      <div class="data-modal-desc">Download a complete snapshot of all your local Thinking Hub data (projects, tasks,
-        ideas, decisions, schedule).</div>
+      <div class="data-modal-desc">Export your data as structured JSON — for backup &amp; restore, or to share context with an AI assistant.</div>
       <div class="data-size" id="data-size-str">0 KB in local storage</div>
 
       <div style="margin-bottom:20px">
@@ -864,8 +926,33 @@
         <div style="font-size:11px;color:var(--text3);margin-top:5px">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
       </div>
 
+      <div class="export-scope-label">Export scope</div>
+      <div class="export-scope-options">
+        <label class="export-scope-option">
+          <input type="radio" name="export-scope" value="full" checked onchange="updateExportSizeEstimate()">
+          <div class="export-scope-card">
+            <div class="export-scope-title">Full Backup</div>
+            <div class="export-scope-desc">All tools — restorable</div>
+          </div>
+        </label>
+        <label class="export-scope-option">
+          <input type="radio" name="export-scope" value="curated" onchange="updateExportSizeEstimate()">
+          <div class="export-scope-card">
+            <div class="export-scope-title">AI Context</div>
+            <div class="export-scope-desc">Projects, goals, decisions…</div>
+          </div>
+        </label>
+        <label class="export-scope-option">
+          <input type="radio" name="export-scope" value="current" onchange="updateExportSizeEstimate()">
+          <div class="export-scope-card">
+            <div class="export-scope-title">Current Tool</div>
+            <div class="export-scope-desc" id="export-current-tool-label">—</div>
+          </div>
+        </label>
+      </div>
+
       <div class="data-btn-row">
-        <button class="data-btn primary" onclick="exportHubData()">Export Backup (.json)</button>
+        <button class="data-btn primary" onclick="exportHubData()">Export (.json)</button>
         <button class="data-btn secondary" onclick="triggerImport()">Import Backup</button>
       </div>
       <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
@@ -1639,22 +1726,43 @@
       HubStorage.set('hub-settings-v1', { ...s, obsidianVault: v.trim() });
     }
 
+    function updateExportSizeEstimate() {
+      const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
+      let storageKeys, toolLabel;
+      if (scope === 'full') {
+        storageKeys = SCOPE_KEYS.full;
+        toolLabel = `${storageKeys.length} tools`;
+      } else if (scope === 'curated') {
+        storageKeys = SCOPE_KEYS.curated;
+        toolLabel = `${storageKeys.length} tools`;
+      } else {
+        const app = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
+        storageKeys = app ? (APP_FILE_STORAGE_KEYS[app.file] || []) : [];
+        toolLabel = app ? app.label : 'no tool';
+      }
+      let bytes = 0;
+      for (const key of storageKeys) {
+        const item = localStorage.getItem(key);
+        if (item) bytes += item.length * 2;
+      }
+      document.getElementById('data-size-str').textContent =
+        `~${(bytes / 1024).toFixed(1)} KB (${toolLabel})`;
+    }
+
     function openDataModal() {
       _modalTrigger = document.activeElement;
       document.getElementById('data-modal').style.display = 'flex';
       const s = HubStorage.get('hub-settings-v1') || {};
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
+      // Show which tool "Current Tool" scope would export
+      const currentApp = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
+      document.getElementById('export-current-tool-label').textContent =
+        currentApp ? currentApp.label : 'Home (no data)';
       // Move focus inside the modal
       const firstBtn = document.querySelector('#data-modal .data-btn');
       if (firstBtn) setTimeout(() => firstBtn.focus(), 50);
-
-      let kb = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        const item = localStorage.getItem(key);
-        kb += (item.length * 2) / 1024;
-      }
-      document.getElementById('data-size-str').textContent = kb.toFixed(1) + ' KB in local storage';
+      // Show size estimate for the currently selected scope
+      updateExportSizeEstimate();
     }
 
     function closeDataModal() {
@@ -1664,20 +1772,173 @@
       if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
     }
 
-    function exportHubData() {
-      const db = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        db[k] = localStorage.getItem(k);
+    // ── Export helpers ────────────────────────────────────────────────────────────
+
+    // Storage key → human-readable section name in the exported JSON
+    const EXPORT_KEY_LABELS = {
+      'project-hub-v1':       'projects',
+      'goals-hub-v1':         'goals',
+      'decision-hub-v1':      'decisions',
+      'review-hub-v1':        'weekly_reviews',
+      'risk-hub-v1':          'risks',
+      'meetings-hub-v1':      'meetings',
+      'assumptions-hub-v1':   'assumptions',
+      'kmqt_current_v2':      'kmqt_board',
+      'schedule-v1':          'schedule',
+      'learning-hub-v1':      'learning_log',
+      'matrix-hub-v1':        'priority_matrix',
+      'stakeholder-hub-v1':   'stakeholders',
+      'retro-hub-v1':         'retrospectives',
+      'focus-hub-v1':         'focus_sessions',
+      'log-hub-v1':           'daily_log',
+      'canvas-v1':            'canvas',
+      'ideaswipe_history_v6': 'idea_swiper',
+      'hub-links-v1':         'cross_tool_links',
+      'hub-activity-v1':      'activity_log',
+      'hub-settings-v1':      'settings',
+    };
+
+    // Tool file → storage keys it owns (for "Current Tool" scope)
+    const APP_FILE_STORAGE_KEYS = {
+      'project-hub.html':      ['project-hub-v1'],
+      'schedule.html':          ['schedule-v1'],
+      'idea-swiper.html':       ['ideaswipe_history_v6'],
+      'kmqt-board.html':       ['kmqt_current_v2'],
+      'decision-hub.html':     ['decision-hub-v1'],
+      'canvas-hub.html':       ['canvas-v1'],
+      'focus-hub.html':        ['focus-hub-v1'],
+      'log-hub.html':          ['log-hub-v1'],
+      'review-hub.html':       ['review-hub-v1'],
+      'retro-hub.html':        ['retro-hub-v1'],
+      'assumptions-hub.html':  ['assumptions-hub-v1'],
+      'goals-hub.html':        ['goals-hub-v1'],
+      'matrix-hub.html':       ['matrix-hub-v1'],
+      'learning-hub.html':     ['learning-hub-v1'],
+      'meetings-hub.html':     ['meetings-hub-v1'],
+      'stakeholder-hub.html':  ['stakeholder-hub-v1'],
+      'risk-hub.html':         ['risk-hub-v1'],
+      'achievements-hub.html': ['hub-activity-v1'],
+    };
+
+    // Storage keys included in each scope
+    const SCOPE_KEYS = {
+      // AI Context: high-signal tools only — no canvas, sessions, raw swipe history
+      curated: [
+        'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
+        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
+        'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
+        'retro-hub-v1',
+      ],
+      // Full Backup: everything except cloud credentials and ephemeral UI state
+      full: [
+        'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
+        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
+        'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
+        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
+        'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
+      ],
+    };
+
+    function safeParseStorage(key) {
+      try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+    }
+
+    // Recursively remove UI-only fields that add noise in an AI context export
+    function stripAINoise(value) {
+      const NOISE_KEYS = new Set(['color', 'taskId', 'taskCreated', 'obsidianNote']);
+      if (Array.isArray(value)) return value.map(stripAINoise);
+      if (value !== null && typeof value === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+          if (!NOISE_KEYS.has(k)) out[k] = stripAINoise(v);
+        }
+        return out;
       }
-      const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+      return value;
+    }
+
+    // Build a quick-orientation summary for AI context exports
+    function buildExportSummary(data) {
+      const s = {};
+      if (data.projects) {
+        const projects = data.projects.projects || [];
+        s.projects = projects.length;
+        let open = 0, total = 0;
+        for (const p of projects) {
+          const tasks = p.tasks || [];
+          total += tasks.length;
+          open += tasks.filter(t => !t.done).length;
+        }
+        s.open_tasks = open;
+        s.total_tasks = total;
+      }
+      if (data.goals)          s.goals_quarters = (data.goals.quarters || []).length;
+      if (data.decisions)      s.decisions      = Array.isArray(data.decisions) ? data.decisions.length : null;
+      if (data.risks)          s.risks          = (data.risks.risks || []).length;
+      if (data.meetings)       s.meetings       = (data.meetings.meetings || []).length;
+      if (data.weekly_reviews) s.weekly_reviews = Object.keys(data.weekly_reviews).length;
+      if (data.assumptions)    s.assumptions    = (data.assumptions.assumptions || []).length;
+      if (data.learning_log)   s.learning_items = (data.learning_log.items || []).length;
+      return s;
+    }
+
+    function buildExportPayload(scope, storageKeys) {
+      const data = {};
+      const storageKeyMap = {};
+      for (const key of storageKeys) {
+        const val = safeParseStorage(key);
+        if (val !== null) {
+          const label = EXPORT_KEY_LABELS[key] || key;
+          data[label] = (scope === 'curated') ? stripAINoise(val) : val;
+          storageKeyMap[label] = key;
+        }
+      }
+      const payload = {
+        version: 2,
+        app: 'Thinking Hub',
+        exportedAt: new Date().toISOString(),
+        scope,
+      };
+      if (scope === 'curated') payload.summary = buildExportSummary(data);
+      payload.storageKeys = storageKeyMap;
+      payload.data = data;
+      return payload;
+    }
+
+    function exportHubData() {
+      const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
+      let storageKeys, filename;
+
+      if (scope === 'full') {
+        storageKeys = SCOPE_KEYS.full;
+        filename = `thinking-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      } else if (scope === 'curated') {
+        storageKeys = SCOPE_KEYS.curated;
+        filename = `thinking-hub-ai-context-${new Date().toISOString().slice(0, 10)}.json`;
+      } else {
+        // current tool
+        const app = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
+        const keys = app ? (APP_FILE_STORAGE_KEYS[app.file] || []) : [];
+        if (!keys.length) {
+          showToast('This tool has no exportable data', 'error');
+          return;
+        }
+        storageKeys = keys;
+        filename = `${activeAppId}-export-${new Date().toISOString().slice(0, 10)}.json`;
+      }
+
+      const payload = buildExportPayload(scope, storageKeys);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `thinking-hub-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       URL.revokeObjectURL(url);
-      showToast('Backup exported', 'success');
+      const labels = { full: 'Full Backup', curated: 'AI Context', current: 'Current Tool' };
+      showToast(`Exported — ${labels[scope]}`, 'success');
     }
 
     function triggerImport() {
@@ -1690,14 +1951,32 @@
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const db = JSON.parse(ev.target.result);
-          if (!confirm('This will OVERWRITE your current local data with the backup.\\nAre you sure you want to proceed?')) return;
+          const parsed = JSON.parse(ev.target.result);
 
-          for (const k in db) {
-            if (db.hasOwnProperty(k)) {
-              localStorage.setItem(k, db[k]);
+          // AI Context and Current Tool exports are not full backups
+          if (parsed.version === 2 && (parsed.scope === 'curated' || parsed.scope === 'current')) {
+            showToast('AI Context / Current Tool exports cannot be restored — use a Full Backup', 'error');
+            return;
+          }
+
+          if (!confirm('This will OVERWRITE your current local data with the backup.\nAre you sure you want to proceed?')) return;
+
+          if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
+            // v2 format — restore each section to its correct storage key
+            for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
+              if (parsed.data[section] !== undefined) {
+                localStorage.setItem(storageKey, JSON.stringify(parsed.data[section]));
+              }
+            }
+          } else {
+            // v1 legacy format — flat { storageKey: jsonString } map
+            for (const k in parsed) {
+              if (Object.prototype.hasOwnProperty.call(parsed, k) && typeof parsed[k] === 'string') {
+                localStorage.setItem(k, parsed[k]);
+              }
             }
           }
+
           showToast('Import successful — reloading…', 'success');
           setTimeout(() => location.reload(), 1000);
         } catch (err) {
