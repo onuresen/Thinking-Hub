@@ -101,6 +101,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 - **Checkpoint after each group.** Before starting the next group, confirm the previous one is working. For pure HTML/JS this means a quick sanity check on logic and storage keys; for compiled projects it means a clean build.
 - **Keep CLAUDE.md in sync.** Mark backlog items ✓ Done as soon as they ship. Add new decisions, conventions, or file-map entries in the same session they're introduced — don't defer.
 - **Search for existing bindings before adding shortcuts.** Grep for the key combo across all HTML files to avoid collisions.
+- **Always edit the main project files, never the worktree copies.** Worktrees live at `.claude/worktrees/*/` — these are isolated git branches for sandboxed work and changes there do NOT affect the real app. Always confirm you are editing `C:\Users\onure\Documents\GitHub\Thinking-Hub\*.html` (or equivalent), not a path containing `.claude/worktrees/`.
 
 ---
 
@@ -151,6 +152,43 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 | `project-hub.html` | Autocomplete on `task-obsidian` input |
 | `decision-hub.html` | Autocomplete on `i-obsidian` input |
 | `CLAUDE.md` | Move Option B to "done" when complete |
+
+---
+
+## Export system — current state (done)
+
+The ⚙️ Data & Backup modal in `index.html` has a scoped export with three radio-card options:
+
+| Scope | Storage keys | Filename | Restorable? |
+|-------|-------------|----------|-------------|
+| **Full Backup** | All 20 data keys (no cloud creds, no UI prefs) | `thinking-hub-backup-YYYY-MM-DD.json` | ✓ Yes |
+| **AI Context** | 13 high-signal keys (projects, goals, decisions, reviews, risks, meetings, assumptions, KMQT, schedule, learning, matrix, stakeholders, retros) | `thinking-hub-ai-context-YYYY-MM-DD.json` | ✗ Read-only |
+| **Current Tool** | Active tool's key(s) only | `{tool-id}-export-YYYY-MM-DD.json` | ✗ Read-only |
+
+**Export format (v2):**
+```json
+{
+  "version": 2,
+  "app": "Thinking Hub",
+  "exportedAt": "...",
+  "scope": "curated",
+  "summary": { "projects": 3, "open_tasks": 12, ... },
+  "storageKeys": { "projects": "project-hub-v1", ... },
+  "data": { "projects": {...}, "goals": {...}, ... }
+}
+```
+
+**Key implementation details (`index.html`):**
+- `EXPORT_KEY_LABELS` — maps storage keys to human-readable JSON section names
+- `SCOPE_KEYS.full / .curated` — arrays defining which keys each scope covers
+- `APP_FILE_STORAGE_KEYS` — maps tool HTML filenames to their storage key(s) (used by Current Tool scope)
+- `stripAINoise(value)` — recursively removes `color`, `taskId`, `taskCreated`, `obsidianNote` from AI Context exports only
+- `buildExportSummary(data)` — generates the `summary` block (counts) for AI Context exports
+- `buildExportPayload(scope, storageKeys)` — assembles the v2 JSON payload
+- `updateExportSizeEstimate()` — called on radio `onchange` and modal open; updates `#data-size-str` with scope-specific KB + tool count
+- Import (`handleImportFile`) handles both v2 (restores via `storageKeys` map) and v1 legacy (flat key→string) formats; blocks restore of non-Full-Backup scopes
+
+**Excluded from all exports:** `hub-cloud-config-v1` (Supabase credentials), `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1` (ephemeral UI state).
 
 ---
 
