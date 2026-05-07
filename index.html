@@ -81,10 +81,33 @@
       padding: 10px 8px;
     }
 
+    .profile-strip {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      padding: 6px 10px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-chip {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+      padding: 3px 7px;
+      border-radius: var(--r-sm);
+      background: transparent;
+      color: var(--text3);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .profile-chip:hover { color: var(--text); border-color: var(--border); }
+    .profile-chip.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-glow); }
+
     .nav-group {
       margin-bottom: 6px;
     }
-
+    .nav-group.collapsed .nav-item { display: none; }
     .nav-group-label {
       font-family: var(--font-mono);
       font-size: 9px;
@@ -94,6 +117,8 @@
       color: var(--text3);
       padding: 10px 8px 5px;
     }
+    .nav-group-label.collapsible { cursor: pointer; user-select: none; }
+    .nav-group-label.collapsible:hover { color: var(--text2); }
 
     .nav-item {
       display: flex;
@@ -841,6 +866,8 @@
       <div class="sidebar-logo-text">Thinking Hub</div>
     </div>
 
+    <div class="profile-strip" id="profile-strip"></div>
+
     <div class="sidebar-nav" id="sidebar-nav"></div>
 
     <div class="sidebar-footer" id="cloud-footer">
@@ -976,167 +1003,34 @@
     // ── App registry ──────────────────────────────────────────────────────────────
 
     const APPS = [
-      {
-        id: 'project-hub',
-        label: 'Project Hub',
-        group: 'PLAN',
-        icon: '◈',
-        file: 'project-hub.html',
-        desc: 'Track milestones, tasks and workstreams across a project'
-      },
-      {
-        id: 'schedule',
-        label: 'Schedule',
-        group: 'PLAN',
-        icon: '▦',
-        file: 'schedule.html',
-        desc: 'Timeline and calendar views for tasks, milestones and events'
-      },
-      {
-        id: 'idea-swiper',
-        label: 'Idea Swiper',
-        group: 'THINK',
-        icon: '⟳',
-        file: 'idea-swiper.html',
-        desc: 'Rapid triage — keep, park, or discard ideas'
-      },
-      {
-        id: 'kmqt-board',
-        label: 'KMQT Board',
-        group: 'THINK',
-        icon: '⊞',
-        file: 'kmqt-board.html',
-        desc: 'Known / Messy / Questions / Thinking structured board'
-      },
-      {
-        id: 'decision-hub',
-        label: 'Decision Hub',
-        group: 'DECIDE',
-        icon: '◎',
-        file: 'decision-hub.html',
-        desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment'
-      },
-      {
-        id: 'graph-hub',
-        label: 'Dependency Graph',
-        group: 'THINK',
-        icon: '🕸️',
-        file: 'graph-hub.html',
-        desc: 'Visual map of your tasks, decisions, and ideas'
-      },
-      {
-        id: 'canvas-hub',
-        label: 'Spatial Canvas',
-        group: 'THINK',
-        icon: '✏️',
-        file: 'canvas-hub.html',
-        desc: 'Unstructured spatial notes for limitless ideation'
-      },
-      {
-        id: 'tool-portfolio',
-        label: 'Tool Portfolio',
-        group: 'SENSE',
-        icon: '🧰',
-        file: 'tool-portfolio.html',
-        desc: 'Curated map of tools, platforms, and vendors'
-      },
-      {
-        id: 'focus-hub',
-        label: 'Focus Timer',
-        group: 'DO',
-        icon: '◉',
-        file: 'focus-hub.html',
-        desc: 'Pomodoro-style focus sessions linked to your tasks'
-      },
-      {
-        id: 'log-hub',
-        label: 'Daily Log',
-        group: 'DO',
-        icon: '◷',
-        file: 'log-hub.html',
-        desc: 'Private daily journal with mood tracking and streak calendar'
-      },
-      {
-        id: 'review-hub',
-        label: 'Weekly Review',
-        group: 'DO',
-        icon: '◈',
-        file: 'review-hub.html',
-        desc: 'Structured weekly ritual — done, capture, next week big rocks'
-      },
-      {
-        id: 'retro-hub',
-        label: 'Retro Board',
-        group: 'TEAM',
-        icon: '⟳',
-        file: 'retro-hub.html',
-        desc: 'Async retrospectives with emoji reactions and markdown export'
-      },
-      {
-        id: 'assumptions-hub',
-        label: 'Assumption Tracker',
-        group: 'DECIDE',
-        icon: '◇',
-        file: 'assumptions-hub.html',
-        desc: 'Track key assumptions through their lifecycle — from assumed to validated'
-      },
-      {
-        id: 'goals-hub',
-        label: 'Goals Hub',
-        group: 'PLAN',
-        icon: '◎',
-        file: 'goals-hub.html',
-        desc: 'Quarterly OKRs — connect daily work to strategic objectives'
-      },
-      {
-        id: 'matrix-hub',
-        label: 'Priority Matrix',
-        group: 'PLAN',
-        icon: '⊞',
-        file: 'matrix-hub.html',
-        desc: 'Eisenhower matrix — sort tasks by urgency and importance'
-      },
-      {
-        id: 'learning-hub',
-        label: 'Learning Log',
-        group: 'THINK',
-        icon: '◈',
-        file: 'learning-hub.html',
-        desc: 'Track books, articles, and courses with highlights and key insights'
-      },
-      {
-        id: 'meetings-hub',
-        label: 'Meeting Notes',
-        group: 'PLAN',
-        icon: '▦',
-        file: 'meetings-hub.html',
-        desc: 'Structured meeting notes with action items that flow into Project Hub'
-      },
-      {
-        id: 'stakeholder-hub',
-        label: 'Stakeholder Map',
-        group: 'TEAM',
-        icon: '◇',
-        file: 'stakeholder-hub.html',
-        desc: 'Power/interest grid for mapping and managing project stakeholders'
-      },
-      {
-        id: 'risk-hub',
-        label: 'Risk Register',
-        group: 'DECIDE',
-        icon: '◈',
-        file: 'risk-hub.html',
-        desc: 'Track project risks with probability/impact heat-map and mitigation plans'
-      },
-      {
-        id: 'achievements-hub',
-        label: 'Achievements',
-        group: 'ME',
-        icon: '🏅',
-        file: 'achievements-hub.html',
-        desc: 'Your productivity profile — badges, streaks & activity heatmap'
-      }
+      { id: 'project-hub',    label: 'Project Hub',       group: 'PLAN',   wg: 'WEEKLY CYCLE',   icon: '◈',   file: 'project-hub.html',    desc: 'Track milestones, tasks and workstreams across a project' },
+      { id: 'schedule',       label: 'Schedule',           group: 'PLAN',   wg: 'WEEKLY CYCLE',   icon: '▦',   file: 'schedule.html',       desc: 'Timeline and calendar views for tasks, milestones and events' },
+      { id: 'review-hub',     label: 'Weekly Review',      group: 'DO',     wg: 'WEEKLY CYCLE',   icon: '◈',   file: 'review-hub.html',     desc: 'Structured weekly ritual — done, capture, next week big rocks' },
+      { id: 'goals-hub',      label: 'Goals Hub',          group: 'PLAN',   wg: 'WEEKLY CYCLE',   icon: '◎',   file: 'goals-hub.html',      desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
+      { id: 'meetings-hub',   label: 'Meeting Notes',      group: 'PLAN',   wg: 'WEEKLY CYCLE',   icon: '▦',   file: 'meetings-hub.html',   desc: 'Structured meeting notes with action items that flow into Project Hub' },
+      { id: 'kmqt-board',     label: 'KMQT Board',         group: 'THINK',  wg: 'ALIGN & DECIDE', icon: '⊞',   file: 'kmqt-board.html',     desc: 'Known / Messy / Questions / Thinking structured board' },
+      { id: 'decision-hub',   label: 'Decision Hub',       group: 'DECIDE', wg: 'ALIGN & DECIDE', icon: '◎',   file: 'decision-hub.html',   desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
+      { id: 'risk-hub',       label: 'Risk Register',      group: 'DECIDE', wg: 'ALIGN & DECIDE', icon: '◈',   file: 'risk-hub.html',       desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
+      { id: 'stakeholder-hub',label: 'Stakeholder Map',    group: 'TEAM',   wg: 'ALIGN & DECIDE', icon: '◇',   file: 'stakeholder-hub.html',desc: 'Power/interest grid for mapping and managing project stakeholders' },
+      { id: 'focus-hub',      label: 'Focus Timer',        group: 'DO',     wg: 'EXECUTE',        icon: '◉',   file: 'focus-hub.html',      desc: 'Pomodoro-style focus sessions linked to your tasks' },
+      { id: 'log-hub',        label: 'Daily Log',          group: 'DO',     wg: 'EXECUTE',        icon: '◷',   file: 'log-hub.html',        desc: 'Private daily journal with mood tracking and streak calendar' },
+      { id: 'matrix-hub',     label: 'Priority Matrix',    group: 'PLAN',   wg: 'EXECUTE',        icon: '⊞',   file: 'matrix-hub.html',     desc: 'Eisenhower matrix — sort tasks by urgency and importance' },
+      { id: 'idea-swiper',    label: 'Idea Swiper',        group: 'THINK',  wg: 'STRATEGY',       icon: '⟳',   file: 'idea-swiper.html',    desc: 'Rapid triage — keep, park, or discard ideas' },
+      { id: 'assumptions-hub',label: 'Assumption Tracker', group: 'DECIDE', wg: 'STRATEGY',       icon: '◇',   file: 'assumptions-hub.html',desc: 'Track key assumptions through their lifecycle — from assumed to validated' },
+      { id: 'learning-hub',   label: 'Learning Log',       group: 'THINK',  wg: 'STRATEGY',       icon: '◈',   file: 'learning-hub.html',   desc: 'Track books, articles, and courses with highlights and key insights' },
+      { id: 'graph-hub',      label: 'Dependency Graph',   group: 'THINK',  wg: 'STRATEGY',       icon: '🕸️',  file: 'graph-hub.html',      desc: 'Visual map of your tasks, decisions, and ideas' },
+      { id: 'retro-hub',      label: 'Retro Board',        group: 'TEAM',   wg: 'MORE',           icon: '⟳',   file: 'retro-hub.html',      desc: 'Async retrospectives with emoji reactions and markdown export' },
+      { id: 'achievements-hub',label: 'Achievements',      group: 'ME',     wg: 'MORE',           icon: '🏅',  file: 'achievements-hub.html',desc: 'Your productivity profile — badges, streaks & activity heatmap' },
+      { id: 'canvas-hub',     label: 'Spatial Canvas',     group: 'THINK',  wg: 'MORE',           icon: '✏️',  file: 'canvas-hub.html',     desc: 'Unstructured spatial notes for limitless ideation' },
+      { id: 'tool-portfolio', label: 'Tool Portfolio',     group: 'SENSE',  wg: 'MORE',           icon: '🧰',  file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
     ];
+
+    const PROFILES = {
+      everything: { label: 'Everything', icon: '⊞', tools: null },
+      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','assumptions-hub','learning-hub','focus-hub','log-hub','schedule'] },
+      bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','matrix-hub','goals-hub','focus-hub','log-hub'] },
+      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','assumptions-hub','goals-hub'] },
+    };
 
     // ── Session state ─────────────────────────────────────────────────────────────
 
@@ -1144,11 +1038,13 @@
 
     function loadSession() {
       try {
-        return JSON.parse(localStorage.getItem(SESSION_KEY)) || { sessionName: '', recentApps: [] };
+        return JSON.parse(localStorage.getItem(SESSION_KEY)) || { sessionName: '', recentApps: [], profile: 'everything' };
       } catch {
-        return { sessionName: '', recentApps: [] };
+        return { sessionName: '', recentApps: [], profile: 'everything' };
       }
     }
+
+    let _activeProfile = loadSession().profile || 'everything';
 
     function saveSession(patch) {
       const s = loadSession();
@@ -1158,16 +1054,42 @@
 
     // ── Sidebar ───────────────────────────────────────────────────────────────────
 
+    function buildProfileStrip() {
+      const strip = document.getElementById('profile-strip');
+      if (!strip) return;
+      strip.innerHTML = '';
+      Object.entries(PROFILES).forEach(([key, prof]) => {
+        const btn = document.createElement('button');
+        btn.className = 'profile-chip' + (_activeProfile === key ? ' active' : '');
+        btn.title = prof.label;
+        btn.textContent = prof.label;
+        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); };
+        strip.appendChild(btn);
+      });
+    }
+
     function buildSidebar() {
       const nav = document.getElementById('sidebar-nav');
       nav.innerHTML = '';
 
-      const groups = [...new Set(APPS.map(a => a.group))];
+      const profile = PROFILES[_activeProfile] || PROFILES.everything;
+      const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
+
+      const groups = [...new Set(APPS.map(a => a.wg))]; // preserve definition order
       groups.forEach(group => {
-        const appsInGroup = APPS.filter(a => a.group === group);
+        const appsInGroup = visibleApps.filter(a => a.wg === group);
+        if (!appsInGroup.length) return;
+        const isMore = group === 'MORE';
         const groupEl = document.createElement('div');
-        groupEl.className = 'nav-group';
-        groupEl.innerHTML = `<div class="nav-group-label">${group}</div>`;
+        groupEl.className = 'nav-group' + (isMore ? ' collapsed' : '');
+        const label = document.createElement('div');
+        label.className = 'nav-group-label' + (isMore ? ' collapsible' : '');
+        label.textContent = isMore ? '▸ MORE' : group;
+        if (isMore) label.onclick = () => {
+          groupEl.classList.toggle('collapsed');
+          label.textContent = groupEl.classList.contains('collapsed') ? '▸ MORE' : '▾ MORE';
+        };
+        groupEl.appendChild(label);
 
         appsInGroup.forEach(app => {
           const btn = document.createElement('button');
@@ -2026,6 +1948,7 @@
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
+    buildProfileStrip();
     buildSidebar();
     buildHomeDashboard();
     buildStatusWidgets();
