@@ -1058,6 +1058,40 @@
       color: var(--text2);
     }
 
+    .cat-chip {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: var(--r-sm);
+      background: var(--surface3);
+      color: var(--text2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .cat-chip:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+    /* Task-level status badges */
+    .ts-inprogress {
+      background: rgba(56, 200, 235, 0.12);
+      color: var(--accent2);
+    }
+    .ts-blocked {
+      background: rgba(240, 67, 107, 0.12);
+      color: var(--accent3);
+    }
+    .ts-onhold {
+      background: rgba(240, 176, 64, 0.12);
+      color: var(--amber);
+    }
+    .task-blocked-reason {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 2px;
+      font-style: italic;
+    }
+
     .p-high {
       background: rgba(240, 67, 107, 0.1);
       color: var(--accent3);
@@ -1525,6 +1559,7 @@
     </div>
     <div class="panel-tabs">
       <div class="panel-tab active" onclick="setTab('tasks')" id="tab-tasks">Tasks</div>
+      <div class="panel-tab" onclick="setTab('workstreams')" id="tab-workstreams">Workstreams</div>
       <div class="panel-tab" onclick="setTab('milestones')" id="tab-milestones">Milestones</div>
       <div class="panel-tab" onclick="setTab('goals')" id="tab-goals">Goals</div>
       <div class="panel-tab" onclick="setTab('people')" id="tab-people">People</div>
@@ -1589,21 +1624,50 @@
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label class="form-label">Task ID <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+          <input class="form-input" id="task-code" placeholder="e.g. TECH-AI-01" style="font-family:var(--font-mono);letter-spacing:0.03em">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="task-type">
+            <option value="">— none —</option>
+            <option value="program">Program</option>
+            <option value="execution">Execution</option>
+            <option value="coordination">Coordination</option>
+            <option value="exploration">Exploration</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:-8px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="category-chips">
+          <span style="font-size:10px;color:var(--text3);align-self:center;margin-right:2px">Category:</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label class="form-label">Project</label>
           <select class="form-select" id="task-project"></select>
         </div>
         <div class="form-group">
-          <label class="form-label">Milestone</label>
-          <select class="form-select" id="task-milestone">
+          <label class="form-label">Workstream</label>
+          <select class="form-select" id="task-workstream">
             <option value="">— none —</option>
           </select>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label class="form-label">Milestone</label>
+          <select class="form-select" id="task-milestone">
+            <option value="">— none —</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">Assignee</label>
           <select class="form-select" id="task-assignee"></select>
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Priority</label>
           <select class="form-select" id="task-priority">
@@ -1620,12 +1684,18 @@
         </div>
         <div class="form-group">
           <label class="form-label">Status</label>
-          <select class="form-select" id="task-status">
+          <select class="form-select" id="task-status" onchange="toggleBlockedReason(this.value)">
             <option value="todo">To Do</option>
             <option value="inprogress">In Progress</option>
+            <option value="blocked">Blocked</option>
+            <option value="onhold">On Hold</option>
             <option value="done">Done</option>
           </select>
         </div>
+      </div>
+      <div class="form-group" id="task-blocked-group" style="display:none">
+        <label class="form-label">Reason <span style="color:var(--text3);font-weight:400">(why blocked / on hold?)</span></label>
+        <input class="form-input" id="task-blocked-reason" placeholder="e.g. Waiting for vendor reply">
       </div>
       <div class="form-group">
         <label class="form-label">Obsidian Note</label>
@@ -1775,9 +1845,17 @@
       try {
         const saved = HubStorage.get(STORAGE_KEY);
         if (saved) {
-          saved.projects?.forEach(p => p.tasks?.forEach(t => {
-            if (!t.status) t.status = t.done ? 'done' : 'todo';
-          }));
+          saved.projects?.forEach(p => {
+            if (!Array.isArray(p.workstreams)) p.workstreams = [];
+            p.tasks?.forEach(t => {
+              if (!t.status) t.status = t.done ? 'done' : 'todo';
+              if (!t.blockedReason) t.blockedReason = '';
+              if (!t.completedAt) t.completedAt = '';
+              if (!t.taskCode) t.taskCode = '';
+              if (!t.taskType) t.taskType = '';
+              if (!t.workstreamId) t.workstreamId = '';
+            });
+          });
           return saved;
         }
       } catch (e) { console.warn('Could not load state:', e); }
@@ -1811,6 +1889,12 @@
     function initials(name) { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
     function statusClass(s) { return { active: 's-active', planning: 's-planning', onhold: 's-onhold', done: 's-done' }[s] || 's-planning'; }
     function statusLabel(s) { return { active: 'Active', planning: 'Planning', onhold: 'On Hold', done: 'Done' }[s] || s; }
+    function taskStatusClass(s) { return { inprogress: 'ts-inprogress', blocked: 'ts-blocked', onhold: 'ts-onhold' }[s] || ''; }
+    function taskStatusLabel(s) { return { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', onhold: 'On Hold', done: 'Done' }[s] || s; }
+    function toggleBlockedReason(val) {
+      const g = document.getElementById('task-blocked-group');
+      if (g) g.style.display = (val === 'blocked' || val === 'onhold') ? '' : 'none';
+    }
     function priorityClass(p) { return { high: 'p-high', medium: 'p-medium', low: 'p-low' }[p] || ''; }
     function projectProgress(proj) {
       if (!proj.tasks.length) return 0;
@@ -1892,10 +1976,16 @@
           incoming.projects.forEach(p => {
             p.goals = Array.isArray(p.goals) ? p.goals : [];
             p.milestones = Array.isArray(p.milestones) ? p.milestones : [];
+            p.workstreams = Array.isArray(p.workstreams) ? p.workstreams : [];
             p.tasks = Array.isArray(p.tasks) ? p.tasks : [];
             p.tasks.forEach(t => {
               if (!t.status) t.status = t.done ? 'done' : 'todo';
               if (typeof t.done !== 'boolean') t.done = t.status === 'done';
+              if (!t.blockedReason) t.blockedReason = '';
+              if (!t.completedAt) t.completedAt = '';
+              if (!t.taskCode) t.taskCode = '';
+              if (!t.taskType) t.taskType = '';
+              if (!t.workstreamId) t.workstreamId = '';
             });
           });
 
@@ -2294,7 +2384,7 @@
       // Status chips
       const statusWrap = document.createElement('div');
       statusWrap.className = 'ov-filter-chips';
-      [{ val: 'all', label: 'All' }, { val: 'open', label: 'Open' }, { val: 'done', label: 'Done' }].forEach(s => {
+      [{ val: 'all', label: 'All' }, { val: 'open', label: 'Open' }, { val: 'blocked', label: '⛔ Blocked' }, { val: 'onhold', label: '⏸ On Hold' }, { val: 'done', label: 'Done' }].forEach(s => {
         const chip = document.createElement('button');
         chip.className = 'ov-chip' + (atf.status === s.val ? ' active' : '');
         chip.textContent = s.label;
@@ -2321,6 +2411,8 @@
       if (atf.members.length > 0) tasks = tasks.filter(t => atf.members.includes(t.assigneeId));
       if (atf.status === 'open') tasks = tasks.filter(t => !t.done);
       else if (atf.status === 'done') tasks = tasks.filter(t => t.done);
+      else if (atf.status === 'blocked') tasks = tasks.filter(t => t.status === 'blocked');
+      else if (atf.status === 'onhold') tasks = tasks.filter(t => t.status === 'onhold');
       if (atf.priority !== 'all') tasks = tasks.filter(t => t.priority === atf.priority);
 
       const open = tasks.filter(t => !t.done);
@@ -2464,6 +2556,12 @@
       const obsidianBadge = (task.obsidianNote && vault)
         ? `<a class="obsidian-badge" href="obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(task.obsidianNote)}" title="Open in Obsidian" onclick="event.stopPropagation()">⟡ Note</a>`
         : '';
+      const tsc = taskStatusClass(task.status);
+      const statusBadge = tsc ? `<span class="task-priority ${tsc}">${taskStatusLabel(task.status)}</span>` : '';
+      const codeBadge = task.taskCode ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);background:var(--surface3);padding:1px 5px;border-radius:3px">${task.taskCode}</span>` : '';
+      const typeBadge = task.taskType ? `<span style="font-size:10px;color:var(--text3)">${task.taskType}</span>` : '';
+      const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
+        ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
       return `
     <div class="task-item" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
       <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(event,'${task.id}','${task.projectId || ''}')">${task.done ? '✓' : ''}</div>
@@ -2471,12 +2569,16 @@
         <div class="task-title ${task.done ? 'done' : ''}">${task.title}</div>
         <div class="task-meta">
           <span class="task-priority ${priorityClass(task.priority)}">${task.priority}</span>
+          ${statusBadge}
+          ${codeBadge}
+          ${typeBadge}
           ${projBadge}
           ${assignee ? `<span class="task-assignee"><div class="avatar" style="background:${bg};color:${fg};width:16px;height:16px;font-size:8px">${initials(assignee.name)}</div>${assignee.name}</span>` : ''}
           ${task.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${formatDate(task.due)}</span>` : ''}
           ${linkBadge}
           ${obsidianBadge}
         </div>
+        ${blockedNote}
       </div>
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
@@ -2543,6 +2645,8 @@
       if (!task) return;
       task.done = !task.done;
       task.status = task.done ? 'done' : 'todo';
+      task.completedAt = task.done ? new Date().toISOString() : '';
+      if (task.done) task.blockedReason = '';
       saveState();
       if (task.done) {
         const row = e.currentTarget.closest('[data-task-id]');
@@ -2716,7 +2820,26 @@
         const done = tasks.filter(t => t.done);
 
         if (!tasks.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">☐</div><div class="e-title">No tasks match</div></div>`); return; }
-        if (tf.status !== 'done' && open.length) {
+
+        // Group by workstream if project has any
+        const hasWorkstreams = proj.workstreams && proj.workstreams.length > 0;
+        if (hasWorkstreams && tf.status !== 'done') {
+          proj.workstreams.forEach(ws => {
+            const wsTasks = open.filter(t => t.workstreamId === ws.id);
+            if (!wsTasks.length) return;
+            const g = document.createElement('div'); g.className = 'task-group';
+            g.innerHTML = `<div class="task-group-label" style="color:var(--text2)">⊡ ${HubUtils.esc(ws.name)}</div>`;
+            wsTasks.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
+            body.appendChild(g);
+          });
+          const ungrouped = open.filter(t => !t.workstreamId);
+          if (ungrouped.length) {
+            const g = document.createElement('div'); g.className = 'task-group';
+            g.innerHTML = `<div class="task-group-label" style="color:var(--text3)">Ungrouped</div>`;
+            ungrouped.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
+            body.appendChild(g);
+          }
+        } else if (tf.status !== 'done' && open.length) {
           const g = document.createElement('div'); g.className = 'task-group';
           g.innerHTML = `<div class="task-group-label">Open</div>`;
           open.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
@@ -2727,6 +2850,47 @@
           g.innerHTML = `<div class="task-group-label">Done</div>`;
           done.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
           body.appendChild(g);
+        }
+      }
+
+      else if (state.currentTab === 'workstreams') {
+        // ── Inline add workstream ──
+        const addRow = document.createElement('div');
+        addRow.style.cssText = 'display:flex;gap:6px;margin-bottom:12px';
+        const wsInput = document.createElement('input');
+        wsInput.className = 'form-input'; wsInput.placeholder = 'New workstream name…'; wsInput.style.flex = '1';
+        const wsAdd = document.createElement('button');
+        wsAdd.className = 'btn btn-primary'; wsAdd.style.cssText = 'flex-shrink:0;font-size:12px';
+        wsAdd.textContent = '+ Add';
+        wsAdd.onclick = () => {
+          const name = wsInput.value.trim(); if (!name) return;
+          if (!proj.workstreams) proj.workstreams = [];
+          proj.workstreams.push({ id: uid(), name });
+          saveState(); wsInput.value = ''; renderPanel(projId);
+        };
+        wsInput.onkeydown = e => { if (e.key === 'Enter') wsAdd.click(); };
+        addRow.appendChild(wsInput); addRow.appendChild(wsAdd);
+        body.appendChild(addRow);
+
+        if (!proj.workstreams || !proj.workstreams.length) {
+          body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">⊡</div><div class="e-title">No workstreams yet</div><div class="e-sub">Group related tasks into programs or initiatives</div></div>`);
+        } else {
+          proj.workstreams.forEach(ws => {
+            const wsTasks = proj.tasks.filter(t => t.workstreamId === ws.id);
+            const open = wsTasks.filter(t => !t.done).length;
+            const done = wsTasks.filter(t => t.done).length;
+            const el = document.createElement('div');
+            el.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px';
+            el.innerHTML = `
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="flex:1;font-weight:600;font-size:13px">${HubUtils.esc(ws.name)}</span>
+                <span style="font-size:10px;color:var(--text3)">${open} open · ${done} done</span>
+                <button class="task-action-btn del" title="Delete workstream" onclick="deleteWorkstream('${ws.id}','${projId}')">✕</button>
+              </div>
+              <div style="font-size:11px;color:var(--text3)">${wsTasks.length ? wsTasks.map(t => `<div style="padding:2px 0;color:${t.done ? 'var(--text3)' : 'var(--text)'}">${t.done ? '✓ ' : '○ '}${HubUtils.esc(t.title)}</div>`).join('') : '<div style="color:var(--text3)">No tasks yet — assign tasks to this workstream when adding them.</div>'}</div>
+            `;
+            body.appendChild(el);
+          });
         }
       }
 
@@ -2961,15 +3125,40 @@
       document.getElementById('task-title').value = '';
       document.getElementById('task-due').value = '';
       document.getElementById('task-obsidian').value = '';
+      document.getElementById('task-blocked-reason').value = '';
+      document.getElementById('task-code').value = '';
+      document.getElementById('task-type').value = '';
+      document.getElementById('task-workstream').value = '';
+      // Build category chips
+      const chipContainer = document.getElementById('category-chips');
+      if (chipContainer) {
+        chipContainer.innerHTML = '<span style="font-size:10px;color:var(--text3);align-self:center;margin-right:2px">Category:</span>';
+        ['OPS','STR','BASE','INFO','GOV','GLB','TECH','HR','ADSK','RD'].forEach(cat => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cat-chip';
+          btn.textContent = cat;
+          btn.onclick = () => {
+            const inp = document.getElementById('task-code');
+            const cur = inp.value;
+            const rest = cur.includes('-') ? cur.slice(cur.indexOf('-')) : '-';
+            inp.value = cat + (rest === '-' && cur === '' ? '-' : rest);
+            inp.focus();
+          };
+          chipContainer.appendChild(btn);
+        });
+      }
       const statusSel = document.getElementById('task-status');
       if (statusSel && preStatus) statusSel.value = preStatus;
       else if (statusSel) statusSel.value = 'todo';
+      toggleBlockedReason(statusSel?.value || 'todo');
       openModal('modal-task');
     }
 
     function populateTaskProjectDependents(projId) {
       const proj = getProject(projId);
       document.getElementById('task-milestone').innerHTML = `<option value="">— none —</option>` + (proj?.milestones || []).map(ms => `<option value="${ms.id}">${ms.name}</option>`).join('');
+      document.getElementById('task-workstream').innerHTML = `<option value="">— none —</option>` + (proj?.workstreams || []).map(ws => `<option value="${ws.id}">${ws.name}</option>`).join('');
       const members = (proj && proj.members && proj.members.length)
         ? proj.members.map(id => getMember(id)).filter(Boolean)
         : state.members;
@@ -2981,8 +3170,13 @@
       const projId = document.getElementById('task-project').value;
       const proj = getProject(projId); if (!proj) return;
       const statusVal = document.getElementById('task-status')?.value || 'todo';
+      const blockedReason = (['blocked','onhold'].includes(statusVal))
+        ? (document.getElementById('task-blocked-reason')?.value.trim() || '') : '';
+      const taskCode = document.getElementById('task-code')?.value.trim() || '';
+      const taskType = document.getElementById('task-type')?.value || '';
+      const workstreamId = document.getElementById('task-workstream')?.value || '';
       const newId = uid();
-      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, workstreamId, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
       saveState(); closeModal('modal-task'); showToast('Task added');
       renderContent();
       if (state.selectedProject === projId) renderPanel(projId);
@@ -3088,6 +3282,14 @@
       const proj = getProject(projId); if (!proj) return;
       proj.goals = proj.goals.filter(g => g.id !== goalId);
       saveState(); renderContent(); if (state.selectedProject) renderPanel(projId); showToast('Goal deleted');
+    }
+
+    function deleteWorkstream(wsId, projId) {
+      if (!confirm('Delete this workstream? Tasks will become ungrouped.')) return;
+      const proj = getProject(projId); if (!proj) return;
+      proj.workstreams = (proj.workstreams || []).filter(ws => ws.id !== wsId);
+      proj.tasks.forEach(t => { if (t.workstreamId === wsId) t.workstreamId = ''; });
+      saveState(); renderPanel(projId); showToast('Workstream deleted');
     }
 
     function openMemberModal() {
