@@ -466,6 +466,58 @@
       transform: translateY(-2px);
     }
 
+    .proj-group-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0 2px;
+    }
+    .proj-group-header:first-child { margin-top: 0; }
+    .proj-group-accent { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .proj-group-name {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      font-weight: 600;
+    }
+    .proj-group-line { flex: 1; height: 1px; background: var(--border); }
+    .proj-group-count { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+
+    .proj-group-tag {
+      display: inline-block;
+      font-size: 9px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--surface3);
+      color: var(--text3);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .proj-group-tag:hover { border-color: var(--border2); color: var(--text2); }
+    .proj-group-tag.has-group { color: var(--text2); }
+    .proj-group-tag-input {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--surface3);
+      color: var(--text);
+      border: 1px solid var(--accent);
+      outline: none;
+      width: 110px;
+    }
+
     .project-card-stripe {
       position: absolute;
       top: 0;
@@ -1803,7 +1855,7 @@
       projects: [
         {
           id: 'p1', name: 'TPM', desc: 'Technical Appraisal and Portfoilio Management',
-          status: 'active', color: '#c8f03e', members: ['m1', 'm2', 'm3'],
+          group: '', status: 'active', color: '#c8f03e', members: ['m1', 'm2', 'm3'],
           goals: [
             { id: 'g1', name: 'Complete Framework', desc: 'Stalegate is complete, reference available.', progress: 70 },
             { id: 'g2', name: 'Solution List', desc: 'Complete list of potential solutions.', progress: 30 },
@@ -1846,6 +1898,7 @@
         const saved = HubStorage.get(STORAGE_KEY);
         if (saved) {
           saved.projects?.forEach(p => {
+            if (!p.group) p.group = '';
             if (!Array.isArray(p.workstreams)) p.workstreams = [];
             p.tasks?.forEach(t => {
               if (!t.status) t.status = t.done ? 'done' : 'todo';
@@ -1977,6 +2030,7 @@
             p.goals = Array.isArray(p.goals) ? p.goals : [];
             p.milestones = Array.isArray(p.milestones) ? p.milestones : [];
             p.workstreams = Array.isArray(p.workstreams) ? p.workstreams : [];
+            if (!p.group) p.group = '';
             p.tasks = Array.isArray(p.tasks) ? p.tasks : [];
             p.tasks.forEach(t => {
               if (!t.status) t.status = t.done ? 'done' : 'todo';
@@ -2284,66 +2338,122 @@
         const emptyMsg = state.projects.length === 0 ? 'Click "+ Project" to create one' : 'No projects match your filters';
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">◈</div><div class="e-title">${state.projects.length === 0 ? 'No projects yet' : 'No matches'}</div><div class="e-sub">${emptyMsg}</div></div>`;
       }
+
+      // Group projects: named groups first (sorted by name), then ungrouped
+      const groupMap = new Map();
       visible.forEach(proj => {
-        const card = document.createElement('div');
-        card.className = 'project-card' + (state.selectedProject === proj.id ? ' selected' : '');
-        card.draggable = true;
+        const key = (proj.group || '').trim();
+        if (!groupMap.has(key)) groupMap.set(key, []);
+        groupMap.get(key).push(proj);
+      });
+      const namedGroups = [...groupMap.entries()].filter(([k]) => k).sort((a, b) => a[0].localeCompare(b[0]));
+      const ungrouped = groupMap.get('') || [];
+      const renderOrder = [...namedGroups, ...(ungrouped.length ? [['', ungrouped]] : [])];
 
-        card.addEventListener('dragstart', e => {
-          projDragSrc = proj.id;
-          card.classList.add('drag-src');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        card.addEventListener('dragend', () => {
-          card.classList.remove('drag-src');
-          projDragSrc = null;
-          document.querySelectorAll('.project-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-        });
-        card.addEventListener('dragover', e => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          if (projDragSrc && projDragSrc !== proj.id) card.classList.add('drag-over');
-        });
-        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
-        card.addEventListener('drop', e => {
-          e.preventDefault();
-          card.classList.remove('drag-over');
-          if (!projDragSrc || projDragSrc === proj.id) return;
-          const fromIdx = state.projects.findIndex(p => p.id === projDragSrc);
-          const toIdx = state.projects.findIndex(p => p.id === proj.id);
-          if (fromIdx === -1 || toIdx === -1) return;
-          const [moved] = state.projects.splice(fromIdx, 1);
-          state.projects.splice(toIdx, 0, moved);
-          projDragSrc = null;
-          saveState();
-          renderContent();
-          showToast('Project order updated');
-        });
+      renderOrder.forEach(([groupName, projects]) => {
+        if (groupName) {
+          const accentColor = projects[0]?.color || 'var(--accent)';
+          const hdr = document.createElement('div');
+          hdr.className = 'proj-group-header';
+          hdr.innerHTML = `
+            <div class="proj-group-accent" style="background:${accentColor}"></div>
+            <div class="proj-group-name">${HubUtils.esc(groupName)}</div>
+            <div class="proj-group-line"></div>
+            <div class="proj-group-count">${projects.length} project${projects.length !== 1 ? 's' : ''}</div>
+          `;
+          grid.appendChild(hdr);
+        }
 
-        card.onclick = () => { if (!projDragSrc) openProject(proj.id); };
-        const prog = projectProgress(proj);
-        const avatars = proj.members.map(mid => {
-          const m = getMember(mid); if (!m) return '';
-          const { bg, fg } = avatarColors(m.color);
-          return `<div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:8.5px">${initials(m.name)}</div>`;
-        }).join('');
-        card.innerHTML = `
-      <div class="project-card-stripe" style="background:${proj.color}"></div>
-      <div class="project-card-header">
-        <div class="project-name">${proj.name}</div>
-        <div class="project-status ${statusClass(proj.status)}">${statusLabel(proj.status)}</div>
-      </div>
-      <div class="project-desc">${proj.desc}</div>
-      <div class="project-progress-wrap">
-        <div class="progress-label"><span>Progress</span><span>${prog}%</span></div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
-      </div>
-      <div class="project-meta">
-        <div class="avatar-stack">${avatars}</div>
-        <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
-      </div>
-    `;
-        grid.appendChild(card);
+        projects.forEach(proj => {
+          const card = document.createElement('div');
+          card.className = 'project-card' + (state.selectedProject === proj.id ? ' selected' : '');
+          card.draggable = true;
+          if (groupName) card.style.borderLeftColor = proj.color + '66';
+
+          card.addEventListener('dragstart', e => {
+            projDragSrc = proj.id;
+            card.classList.add('drag-src');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          card.addEventListener('dragend', () => {
+            card.classList.remove('drag-src');
+            projDragSrc = null;
+            document.querySelectorAll('.project-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+          });
+          card.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (projDragSrc && projDragSrc !== proj.id) card.classList.add('drag-over');
+          });
+          card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+          card.addEventListener('drop', e => {
+            e.preventDefault();
+            card.classList.remove('drag-over');
+            if (!projDragSrc || projDragSrc === proj.id) return;
+            const fromIdx = state.projects.findIndex(p => p.id === projDragSrc);
+            const toIdx = state.projects.findIndex(p => p.id === proj.id);
+            if (fromIdx === -1 || toIdx === -1) return;
+            const [moved] = state.projects.splice(fromIdx, 1);
+            state.projects.splice(toIdx, 0, moved);
+            projDragSrc = null;
+            saveState();
+            renderContent();
+            showToast('Project order updated');
+          });
+
+          card.onclick = () => { if (!projDragSrc) openProject(proj.id); };
+          const prog = projectProgress(proj);
+          const avatars = proj.members.map(mid => {
+            const m = getMember(mid); if (!m) return '';
+            const { bg, fg } = avatarColors(m.color);
+            return `<div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:8.5px">${initials(m.name)}</div>`;
+          }).join('');
+
+          const groupTagHtml = `<span class="proj-group-tag${proj.group ? ' has-group' : ''}" data-proj-id="${proj.id}" title="Click to set group">${proj.group ? HubUtils.esc(proj.group) : '＋ group'}</span>`;
+
+          card.innerHTML = `
+        <div class="project-card-stripe" style="background:${proj.color}"></div>
+        <div class="project-card-header">
+          <div class="project-name">${proj.name}</div>
+          <div class="project-status ${statusClass(proj.status)}">${statusLabel(proj.status)}</div>
+        </div>
+        <div class="project-desc">${proj.desc}</div>
+        <div class="project-progress-wrap">
+          <div class="progress-label"><span>Progress</span><span>${prog}%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
+        </div>
+        <div class="project-meta">
+          <div class="avatar-stack">${avatars}</div>
+          <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
+        </div>
+        <div style="margin-top:8px">${groupTagHtml}</div>
+      `;
+
+          // Inline group tag editing
+          card.querySelector('.proj-group-tag').addEventListener('click', e => {
+            e.stopPropagation();
+            const tag = e.currentTarget;
+            const input = document.createElement('input');
+            input.className = 'proj-group-tag-input';
+            input.value = proj.group || '';
+            input.placeholder = 'Group name…';
+            tag.replaceWith(input);
+            input.focus(); input.select();
+            const commit = () => {
+              const val = input.value.trim();
+              const p = state.projects.find(x => x.id === proj.id);
+              if (p) { p.group = val; saveState(); }
+              renderContent();
+            };
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', e => {
+              if (e.key === 'Enter') { e.preventDefault(); commit(); }
+              if (e.key === 'Escape') { e.preventDefault(); renderContent(); }
+            });
+          });
+
+          grid.appendChild(card);
+        });
       });
       container.appendChild(grid);
     }
