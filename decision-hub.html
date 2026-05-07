@@ -792,6 +792,10 @@
             </div>
           </div>
         `;
+        if (typeof HubObsidian !== 'undefined') {
+          const obsEl = document.getElementById('i-obsidian');
+          if (obsEl) HubObsidian.attachAutocomplete(obsEl);
+        }
       }
       else if (currentTab === 'workspace') {
         const plFirst = PROBLEM_FIELDS[0];

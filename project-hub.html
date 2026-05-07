@@ -2965,6 +2965,9 @@
       if (statusSel && preStatus) statusSel.value = preStatus;
       else if (statusSel) statusSel.value = 'todo';
       openModal('modal-task');
+      if (typeof HubObsidian !== 'undefined') {
+        HubObsidian.attachAutocomplete(document.getElementById('task-obsidian'));
+      }
     }
 
     function populateTaskProjectDependents(projId) {

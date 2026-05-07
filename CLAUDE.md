@@ -13,6 +13,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
+| `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
 | `hub-search.js` | Global Cmd+K search, injected into index.html only |
@@ -42,7 +43,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `achievements-hub.html` | Achievements & milestones tracker |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-tutorial.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -62,7 +63,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `hub-activity-v1`, `hub-settings-v1`
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -117,7 +118,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 ---
 
-## Obsidian integration — next plan (Option B)
+## ~~Obsidian integration — Option B~~ ✓ Done
 
 **Goal:** Read the Obsidian vault folder directly in the browser, index note titles/frontmatter, and surface related notes next to items — no backend, no Obsidian running required.
 
@@ -144,14 +145,13 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 5. **Storage key:** Vault `FileSystemDirectoryHandle` cannot be serialised to localStorage — must be re-requested each session. Store only the index (titles/paths/frontmatter) in `hub-settings-v1`. Handle stale index gracefully (show "last indexed X ago, re-index?").
 
-**Files to create/modify:**
+**Implemented files:**
 | File | Change |
 |------|--------|
-| `hub-obsidian.js` (new) | Full vault reader + index module |
-| `index.html` | Load `hub-obsidian.js`; add vault picker UI to ⚙️ modal |
-| `project-hub.html` | Autocomplete on `task-obsidian` input |
-| `decision-hub.html` | Autocomplete on `i-obsidian` input |
-| `CLAUDE.md` | Move Option B to "done" when complete |
+| `hub-obsidian.js` ✓ | Full vault reader + index module (`HubObsidian` singleton) |
+| `index.html` ✓ | Loads `hub-obsidian.js`; vault picker UI in ⚙️ modal (File System Access API) |
+| `project-hub.html` ✓ | Autocomplete on `#task-obsidian` input via `HubObsidian.attachAutocomplete()` |
+| `decision-hub.html` ✓ | Autocomplete on `#i-obsidian` input in log tab |
 
 ---
 
