@@ -176,6 +176,41 @@
       flex-shrink: 0;
     }
 
+    /* ── Project context panel ──────────────────────────────────────── */
+    .proj-ctx-panel {
+      margin: 0 10px 8px;
+      border-radius: var(--r-sm);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .proj-ctx-bar { height: 3px; width: 100%; }
+    .proj-ctx-name {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text);
+      padding: 7px 10px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .proj-ctx-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 0 10px 8px;
+    }
+    .proj-ctx-stat {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      background: var(--surface3);
+      border-radius: var(--r-sm);
+      padding: 2px 6px;
+    }
+    .proj-ctx-stat.highlight { color: var(--accent); background: var(--accent-dim); }
+
     /* ── Cloud connection panel ─────────────────────────────────────── */
     .cloud-status-row {
       display: flex;
@@ -648,6 +683,7 @@
       justify-content: space-between;
       letter-spacing: 0.3px;
     }
+    .stat-stale { color: var(--accent-like); }
 
     /* ── iframe ─────────────────────────────────────── */
     #app-frame {
@@ -870,6 +906,12 @@
 
     <div class="sidebar-nav" id="sidebar-nav"></div>
 
+    <div class="proj-ctx-panel" id="proj-ctx-panel" style="display:none">
+      <div class="proj-ctx-bar" id="proj-ctx-bar"></div>
+      <div class="proj-ctx-name" id="proj-ctx-name"></div>
+      <div class="proj-ctx-stats" id="proj-ctx-stats"></div>
+    </div>
+
     <div class="sidebar-footer" id="cloud-footer">
       <div class="cloud-status-row">
         <span id="cloud-dot" class="cloud-status-dot local"></span>
@@ -1014,9 +1056,7 @@
       { id: 'stakeholder-hub',label: 'Stakeholder Map',    group: 'TEAM',   wg: 'ALIGN & DECIDE', icon: '◇',   file: 'stakeholder-hub.html',desc: 'Power/interest grid for mapping and managing project stakeholders' },
       { id: 'focus-hub',      label: 'Focus Timer',        group: 'DO',     wg: 'EXECUTE',        icon: '◉',   file: 'focus-hub.html',      desc: 'Pomodoro-style focus sessions linked to your tasks' },
       { id: 'log-hub',        label: 'Daily Log',          group: 'DO',     wg: 'EXECUTE',        icon: '◷',   file: 'log-hub.html',        desc: 'Private daily journal with mood tracking and streak calendar' },
-      { id: 'matrix-hub',     label: 'Priority Matrix',    group: 'PLAN',   wg: 'EXECUTE',        icon: '⊞',   file: 'matrix-hub.html',     desc: 'Eisenhower matrix — sort tasks by urgency and importance' },
       { id: 'idea-swiper',    label: 'Idea Swiper',        group: 'THINK',  wg: 'STRATEGY',       icon: '⟳',   file: 'idea-swiper.html',    desc: 'Rapid triage — keep, park, or discard ideas' },
-      { id: 'assumptions-hub',label: 'Assumption Tracker', group: 'DECIDE', wg: 'STRATEGY',       icon: '◇',   file: 'assumptions-hub.html',desc: 'Track key assumptions through their lifecycle — from assumed to validated' },
       { id: 'learning-hub',   label: 'Learning Log',       group: 'THINK',  wg: 'STRATEGY',       icon: '◈',   file: 'learning-hub.html',   desc: 'Track books, articles, and courses with highlights and key insights' },
       { id: 'graph-hub',      label: 'Dependency Graph',   group: 'THINK',  wg: 'STRATEGY',       icon: '🕸️',  file: 'graph-hub.html',      desc: 'Visual map of your tasks, decisions, and ideas' },
       { id: 'retro-hub',      label: 'Retro Board',        group: 'TEAM',   wg: 'MORE',           icon: '⟳',   file: 'retro-hub.html',      desc: 'Async retrospectives with emoji reactions and markdown export' },
@@ -1027,9 +1067,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','assumptions-hub','learning-hub','focus-hub','log-hub','schedule'] },
-      bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','matrix-hub','goals-hub','focus-hub','log-hub'] },
-      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','assumptions-hub','goals-hub'] },
+      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','learning-hub','focus-hub','log-hub','schedule'] },
+      bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','goals-hub','focus-hub','log-hub'] },
+      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
@@ -1209,6 +1249,9 @@
       setActiveNav(id);
       document.getElementById('breadcrumb').textContent = app.label;
 
+      // Clear project context panel when switching away from project-hub
+      if (id !== 'project-hub') updateProjectContextPanel(null);
+
       activeAppId = id;
     }
 
@@ -1223,6 +1266,7 @@
       document.getElementById('breadcrumb').textContent = '';
       refreshRecentStrip();
       buildStatusWidgets();
+      updateProjectContextPanel(null);
       activeAppId = null;
     }
 
@@ -1267,7 +1311,28 @@
           setTimeout(startWorkflowTour, 400);
         }
       }
+      if (e.data.type === 'hub-project-active') {
+        updateProjectContextPanel(e.data.project || null);
+      }
     });
+
+    function updateProjectContextPanel(proj) {
+      const panel = document.getElementById('proj-ctx-panel');
+      if (!proj) { panel.style.display = 'none'; return; }
+      document.getElementById('proj-ctx-bar').style.background = proj.color || 'var(--accent)';
+      document.getElementById('proj-ctx-name').textContent = proj.name;
+      const stats = [];
+      stats.push(`<span class="proj-ctx-stat${proj.openTasks > 0 ? ' highlight' : ''}">${proj.openTasks} open task${proj.openTasks !== 1 ? 's' : ''}</span>`);
+      if (proj.nextDue) {
+        const d = new Date(proj.nextDue);
+        const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        stats.push(`<span class="proj-ctx-stat">due ${label}</span>`);
+      }
+      if (proj.goalCount > 0) stats.push(`<span class="proj-ctx-stat">🎯 ${proj.goalCount} OKR${proj.goalCount !== 1 ? 's' : ''}</span>`);
+      if (proj.riskCount > 0) stats.push(`<span class="proj-ctx-stat">⚠ ${proj.riskCount} risk${proj.riskCount !== 1 ? 's' : ''}</span>`);
+      document.getElementById('proj-ctx-stats').innerHTML = stats.join('');
+      panel.style.display = '';
+    }
 
     // ── Keyboard shortcut (Escape → home) ────────────────────────────────────────
 
@@ -1284,6 +1349,27 @@
       return String(s || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function latestTimestamp(items, fields = ['updatedAt', 'createdAt', 'date', 'start']) {
+      let max = null;
+      (items || []).forEach(item => {
+        if (!item) return;
+        fields.forEach(f => {
+          if (item[f]) { const d = new Date(item[f]); if (!isNaN(d) && (!max || d > max)) max = d; }
+        });
+      });
+      return max;
+    }
+    function relativeAge(date) {
+      if (!date) return { text: '', isStale: false };
+      const days = Math.floor((Date.now() - date) / 86400000);
+      const text = days === 0 ? 'updated today'
+        : days === 1 ? 'updated yesterday'
+        : days < 7 ? `updated ${days}d ago`
+        : days < 30 ? `updated ${Math.floor(days / 7)}w ago`
+        : `updated ${Math.floor(days / 30)}mo ago`;
+      return { text, isStale: days > 13 };
     }
 
     function buildStatusWidgets() {
@@ -1308,11 +1394,13 @@
           <div class="stat-item-meta">${open} / ${all} open</div>
         </div>`;
           }).join('');
+          const phAge = relativeAge(latestTimestamp(projects.flatMap(p => [p, ...(p.tasks || [])])));
           widgets.push({
             id: 'project-hub', icon: '◈', title: 'Project Hub',
             count: `${projects.length} project${projects.length !== 1 ? 's' : ''}`,
             body: rows,
-            more: projects.length > 3 ? `+${projects.length - 3} more` : ''
+            more: projects.length > 3 ? `+${projects.length - 3} more` : '',
+            staleness: phAge
           });
         }
       } catch { }
@@ -1335,11 +1423,13 @@
           <div class="stat-item-meta">${label}</div>
         </div>`;
           }).join('');
+          const scAge = relativeAge(latestTimestamp(sc.items || []));
           widgets.push({
             id: 'schedule', icon: '▦', title: 'Schedule',
             count: `${upcoming.length} this week`,
             body: rows,
-            more: upcoming.length > 3 ? `+${upcoming.length - 3} more` : ''
+            more: upcoming.length > 3 ? `+${upcoming.length - 3} more` : '',
+            staleness: scAge
           });
         }
       } catch { }
@@ -1354,11 +1444,13 @@
         <span class="stat-badge ${_esc(e.type || 'note')}">${_esc(e.type || 'note')}</span>
         <div class="stat-item-text">${_esc(e.title || '(untitled)')}</div>
       </div>`).join('');
+          const dhAge = relativeAge(latestTimestamp(entries));
           widgets.push({
             id: 'decision-hub', icon: '◎', title: 'Decision Hub',
             count: `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`,
             body: rows,
-            more: entries.length > 3 ? `+${entries.length - 3} more` : ''
+            more: entries.length > 3 ? `+${entries.length - 3} more` : '',
+            staleness: dhAge
           });
         }
       } catch { }
@@ -1374,11 +1466,13 @@
         <div class="stat-item-dot" style="background:var(--accent);opacity:.45"></div>
         <div class="stat-item-text">${_esc(q.text || '')}</div>
       </div>`).join('');
+          const kmAge = relativeAge(latestTimestamp(questions));
           widgets.push({
             id: 'kmqt-board', icon: '⊞', title: `${_esc(qLabel)}s`,
             count: `${questions.length} open`,
             body: rows,
-            more: questions.length > 3 ? `+${questions.length - 3} more` : ''
+            more: questions.length > 3 ? `+${questions.length - 3} more` : '',
+            staleness: kmAge
           });
         }
       } catch { }
@@ -1407,11 +1501,13 @@
               <div class="stat-item-text">${_esc(o.title || 'Objective')}</div>
               <div class="stat-item-meta">${(o.keyResults||[]).length} KR</div>
             </div>`).join('');
+            const ghAge = relativeAge(latestTimestamp(objs.flatMap(o => [o, ...(o.keyResults || [])])));
             widgets.push({
               id: 'goals-hub', icon: '◎', title: `Goals — ${_esc(qtr.label || '')}`,
               count: `${pct}% overall`,
               body: rows,
-              more: objs.length > 3 ? `+${objs.length - 3} more` : ''
+              more: objs.length > 3 ? `+${objs.length - 3} more` : '',
+              staleness: ghAge
             });
           }
         }
@@ -1432,7 +1528,7 @@
       </div>
       <div class="stat-card-body">${w.body}</div>
       <div class="stat-card-footer">
-        <span>${w.more}</span>
+        <span class="${(w.staleness && w.staleness.isStale) ? 'stat-stale' : ''}">${[w.staleness && w.staleness.text, w.more].filter(Boolean).join(' · ')}</span>
         <span>Open →</span>
       </div>`;
         card.addEventListener('click', e => {

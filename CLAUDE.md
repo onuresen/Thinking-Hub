@@ -25,16 +25,16 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `schedule.html` | Calendar / timeline |
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | `kmqt-board.html` | Known / Messy / Questions / Thinking board |
-| `decision-hub.html` | Decision log + alignment matrix |
+| `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`) |
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
 | `log-hub.html` | Private daily captain's log with mood heatmap |
 | `retro-hub.html` | Async team retrospective (Went Well / Improve / Actions) |
-| `assumptions-hub.html` | Assumption tracker linked to decisions |
+| `assumptions-hub.html` | ⚠ Retired from sidebar — data lives on in `assumptions-hub-v1`, accessed via Decision Hub → Assumptions tab |
 | `review-hub.html` | Structured weekly review ritual |
-| `matrix-hub.html` | Eisenhower 2×2 priority/impact matrix |
+| `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
 | `meetings-hub.html` | Meeting notes with action-item extraction |
 | `goals-hub.html` | OKR / quarterly goals hub |
 | `learning-hub.html` | Reading & learning log |
@@ -195,6 +195,29 @@ The ⚙️ Data & Backup modal in `index.html` has a scoped export with three ra
 ## Improvement Backlog
 
 Prioritized list. Items marked with the same **group tag** can be implemented together in one session for efficiency.
+
+---
+
+### ~~Group C — Health & hygiene~~ ✓ Done
+- **C6 — Auto-unassign on member removal** — already implemented in both `removeProjectMember` and `deleteMember`. No change needed.
+- **C7 — Staleness indicators** — `latestTimestamp()` + `relativeAge()` helpers added to `index.html`; each of the 5 dashboard stat cards shows "updated Xd ago" in the footer, amber-tinted if > 13 days.
+- **C8 — Achievements Hub audit + cross-link** — fixed two data-reading bugs (`decision-hub-v1` is a plain array, not `{decisions:[]}`, and goals objectives are nested under `quarters[].objectives`); added 🏅 button to project detail panel header navigating to achievements via `hub-navigate` postMessage.
+**Files:** `index.html`, `achievements-hub.html`, `project-hub.html`
+
+---
+
+### ~~Group A — Tool consolidation~~ ✓ Done
+- **A1 — Assumptions Hub → Decision Hub "Assumptions" tab** — full lane view (Assumed / Testing / Validated / Invalidated), inline edit modal, "+ New assumption" pre-linked to current decision, "Show all" toggle. Data stays in `assumptions-hub-v1`. Standalone `assumptions-hub.html` retired from sidebar (file kept).
+- **A2 — Priority Matrix → Project Hub "Priority Matrix" view** — full 2×2 Eisenhower grid with drag-drop, card CRUD, "Import tasks" modal pulling from project state. Badge in sidebar shows open item count. Data stays in `matrix-hub-v1`. Standalone `matrix-hub.html` retired from sidebar (file kept).
+**Files:** `decision-hub.html`, `project-hub.html`, `index.html`, `CLAUDE.md`
+
+---
+
+### ~~Group B — Project as gravity center~~ ✓ Done
+- **B3 — Goals ↔ Project Hub bridge** — `projectId` + `projectName` fields added to objectives in `goals-hub.html`; project select in objective modal populated from `HubData.getProjects()`; project badge shown on objective cards. Project Hub overview reads `goals-hub-v1` and renders "🎯 X" chip on each project card.
+- **B4 — Risk Register → Project Hub badge** — Project Hub overview reads `risk-hub-v1` and renders "⚠ X" chip on each project card (risks already had `projectId` field).
+- **B5 — Project context panel in shell sidebar** — Persistent mini-card between sidebar-nav and sidebar-footer in `index.html`; shown/hidden via new `hub-project-active` postMessage sent from `openProject()`/`closePanel()` in project-hub; displays project name (with color bar), open task count, next due date, OKR count, risk count. Auto-hides when navigating to a different tool or going home.
+**Files:** `goals-hub.html`, `project-hub.html`, `index.html`
 
 ### ~~Priority 1 — Schedule ↔ Project Hub sync~~ ✓ Done `[group: data-layer]`
 **ID:** 1C — **Implemented.** `schedule.html` has `syncFromProjectHub()` called on `HubData.onChange()` — fixed a `JSON.parse()` double-parse bug that was silently preventing it from running. After the first manual import, due-date changes in Project Hub auto-sync to Schedule.  

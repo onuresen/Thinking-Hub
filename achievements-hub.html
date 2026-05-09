@@ -351,7 +351,8 @@
     const activity  = readActivity();
     const log       = activity.log;
     const ideas     = HubStorage.get('ideaswipe_history_v6') || [];
-    const decisions = (HubStorage.get('decision-hub-v1') || {}).decisions || [];
+    const _dl       = HubStorage.get('decision-hub-v1') || [];
+    const decisions = Array.isArray(_dl) ? _dl : (_dl.decisions || _dl.entries || []);
     const projects  = (HubStorage.get('project-hub-v1') || {}).projects || [];
     const focusSess = (HubStorage.get('focus-hub-v1') || {}).sessions || [];
     const logEntries= (HubStorage.get('log-hub-v1') || {}).entries || {};
@@ -361,7 +362,7 @@
     const meetings  = (HubStorage.get('meetings-hub-v1') || {}).meetings || [];
     const assump    = (HubStorage.get('assumptions-hub-v1') || {}).assumptions || [];
     const risks     = (HubStorage.get('risk-hub-v1') || {}).risks || [];
-    const goals     = (HubStorage.get('goals-hub-v1') || {}).objectives || [];
+    const goals     = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []);
     const canvas    = (HubStorage.get('canvas-v1') || {}).items || [];
 
     const uniqueAppIds = new Set(log.map(e => e.appId));

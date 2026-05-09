@@ -605,6 +605,15 @@
       color: var(--text3);
       font-family: var(--font-mono);
     }
+    .proj-link-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: var(--r-sm);
+      margin-left: 4px;
+      font-family: var(--font-mono);
+    }
+    .proj-link-badge.goals { background: var(--accent-dim); color: var(--accent); }
+    .proj-link-badge.risks { background: color-mix(in srgb, var(--accent-nope) 12%, transparent); color: var(--accent-nope); }
 
     /* ── DETAIL PANEL ────────────────────────────────────────── */
     .detail-panel {
@@ -1464,6 +1473,51 @@
       color: var(--text);
     }
 
+    /* ── PRIORITY MATRIX ────────────────────────────────────── */
+    .mx-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .mx-show-done { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .mx-show-done input { cursor: pointer; accent-color: var(--accent); }
+    .mx-wrap { flex: 1; display: flex; overflow: hidden; padding: 10px 14px; gap: 0; min-height: 0; }
+    .mx-y-label { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; justify-content: center; width: 16px; flex-shrink: 0; user-select: none; }
+    .mx-inner { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+    .mx-x-row { display: flex; gap: 0; }
+    .mx-x-label { flex: 1; text-align: center; font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 4px; user-select: none; }
+    .mx-grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
+    .mx-grid-row + .mx-grid-row { margin-top: 8px; }
+    .mx-quadrant { flex: 1; border-radius: var(--r); border: 2px solid; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0; transition: opacity 0.15s; }
+    .mx-quadrant.do-now   { border-color: #ef4444; background: rgba(239,68,68,0.04); }
+    .mx-quadrant.schedule { border-color: var(--accent); background: rgba(184,240,51,0.04); }
+    .mx-quadrant.delegate { border-color: #f59e0b; background: rgba(245,158,11,0.04); }
+    .mx-quadrant.eliminate { border-color: var(--border); background: transparent; }
+    .mx-quadrant.drag-over { opacity: 0.7; }
+    .mx-q-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .mx-q-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+    .mx-q-title.do-now   { color: #ef4444; }
+    .mx-q-title.schedule { color: var(--accent); }
+    .mx-q-title.delegate { color: #f59e0b; }
+    .mx-q-title.eliminate { color: var(--text3); }
+    .mx-q-count { font-size: 10px; font-family: var(--font-mono); color: var(--text3); }
+    .mx-q-spacer { flex: 1; }
+    .mx-q-add { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; line-height: 1; padding: 0 2px; transition: color 0.12s; }
+    .mx-q-add:hover { color: var(--text); }
+    .mx-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+    .mx-cards::-webkit-scrollbar { width: 3px; }
+    .mx-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .mx-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; cursor: grab; user-select: none; transition: border-color 0.12s, opacity 0.15s; display: flex; align-items: flex-start; gap: 7px; }
+    .mx-card:hover { border-color: var(--border2); }
+    .mx-card.dragging { opacity: 0.45; cursor: grabbing; }
+    .mx-card.done-card { opacity: 0.45; }
+    .mx-check { width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--border); background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    .mx-check.done { border-color: var(--accent); background: var(--accent); }
+    .mx-check.done::after { content: '✓'; font-size: 8px; color: #111; font-weight: 800; }
+    .mx-card-body { flex: 1; min-width: 0; }
+    .mx-card-title { font-size: 12.5px; color: var(--text); line-height: 1.35; font-weight: 500; }
+    .mx-card-title.done { text-decoration: line-through; color: var(--text3); }
+    .mx-card-meta { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-edit-btn { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; padding: 1px; opacity: 0; transition: opacity 0.12s; }
+    .mx-card:hover .mx-edit-btn { opacity: 1; }
+    .mx-edit-btn:hover { color: var(--text); }
+
     /* ── VIEW TOGGLE ─────────────────────────────────────────── */
     .view-toggle {
       display: flex;
@@ -1567,6 +1621,10 @@
           <span class="nav-icon">◇</span> Goals
           <span class="nav-badge" id="badge-goals">0</span>
         </div>
+        <div class="nav-item" onclick="setView('matrix')">
+          <span class="nav-icon">⊞</span> Priority Matrix
+          <span class="nav-badge" id="badge-matrix">0</span>
+        </div>
       </div>
     </div>
     <div class="sidebar-team">
@@ -1607,6 +1665,7 @@
         <div class="panel-project-name" id="panel-project-name"></div>
         <div class="panel-project-desc" id="panel-project-desc"></div>
       </div>
+      <button class="panel-close" title="View Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},'*')" style="font-size:14px">🏅</button>
       <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
     <div class="panel-tabs">
@@ -2150,6 +2209,10 @@
       document.getElementById('badge-tasks').textContent = allTasks.filter(t => !t.done).length;
       document.getElementById('badge-milestones').textContent = state.projects.flatMap(p => p.milestones).length;
       document.getElementById('badge-goals').textContent = state.projects.flatMap(p => p.goals).length;
+      try {
+        const mxd = HubStorage.get('matrix-hub-v1') || { items: [] };
+        document.getElementById('badge-matrix').textContent = (mxd.items || []).filter(i => !i.done).length;
+      } catch { document.getElementById('badge-matrix').textContent = '0'; }
     }
 
     // ─── VIEW ROUTING ─────────────────────────────────────────────────────────────
@@ -2160,9 +2223,9 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals' };
+      const titles = { overview: 'Overview', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
-      const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal' };
+      const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item' };
       document.getElementById('main-action-btn').textContent = btnLabels[view];
       document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
       renderContent();
@@ -2182,6 +2245,8 @@
       } else if (state.currentView === 'goals') {
         if (!state.selectedProject && state.projects.length) state.selectedProject = state.projects[0].id;
         openGoalModal();
+      } else if (state.currentView === 'matrix') {
+        openMxModal(null);
       } else { showAddTask(); }
     }
 
@@ -2197,6 +2262,7 @@
       }
       else if (state.currentView === 'milestones') renderAllMilestones(c);
       else if (state.currentView === 'goals') renderAllGoals(c);
+      else if (state.currentView === 'matrix') renderMxView(c);
     }
 
     // ─── OVERVIEW ────────────────────────────────────────────────────────────────
@@ -2350,6 +2416,18 @@
       const ungrouped = groupMap.get('') || [];
       const renderOrder = [...namedGroups, ...(ungrouped.length ? [['', ungrouped]] : [])];
 
+      // Build project→goal and project→risk count maps
+      const goalsData = HubStorage.get('goals-hub-v1') || {};
+      const goalsMap = {};
+      ((goalsData.quarters || []).flatMap(q => q.objectives || [])).forEach(o => {
+        if (o.projectId) goalsMap[o.projectId] = (goalsMap[o.projectId] || 0) + 1;
+      });
+      const risksData = HubStorage.get('risk-hub-v1') || {};
+      const risksMap = {};
+      (risksData.risks || []).forEach(r => {
+        if (r && r.projectId) risksMap[r.projectId] = (risksMap[r.projectId] || 0) + 1;
+      });
+
       renderOrder.forEach(([groupName, projects]) => {
         if (groupName) {
           const accentColor = projects[0]?.color || 'var(--accent)';
@@ -2425,6 +2503,8 @@
         <div class="project-meta">
           <div class="avatar-stack">${avatars}</div>
           <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
+          ${goalsMap[proj.id] ? `<span class="proj-link-badge goals" title="${goalsMap[proj.id]} linked OKR${goalsMap[proj.id] !== 1 ? 's' : ''}">🎯 ${goalsMap[proj.id]}</span>` : ''}
+          ${risksMap[proj.id] ? `<span class="proj-link-badge risks" title="${risksMap[proj.id]} risk${risksMap[proj.id] !== 1 ? 's' : ''}">⚠ ${risksMap[proj.id]}</span>` : ''}
         </div>
         <div style="margin-top:8px">${groupTagHtml}</div>
       `;
@@ -2845,12 +2925,20 @@
       state.selectedProject = projId;
       document.getElementById('detail-panel').classList.remove('hidden');
       renderPanel(projId); renderContent();
+      const proj = getProject(projId);
+      if (proj) {
+        const nextDue = proj.tasks.filter(t => !t.done && t.due).map(t => t.due).sort()[0] || null;
+        const riskCount = ((HubStorage.get('risk-hub-v1') || {}).risks || []).filter(r => r.projectId === projId).length;
+        const goalCount = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []).filter(o => o.projectId === projId).length;
+        parent.postMessage({ type: 'hub-project-active', project: { id: proj.id, name: proj.name, color: proj.color, openTasks: proj.tasks.filter(t => !t.done).length, nextDue, riskCount, goalCount } }, '*');
+      }
     }
 
     function closePanel() {
       state.selectedProject = null;
       document.getElementById('detail-panel').classList.add('hidden');
       renderContent();
+      parent.postMessage({ type: 'hub-project-active', project: null }, '*');
     }
 
     function setTab(tab) {
@@ -3533,10 +3621,216 @@
       }
     });
 
+    // ─── PRIORITY MATRIX ──────────────────────────────────────────────────────────
+    const MX_KEY = 'matrix-hub-v1';
+    const MX_QUADRANTS = ['do-now', 'schedule', 'delegate', 'eliminate'];
+    const MX_LABELS = { 'do-now': 'Do Now', 'schedule': 'Schedule', 'delegate': 'Delegate', 'eliminate': 'Eliminate' };
+    let mxData = { items: [] };
+    let mxEditId = null;
+    let mxDragId = null;
+    let mxShowDone = false;
+
+    function loadMx() { mxData = HubStorage.get(MX_KEY) || { items: [] }; if (!mxData.items) mxData.items = []; }
+    function saveMx() { HubStorage.set(MX_KEY, mxData); updateBadges(); }
+
+    function renderMxView(container) {
+      loadMx();
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.overflow = 'hidden';
+
+      // Toolbar
+      const toolbar = document.createElement('div');
+      toolbar.className = 'mx-toolbar';
+      toolbar.innerHTML = `
+        <label class="mx-show-done">
+          <input type="checkbox" id="mx-show-done-chk" ${mxShowDone ? 'checked' : ''} onchange="mxShowDone=this.checked;renderContent()"> Show done
+        </label>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="openMxImportModal()">↓ Import tasks</button>
+      `;
+      container.appendChild(toolbar);
+
+      // Grid wrapper
+      const wrap = document.createElement('div');
+      wrap.className = 'mx-wrap';
+      wrap.innerHTML = `
+        <div class="mx-y-label">Urgency →</div>
+        <div class="mx-inner">
+          <div class="mx-x-row">
+            <div class="mx-x-label">Not Important</div>
+            <div class="mx-x-label">Important</div>
+          </div>
+          <div class="mx-grid-row">
+            <div class="mx-quadrant delegate" id="mxq-delegate" ondragover="onMxDragOver(event,'delegate')" ondrop="onMxDrop(event,'delegate')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title delegate">Delegate</div><div class="mx-q-count" id="mxcnt-delegate"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('delegate')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-delegate"></div>
+            </div>
+            <div class="mx-quadrant do-now" id="mxq-do-now" ondragover="onMxDragOver(event,'do-now')" ondrop="onMxDrop(event,'do-now')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title do-now">Do Now</div><div class="mx-q-count" id="mxcnt-do-now"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('do-now')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-do-now"></div>
+            </div>
+          </div>
+          <div class="mx-grid-row">
+            <div class="mx-quadrant eliminate" id="mxq-eliminate" ondragover="onMxDragOver(event,'eliminate')" ondrop="onMxDrop(event,'eliminate')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title eliminate">Eliminate</div><div class="mx-q-count" id="mxcnt-eliminate"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('eliminate')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-eliminate"></div>
+            </div>
+            <div class="mx-quadrant schedule" id="mxq-schedule" ondragover="onMxDragOver(event,'schedule')" ondrop="onMxDrop(event,'schedule')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title schedule">Schedule</div><div class="mx-q-count" id="mxcnt-schedule"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('schedule')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-schedule"></div>
+            </div>
+          </div>
+        </div>`;
+      container.appendChild(wrap);
+      renderMxCards();
+    }
+
+    function renderMxCards() {
+      MX_QUADRANTS.forEach(q => {
+        const cards = document.getElementById('mxcards-' + q);
+        const cnt = document.getElementById('mxcnt-' + q);
+        if (!cards || !cnt) return;
+        let items = mxData.items.filter(it => it.quadrant === q);
+        if (!mxShowDone) items = items.filter(it => !it.done);
+        const allInQ = mxData.items.filter(it => it.quadrant === q);
+        cnt.textContent = `${allInQ.filter(i => !i.done).length} / ${allInQ.length}`;
+        cards.innerHTML = items.length
+          ? items.map(it => `<div class="mx-card${it.done ? ' done-card' : ''}" id="mxc-${it.id}" draggable="true" ondragstart="onMxDragStart(event,'${it.id}')" ondragend="onMxDragEnd(event)">
+              <div class="mx-check${it.done ? ' done' : ''}" onclick="toggleMxDone('${it.id}')"></div>
+              <div class="mx-card-body">
+                <div class="mx-card-title${it.done ? ' done' : ''}">${_esc(it.title)}</div>
+                ${it.notes ? `<div class="mx-card-meta">${_esc(it.notes.slice(0, 60))}</div>` : ''}
+                ${it.projectName ? `<div class="mx-card-meta">${_esc(it.projectName)}</div>` : ''}
+              </div>
+              <button class="mx-edit-btn" onclick="openMxModal('${it.quadrant}','${it.id}')" title="Edit">✎</button>
+            </div>`).join('')
+          : `<div style="font-size:11px;color:var(--text3);padding:4px 2px;font-style:italic">Drop items here</div>`;
+      });
+    }
+
+    function onMxDragStart(e, id) {
+      mxDragId = id;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => { const el = document.getElementById('mxc-' + id); if (el) el.classList.add('dragging'); }, 0);
+    }
+    function onMxDragEnd() {
+      if (mxDragId) { const el = document.getElementById('mxc-' + mxDragId); if (el) el.classList.remove('dragging'); }
+      document.querySelectorAll('.mx-quadrant').forEach(q => q.classList.remove('drag-over'));
+    }
+    function onMxDragOver(e, q) {
+      e.preventDefault();
+      document.querySelectorAll('.mx-quadrant').forEach(el => el.classList.remove('drag-over'));
+      document.getElementById('mxq-' + q).classList.add('drag-over');
+    }
+    function onMxDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+    function onMxDrop(e, q) {
+      e.preventDefault();
+      document.querySelectorAll('.mx-quadrant').forEach(el => el.classList.remove('drag-over'));
+      if (!mxDragId) return;
+      const item = mxData.items.find(it => it.id === mxDragId);
+      if (item) { item.quadrant = q; saveMx(); renderMxCards(); }
+      mxDragId = null;
+    }
+
+    function toggleMxDone(id) {
+      const item = mxData.items.find(it => it.id === id);
+      if (!item) return;
+      item.done = !item.done;
+      saveMx(); renderMxCards();
+    }
+
+    function openMxModal(defaultQ, id) {
+      mxEditId = id || null;
+      const item = id ? mxData.items.find(it => it.id === id) : null;
+      document.getElementById('mx-modal-title').textContent = item ? 'Edit Item' : 'New Item';
+      document.getElementById('mx-am-title').value = item ? item.title : '';
+      document.getElementById('mx-am-notes').value = item ? (item.notes || '') : '';
+      document.getElementById('mx-am-quadrant').value = item ? item.quadrant : (defaultQ || 'do-now');
+      document.getElementById('mx-am-delete').style.display = item ? '' : 'none';
+      document.getElementById('mx-modal-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('mx-am-title').focus(), 50);
+    }
+    function closeMxModal() { document.getElementById('mx-modal-overlay').classList.remove('open'); mxEditId = null; }
+    function saveMxItem() {
+      const title = document.getElementById('mx-am-title').value.trim();
+      if (!title) { document.getElementById('mx-am-title').focus(); return; }
+      if (mxEditId) {
+        const item = mxData.items.find(it => it.id === mxEditId);
+        if (item) { item.title = title; item.notes = document.getElementById('mx-am-notes').value.trim(); item.quadrant = document.getElementById('mx-am-quadrant').value; }
+      } else {
+        mxData.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, notes: document.getElementById('mx-am-notes').value.trim(), quadrant: document.getElementById('mx-am-quadrant').value, done: false, createdAt: new Date().toISOString() });
+      }
+      saveMx(); closeMxModal(); renderMxCards();
+    }
+    function deleteMxItem() {
+      if (!mxEditId) return;
+      mxData.items = mxData.items.filter(it => it.id !== mxEditId);
+      saveMx(); closeMxModal(); renderMxCards();
+    }
+
+    function openMxImportModal() {
+      loadMx();
+      const tasks = (() => { try { return state.projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _projectName: p.name, _projectId: p.id }))); } catch { return []; } })();
+      const existing = new Set(mxData.items.filter(it => it.taskId).map(it => it.taskId));
+      const available = tasks.filter(t => !t.done && !existing.has(t.id));
+      const list = document.getElementById('mx-import-list');
+      list.innerHTML = available.length
+        ? available.map(t => `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-sm);cursor:pointer">
+            <input type="checkbox" value="${_esc(t.id)}" data-title="${_esc(t.title)}" data-project="${_esc(t._projectName || '')}" data-pid="${_esc(t._projectId || '')}" style="accent-color:var(--accent);cursor:pointer">
+            <span style="font-size:13px;flex:1">${_esc(t.title)}</span>
+            <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">${_esc(t._projectName || '')}</span>
+          </label>`).join('')
+        : '<div style="font-size:13px;color:var(--text3);padding:12px 10px">No new open tasks found.</div>';
+      document.getElementById('mx-import-overlay').classList.add('open');
+    }
+    function closeMxImportModal() { document.getElementById('mx-import-overlay').classList.remove('open'); }
+    function doMxImport() {
+      document.querySelectorAll('#mx-import-list input[type=checkbox]:checked').forEach(chk => {
+        mxData.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), taskId: chk.value, title: chk.dataset.title, notes: '', projectName: chk.dataset.project || null, projectId: chk.dataset.pid || null, quadrant: 'do-now', done: false, createdAt: new Date().toISOString() });
+      });
+      saveMx(); closeMxImportModal(); renderMxCards();
+    }
+
     // ─── INIT ─────────────────────────────────────────────────────────────────────
     renderSidebarUsers();
     renderContent();
   </script>
+
+  <!-- Priority Matrix modals -->
+  <div class="modal-overlay" id="mx-modal-overlay" onclick="if(event.target===this)closeMxModal()" style="z-index:300">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="width:420px">
+      <div class="modal-title" id="mx-modal-title">New Item</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+        <div><div class="label">Title</div><input class="input" id="mx-am-title" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter')saveMxItem()"></div>
+        <div><div class="label">Quadrant</div>
+          <select class="select" id="mx-am-quadrant">
+            <option value="do-now">Do Now — Urgent &amp; Important</option>
+            <option value="schedule">Schedule — Important, Not Urgent</option>
+            <option value="delegate">Delegate — Urgent, Not Important</option>
+            <option value="eliminate">Eliminate — Not Urgent, Not Important</option>
+          </select>
+        </div>
+        <div><div class="label">Notes (optional)</div><textarea class="textarea" id="mx-am-notes" rows="2" placeholder="Context, links, details…"></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-primary" onclick="saveMxItem()">Save</button>
+        <button class="btn btn-ghost" onclick="closeMxModal()">Cancel</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-danger" id="mx-am-delete" onclick="deleteMxItem()" style="display:none">Delete</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="mx-import-overlay" onclick="if(event.target===this)closeMxImportModal()" style="z-index:300">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="width:440px">
+      <div class="modal-title">Import from Project Hub</div>
+      <div style="font-size:12px;color:var(--text3);margin:8px 0">Select tasks to add to the matrix. Already-imported tasks are skipped.</div>
+      <div id="mx-import-list" style="max-height:300px;overflow-y:auto;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="doMxImport()">Import selected</button>
+        <button class="btn btn-ghost" onclick="closeMxImportModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {

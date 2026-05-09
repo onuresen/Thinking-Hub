@@ -481,6 +481,49 @@
       background: rgba(240, 67, 107, 0.15);
       color: var(--accent3);
     }
+
+    /* ── Assumptions tab ── */
+    .asm-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .asm-lane { margin-bottom: 20px; }
+    .asm-lane-hdr { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 2px solid; margin-bottom: 8px; }
+    .asm-lane-hdr.assumed { border-color: #6366f1; }
+    .asm-lane-hdr.testing { border-color: #f59e0b; }
+    .asm-lane-hdr.validated { border-color: var(--accent-like); }
+    .asm-lane-hdr.invalidated { border-color: var(--accent-nope); }
+    .asm-lane-label { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+    .asm-lane-label.assumed { color: #6366f1; }
+    .asm-lane-label.testing { color: #f59e0b; }
+    .asm-lane-label.validated { color: var(--accent-like); }
+    .asm-lane-label.invalidated { color: var(--accent-nope); }
+    .asm-lane-count { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .asm-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; cursor: pointer; transition: border-color 0.12s; margin-bottom: 6px; }
+    .asm-card:hover { border-color: var(--accent-glow); }
+    .asm-card.invalidated-card { border-left: 3px solid var(--accent-nope); }
+    .asm-card-main { flex: 1; min-width: 0; }
+    .asm-card-stmt { font-size: 12.5px; color: var(--text); font-weight: 500; line-height: 1.4; }
+    .asm-card-why { font-size: 11.5px; color: var(--text3); margin-top: 3px; }
+    .asm-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+    .asm-stars { display: flex; gap: 2px; font-size: 11px; color: var(--text3); }
+    .asm-stars .lit { color: #f59e0b; }
+    .asm-status-badge { font-size: 9px; border-radius: 999px; padding: 2px 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; white-space: nowrap; }
+    .asm-status-badge.assumed { background: color-mix(in srgb,#6366f1 15%,transparent); color: #6366f1; border: 1px solid #6366f140; }
+    .asm-status-badge.testing { background: color-mix(in srgb,#f59e0b 15%,transparent); color: #f59e0b; border: 1px solid #f59e0b40; }
+    .asm-status-badge.validated { background: color-mix(in srgb,var(--accent-like) 15%,transparent); color: var(--accent-like); border: 1px solid color-mix(in srgb,var(--accent-like) 30%,transparent); }
+    .asm-status-badge.invalidated { background: color-mix(in srgb,var(--accent-nope) 15%,transparent); color: var(--accent-nope); border: 1px solid color-mix(in srgb,var(--accent-nope) 30%,transparent); }
+
+    /* ── Assumption edit modal ── */
+    .asm-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; }
+    .asm-modal-overlay.open { display: flex; }
+    .asm-modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r); padding: 24px; width: 440px; max-width: 95vw; display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto; }
+    .asm-modal-title { font-family: var(--font-display); font-size: 15px; font-weight: 800; }
+    .asm-field-label { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .asm-modal textarea, .asm-modal select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; color: var(--text); font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s; resize: vertical; }
+    .asm-modal textarea:focus, .asm-modal select:focus { border-color: var(--accent); }
+    .asm-modal-stars { display: flex; gap: 4px; }
+    .asm-modal-star { font-size: 20px; cursor: pointer; color: var(--border); transition: color 0.1s, transform 0.1s; }
+    .asm-modal-star.lit { color: #f59e0b; }
+    .asm-modal-star:hover { transform: scale(1.2); }
+    .asm-modal-footer { display: flex; gap: 8px; margin-top: 4px; }
   </style>
 </head>
 
@@ -509,6 +552,7 @@
         <button class="view-toggle-btn active" id="tab-log" onclick="switchTab('log')">Log & Summary</button>
         <button class="view-toggle-btn" id="tab-workspace" onclick="switchTab('workspace')">Workspace</button>
         <button class="view-toggle-btn" id="tab-alignment" onclick="switchTab('alignment')">Alignment</button>
+        <button class="view-toggle-btn" id="tab-assumptions" onclick="switchTab('assumptions')">Assumptions</button>
       </div>
 
       <button class="btn-ghost" id="btn-save" style="display:none" onclick="saveCurrent()">Save Changes</button>
@@ -648,6 +692,7 @@
 
     function openDecision(id) {
       currentId = id;
+      asmShowAll = false;
       document.getElementById('view-toggle').style.display = 'flex';
       document.getElementById('btn-save').style.display = 'block';
       document.getElementById('btn-delete').style.display = 'block';
@@ -973,6 +1018,9 @@
             <div class="align-hint">Click a vote cell to cycle: — → ✓ Yes → ~ Maybe → ✗ No → —</div>
           </div>`;
       }
+      else if (currentTab === 'assumptions') {
+        renderAssumptionsTab();
+      }
     }
 
     // Expose option helpers globally for inline onclick
@@ -1070,6 +1118,151 @@
       renderContent();
     };
 
+    // ── Assumptions tab ──────────────────────────────────────────────────────
+    const ASM_KEY = 'assumptions-hub-v1';
+    const ASM_STATUSES = ['assumed', 'testing', 'validated', 'invalidated'];
+    const ASM_LABELS = { assumed: 'Assumed', testing: 'Testing', validated: 'Validated ✓', invalidated: 'Invalidated ✗' };
+    let asmData = { assumptions: [] };
+    let asmEditId = null;
+    let asmEditConf = 3;
+    let asmShowAll = false;
+
+    function loadAsm() {
+      asmData = HubStorage.get(ASM_KEY) || { assumptions: [] };
+      if (!Array.isArray(asmData.assumptions)) asmData.assumptions = [];
+    }
+    function saveAsm() { HubStorage.set(ASM_KEY, asmData); }
+
+    function renderAssumptionsTab() {
+      const c = document.getElementById('main-content');
+      c.innerHTML = '';
+      loadAsm();
+      const linked = asmData.assumptions.filter(a => a.linkedDecision === currentId);
+      const displayList = asmShowAll ? asmData.assumptions : linked;
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'asm-toolbar';
+      toolbar.innerHTML = `
+        <button class="btn-create" style="font-size:12px;padding:6px 14px" onclick="newLinkedAsm()">+ New assumption</button>
+        <button class="btn-ghost" style="font-size:12px;padding:6px 14px" onclick="toggleAsmShowAll()">
+          ${asmShowAll ? 'Show linked only' : `Show all (${asmData.assumptions.length})`}
+        </button>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-left:auto">${linked.length} linked to this decision</span>
+      `;
+      c.appendChild(toolbar);
+
+      if (!displayList.length) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:40px 24px;text-align:center;color:var(--text3);font-size:13px';
+        empty.innerHTML = '<div style="font-size:32px;margin-bottom:10px">🔍</div>No assumptions yet. Add one to track what this decision depends on.';
+        c.appendChild(empty);
+        return;
+      }
+
+      ASM_STATUSES.forEach(status => {
+        const items = displayList.filter(a => a.status === status)
+          .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+        if (!items.length) return;
+        const lane = document.createElement('div');
+        lane.className = 'asm-lane';
+        lane.innerHTML = `
+          <div class="asm-lane-hdr ${status}">
+            <span class="asm-lane-label ${status}">${ASM_LABELS[status]}</span>
+            <span class="asm-lane-count">${items.length}</span>
+          </div>
+          ${items.map(a => `
+            <div class="asm-card${a.status === 'invalidated' ? ' invalidated-card' : ''}" onclick="openAsmEdit('${a.id}')">
+              <div class="asm-card-main">
+                <div class="asm-card-stmt">${_esc(a.statement || 'No statement')}</div>
+                ${a.why ? `<div class="asm-card-why">${_esc(a.why)}</div>` : ''}
+              </div>
+              <div class="asm-card-right">
+                <div class="asm-stars">${[1,2,3,4,5].map(i => `<span class="${i <= (a.confidence||0) ? 'lit' : ''}">★</span>`).join('')}</div>
+                <div class="asm-status-badge ${a.status}" onclick="event.stopPropagation();cycleAsmStatus('${a.id}')">${ASM_LABELS[a.status]}</div>
+              </div>
+            </div>`).join('')}
+        `;
+        c.appendChild(lane);
+      });
+    }
+
+    function toggleAsmShowAll() { asmShowAll = !asmShowAll; renderAssumptionsTab(); }
+
+    function cycleAsmStatus(id) {
+      loadAsm();
+      const a = asmData.assumptions.find(x => x.id === id);
+      if (!a) return;
+      const i = ASM_STATUSES.indexOf(a.status);
+      a.status = ASM_STATUSES[(i + 1) % ASM_STATUSES.length];
+      a.updatedAt = new Date().toISOString();
+      saveAsm();
+      renderAssumptionsTab();
+    }
+
+    function newLinkedAsm() {
+      loadAsm();
+      const a = {
+        id: 'asm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        statement: '', why: '', confidence: 3, status: 'assumed',
+        linkedDecision: currentId, notes: '', createdAt: new Date().toISOString()
+      };
+      asmData.assumptions.push(a);
+      saveAsm();
+      openAsmEdit(a.id);
+    }
+
+    function openAsmEdit(id) {
+      loadAsm();
+      const a = asmData.assumptions.find(x => x.id === id);
+      if (!a) return;
+      asmEditId = id;
+      asmEditConf = a.confidence || 3;
+      document.getElementById('asm-stmt').value = a.statement || '';
+      document.getElementById('asm-why').value = a.why || '';
+      document.getElementById('asm-status').value = a.status || 'assumed';
+      document.getElementById('asm-notes').value = a.notes || '';
+      updateAsmStars(asmEditConf);
+      document.getElementById('asm-modal').classList.add('open');
+      setTimeout(() => document.getElementById('asm-stmt').focus(), 50);
+    }
+
+    function closeAsmModal() {
+      document.getElementById('asm-modal').classList.remove('open');
+      asmEditId = null;
+    }
+
+    function updateAsmStars(v) {
+      asmEditConf = v;
+      document.querySelectorAll('#asm-modal-stars .asm-modal-star').forEach(s => {
+        s.classList.toggle('lit', parseInt(s.dataset.v) <= v);
+      });
+    }
+
+    function saveAsmEdit() {
+      if (!asmEditId) return;
+      loadAsm();
+      const a = asmData.assumptions.find(x => x.id === asmEditId);
+      if (!a) return;
+      a.statement = document.getElementById('asm-stmt').value.trim();
+      a.why = document.getElementById('asm-why').value.trim();
+      a.status = document.getElementById('asm-status').value;
+      a.notes = document.getElementById('asm-notes').value.trim();
+      a.confidence = asmEditConf;
+      a.updatedAt = new Date().toISOString();
+      saveAsm();
+      closeAsmModal();
+      if (currentTab === 'assumptions') renderAssumptionsTab();
+    }
+
+    function deleteAsmEdit() {
+      if (!asmEditId || !confirm('Delete this assumption?')) return;
+      loadAsm();
+      asmData.assumptions = asmData.assumptions.filter(x => x.id !== asmEditId);
+      saveAsm();
+      closeAsmModal();
+      if (currentTab === 'assumptions') renderAssumptionsTab();
+    }
+
     // Auto save on any input change within forms
     document.addEventListener('input', e => {
       if (e.target.matches('.form-input, .form-textarea, .form-select')) {
@@ -1078,6 +1271,49 @@
     });
 
   </script>
+  <!-- Assumption edit modal -->
+  <div class="asm-modal-overlay" id="asm-modal" onclick="if(event.target===this)closeAsmModal()">
+    <div class="asm-modal">
+      <div class="asm-modal-title">Edit Assumption</div>
+      <div>
+        <div class="asm-field-label">Statement</div>
+        <textarea id="asm-stmt" rows="3" placeholder="We believe that…"></textarea>
+      </div>
+      <div>
+        <div class="asm-field-label">Why it matters</div>
+        <textarea id="asm-why" rows="2" placeholder="If wrong, this would…"></textarea>
+      </div>
+      <div>
+        <div class="asm-field-label">Confidence (1–5)</div>
+        <div class="asm-modal-stars" id="asm-modal-stars">
+          <span class="asm-modal-star lit" data-v="1" onclick="updateAsmStars(1)">★</span>
+          <span class="asm-modal-star lit" data-v="2" onclick="updateAsmStars(2)">★</span>
+          <span class="asm-modal-star lit" data-v="3" onclick="updateAsmStars(3)">★</span>
+          <span class="asm-modal-star" data-v="4" onclick="updateAsmStars(4)">★</span>
+          <span class="asm-modal-star" data-v="5" onclick="updateAsmStars(5)">★</span>
+        </div>
+      </div>
+      <div>
+        <div class="asm-field-label">Status</div>
+        <select id="asm-status">
+          <option value="assumed">Assumed</option>
+          <option value="testing">Testing</option>
+          <option value="validated">Validated</option>
+          <option value="invalidated">Invalidated</option>
+        </select>
+      </div>
+      <div>
+        <div class="asm-field-label">Notes</div>
+        <textarea id="asm-notes" rows="2" placeholder="Evidence, context, updates…"></textarea>
+      </div>
+      <div class="asm-modal-footer">
+        <button class="btn-create" style="flex:1" onclick="saveAsmEdit()">Save</button>
+        <button class="btn-ghost" onclick="closeAsmModal()">Cancel</button>
+        <button class="btn-danger" onclick="deleteAsmEdit()">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('decision-hub');
