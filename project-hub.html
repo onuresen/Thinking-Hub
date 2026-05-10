@@ -2119,7 +2119,7 @@
           state.currentTab = 'tasks';
 
           // Close any open modals
-          document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+          document.querySelectorAll('.ui-modal-overlay.is-open').forEach(m => m.classList.remove('is-open'));
 
           saveState();
           renderSidebarUsers();
@@ -3580,8 +3580,8 @@
     // ─── KEYBOARD ─────────────────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        const open = document.querySelector('.modal-overlay.open');
-        if (open) { open.classList.remove('open'); return; }
+        const open = document.querySelector('.ui-modal-overlay.is-open');
+        if (open) { open.classList.remove('is-open'); return; }
         closePanel();
       }
     });
@@ -3747,10 +3747,10 @@
       document.getElementById('mx-am-notes').value = item ? (item.notes || '') : '';
       document.getElementById('mx-am-quadrant').value = item ? item.quadrant : (defaultQ || 'do-now');
       document.getElementById('mx-am-delete').style.display = item ? '' : 'none';
-      document.getElementById('mx-modal-overlay').classList.add('open');
+      document.getElementById('mx-modal-overlay').classList.add('is-open');
       setTimeout(() => document.getElementById('mx-am-title').focus(), 50);
     }
-    function closeMxModal() { document.getElementById('mx-modal-overlay').classList.remove('open'); mxEditId = null; }
+    function closeMxModal() { document.getElementById('mx-modal-overlay').classList.remove('is-open'); mxEditId = null; }
     function saveMxItem() {
       const title = document.getElementById('mx-am-title').value.trim();
       if (!title) { document.getElementById('mx-am-title').focus(); return; }
@@ -3781,9 +3781,9 @@
             <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">${_esc(t._projectName || '')}</span>
           </label>`).join('')
         : '<div style="font-size:13px;color:var(--text3);padding:12px 10px">No new open tasks found.</div>';
-      document.getElementById('mx-import-overlay').classList.add('open');
+      document.getElementById('mx-import-overlay').classList.add('is-open');
     }
-    function closeMxImportModal() { document.getElementById('mx-import-overlay').classList.remove('open'); }
+    function closeMxImportModal() { document.getElementById('mx-import-overlay').classList.remove('is-open'); }
     function doMxImport() {
       document.querySelectorAll('#mx-import-list input[type=checkbox]:checked').forEach(chk => {
         mxData.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), taskId: chk.value, title: chk.dataset.title, notes: '', projectName: chk.dataset.project || null, projectId: chk.dataset.pid || null, quadrant: 'do-now', done: false, createdAt: new Date().toISOString() });
@@ -3797,7 +3797,7 @@
   </script>
 
   <!-- Priority Matrix modals -->
-  <div class="modal-overlay" id="mx-modal-overlay" onclick="if(event.target===this)closeMxModal()" style="z-index:300">
+  <div class="ui-modal-overlay" id="mx-modal-overlay" onclick="if(event.target===this)closeMxModal()" style="z-index:300">
     <div class="ui-modal" onclick="event.stopPropagation()" style="width:420px">
       <div class="modal-title" id="mx-modal-title">New Item</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
@@ -3820,7 +3820,7 @@
       </div>
     </div>
   </div>
-  <div class="modal-overlay" id="mx-import-overlay" onclick="if(event.target===this)closeMxImportModal()" style="z-index:300">
+  <div class="ui-modal-overlay" id="mx-import-overlay" onclick="if(event.target===this)closeMxImportModal()" style="z-index:300">
     <div class="ui-modal" onclick="event.stopPropagation()" style="width:440px">
       <div class="modal-title">Import from Project Hub</div>
       <div style="font-size:12px;color:var(--text3);margin:8px 0">Select tasks to add to the matrix. Already-imported tasks are skipped.</div>
