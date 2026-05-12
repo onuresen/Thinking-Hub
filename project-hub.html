@@ -1670,7 +1670,6 @@
     </div>
     <div class="panel-tabs">
       <div class="panel-tab active" onclick="setTab('tasks')" id="tab-tasks">Tasks</div>
-      <div class="panel-tab" onclick="setTab('workstreams')" id="tab-workstreams">Workstreams</div>
       <div class="panel-tab" onclick="setTab('milestones')" id="tab-milestones">Milestones</div>
       <div class="panel-tab" onclick="setTab('goals')" id="tab-goals">Goals</div>
       <div class="panel-tab" onclick="setTab('people')" id="tab-people">People</div>
@@ -1678,6 +1677,16 @@
     </div>
     <div class="panel-body" id="panel-body"></div>
   </div>
+
+  <datalist id="proj-role-suggestions">
+    <option value="Owner">
+    <option value="Lead">
+    <option value="Contributor">
+    <option value="Reviewer">
+    <option value="Sponsor">
+    <option value="Consulted">
+    <option value="Informed">
+  </datalist>
 
   <!-- MODALS -->
   <div class="ui-modal-overlay" id="modal-project" onclick="closeModal('modal-project')">
@@ -1758,12 +1767,6 @@
         <div class="form-group">
           <label class="form-label">Project</label>
           <select class="form-select" id="task-project"></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Workstream</label>
-          <select class="form-select" id="task-workstream">
-            <option value="">— none —</option>
-          </select>
         </div>
       </div>
       <div class="form-row">
@@ -1996,6 +1999,22 @@
     const uid = () => Math.random().toString(36).slice(2, 9);
     const getMember = id => state.members.find(m => m.id === id);
     const getProject = id => state.projects.find(p => p.id === id);
+
+    // proj.members may be legacy [string] or new [{memberId, role}] — always normalise
+    function normalizeProjMembers(proj) {
+      if (!proj.members) return [];
+      return proj.members.map(item => typeof item === 'string' ? { memberId: item, role: '' } : item);
+    }
+    function getProjMemberIds(proj) { return normalizeProjMembers(proj).map(pm => pm.memberId); }
+    function getProjMemberRole(proj, memberId) {
+      const pm = normalizeProjMembers(proj).find(pm => pm.memberId === memberId);
+      return pm ? pm.role : '';
+    }
+    function saveProjMemberRole(projId, memberId, role) {
+      const proj = getProject(projId); if (!proj) return;
+      proj.members = normalizeProjMembers(proj).map(pm => pm.memberId === memberId ? { memberId, role } : pm);
+      saveState();
+    }
 
     function avatarColors(colorStr) { const [bg, fg] = colorStr.split(','); return { bg, fg }; }
     function initials(name) { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
@@ -2379,7 +2398,7 @@
       // ── Apply filters & sort ──
       let visible = [...state.projects];
       if (filteredMembers.length > 0)
-        visible = visible.filter(p => filteredMembers.some(m => p.members.includes(m)));
+        visible = visible.filter(p => filteredMembers.some(m => getProjMemberIds(p).includes(m)));
       if (of.status !== 'all')
         visible = visible.filter(p => p.status === of.status);
       if (of.search.trim()) {
@@ -2481,7 +2500,7 @@
 
           card.onclick = () => { if (!projDragSrc) openProject(proj.id); };
           const prog = projectProgress(proj);
-          const avatars = proj.members.map(mid => {
+          const avatars = getProjMemberIds(proj).map(mid => {
             const m = getMember(mid); if (!m) return '';
             const { bg, fg } = avatarColors(m.color);
             return `<div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:8.5px">${initials(m.name)}</div>`;
@@ -2854,8 +2873,9 @@
       const proj = getProject(projId);
       if (!proj) return;
 
-      if (!proj.members.includes(memberId)) {
-        proj.members.push(memberId);
+      if (!getProjMemberIds(proj).includes(memberId)) {
+        proj.members = normalizeProjMembers(proj);
+        proj.members.push({ memberId, role: '' });
         saveState();
         renderContent();
         renderPanel(projId);
@@ -2871,7 +2891,7 @@
       const name = member ? member.name : memberId;
 
       // Remove from project membership
-      proj.members = proj.members.filter(id => id !== memberId);
+      proj.members = normalizeProjMembers(proj).filter(pm => pm.memberId !== memberId);
 
       // Auto-unassign tasks
       const affected = proj.tasks.filter(t => t.assigneeId === memberId);
@@ -3019,25 +3039,7 @@
 
         if (!tasks.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">☐</div><div class="e-title">No tasks match</div></div>`); return; }
 
-        // Group by workstream if project has any
-        const hasWorkstreams = proj.workstreams && proj.workstreams.length > 0;
-        if (hasWorkstreams && tf.status !== 'done') {
-          proj.workstreams.forEach(ws => {
-            const wsTasks = open.filter(t => t.workstreamId === ws.id);
-            if (!wsTasks.length) return;
-            const g = document.createElement('div'); g.className = 'task-group';
-            g.innerHTML = `<div class="task-group-label" style="color:var(--text2)">⊡ ${HubUtils.esc(ws.name)}</div>`;
-            wsTasks.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
-            body.appendChild(g);
-          });
-          const ungrouped = open.filter(t => !t.workstreamId);
-          if (ungrouped.length) {
-            const g = document.createElement('div'); g.className = 'task-group';
-            g.innerHTML = `<div class="task-group-label" style="color:var(--text3)">Ungrouped</div>`;
-            ungrouped.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
-            body.appendChild(g);
-          }
-        } else if (tf.status !== 'done' && open.length) {
+        if (tf.status !== 'done' && open.length) {
           const g = document.createElement('div'); g.className = 'task-group';
           g.innerHTML = `<div class="task-group-label">Open</div>`;
           open.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
@@ -3048,47 +3050,6 @@
           g.innerHTML = `<div class="task-group-label">Done</div>`;
           done.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
           body.appendChild(g);
-        }
-      }
-
-      else if (state.currentTab === 'workstreams') {
-        // ── Inline add workstream ──
-        const addRow = document.createElement('div');
-        addRow.style.cssText = 'display:flex;gap:6px;margin-bottom:12px';
-        const wsInput = document.createElement('input');
-        wsInput.className = 'form-input'; wsInput.placeholder = 'New workstream name…'; wsInput.style.flex = '1';
-        const wsAdd = document.createElement('button');
-        wsAdd.className = 'btn btn-primary'; wsAdd.style.cssText = 'flex-shrink:0;font-size:12px';
-        wsAdd.textContent = '+ Add';
-        wsAdd.onclick = () => {
-          const name = wsInput.value.trim(); if (!name) return;
-          if (!proj.workstreams) proj.workstreams = [];
-          proj.workstreams.push({ id: uid(), name });
-          saveState(); wsInput.value = ''; renderPanel(projId);
-        };
-        wsInput.onkeydown = e => { if (e.key === 'Enter') wsAdd.click(); };
-        addRow.appendChild(wsInput); addRow.appendChild(wsAdd);
-        body.appendChild(addRow);
-
-        if (!proj.workstreams || !proj.workstreams.length) {
-          body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">⊡</div><div class="e-title">No workstreams yet</div><div class="e-sub">Group related tasks into programs or initiatives</div></div>`);
-        } else {
-          proj.workstreams.forEach(ws => {
-            const wsTasks = proj.tasks.filter(t => t.workstreamId === ws.id);
-            const open = wsTasks.filter(t => !t.done).length;
-            const done = wsTasks.filter(t => t.done).length;
-            const el = document.createElement('div');
-            el.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px';
-            el.innerHTML = `
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <span style="flex:1;font-weight:600;font-size:13px">${HubUtils.esc(ws.name)}</span>
-                <span style="font-size:10px;color:var(--text3)">${open} open · ${done} done</span>
-                <button class="task-action-btn del" title="Delete workstream" onclick="deleteWorkstream('${ws.id}','${projId}')">✕</button>
-              </div>
-              <div style="font-size:11px;color:var(--text3)">${wsTasks.length ? wsTasks.map(t => `<div style="padding:2px 0;color:${t.done ? 'var(--text3)' : 'var(--text)'}">${t.done ? '✓ ' : '○ '}${HubUtils.esc(t.title)}</div>`).join('') : '<div style="color:var(--text3)">No tasks yet — assign tasks to this workstream when adding them.</div>'}</div>
-            `;
-            body.appendChild(el);
-          });
         }
       }
 
@@ -3166,16 +3127,18 @@
       }
 
       else if (state.currentTab === 'people') {
-        const projMembers = proj.members.map(mid => getMember(mid)).filter(Boolean);
-        if (!projMembers.length) { body.innerHTML = `<div class="empty-state"><div class="e-icon">◯</div><div class="e-title">No members</div></div>`; return; }
-        projMembers.forEach(m => {
+        const projMemberEntries = normalizeProjMembers(proj);
+        if (!projMemberEntries.length) { body.innerHTML = `<div class="empty-state"><div class="e-icon">◯</div><div class="e-title">No members</div></div>`; return; }
+        projMemberEntries.forEach(({ memberId, role }) => {
+          const m = getMember(memberId); if (!m) return;
           const { bg, fg } = avatarColors(m.color);
           const assigned = proj.tasks.filter(t => t.assigneeId === m.id);
           const openCount = assigned.filter(t => !t.done).length;
+          const displayRole = role || m.role;
           const el = document.createElement('div'); el.className = 'person-item';
           el.innerHTML = `
         <div class="avatar" style="background:${bg};color:${fg};width:36px;height:36px;font-size:13px">${initials(m.name)}</div>
-        <div class="person-info"><div class="person-name">${m.name}</div><div class="person-role">${m.role}</div></div>
+        <div class="person-info"><div class="person-name">${HubUtils.esc(m.name)}</div><div class="person-role">${HubUtils.esc(displayRole)}</div></div>
         <div class="person-task-count">${openCount} open<br><span style="color:var(--text3);font-size:10px">${assigned.length} total</span></div>
       `;
           body.appendChild(el);
@@ -3185,25 +3148,28 @@
       else if (state.currentTab === 'settings') {
         const wrap = document.createElement('div');
 
-        const assigned = proj.members
-          .map(mid => getMember(mid))
-          .filter(Boolean);
+        const assignedEntries = normalizeProjMembers(proj);
+        const assignedIds = assignedEntries.map(pm => pm.memberId);
 
-        const available = state.members
-          .filter(m => !proj.members.includes(m.id));
+        const available = state.members.filter(m => !assignedIds.includes(m.id));
 
-        const assignedHTML = assigned.length
-          ? assigned.map(m => {
+        const assignedHTML = assignedEntries.length
+          ? assignedEntries.map(({ memberId, role }) => {
+            const m = getMember(memberId); if (!m) return '';
             const { bg, fg } = avatarColors(m.color);
             return `
-        <div class="person-item" style="padding:10px;margin-bottom:6px">
-          <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
-          <div class="person-info">
-            <div class="person-name" style="font-size:12.5px">${m.name}</div>
-            <div class="person-role">${m.role}</div>
+        <div class="person-item" style="padding:10px;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+          <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:11px;flex-shrink:0">${initials(m.name)}</div>
+          <div class="person-info" style="flex:1;min-width:80px">
+            <div class="person-name" style="font-size:12.5px">${HubUtils.esc(m.name)}</div>
+            <input class="form-input" list="proj-role-suggestions"
+              value="${HubUtils.esc(role)}" placeholder="Role (e.g. Owner)"
+              style="margin-top:4px;padding:3px 7px;font-size:11px;height:26px"
+              onchange="saveProjMemberRole('${proj.id}','${memberId}',this.value)"
+              onblur="saveProjMemberRole('${proj.id}','${memberId}',this.value)">
           </div>
-          <button class="btn btn-ghost" style="padding:5px 10px"
-            onclick="removeProjectMember('${proj.id}','${m.id}')">Remove</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;flex-shrink:0"
+            onclick="removeProjectMember('${proj.id}','${memberId}')">Remove</button>
         </div>
       `;
           }).join('')
@@ -3219,8 +3185,8 @@
         <div class="person-item" style="padding:10px;margin-bottom:6px">
           <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
           <div class="person-info">
-            <div class="person-name" style="font-size:12.5px">${m.name}</div>
-            <div class="person-role">${m.role}</div>
+            <div class="person-name" style="font-size:12.5px">${HubUtils.esc(m.name)}</div>
+            <div class="person-role">${HubUtils.esc(m.role)}</div>
           </div>
           <button class="btn btn-primary" style="padding:5px 10px"
             onclick="addProjectMember('${proj.id}','${m.id}')">Add</button>
@@ -3308,7 +3274,7 @@
 
     function saveProject() {
       const name = document.getElementById('proj-name').value.trim(); if (!name) return;
-      const members = [...document.querySelectorAll('#proj-members input:checked')].map(cb => cb.value);
+      const members = [...document.querySelectorAll('#proj-members input:checked')].map(cb => ({ memberId: cb.value, role: '' }));
       const isFirst = state.projects.length === 0;
       state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [] });
       saveState(); closeModal('modal-project'); showToast('Project created'); renderContent();
@@ -3326,7 +3292,6 @@
       document.getElementById('task-blocked-reason').value = '';
       document.getElementById('task-code').value = '';
       document.getElementById('task-type').value = '';
-      document.getElementById('task-workstream').value = '';
       // Build category chips
       const chipContainer = document.getElementById('category-chips');
       if (chipContainer) {
@@ -3359,9 +3324,8 @@
     function populateTaskProjectDependents(projId) {
       const proj = getProject(projId);
       document.getElementById('task-milestone').innerHTML = `<option value="">— none —</option>` + (proj?.milestones || []).map(ms => `<option value="${ms.id}">${ms.name}</option>`).join('');
-      document.getElementById('task-workstream').innerHTML = `<option value="">— none —</option>` + (proj?.workstreams || []).map(ws => `<option value="${ws.id}">${ws.name}</option>`).join('');
       const members = (proj && proj.members && proj.members.length)
-        ? proj.members.map(id => getMember(id)).filter(Boolean)
+        ? getProjMemberIds(proj).map(id => getMember(id)).filter(Boolean)
         : state.members;
       document.getElementById('task-assignee').innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     }
@@ -3375,9 +3339,8 @@
         ? (document.getElementById('task-blocked-reason')?.value.trim() || '') : '';
       const taskCode = document.getElementById('task-code')?.value.trim() || '';
       const taskType = document.getElementById('task-type')?.value || '';
-      const workstreamId = document.getElementById('task-workstream')?.value || '';
       const newId = uid();
-      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, workstreamId, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
       saveState(); closeModal('modal-task'); showToast('Task added');
       renderContent();
       if (state.selectedProject === projId) renderPanel(projId);
@@ -3535,7 +3498,7 @@
       if (!confirm(`Delete member "${m.name}"? They will be unassigned from all tasks.`)) return;
       state.members = state.members.filter(x => x.id !== memberId);
       state.projects.forEach(p => {
-        p.members = p.members.filter(id => id !== memberId);
+        p.members = normalizeProjMembers(p).filter(pm => pm.memberId !== memberId);
         p.tasks.forEach(t => { if (t.assigneeId === memberId) t.assigneeId = ''; });
       });
       state.overviewFilter.members = state.overviewFilter.members.filter(id => id !== memberId);

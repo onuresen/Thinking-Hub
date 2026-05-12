@@ -29,6 +29,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
+| `scrum-hub.html` | Scrum Board — product backlog (MoSCoW), sprint planning, kanban, velocity chart, DoD |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
 | `log-hub.html` | Private daily captain's log with mood heatmap |
 | `retro-hub.html` | Async team retrospective (Went Well / Improve / Actions) |
@@ -63,7 +64,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `hub-activity-v1`, `hub-settings-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1`, `hub-activity-v1`, `hub-settings-v1`
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -195,6 +196,26 @@ The ⚙️ Data & Backup modal in `index.html` has a scoped export with three ra
 ## Improvement Backlog
 
 Prioritized list. Items marked with the same **group tag** can be implemented together in one session for efficiency.
+
+---
+
+### ~~Workstream UI disabled~~ ✓ Done
+Workstreams tab, panel, and task-form field removed from `project-hub.html`. Data (`proj.workstreams`, `task.workstreamId`) preserved in localStorage untouched.
+**Files:** `project-hub.html`
+
+---
+
+### ~~Per-project member roles~~ ✓ Done
+`proj.members` migrated from `[string]` to `[{memberId, role}]`. `normalizeProjMembers()`, `getProjMemberIds()`, `getProjMemberRole()`, `saveProjMemberRole()` helpers added. Settings tab now shows an inline role `<input list="proj-role-suggestions">` per assigned member (Owner / Lead / Contributor / Reviewer / Sponsor / Consulted / Informed). People tab shows project-specific role, falling back to global role if unset.
+**Files:** `project-hub.html`
+
+---
+
+### ~~New tool: Scrum Board~~ ✓ Done `[group: new-tools-solo]`
+Full PSPO-aligned scrum tool: **Backlog** (MoSCoW priority, story points, type icons, status groups), **Sprint Board** (kanban drag-drop, sprint meta bar, burndown), **Review & Retro** (velocity chart, review notes, Went Well / Improve / Actions), **Definition of Done** (categorised checklist). Storage key: `scrum-hub-v1`. Sidebar: EXECUTE group, IT/Dev profile.
+**Files:** `scrum-hub.html` (new), `index.html`, `CLAUDE.md`
+
+---
 
 ---
 

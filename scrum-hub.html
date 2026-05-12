@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scrum Board</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Header ── */
+    .app-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; height: 50px; flex-shrink: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .app-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.4px; }
+    .app-title em { font-style: normal; color: var(--accent); }
+    .spacer { flex: 1; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex; gap: 0; flex-shrink: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--text3);
+      border: none; background: none; cursor: pointer; letter-spacing: 0.4px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Content ── */
+    #content { flex: 1; overflow-y: auto; padding: 16px; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+
+    /* ── Backlog ── */
+    .bl-group { margin-bottom: 22px; }
+    .bl-group-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3);
+      padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .bl-count { background: var(--surface3); border-radius: 10px; padding: 1px 7px; font-size: 10px; color: var(--text3); }
+    .bl-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px 12px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s;
+    }
+    .bl-item:hover { border-color: var(--accent); }
+    .bi-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .bi-main { flex: 1; min-width: 0; }
+    .bi-title { font-size: 13px; font-weight: 500; line-height: 1.3; }
+    .bi-desc { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bi-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .bi-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+
+    /* ── Pills ── */
+    .pill {
+      display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 10px;
+      font-size: 10px; font-weight: 600; line-height: 1.4;
+    }
+    .pill-must   { background: var(--surface3); color: var(--accent-nope); border: 1px solid var(--accent-nope); }
+    .pill-should { background: var(--surface3); color: var(--accent-super); border: 1px solid var(--accent-super); }
+    .pill-could  { background: var(--accent-dim); color: var(--accent); }
+    .pill-wont   { background: var(--surface3); color: var(--text3); }
+    .pill-pts    { background: var(--accent-dim); color: var(--accent); font-family: var(--font-mono); }
+    .pill-type   { background: var(--surface3); color: var(--text2); }
+    .pill-sprint { background: var(--surface3); color: var(--text3); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Sprint meta bar ── */
+    .sprint-selector-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 10px 12px; margin-bottom: 12px;
+    }
+    .sprint-meta-row {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 10px 14px; margin-bottom: 14px;
+    }
+    .smi { display: flex; flex-direction: column; gap: 2px; }
+    .smi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); }
+    .smi-val   { font-size: 15px; font-weight: 700; }
+    .progress-bar-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+    .progress-bar { height: 8px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+
+    /* ── Sprint goal card ── */
+    .sprint-goal-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 12px 14px; margin-bottom: 12px;
+    }
+    .sgc-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .sgc-goal  { font-size: 12px; color: var(--text2); font-style: italic; margin-top: 5px; }
+    .sgc-dates { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .status-chip {
+      padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .status-planning { background: var(--surface3); color: var(--text3); }
+    .status-active   { background: var(--accent-dim); color: var(--accent); }
+    .status-review   { background: var(--surface3); color: var(--accent-like); }
+    .status-closed   { background: var(--surface3); color: var(--text3); }
+
+    /* ── Kanban ── */
+    .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .kanban-col {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 12px; min-height: 180px; transition: border-color 0.15s, background 0.15s;
+    }
+    .kanban-col.drop-target { border-color: var(--accent); background: var(--accent-dim); }
+    .kc-header {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text2);
+    }
+    .kc-count { background: var(--surface3); color: var(--text3); border-radius: 10px; padding: 1px 7px; font-size: 10px; }
+    .kc-card {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px; margin-bottom: 8px; cursor: grab; transition: box-shadow 0.15s, opacity 0.15s;
+    }
+    .kc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .kc-card.dragging { opacity: 0.35; cursor: grabbing; }
+    .kc-type-row { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+    .kc-title { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
+
+    /* ── Velocity chart ── */
+    .vel-chart { margin-bottom: 24px; }
+    .vel-chart h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); margin-bottom: 10px; }
+    .vel-bars { display: flex; align-items: flex-end; gap: 10px; height: 80px; }
+    .vel-col { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .vel-bar { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 3px; }
+    .vel-val { font-size: 10px; font-weight: 600; color: var(--accent); }
+    .vel-name { font-size: 10px; color: var(--text3); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px; }
+
+    /* ── Review sections ── */
+    .review-section { margin-bottom: 20px; }
+    .review-section h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); margin-bottom: 8px; }
+    .retro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .retro-col-label { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+
+    /* ── DoD ── */
+    .dod-section { margin-bottom: 22px; }
+    .dod-section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text3);
+      padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .dod-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 8px 10px; margin-bottom: 6px;
+    }
+    .dod-item input[type="checkbox"] { width: 15px; height: 15px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+    .dod-label { flex: 1; font-size: 13px; cursor: pointer; }
+    .dod-label.struck { color: var(--text3); text-decoration: line-through; }
+    .dod-del { background: none; border: none; color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .dod-del:hover { color: var(--accent-nope); background: var(--surface3); }
+
+    /* ── Form helpers ── */
+    .form-group { margin-bottom: 12px; }
+    .form-group > label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); margin-bottom: 5px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="app-header">
+    <div class="app-title">⚡ Scrum <em>Board</em></div>
+    <div class="spacer"></div>
+    <select class="select" id="project-filter" style="width:180px;font-size:12px" onchange="onProjectChange()">
+      <option value="">All Projects</option>
+    </select>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="setTab('backlog')"  id="tb-backlog">Backlog</button>
+    <button class="tab-btn"        onclick="setTab('sprint')"   id="tb-sprint">Sprint Board</button>
+    <button class="tab-btn"        onclick="setTab('review')"   id="tb-review">Review &amp; Retro</button>
+    <button class="tab-btn"        onclick="setTab('dod')"      id="tb-dod">Definition of Done</button>
+  </div>
+
+  <div id="content"></div>
+
+  <!-- ── Story modal ─────────────────────────────────────────── -->
+  <div class="ui-modal-overlay" id="modal-story" onclick="closeModal('modal-story')">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="max-width:520px">
+      <div class="modal-title" id="story-modal-title">New Story</div>
+      <div class="form-group" style="margin-top:8px">
+        <label>Title</label>
+        <input class="input" id="s-title" placeholder="As a user, I want to…">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="textarea" id="s-desc" rows="2" placeholder="Optional context…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Acceptance Criteria</label>
+        <textarea class="textarea" id="s-ac" rows="3" placeholder="Given… / When… / Then…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select class="select" id="s-type">
+            <option value="story">📖 Story</option>
+            <option value="bug">🐛 Bug</option>
+            <option value="task">✅ Task</option>
+            <option value="spike">🔬 Spike</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority (MoSCoW)</label>
+          <select class="select" id="s-priority">
+            <option value="must">Must Have</option>
+            <option value="should">Should Have</option>
+            <option value="could">Could Have</option>
+            <option value="wont">Won't Have</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Story Points</label>
+          <select class="select" id="s-points">
+            <option value="0">— (unestimated)</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="8">8</option>
+            <option value="13">13</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Link to Project</label>
+          <select class="select" id="s-project">
+            <option value="">— none —</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-story')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveStory()">Save Story</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sprint modal ─────────────────────────────────────────── -->
+  <div class="ui-modal-overlay" id="modal-sprint" onclick="closeModal('modal-sprint')">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="max-width:440px">
+      <div class="modal-title" id="sprint-modal-title">New Sprint</div>
+      <div class="form-group" style="margin-top:8px">
+        <label>Sprint Name</label>
+        <input class="input" id="sp-name" placeholder="e.g. Sprint 1">
+      </div>
+      <div class="form-group">
+        <label>Sprint Goal</label>
+        <textarea class="textarea" id="sp-goal" rows="2" placeholder="What will we achieve this sprint?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input class="input" type="date" id="sp-start">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input class="input" type="date" id="sp-end">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-sprint')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSprint()">Create Sprint</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Move-to-sprint modal ─────────────────────────────────── -->
+  <div class="ui-modal-overlay" id="modal-move" onclick="closeModal('modal-move')">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="max-width:360px">
+      <div class="modal-title">Move to Sprint</div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Sprint</label>
+        <select class="select" id="move-sprint-sel"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-move')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmMove()">Move</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DoD item modal ──────────────────────────────────────── -->
+  <div class="ui-modal-overlay" id="modal-dod" onclick="closeModal('modal-dod')">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="max-width:380px">
+      <div class="modal-title">Add DoD Criterion</div>
+      <div class="form-group" style="margin-top:10px">
+        <label>Criterion</label>
+        <input class="input" id="dod-text" placeholder="e.g. All unit tests pass">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select class="select" id="dod-cat">
+          <option value="code">Code Quality</option>
+          <option value="test">Testing</option>
+          <option value="review">Review</option>
+          <option value="deploy">Deployment</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-dod')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDodItem()">Add Criterion</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const KEY = 'scrum-hub-v1';
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const DEFAULT_DOD = [
+  { text: 'Acceptance criteria met and verified', category: 'code' },
+  { text: 'Code reviewed by at least one peer', category: 'review' },
+  { text: 'All unit and integration tests pass', category: 'test' },
+  { text: 'No known critical or high bugs introduced', category: 'code' },
+  { text: 'Documentation updated where applicable', category: 'review' },
+  { text: 'Feature tested on staging environment', category: 'deploy' },
+];
+
+let state = { backlogs: [], sprints: [], dod: [], settings: { linkedProjectId: '' } };
+let currentTab = 'backlog';
+let currentSprintId = null;
+let _editingStoryId = null;
+let _movingStoryId  = null;
+let _dragStoryId    = null;
+
+// ── State ─────────────────────────────────────────────────────────────────
+function loadState() {
+  const raw = HubStorage.get(KEY);
+  if (raw) { try { state = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch(e) {} }
+  if (!Array.isArray(state.backlogs)) state.backlogs = [];
+  if (!Array.isArray(state.sprints))  state.sprints  = [];
+  if (!Array.isArray(state.dod) || !state.dod.length) {
+    state.dod = DEFAULT_DOD.map(d => ({ id: uid(), text: d.text, category: d.category, checked: true }));
+  }
+  if (!state.settings) state.settings = { linkedProjectId: '' };
+  if (!currentSprintId) {
+    const active = state.sprints.find(s => s.status === 'active');
+    currentSprintId = active ? active.id : (state.sprints[0]?.id || null);
+  }
+}
+
+function saveState() { HubStorage.set(KEY, JSON.stringify(state)); }
+
+// ── Modals ────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('is-open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('is-open'); }
+
+// ── Project filter ────────────────────────────────────────────────────────
+function populateProjectFilter() {
+  const projects = (typeof HubData !== 'undefined' && HubData.getProjects) ? HubData.getProjects() : [];
+  const sel = document.getElementById('project-filter');
+  sel.innerHTML = `<option value="">All Projects</option>` +
+    projects.map(p => `<option value="${p.id}" ${p.id === state.settings.linkedProjectId ? 'selected' : ''}>${HubUtils.esc(p.name)}</option>`).join('');
+}
+
+function onProjectChange() {
+  state.settings.linkedProjectId = document.getElementById('project-filter').value;
+  saveState(); render();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tb-' + tab).classList.add('active');
+  render();
+}
+
+function render() {
+  const c = document.getElementById('content');
+  if (currentTab === 'backlog') renderBacklog(c);
+  else if (currentTab === 'sprint') renderSprintBoard(c);
+  else if (currentTab === 'review') renderReview(c);
+  else if (currentTab === 'dod')    renderDod(c);
+}
+
+// ── Pills / helpers ───────────────────────────────────────────────────────
+const TYPE_ICON = { story: '📖', bug: '🐛', task: '✅', spike: '🔬' };
+const MOSCOW    = { must: 'Must', should: 'Should', could: 'Could', wont: "Won't" };
+
+function moscowPill(p) { return `<span class="pill pill-${p}">${MOSCOW[p] || p}</span>`; }
+function ptsPill(pts)  { return pts > 0 ? `<span class="pill pill-pts">${pts}pt</span>` : ''; }
+
+// ── Backlog ───────────────────────────────────────────────────────────────
+function renderBacklog(c) {
+  const filter = state.settings.linkedProjectId;
+  let items = filter ? state.backlogs.filter(i => !i.projectId || i.projectId === filter) : state.backlogs;
+
+  const groups = [
+    { key: 'backlog',   label: 'Backlog',   icon: '▤' },
+    { key: 'ready',     label: 'Ready',     icon: '✓' },
+    { key: 'in-sprint', label: 'In Sprint', icon: '⚡' },
+    { key: 'done',      label: 'Done',      icon: '◉' },
+  ];
+
+  let html = `
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openStoryModal()">+ New Story</button>
+      <button class="btn btn-ghost"   onclick="openSprintModal()">+ New Sprint</button>
+      <div class="spacer"></div>
+      <span style="font-size:12px;color:var(--text3)">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+    </div>`;
+
+  groups.forEach(g => {
+    const gi = items.filter(i => i.status === g.key);
+    if (!gi.length && g.key === 'done') return;
+    html += `
+      <div class="bl-group">
+        <div class="bl-group-header">
+          <span>${g.icon} ${g.label}</span>
+          <span class="bl-count">${gi.length}</span>
+        </div>
+        ${!gi.length
+          ? `<div style="color:var(--text3);font-size:12px;padding:10px 4px;text-align:center">Empty — add stories or move items here</div>`
+          : gi.map(item => blItemHTML(item)).join('')}
+      </div>`;
+  });
+
+  c.innerHTML = html;
+}
+
+function blItemHTML(item) {
+  const sprint = item.sprintId ? state.sprints.find(s => s.id === item.sprintId) : null;
+  const canMove = item.status !== 'done';
+  return `
+    <div class="bl-item" onclick="openStoryModal('${item.id}')">
+      <div class="bi-icon">${TYPE_ICON[item.type] || '📖'}</div>
+      <div class="bi-main">
+        <div class="bi-title">${HubUtils.esc(item.title)}</div>
+        ${item.description ? `<div class="bi-desc">${HubUtils.esc(item.description)}</div>` : ''}
+        <div class="bi-pills">
+          ${moscowPill(item.priority)}
+          ${ptsPill(item.points)}
+          ${sprint ? `<span class="pill pill-sprint">⚡ ${HubUtils.esc(sprint.name)}</span>` : ''}
+        </div>
+      </div>
+      <div class="bi-actions" onclick="event.stopPropagation()">
+        ${canMove ? `<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="openMoveToSprint('${item.id}')">→ Sprint</button>` : ''}
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--accent-nope)" onclick="deleteStory('${item.id}')">✕</button>
+      </div>
+    </div>`;
+}
+
+// ── Sprint Board ──────────────────────────────────────────────────────────
+function renderSprintBoard(c) {
+  if (!state.sprints.length) {
+    c.innerHTML = `
+      <div class="empty-state" style="padding:60px 20px">
+        <div class="e-icon">⚡</div>
+        <div class="e-title">No Sprints Yet</div>
+        <div class="e-sub">Create a sprint to start planning your iteration</div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="openSprintModal()">+ New Sprint</button>
+      </div>`;
+    return;
+  }
+
+  if (!currentSprintId || !state.sprints.find(s => s.id === currentSprintId)) {
+    currentSprintId = state.sprints[0].id;
+  }
+  const sprint = state.sprints.find(s => s.id === currentSprintId);
+  const sprintItems = state.backlogs.filter(i => i.sprintId === sprint.id);
+  const committed = sprintItems.reduce((s, i) => s + (Number(i.points) || 0), 0);
+  const donePts   = sprintItems.filter(i => i.sprintStatus === 'done').reduce((s, i) => s + (Number(i.points) || 0), 0);
+  const pct = committed > 0 ? Math.round((donePts / committed) * 100) : 0;
+  const daysLeft = sprint.endDate
+    ? Math.max(0, Math.round((new Date(sprint.endDate) - new Date()) / 86400000))
+    : '—';
+
+  const cols = [
+    { key: 'todo',       label: 'To Do'       },
+    { key: 'inprogress', label: 'In Progress'  },
+    { key: 'done',       label: 'Done'         },
+  ];
+
+  let kanban = `<div class="kanban-board">`;
+  cols.forEach(col => {
+    const colItems = sprintItems.filter(i => (i.sprintStatus || 'todo') === col.key);
+    kanban += `
+      <div class="kanban-col" data-col="${col.key}"
+        ondragover="event.preventDefault();this.classList.add('drop-target')"
+        ondragleave="this.classList.remove('drop-target')"
+        ondrop="onDrop('${sprint.id}','${col.key}',event)">
+        <div class="kc-header">${col.label} <span class="kc-count">${colItems.length}</span></div>
+        ${colItems.map(item => `
+          <div class="kc-card" draggable="true"
+            ondragstart="_dragStoryId='${item.id}';this.classList.add('dragging')"
+            ondragend="this.classList.remove('dragging');document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drop-target'))">
+            <div class="kc-type-row">${TYPE_ICON[item.type] || '📖'} ${item.type}</div>
+            <div class="kc-title">${HubUtils.esc(item.title)}</div>
+            <div class="bi-pills">${moscowPill(item.priority)}${ptsPill(item.points)}</div>
+          </div>`).join('')}
+        ${col.key === 'todo' ? `
+          <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:11px;justify-content:center"
+            onclick="addReadyItemsToSprint('${sprint.id}')">+ Add Ready Items</button>` : ''}
+      </div>`;
+  });
+  kanban += `</div>`;
+
+  c.innerHTML = `
+    <div class="sprint-selector-bar">
+      <select class="select" style="flex:1;min-width:160px" onchange="currentSprintId=this.value;render()">
+        ${state.sprints.map(s => `<option value="${s.id}" ${s.id === sprint.id ? 'selected':''}>${HubUtils.esc(s.name)}</option>`).join('')}
+      </select>
+      <button class="btn btn-ghost" onclick="openSprintModal()">+ New Sprint</button>
+      ${sprint.status !== 'closed'
+        ? `<button class="btn btn-primary" style="font-size:12px" onclick="closeSprint('${sprint.id}')">Close Sprint</button>`
+        : `<span style="font-size:11px;color:var(--text3)">Sprint closed</span>`}
+    </div>
+
+    <div class="sprint-goal-card">
+      <div class="sgc-title">
+        ${HubUtils.esc(sprint.name)}
+        <span class="status-chip status-${sprint.status}">${sprint.status}</span>
+      </div>
+      ${sprint.goal   ? `<div class="sgc-goal">"${HubUtils.esc(sprint.goal)}"</div>` : ''}
+      ${sprint.startDate ? `<div class="sgc-dates">${sprint.startDate} → ${sprint.endDate || '?'}</div>` : ''}
+    </div>
+
+    <div class="sprint-meta-row">
+      <div class="smi"><div class="smi-label">Committed</div><div class="smi-val">${committed}pt</div></div>
+      <div class="smi"><div class="smi-label">Done</div><div class="smi-val" style="color:var(--accent)">${donePts}pt</div></div>
+      <div class="smi"><div class="smi-label">Progress</div><div class="smi-val">${pct}%</div></div>
+      <div class="smi"><div class="smi-label">Days Left</div><div class="smi-val">${daysLeft}</div></div>
+      <div class="progress-bar-wrap">
+        <div class="smi-label">Burndown</div>
+        <div class="progress-bar" style="margin-top:6px"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>
+
+    ${kanban}`;
+}
+
+function onDrop(sprintId, col, event) {
+  event.preventDefault();
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drop-target'));
+  if (!_dragStoryId) return;
+  const item = state.backlogs.find(i => i.id === _dragStoryId);
+  if (!item) return;
+  item.sprintId     = sprintId;
+  item.sprintStatus = col;
+  item.status       = col === 'done' ? 'done' : 'in-sprint';
+  _dragStoryId = null;
+  saveState(); render();
+}
+
+function addReadyItemsToSprint(sprintId) {
+  const ready = state.backlogs.filter(i => i.status === 'ready' && !i.sprintId);
+  if (!ready.length) { showToast('No ready items in the backlog.'); return; }
+  ready.forEach(i => { i.sprintId = sprintId; i.status = 'in-sprint'; i.sprintStatus = 'todo'; });
+  saveState(); render(); showToast(`${ready.length} item${ready.length !== 1 ? 's' : ''} added to sprint`);
+}
+
+// ── Sprint Review & Retro ─────────────────────────────────────────────────
+function renderReview(c) {
+  if (!state.sprints.length) {
+    c.innerHTML = `<div class="empty-state" style="padding:60px 20px"><div class="e-icon">📊</div><div class="e-title">No Sprints Yet</div></div>`;
+    return;
+  }
+  if (!currentSprintId || !state.sprints.find(s => s.id === currentSprintId)) {
+    currentSprintId = state.sprints[0].id;
+  }
+  const sprint = state.sprints.find(s => s.id === currentSprintId);
+  const closed = state.sprints.filter(s => s.status === 'closed').slice(-6);
+  const maxVel = Math.max(1, ...closed.map(s => s.velocity || 0));
+
+  c.innerHTML = `
+    <div class="sprint-selector-bar" style="margin-bottom:16px">
+      <select class="select" style="flex:1;min-width:160px" onchange="currentSprintId=this.value;render()">
+        ${state.sprints.map(s => `<option value="${s.id}" ${s.id === sprint.id ? 'selected':''}>${HubUtils.esc(s.name)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="vel-chart">
+      <h4>Team Velocity — last ${closed.length || 0} closed sprint${closed.length !== 1 ? 's' : ''}</h4>
+      ${!closed.length
+        ? `<div style="color:var(--text3);font-size:12px">Close sprints to track velocity here.</div>`
+        : `<div class="vel-bars">
+            ${closed.map(s => {
+              const h = maxVel > 0 ? Math.round(((s.velocity || 0) / maxVel) * 64) : 3;
+              return `<div class="vel-col">
+                <div class="vel-val">${s.velocity || 0}</div>
+                <div class="vel-bar" style="height:${h}px"></div>
+                <div class="vel-name">${HubUtils.esc(s.name)}</div>
+              </div>`;
+            }).join('')}
+          </div>`}
+    </div>
+
+    <div class="review-section">
+      <h4>Sprint Review Notes</h4>
+      <textarea class="textarea" style="width:100%" rows="4"
+        placeholder="What did we ship? What did stakeholders say?"
+        onblur="saveSprintField('${sprint.id}','reviewNotes',this.value)">${HubUtils.esc(sprint.reviewNotes || '')}</textarea>
+    </div>
+
+    <div class="review-section">
+      <h4>Retrospective</h4>
+      <div class="retro-grid">
+        <div>
+          <div class="retro-col-label" style="color:var(--accent-like)">✓ Went Well</div>
+          <textarea class="textarea" style="width:100%" rows="6"
+            placeholder="What worked well?"
+            onblur="saveSprintField('${sprint.id}','retroWell',this.value)">${HubUtils.esc(sprint.retroWell || '')}</textarea>
+        </div>
+        <div>
+          <div class="retro-col-label" style="color:var(--accent-super)">△ Improve</div>
+          <textarea class="textarea" style="width:100%" rows="6"
+            placeholder="What needs improvement?"
+            onblur="saveSprintField('${sprint.id}','retroImprove',this.value)">${HubUtils.esc(sprint.retroImprove || '')}</textarea>
+        </div>
+        <div>
+          <div class="retro-col-label" style="color:var(--accent)">→ Actions</div>
+          <textarea class="textarea" style="width:100%" rows="6"
+            placeholder="What will we do differently?"
+            onblur="saveSprintField('${sprint.id}','retroActions',this.value)">${HubUtils.esc(sprint.retroActions || '')}</textarea>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveSprintField(sprintId, field, value) {
+  const s = state.sprints.find(s => s.id === sprintId); if (!s) return;
+  s[field] = value; saveState();
+}
+
+// ── Definition of Done ────────────────────────────────────────────────────
+function renderDod(c) {
+  const cats = [
+    { key: 'code',   label: 'Code Quality' },
+    { key: 'test',   label: 'Testing'      },
+    { key: 'review', label: 'Review'       },
+    { key: 'deploy', label: 'Deployment'   },
+  ];
+  const total   = state.dod.length;
+  const checked = state.dod.filter(d => d.checked).length;
+
+  let html = `
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openDodModal()">+ Add Criterion</button>
+      <div class="spacer"></div>
+      <span style="font-size:12px;color:var(--text3)">${checked} / ${total} active</span>
+    </div>`;
+
+  cats.forEach(cat => {
+    const items = state.dod.filter(d => d.category === cat.key);
+    if (!items.length) return;
+    html += `
+      <div class="dod-section">
+        <div class="dod-section-title">${cat.label}</div>
+        ${items.map(item => `
+          <div class="dod-item">
+            <input type="checkbox" id="dod-${item.id}" ${item.checked ? 'checked' : ''}
+              onchange="toggleDod('${item.id}',this.checked)">
+            <label class="dod-label ${item.checked ? 'struck' : ''}" for="dod-${item.id}">${HubUtils.esc(item.text)}</label>
+            <button class="dod-del" onclick="deleteDod('${item.id}')">✕</button>
+          </div>`).join('')}
+      </div>`;
+  });
+
+  c.innerHTML = html;
+}
+
+function toggleDod(id, checked) {
+  const d = state.dod.find(d => d.id === id); if (!d) return;
+  d.checked = checked; saveState();
+  const lbl = document.querySelector(`label[for="dod-${id}"]`);
+  if (lbl) lbl.className = `dod-label ${checked ? 'struck' : ''}`;
+}
+
+function deleteDod(id) {
+  state.dod = state.dod.filter(d => d.id !== id); saveState(); render();
+}
+
+function openDodModal() {
+  document.getElementById('dod-text').value = '';
+  document.getElementById('dod-cat').value  = 'code';
+  openModal('modal-dod');
+}
+
+function saveDodItem() {
+  const text = document.getElementById('dod-text').value.trim(); if (!text) return;
+  state.dod.push({ id: uid(), text, category: document.getElementById('dod-cat').value, checked: true });
+  saveState(); closeModal('modal-dod'); render();
+}
+
+// ── Story CRUD ────────────────────────────────────────────────────────────
+function openStoryModal(storyId) {
+  _editingStoryId = storyId || null;
+  const story = storyId ? state.backlogs.find(i => i.id === storyId) : null;
+  document.getElementById('story-modal-title').textContent = story ? 'Edit Story' : 'New Story';
+  document.getElementById('s-title').value    = story?.title    || '';
+  document.getElementById('s-desc').value     = story?.description || '';
+  document.getElementById('s-ac').value       = story?.acceptanceCriteria || '';
+  document.getElementById('s-type').value     = story?.type     || 'story';
+  document.getElementById('s-priority').value = story?.priority || 'should';
+  document.getElementById('s-points').value   = story?.points   || 0;
+  const projects = (typeof HubData !== 'undefined' && HubData.getProjects) ? HubData.getProjects() : [];
+  document.getElementById('s-project').innerHTML = `<option value="">— none —</option>` +
+    projects.map(p => `<option value="${p.id}" ${story?.projectId === p.id ? 'selected':''}>${HubUtils.esc(p.name)}</option>`).join('');
+  openModal('modal-story');
+}
+
+function saveStory() {
+  const title = document.getElementById('s-title').value.trim(); if (!title) return;
+  if (_editingStoryId) {
+    const item = state.backlogs.find(i => i.id === _editingStoryId); if (!item) return;
+    Object.assign(item, {
+      title, description: document.getElementById('s-desc').value.trim(),
+      acceptanceCriteria: document.getElementById('s-ac').value.trim(),
+      type: document.getElementById('s-type').value,
+      priority: document.getElementById('s-priority').value,
+      points: Number(document.getElementById('s-points').value),
+      projectId: document.getElementById('s-project').value,
+    });
+  } else {
+    state.backlogs.push({
+      id: uid(), title,
+      description: document.getElementById('s-desc').value.trim(),
+      acceptanceCriteria: document.getElementById('s-ac').value.trim(),
+      type: document.getElementById('s-type').value,
+      priority: document.getElementById('s-priority').value,
+      points: Number(document.getElementById('s-points').value),
+      projectId: document.getElementById('s-project').value,
+      status: 'backlog', sprintId: null, sprintStatus: 'todo',
+      createdAt: new Date().toISOString(),
+    });
+  }
+  saveState(); closeModal('modal-story');
+  showToast(_editingStoryId ? 'Story updated' : 'Story added');
+  render();
+}
+
+function deleteStory(id) {
+  if (!confirm('Delete this story?')) return;
+  state.backlogs = state.backlogs.filter(i => i.id !== id);
+  saveState(); render(); showToast('Story deleted');
+}
+
+// ── Sprint CRUD ───────────────────────────────────────────────────────────
+function openSprintModal() {
+  const today = new Date().toISOString().slice(0, 10);
+  const end   = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  document.getElementById('sprint-modal-title').textContent = 'New Sprint';
+  document.getElementById('sp-name').value  = `Sprint ${state.sprints.length + 1}`;
+  document.getElementById('sp-goal').value  = '';
+  document.getElementById('sp-start').value = today;
+  document.getElementById('sp-end').value   = end;
+  openModal('modal-sprint');
+}
+
+function saveSprint() {
+  const name = document.getElementById('sp-name').value.trim(); if (!name) return;
+  const newSprint = {
+    id: uid(), name,
+    goal: document.getElementById('sp-goal').value.trim(),
+    startDate: document.getElementById('sp-start').value,
+    endDate:   document.getElementById('sp-end').value,
+    status: 'active', velocity: 0,
+    reviewNotes: '', retroWell: '', retroImprove: '', retroActions: '',
+  };
+  state.sprints.push(newSprint);
+  currentSprintId = newSprint.id;
+  saveState(); closeModal('modal-sprint'); showToast('Sprint created'); render();
+}
+
+function closeSprint(sprintId) {
+  if (!confirm('Close this sprint? Incomplete items will be moved back to the backlog.')) return;
+  const sprint = state.sprints.find(s => s.id === sprintId); if (!sprint) return;
+  sprint.status = 'closed';
+  const sprintItems = state.backlogs.filter(i => i.sprintId === sprintId);
+  sprint.velocity = sprintItems
+    .filter(i => i.sprintStatus === 'done')
+    .reduce((s, i) => s + (Number(i.points) || 0), 0);
+  sprintItems.forEach(i => {
+    if (i.sprintStatus !== 'done') {
+      i.sprintId = null; i.sprintStatus = 'todo'; i.status = 'backlog';
+    } else {
+      i.status = 'done';
+    }
+  });
+  saveState(); showToast(`Sprint closed · velocity ${sprint.velocity}pt`); render();
+}
+
+// ── Move to sprint ────────────────────────────────────────────────────────
+function openMoveToSprint(storyId) {
+  const active = state.sprints.filter(s => s.status !== 'closed');
+  if (!active.length) { showToast('No active sprints — create one first.'); return; }
+  _movingStoryId = storyId;
+  document.getElementById('move-sprint-sel').innerHTML =
+    active.map(s => `<option value="${s.id}">${HubUtils.esc(s.name)}</option>`).join('');
+  openModal('modal-move');
+}
+
+function confirmMove() {
+  const sprintId = document.getElementById('move-sprint-sel').value;
+  const item = state.backlogs.find(i => i.id === _movingStoryId); if (!item) return;
+  item.sprintId = sprintId; item.status = 'in-sprint'; item.sprintStatus = 'todo';
+  saveState(); closeModal('modal-move'); showToast('Moved to sprint'); render();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  populateProjectFilter();
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const open = document.querySelector('.ui-modal-overlay.is-open');
+    if (open) open.classList.remove('is-open');
+  }
+});
+</script>
+</body>
+</html>

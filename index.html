@@ -1054,6 +1054,7 @@
       { id: 'decision-hub',   label: 'Decision Hub',       group: 'DECIDE', wg: 'ALIGN & DECIDE', icon: '◎',   file: 'decision-hub.html',   desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
       { id: 'risk-hub',       label: 'Risk Register',      group: 'DECIDE', wg: 'ALIGN & DECIDE', icon: '◈',   file: 'risk-hub.html',       desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
       { id: 'stakeholder-hub',label: 'Stakeholder Map',    group: 'TEAM',   wg: 'ALIGN & DECIDE', icon: '◇',   file: 'stakeholder-hub.html',desc: 'Power/interest grid for mapping and managing project stakeholders' },
+      { id: 'scrum-hub',      label: 'Scrum Board',        group: 'DO',     wg: 'EXECUTE',        icon: '⚡',   file: 'scrum-hub.html',      desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
       { id: 'focus-hub',      label: 'Focus Timer',        group: 'DO',     wg: 'EXECUTE',        icon: '◉',   file: 'focus-hub.html',      desc: 'Pomodoro-style focus sessions linked to your tasks' },
       { id: 'log-hub',        label: 'Daily Log',          group: 'DO',     wg: 'EXECUTE',        icon: '◷',   file: 'log-hub.html',        desc: 'Private daily journal with mood tracking and streak calendar' },
       { id: 'idea-swiper',    label: 'Idea Swiper',        group: 'THINK',  wg: 'STRATEGY',       icon: '⟳',   file: 'idea-swiper.html',    desc: 'Rapid triage — keep, park, or discard ideas' },
@@ -1069,7 +1070,7 @@
       everything: { label: 'Everything', icon: '⊞', tools: null },
       dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','learning-hub','focus-hub','log-hub','schedule'] },
       bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','goals-hub','focus-hub','log-hub'] },
-      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
+      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','scrum-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
@@ -1844,6 +1845,7 @@
       'matrix-hub-v1':        'priority_matrix',
       'stakeholder-hub-v1':   'stakeholders',
       'retro-hub-v1':         'retrospectives',
+      'scrum-hub-v1':         'scrum_board',
       'focus-hub-v1':         'focus_sessions',
       'log-hub-v1':           'daily_log',
       'canvas-v1':            'canvas',
@@ -1861,6 +1863,7 @@
       'kmqt-board.html':       ['kmqt_current_v2'],
       'decision-hub.html':     ['decision-hub-v1'],
       'canvas-hub.html':       ['canvas-v1'],
+      'scrum-hub.html':        ['scrum-hub-v1'],
       'focus-hub.html':        ['focus-hub-v1'],
       'log-hub.html':          ['log-hub-v1'],
       'review-hub.html':       ['review-hub-v1'],
@@ -1889,7 +1892,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
+        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
       ],
     };
