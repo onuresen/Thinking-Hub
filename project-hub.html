@@ -2792,7 +2792,7 @@
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
         <button class="task-action-btn obsidian" title="Link Obsidian note" onclick="promptObsidianNote(event,'${task.id}','${task.projectId || ''}')">⟡</button>
-        <button class="task-action-btn edit" title="Rename" onclick="startInlineEdit(event,'${task.id}','${task.projectId || ''}')">✎</button>
+        <button class="task-action-btn edit" title="Edit" onclick="openEditTask('${task.id}','${task.projectId || ''}')">✎</button>
         <button class="task-action-btn del" title="Delete" onclick="deleteTask(event,'${task.id}','${task.projectId || ''}')">✕</button>
       </div>
     </div>
@@ -3282,6 +3282,10 @@
     }
 
     function showAddTask(preProjectId, preStatus) {
+      _editingTaskId = null; _editingTaskProjId = null;
+      document.querySelector('#modal-task .modal-title').textContent = 'New Task';
+      document.querySelector('#modal-task .modal-sub').textContent = 'Add a task to the project';
+      document.querySelector('#modal-task .btn-primary').textContent = 'Add Task';
       const sel = document.getElementById('task-project');
       sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === preProjectId ? 'selected' : ''}>${p.name}</option>`).join('');
       populateTaskProjectDependents(preProjectId || state.projects[0]?.id);
@@ -3330,6 +3334,55 @@
       document.getElementById('task-assignee').innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     }
 
+    function openEditTask(taskId, projectId) {
+      const proj = getProject(projectId); if (!proj) return;
+      const task = proj.tasks.find(t => t.id === taskId); if (!task) return;
+      _editingTaskId = taskId; _editingTaskProjId = projectId;
+      const sel = document.getElementById('task-project');
+      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === projectId ? 'selected' : ''}>${p.name}</option>`).join('');
+      populateTaskProjectDependents(projectId);
+      sel.onchange = () => populateTaskProjectDependents(sel.value);
+      document.getElementById('task-title').value = task.title || '';
+      document.getElementById('task-code').value = task.taskCode || '';
+      document.getElementById('task-type').value = task.taskType || '';
+      document.getElementById('task-due').value = task.due || '';
+      document.getElementById('task-obsidian').value = task.obsidianNote || '';
+      document.getElementById('task-blocked-reason').value = task.blockedReason || '';
+      document.getElementById('task-priority').value = task.priority || 'medium';
+      const chipContainer = document.getElementById('category-chips');
+      if (chipContainer) {
+        chipContainer.innerHTML = '<span style="font-size:10px;color:var(--text3);align-self:center;margin-right:2px">Category:</span>';
+        ['OPS','STR','BASE','INFO','GOV','GLB','TECH','HR','ADSK','RD'].forEach(cat => {
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'cat-chip'; btn.textContent = cat;
+          btn.onclick = () => {
+            const inp = document.getElementById('task-code');
+            const cur = inp.value;
+            const rest = cur.includes('-') ? cur.slice(cur.indexOf('-')) : '-';
+            inp.value = cat + (rest === '-' && cur === '' ? '-' : rest);
+            inp.focus();
+          };
+          chipContainer.appendChild(btn);
+        });
+      }
+      requestAnimationFrame(() => {
+        const ms = document.getElementById('task-milestone');
+        if (ms) ms.value = task.milestoneId || '';
+        const asn = document.getElementById('task-assignee');
+        if (asn) asn.value = task.assigneeId || '';
+      });
+      const statusSel = document.getElementById('task-status');
+      if (statusSel) statusSel.value = task.status || 'todo';
+      toggleBlockedReason(task.status || 'todo');
+      document.querySelector('#modal-task .modal-title').textContent = 'Edit Task';
+      document.querySelector('#modal-task .modal-sub').textContent = 'Update task properties';
+      document.querySelector('#modal-task .btn-primary').textContent = 'Save Changes';
+      openModal('modal-task');
+      if (typeof HubObsidian !== 'undefined') {
+        HubObsidian.attachAutocomplete(document.getElementById('task-obsidian'));
+      }
+    }
+
     function saveTask() {
       const title = document.getElementById('task-title').value.trim(); if (!title) return;
       const projId = document.getElementById('task-project').value;
@@ -3339,18 +3392,47 @@
         ? (document.getElementById('task-blocked-reason')?.value.trim() || '') : '';
       const taskCode = document.getElementById('task-code')?.value.trim() || '';
       const taskType = document.getElementById('task-type')?.value || '';
-      const newId = uid();
-      proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
-      saveState(); closeModal('modal-task'); showToast('Task added');
-      renderContent();
-      if (state.selectedProject === projId) renderPanel(projId);
-      requestAnimationFrame(() => {
-        const el = document.querySelector(`[data-task-id="${newId}"]`);
-        if (el) el.classList.add('card-enter');
-      });
+      if (_editingTaskId) {
+        const editId = _editingTaskId, editProjId = _editingTaskProjId;
+        _editingTaskId = null; _editingTaskProjId = null;
+        const oldProj = getProject(editProjId);
+        let task = oldProj?.tasks.find(t => t.id === editId);
+        if (!task) return;
+        if (projId !== editProjId) {
+          oldProj.tasks = oldProj.tasks.filter(t => t.id !== editId);
+          task = { ...task };
+          proj.tasks.push(task);
+        }
+        task.title = title;
+        task.milestoneId = document.getElementById('task-milestone').value;
+        task.assigneeId = document.getElementById('task-assignee').value;
+        task.priority = document.getElementById('task-priority').value;
+        task.due = document.getElementById('task-due').value;
+        task.status = statusVal;
+        task.done = statusVal === 'done';
+        task.completedAt = statusVal === 'done' ? (task.completedAt || new Date().toISOString()) : '';
+        task.blockedReason = blockedReason;
+        task.taskCode = taskCode;
+        task.taskType = taskType;
+        task.obsidianNote = document.getElementById('task-obsidian').value.trim();
+        saveState(); closeModal('modal-task'); showToast('Task updated');
+        renderContent();
+        if (state.selectedProject) renderPanel(state.selectedProject);
+      } else {
+        const newId = uid();
+        proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+        saveState(); closeModal('modal-task'); showToast('Task added');
+        renderContent();
+        if (state.selectedProject === projId) renderPanel(projId);
+        requestAnimationFrame(() => {
+          const el = document.querySelector(`[data-task-id="${newId}"]`);
+          if (el) el.classList.add('card-enter');
+        });
+      }
     }
 
     // ─── EDIT STATE ──────────────────────────────────────────────────────────────
+    let _editingTaskId = null, _editingTaskProjId = null;
     let _editingMsId = null, _editingMsProjId = null;
     let _editingGoalId = null, _editingGoalProjId = null;
     let _editingMemberId = null;
