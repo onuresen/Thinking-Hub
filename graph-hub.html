@@ -491,6 +491,11 @@
 
       function nodeId(tool, itemId) { return `${tool}::${itemId}`; }
 
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
+      const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.28)';
+      const edgeHover = isDark ? 'rgba(184,240,51,0.45)' : 'rgba(100,160,20,0.55)';
+
       links.forEach(link => {
         [link.a, link.b].forEach(side => {
           const id = nodeId(side.tool, side.itemId);
@@ -509,7 +514,7 @@
               highlight: { background: c.bg, border: '#b8f033' },
               hover: { background: c.bg, border: c.border }
             },
-            font: { color: '#e8e8f0', size: 12, face: 'DM Sans, sans-serif' },
+            font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
             shape: 'box',
             borderWidth: 1,
             margin: { top: 8, bottom: 8, left: 10, right: 10 }
@@ -524,11 +529,11 @@
           to: nodeId(link.b.tool, link.b.itemId),
           title: edgeTitle,
           color: {
-            color: 'rgba(255,255,255,0.1)',
+            color: edgeColor,
             highlight: '#b8f033',
-            hover: 'rgba(184,240,51,0.35)'
+            hover: edgeHover
           },
-          width: link.note ? 2 : 1,
+          width: link.note ? 2.5 : 1.5,
           selectionWidth: 2,
           smooth: { type: 'curvedCW', roundness: 0.1 }
         });
@@ -737,6 +742,13 @@
     buildGraph();
     HubStorage.subscribe('hub-links-v1', buildGraph);
     window.__hl_onLinkChange = buildGraph;
+
+    window.addEventListener('message', e => {
+      if (e.data?.type === 'hub-theme') {
+        document.documentElement.setAttribute('data-theme', e.data.theme);
+        buildGraph();
+      }
+    });
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
