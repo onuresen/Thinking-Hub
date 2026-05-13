@@ -68,6 +68,16 @@ window.HubData = (() => {
     return getData().members.find(m => m.id === memberId) || null;
   }
 
+  function getSelfMemberId() {
+    try { return JSON.parse(localStorage.getItem('hub-session-v1') || '{}').selfMemberId || null; }
+    catch { return null; }
+  }
+
+  function getSelfMember() {
+    const id = getSelfMemberId();
+    return id ? getMember(id) : null;
+  }
+
   // ── Task selectors ───────────────────────────────────────────────────────────
   // Returns all tasks across all projects, each augmented with
   // _projectId, _projectName, _projectColor.
@@ -148,6 +158,8 @@ window.HubData = (() => {
     getProject,
     getMembers,
     getMember,
+    getSelfMemberId,
+    getSelfMember,
     getAllTasks,
     getTasksForProject,
     findTask,

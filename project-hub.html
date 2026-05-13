@@ -202,6 +202,60 @@
       color: var(--text);
     }
 
+    .sidebar-team-view-toggle {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text3);
+      font-size: 11px;
+      border-radius: var(--r-sm);
+      padding: 2px 5px;
+      cursor: pointer;
+      transition: all 0.1s;
+      margin-left: auto;
+      margin-right: 4px;
+      line-height: 1;
+    }
+    .sidebar-team-view-toggle:hover,
+    .sidebar-team-view-toggle.active { color: var(--accent); border-color: var(--accent-glow); }
+
+    /* ── Org tree ───────────────────────────────── */
+    .org-tree-wrap { padding: 6px 0; }
+    .org-dept-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text3);
+      padding: 10px 10px 4px;
+    }
+    .org-node {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      border-radius: var(--r-sm);
+      cursor: default;
+      transition: background 0.1s;
+    }
+    .org-node:hover { background: var(--surface2); }
+    .org-node-self { background: var(--accent-dim); }
+    .org-node-info { display: flex; flex-direction: column; min-width: 0; }
+    .org-node-name { font-size: 12px; font-weight: 500; color: var(--text); }
+    .org-node-role { font-size: 10px; color: var(--text3); }
+    .org-me-badge {
+      display: inline-block;
+      font-size: 8px;
+      font-family: var(--font-mono);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #111;
+      border-radius: 3px;
+      padding: 1px 4px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
     .user-pill {
       display: flex;
       align-items: center;
@@ -1630,6 +1684,7 @@
     <div class="sidebar-team">
       <div class="sidebar-team-header">
         <span class="sidebar-team-label">Team</span>
+        <button class="sidebar-team-view-toggle" id="team-view-toggle" onclick="toggleTeamView()" title="Toggle org chart view">⬡</button>
         <div class="sidebar-team-add" onclick="openMemberModal()" title="Add member">+</div>
       </div>
       <div id="sidebar-users"></div>
@@ -1898,6 +1953,22 @@
           <option value="#f09b3e,#111">Orange</option>
         </select>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department / Team</label>
+          <input class="form-input" id="member-dept" placeholder="e.g. Engineering">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reports to</label>
+          <select class="form-select" id="member-manager">
+            <option value="">— None (top-level) —</option>
+          </select>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+        <input type="checkbox" id="member-is-self">
+        <span class="form-label" style="margin:0">This is me</span>
+      </label>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('modal-member')">Cancel</button>
         <button class="btn btn-primary" onclick="saveMember()">Add Member</button>
@@ -2183,17 +2254,26 @@
     function renderSidebarUsers() {
       const container = document.getElementById('sidebar-users');
       container.innerHTML = '';
+      let selfId = '';
+      try { selfId = JSON.parse(localStorage.getItem('hub-session-v1') || '{}').selfMemberId || ''; } catch {}
+
+      if (_teamViewMode === 'org') {
+        container.appendChild(buildOrgTree(selfId));
+        return;
+      }
+
       state.members.forEach(m => {
         const { bg, fg } = avatarColors(m.color);
         const selected = state.overviewFilter.members.includes(m.id);
+        const isSelf = m.id === selfId;
         const div = document.createElement('div');
         div.className = 'user-pill' + (selected ? ' selected' : '');
         div.style.position = 'relative';
         div.innerHTML = `
       <div class="avatar" style="background:${bg};color:${fg};cursor:pointer" onclick="toggleOverviewMember('${m.id}')">${initials(m.name)}</div>
       <div class="user-pill-info" style="cursor:pointer;flex:1" onclick="toggleOverviewMember('${m.id}')">
-        <div class="user-pill-name">${m.name}</div>
-        <div class="user-pill-role">${m.role}</div>
+        <div class="user-pill-name">${HubUtils.esc(m.name)}${isSelf ? '<span class="org-me-badge">me</span>' : ''}</div>
+        <div class="user-pill-role">${HubUtils.esc(m.role)}</div>
       </div>
       ${selected ? `<div class="filter-active-dot" style="background:${bg}"></div>` : ''}
       <div class="user-pill-actions" style="display:flex;gap:2px;opacity:0;transition:opacity 0.15s">
@@ -2205,6 +2285,52 @@
         div.addEventListener('mouseleave', () => div.querySelector('.user-pill-actions').style.opacity = '0');
         container.appendChild(div);
       });
+    }
+
+    function buildOrgTree(selfId) {
+      const byDept = {};
+      state.members.forEach(m => {
+        const d = m.department || '';
+        if (!byDept[d]) byDept[d] = [];
+        byDept[d].push(m);
+      });
+
+      const wrap = document.createElement('div');
+      wrap.className = 'org-tree-wrap';
+
+      Object.entries(byDept).forEach(([dept, depts]) => {
+        if (dept) {
+          const lbl = document.createElement('div');
+          lbl.className = 'org-dept-label';
+          lbl.textContent = dept;
+          wrap.appendChild(lbl);
+        }
+        const ids = new Set(depts.map(m => m.id));
+        const roots = depts.filter(m => !m.managerId || !ids.has(m.managerId));
+
+        function renderNode(m, depth) {
+          const { bg, fg } = avatarColors(m.color);
+          const isSelf = m.id === selfId;
+          const node = document.createElement('div');
+          node.className = 'org-node' + (isSelf ? ' org-node-self' : '');
+          node.style.paddingLeft = (depth * 18 + 8) + 'px';
+          node.title = 'Double-click to edit';
+          node.innerHTML = `
+            <div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:9px;flex-shrink:0">${initials(m.name)}</div>
+            <div class="org-node-info">
+              <span class="org-node-name">${HubUtils.esc(m.name)}${isSelf ? '<span class="org-me-badge">me</span>' : ''}</span>
+              <span class="org-node-role">${HubUtils.esc(m.role)}</span>
+            </div>
+          `;
+          node.ondblclick = () => openEditMember(m.id);
+          wrap.appendChild(node);
+          depts.filter(c => c.managerId === m.id).forEach(c => renderNode(c, depth + 1));
+        }
+
+        roots.forEach(r => renderNode(r, 0));
+      });
+
+      return wrap;
     }
 
     function toggleOverviewMember(id) {
@@ -3436,6 +3562,14 @@
     let _editingMsId = null, _editingMsProjId = null;
     let _editingGoalId = null, _editingGoalProjId = null;
     let _editingMemberId = null;
+    let _teamViewMode = 'list';
+
+    function toggleTeamView() {
+      _teamViewMode = _teamViewMode === 'list' ? 'org' : 'list';
+      const btn = document.getElementById('team-view-toggle');
+      if (btn) btn.classList.toggle('active', _teamViewMode === 'org');
+      renderSidebarUsers();
+    }
 
     function openMilestoneModal() {
       _editingMsId = null; _editingMsProjId = null;
@@ -3538,11 +3672,25 @@
       saveState(); renderPanel(projId); showToast('Workstream deleted');
     }
 
+    function _populateManagerDropdown(excludeId) {
+      const sel = document.getElementById('member-manager');
+      sel.innerHTML = '<option value="">— None (top-level) —</option>';
+      state.members.filter(m => m.id !== excludeId).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + (m.role ? ` (${m.role})` : '');
+        sel.appendChild(opt);
+      });
+    }
+
     function openMemberModal() {
       _editingMemberId = null;
       document.getElementById('member-name').value = '';
       document.getElementById('member-role').value = '';
       document.getElementById('member-color').value = '#c8f03e,#111';
+      document.getElementById('member-dept').value = '';
+      document.getElementById('member-is-self').checked = false;
+      _populateManagerDropdown(null);
       document.querySelector('#modal-member .modal-title').textContent = 'Add Team Member';
       document.querySelector('#modal-member .modal-sub').textContent = 'Add someone to the workspace';
       document.querySelector('#modal-member .btn-primary').textContent = 'Add Member';
@@ -3555,6 +3703,13 @@
       document.getElementById('member-name').value = m.name;
       document.getElementById('member-role').value = m.role;
       document.getElementById('member-color').value = m.color;
+      document.getElementById('member-dept').value = m.department || '';
+      _populateManagerDropdown(memberId);
+      document.getElementById('member-manager').value = m.managerId || '';
+      try {
+        const selfId = JSON.parse(localStorage.getItem('hub-session-v1') || '{}').selfMemberId || '';
+        document.getElementById('member-is-self').checked = (selfId === memberId);
+      } catch { document.getElementById('member-is-self').checked = false; }
       document.querySelector('#modal-member .modal-title').textContent = 'Edit Member';
       document.querySelector('#modal-member .modal-sub').textContent = 'Update this team member';
       document.querySelector('#modal-member .btn-primary').textContent = 'Save Changes';
@@ -3563,15 +3718,28 @@
 
     function saveMember() {
       const name = document.getElementById('member-name').value.trim(); if (!name) return;
+      const dept   = document.getElementById('member-dept').value.trim();
+      const mgr    = document.getElementById('member-manager').value;
+      const isSelf = document.getElementById('member-is-self').checked;
+      let targetId;
       if (_editingMemberId) {
         const m = getMember(_editingMemberId);
-        if (m) { m.name = name; m.role = document.getElementById('member-role').value.trim() || 'Team'; m.color = document.getElementById('member-color').value; }
+        if (m) { m.name = name; m.role = document.getElementById('member-role').value.trim() || 'Team'; m.color = document.getElementById('member-color').value; m.department = dept; m.managerId = mgr; }
+        targetId = _editingMemberId;
         _editingMemberId = null;
         saveState(); closeModal('modal-member'); showToast('Member updated');
       } else {
-        state.members.push({ id: uid(), name, role: document.getElementById('member-role').value.trim() || 'Team', color: document.getElementById('member-color').value });
+        const newMember = { id: uid(), name, role: document.getElementById('member-role').value.trim() || 'Team', color: document.getElementById('member-color').value, department: dept, managerId: mgr };
+        state.members.push(newMember);
+        targetId = newMember.id;
         saveState(); closeModal('modal-member'); showToast('Member added');
       }
+      try {
+        const s = JSON.parse(localStorage.getItem('hub-session-v1') || '{}');
+        if (isSelf) { s.selfMemberId = targetId; }
+        else if (s.selfMemberId === targetId) { delete s.selfMemberId; }
+        localStorage.setItem('hub-session-v1', JSON.stringify(s));
+      } catch {}
       renderSidebarUsers(); renderContent();
     }
 

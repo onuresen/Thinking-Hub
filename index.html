@@ -1383,6 +1383,14 @@
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    function _avatarColors(c) {
+      const [bg, fg] = (c || '#888,#fff').split(',');
+      return { bg: bg.trim(), fg: (fg || '#fff').trim() };
+    }
+    function _initials(n) {
+      return (n || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
+
     function latestTimestamp(items, fields = ['updatedAt', 'createdAt', 'date', 'start']) {
       let max = null;
       (items || []).forEach(item => {
@@ -1410,6 +1418,41 @@
       if (!grid || !section) return;
 
       const widgets = [];
+
+      // ── My Work (selfMemberId in hub-session-v1) ───────────────────────────────
+      try {
+        const selfId = loadSession().selfMemberId;
+        if (selfId) {
+          const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          const selfMember = (ph.members || []).find(m => m.id === selfId);
+          if (selfMember) {
+            const myOpen = (ph.projects || [])
+              .flatMap(p => (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color, _pId: p.id })))
+              .filter(t => !t.done && t.assigneeId === selfId);
+            const shown = myOpen.slice(0, 5);
+            const { bg, fg } = _avatarColors(selfMember.color);
+            const rows = shown.map(t => {
+              const prioIcon = t.priority === 'high' ? '↑' : t.priority === 'low' ? '↓' : '–';
+              return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id || '')}">
+                <div class="stat-item-dot" style="background:${t._pColor || 'var(--text3)'}"></div>
+                <div class="stat-item-text">${_esc(t.title)}</div>
+                <div class="stat-item-meta">${prioIcon} ${_esc(t._pName)}</div>
+              </div>`;
+            }).join('');
+            const myAge = relativeAge(latestTimestamp(myOpen));
+            const avatarIcon = `<span style="background:${bg};color:${fg};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;font-size:8px;flex-shrink:0">${_initials(selfMember.name)}</span>`;
+            widgets.push({
+              id: 'project-hub',
+              icon: avatarIcon,
+              title: `My Work — ${_esc(selfMember.name)}`,
+              count: `${myOpen.length} open task${myOpen.length !== 1 ? 's' : ''}`,
+              body: myOpen.length ? rows : `<div style="color:var(--text3);font-size:12px;padding:4px 0">No open tasks assigned to you.</div>`,
+              more: myOpen.length > 5 ? `+${myOpen.length - 5} more` : '',
+              staleness: myAge
+            });
+          }
+        }
+      } catch { }
 
       // ── Projects (project-hub-v1) ──────────────────────────────────────────────
       try {
