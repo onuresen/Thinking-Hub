@@ -202,6 +202,25 @@
       color: var(--text);
     }
 
+    .drag-handle {
+      font-size: 13px;
+      color: var(--text3);
+      cursor: grab;
+      opacity: 0;
+      transition: opacity 0.12s;
+      flex-shrink: 0;
+      line-height: 1;
+      padding: 0 2px;
+      user-select: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    .user-pill:hover .drag-handle { opacity: 1; }
+    .user-pill.dragging { opacity: 0.4; }
+    .user-pill.drag-over {
+      border-top: 2px solid var(--accent);
+      margin-top: -2px;
+    }
+
     .sidebar-team-view-toggle {
       background: none;
       border: 1px solid transparent;
@@ -2269,7 +2288,9 @@
         const div = document.createElement('div');
         div.className = 'user-pill' + (selected ? ' selected' : '');
         div.style.position = 'relative';
+        div.draggable = true;
         div.innerHTML = `
+      <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="avatar" style="background:${bg};color:${fg};cursor:pointer" onclick="toggleOverviewMember('${m.id}')">${initials(m.name)}</div>
       <div class="user-pill-info" style="cursor:pointer;flex:1" onclick="toggleOverviewMember('${m.id}')">
         <div class="user-pill-name">${HubUtils.esc(m.name)}${isSelf ? '<span class="org-me-badge">me</span>' : ''}</div>
@@ -2281,6 +2302,37 @@
         <button class="task-action-btn del" title="Delete member" onclick="deleteMember('${m.id}')">✕</button>
       </div>
     `;
+        div.querySelector('.drag-handle').addEventListener('mousedown', () => { _dragViaHandle = true; });
+        div.addEventListener('dragstart', e => {
+          if (!_dragViaHandle) { e.preventDefault(); return; }
+          _dragSrcId = m.id;
+          e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => div.classList.add('dragging'), 0);
+        });
+        div.addEventListener('dragend', () => {
+          _dragViaHandle = false;
+          div.classList.remove('dragging');
+          container.querySelectorAll('.user-pill').forEach(p => p.classList.remove('drag-over'));
+        });
+        div.addEventListener('dragover', e => {
+          if (!_dragSrcId || _dragSrcId === m.id) return;
+          e.preventDefault();
+          container.querySelectorAll('.user-pill').forEach(p => p.classList.remove('drag-over'));
+          div.classList.add('drag-over');
+        });
+        div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+        div.addEventListener('drop', e => {
+          e.preventDefault();
+          if (!_dragSrcId || _dragSrcId === m.id) return;
+          const srcIdx = state.members.findIndex(x => x.id === _dragSrcId);
+          const dstIdx = state.members.findIndex(x => x.id === m.id);
+          if (srcIdx === -1 || dstIdx === -1) return;
+          const [moved] = state.members.splice(srcIdx, 1);
+          state.members.splice(dstIdx, 0, moved);
+          _dragSrcId = null;
+          saveState();
+          renderSidebarUsers();
+        });
         div.addEventListener('mouseenter', () => div.querySelector('.user-pill-actions').style.opacity = '1');
         div.addEventListener('mouseleave', () => div.querySelector('.user-pill-actions').style.opacity = '0');
         container.appendChild(div);
@@ -3563,6 +3615,8 @@
     let _editingGoalId = null, _editingGoalProjId = null;
     let _editingMemberId = null;
     let _teamViewMode = 'list';
+    let _dragSrcId = null;
+    let _dragViaHandle = false;
 
     function toggleTeamView() {
       _teamViewMode = _teamViewMode === 'list' ? 'org' : 'list';

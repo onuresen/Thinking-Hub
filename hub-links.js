@@ -18,7 +18,7 @@ if (typeof window.HubStorage === 'undefined') {
   };
 }
 
-const HubLinks = (() => {
+window.HubLinks = (() => {
 
   const STORAGE_KEY = 'hub-links-v1';
 

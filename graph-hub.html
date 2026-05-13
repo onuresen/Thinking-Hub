@@ -187,6 +187,10 @@
       line-height: 1.5;
     }
 
+    .legend-toggle { font-size: 9px; color: var(--text3); }
+    .legend.collapsed .legend-body { display: none; }
+    .legend-body { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+
     /* ── New Link modal ─────────────────────────────────────── */
     .gh-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.6);
@@ -455,18 +459,25 @@
       const legend = document.getElementById('legend');
       if (!tools.length) { legend.classList.remove('visible'); return; }
       legend.classList.add('visible');
-      legend.innerHTML = `<div class="legend-title">Tools</div>`;
+      const collapsed = legend.classList.contains('collapsed');
+      legend.innerHTML = `
+        <div class="legend-title" onclick="this.closest('.legend').classList.toggle('collapsed')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>TOOLS</span><span class="legend-toggle">${collapsed ? '▸' : '▾'}</span>
+        </div>`;
+      const body = document.createElement('div');
+      body.className = 'legend-body';
       tools.forEach(tool => {
         const c = TOOL_COLORS[tool] || { bg: '#333', border: '#555' };
         const item = document.createElement('div');
         item.className = 'legend-item';
         item.innerHTML = `<div class="legend-swatch" style="background:${c.bg};border-color:${c.border}"></div><span>${TOOL_LABELS[tool] || tool}</span>`;
-        legend.appendChild(item);
+        body.appendChild(item);
       });
       const hint = document.createElement('div');
       hint.className = 'legend-hint';
       hint.innerHTML = 'Double-click a node to open it';
-      legend.appendChild(hint);
+      body.appendChild(hint);
+      legend.appendChild(body);
     }
 
     // ── Build graph ───────────────────────────────────────────
