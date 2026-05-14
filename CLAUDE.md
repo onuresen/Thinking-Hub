@@ -419,3 +419,51 @@ Full PSPO-aligned scrum tool: **Backlog** (MoSCoW priority, story points, type i
 ### ~~Priority 31 — New tool: Risk Register~~ ✓ Done `[group: new-tools-team]`
 **ID:** 3K — **Implemented.**  
 **Files:** `risk-hub.html`
+
+---
+
+### ~~Priority 32 — Framework Tier 1 & 2 improvements~~ ✓ Done `[group: framework-grounding]`
+Framework-grounded enhancements across 7 tools, matching each tool to its primary methodologies.
+
+- **Scrum Board — Sprint Goal field**: Sprint meta bar now has a plain-text `#sprint-goal-input` field. Stored in `state.sprintGoal`, persisted to `scrum-hub-v1`. Grounds the sprint in Scrum's official Sprint Goal concept.
+- **Decision Hub — Cynefin domain tag**: Log tab now has a `<select>` for `#i-cynefin` (Clear / Complicated / Complex / Chaotic / Disorder). Stored on decision object as `cynefin`. Badge rendered on decision cards. Helps users frame decisions using Dave Snowden's sense-making model.
+- **Goals Hub — OKR scoring (0.0–1.0) + committed vs. aspirational**: Each Key Result now has a `score` field (0.0–1.0 number input) and a `krType` field ('committed'|'aspirational'). Score averaged per objective. Type shown as a colored badge.
+- **Tool Portfolio — Technology Radar ring**: Each tool now has a `ring` field (Adopt / Trial / Assess / Hold). Shown as a colored badge in the detail panel and sidebar list. Based on ThoughtWorks Technology Radar framework.
+- **Risk Register — Treatment plan + owner + review date**: Each risk now has `treatment` (text), `owner` (text), and `reviewDate` (date) fields in the add/edit modal, rendered in the risk detail card.
+- **Stakeholder Map — Engagement level**: Each stakeholder card now has an engagement level field (Unaware / Resistant / Neutral / Supportive / Leading). Grounded in PMBOK stakeholder engagement assessment matrix.
+- **Learning Log — Key insight field (Feynman)**: Each log entry now has a `keyInsight` textarea field ("explain it simply"). Grounded in the Feynman Technique — learning by articulating in plain language.
+
+**Files:** `scrum-hub.html`, `decision-hub.html`, `goals-hub.html`, `tool-portfolio.html`, `risk-hub.html`, `stakeholder-hub.html`, `learning-hub.html`
+
+---
+
+### ~~Priority 33 — Framework Quick Wins (10 improvements)~~ ✓ Done `[group: framework-quick-wins]`
+Second wave of framework-grounded enhancements, addressing remaining gaps from the tool→framework mapping.
+
+- **Scrum Board — WIP limits on Sprint kanban**: Each kanban column (To Do / In Progress / Done) now has a WIP limit input. Columns turn red when over limit. Stored in `state.wipLimits`. Grounded in Kanban's core WIP constraint principle.
+- **Project Hub — WIP limits on Kanban view**: Same WIP limit inputs added to the Project Hub kanban. Stored in `state.kanbanWip`, persisted to `project-hub-v1`.
+- **Focus Timer — Energy level (GTD)**: Session form now has an Energy select (⚡ High / 🌤 Medium / 🌙 Low). Stored in `timerState.energy`, saved to session records. Aligns with GTD's context-based task selection.
+- **Focus Timer — Context tagging (GTD)**: `<input list>` with datalist suggestions (`@deep-work`, `@admin`, `@calls`, `@creative`, `@learning`, `@errands`). Stored in `timerState.context`. Shown as badge on session history.
+- **Focus Timer — Pomodoro estimation**: Number input (1–20 pomodoros). Stored in `timerState.pomodoroEst`, shown as `🍅 X` badge in session history.
+- **Decision Hub — ABP Signpost + Hedging Action**: Assumption cards now have two new fields: `signpost` (observable confirmation event) and `hedge` (fallback action if assumption fails). Grounded in RAND Corp's Assumption-Based Planning methodology.
+- **Daily Log — Bullet Journal mode chips**: Three mode chips (📓 Journal / ✅ Tasks / 📅 Events) switch the textarea placeholder to match the Bullet Journal Method's rapid-logging entry types.
+- **Daily Log — Feynman "What did I learn?" prompt**: Dedicated learning textarea below each entry. Stored as `entry.learning`. Grounded in the Feynman Technique.
+- **Tool Portfolio — TOGAF Architecture Layer**: Each tool now has an `archLayer` field (Business / Data / Application / Technology). Shown as a select in the detail panel. Grounded in TOGAF's four architecture domains.
+- **Goals Hub — Risk count chip**: Objective cards now show a `⚠ X risks` badge when the objective's linked project has open risks in the Risk Register. Reads `risk-hub-v1` live.
+- **KMQT Board — Tags on items**: Each KMQT item now has a `tags` array (comma-input in edit modal). Tags shown as pills in each column. Enables Kaizen-style categorization of improvement themes.
+
+**Files:** `scrum-hub.html`, `project-hub.html`, `focus-hub.html`, `decision-hub.html`, `log-hub.html`, `tool-portfolio.html`, `goals-hub.html`, `kmqt-board.html`
+
+---
+
+### ~~Priority 34 — New tool: Help & Guide~~ ✓ Done `[group: new-tools-solo]`
+Dedicated help/about page surfacing all 19 tools with framework connections, when-to-use guidance, key features, and sample scenarios. Also includes a Framework Reference (37 frameworks) and 4 pre-built workflow guides.
+
+**Three view modes:**
+- **Tools** — sidebar lists all 19 tools grouped by workflow cycle; detail panel shows frameworks used, when to use, key features, sample scenario
+- **Frameworks** — sidebar lists all 37 frameworks grouped by domain; detail panel shows what it is, certifications, which tools use it
+- **Workflows** — 4 workflow cards: Project Kickoff, Weekly Rhythm, Decision Sprint, Idea → Delivery
+
+**Framework domains covered:** Project & Task (blue), Agile & Lean (green), Goal-Setting (yellow), Decision-Making (purple), Risk & Governance (red), Stakeholder & People (orange), Personal Productivity (cyan), Knowledge & Learning, Design & Ideation.
+
+**Files:** `help-hub.html` (new), `index.html` (APPS array), `CLAUDE.md` (file map)
