@@ -279,6 +279,25 @@
         <textarea class="field-textarea" id="dp-mitigation" placeholder="What steps reduce this risk?"></textarea>
       </div>
       <div>
+        <div class="field-label">Treatment <span style="color:var(--text3);font-size:10px;font-weight:400">(ISO 31000)</span></div>
+        <select class="field-select" id="dp-treatment">
+          <option value="">— not set —</option>
+          <option value="avoid">Avoid — eliminate the risk source entirely</option>
+          <option value="reduce">Reduce — lower likelihood or impact</option>
+          <option value="transfer">Transfer — share via insurance or contract</option>
+          <option value="accept">Accept — acknowledge and monitor</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Owner</div>
+        <input class="field-input" id="dp-owner" list="dp-member-list" placeholder="Who is responsible for this risk?" />
+        <datalist id="dp-member-list"></datalist>
+      </div>
+      <div>
+        <div class="field-label">Review Date</div>
+        <input class="field-input" type="date" id="dp-review-date" />
+      </div>
+      <div>
         <div class="field-label">Project (optional)</div>
         <select class="field-select" id="dp-project">
           <option value="">— None —</option>
@@ -470,6 +489,13 @@
     document.getElementById('prob-val').textContent = p;
     document.getElementById('imp-val').textContent = i;
     document.getElementById('dp-mitigation').value = r.mitigation || '';
+    document.getElementById('dp-treatment').value = r.treatment || '';
+    document.getElementById('dp-owner').value = r.owner || '';
+    document.getElementById('dp-review-date').value = r.reviewDate || '';
+
+    // Populate member datalist
+    const members = (() => { try { return HubData.getMembers(); } catch { return []; } })();
+    document.getElementById('dp-member-list').innerHTML = members.map(m => `<option value="${_esc(m.name||m.id)}"></option>`).join('');
 
     const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
     document.getElementById('dp-project').innerHTML = '<option value="">— None —</option>' +
@@ -513,6 +539,9 @@
     r.probability = parseInt(document.getElementById('dp-probability').value);
     r.impact = parseInt(document.getElementById('dp-impact').value);
     r.mitigation = document.getElementById('dp-mitigation').value.trim();
+    r.treatment = document.getElementById('dp-treatment').value;
+    r.owner = document.getElementById('dp-owner').value.trim();
+    r.reviewDate = document.getElementById('dp-review-date').value;
     const projSel = document.getElementById('dp-project');
     r.projectId = projSel.value || null;
     r.projectName = projSel.value ? projSel.options[projSel.selectedIndex].text : null;
@@ -544,7 +573,8 @@
       id: uid(), title,
       category: document.getElementById('am-category').value,
       status: 'open', probability: 3, impact: 3,
-      mitigation: '', projectId: null, projectName: null,
+      mitigation: '', treatment: '', owner: '', reviewDate: '',
+      projectId: null, projectName: null,
       createdAt: new Date().toISOString()
     };
     data.risks.push(r);

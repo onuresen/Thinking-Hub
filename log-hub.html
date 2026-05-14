@@ -165,6 +165,21 @@
     .log-textarea:focus { border-color: var(--accent); }
     .log-textarea::placeholder { color: var(--text3); }
 
+    /* ── Bullet focus ── */
+    .bullet-focus-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .bf-label { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); }
+    .bf-chip { border: 1px solid var(--border); border-radius: 20px; background: transparent; color: var(--text2); font-size: 11.5px; padding: 3px 10px; cursor: pointer; transition: all 0.12s; }
+    .bf-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .bf-chip.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+
+    /* ── Feynman learning ── */
+    .learning-section { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .learning-label { font-size: 11.5px; font-weight: 700; color: var(--text2); }
+    .learning-hint { font-weight: 400; color: var(--text3); font-size: 10.5px; }
+    .learning-textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 12.5px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.15s; }
+    .learning-textarea:focus { border-color: var(--accent); }
+    .learning-textarea::placeholder { color: var(--text3); }
+
     /* ── Save bar ── */
     .save-bar {
       padding: 12px 24px; border-top: 1px solid var(--border);
@@ -258,7 +273,19 @@
       </div>
       <div class="editor-body">
         <div class="editor-prompt" id="editor-prompt">What happened today? What did you learn? What are you grateful for?</div>
+        <div class="bullet-focus-row">
+          <span class="bf-label">Today's mode:</span>
+          <button class="bf-chip" data-bf="notes" onclick="setBulletFocus('notes')">📓 Journal</button>
+          <button class="bf-chip" data-bf="tasks" onclick="setBulletFocus('tasks')">✅ Tasks</button>
+          <button class="bf-chip" data-bf="events" onclick="setBulletFocus('events')">📅 Events</button>
+        </div>
         <textarea class="log-textarea" id="log-textarea" placeholder="Start writing…" oninput="onEdit()"></textarea>
+        <div class="learning-section">
+          <div class="learning-label">🔬 What did I learn today? <span class="learning-hint">(Feynman: explain it simply)</span></div>
+          <textarea class="learning-textarea" id="learning-textarea" rows="3"
+            placeholder="Explain the core insight as if teaching someone new. Avoid jargon — use a concrete analogy. If you can't explain it simply, dig deeper."
+            oninput="onLearningEdit()"></textarea>
+        </div>
       </div>
       <div class="save-bar">
         <div class="save-status" id="save-status"></div>
@@ -402,6 +429,17 @@
     document.getElementById('editor-date-sub').textContent = dateStr === todayISO ? dateLabel : '';
     document.getElementById('log-textarea').value = e.text || '';
 
+    // Bullet focus chips
+    const bf = e.bulletFocus || '';
+    document.querySelectorAll('.bf-chip').forEach(c => c.classList.toggle('active', c.dataset.bf === bf && !!bf));
+    const placeholders = { notes: 'Start writing freely — thoughts, reflections, gratitude…', tasks: '• Task I did\n• Task I started\n○ Task I want to do tomorrow', events: '○ 09:00 Standup\n○ 11:30 Design review\n• 15:00 1:1 with manager' };
+    const ta = document.getElementById('log-textarea');
+    if (ta) ta.placeholder = (bf && placeholders[bf]) || 'Start writing…';
+
+    // Learning field
+    const learningTA = document.getElementById('learning-textarea');
+    if (learningTA) learningTA.value = e.learning || '';
+
     // Mood buttons
     document.querySelectorAll('.mood-btn').forEach(btn => {
       btn.classList.toggle('active', parseInt(btn.dataset.mood) === e.mood);
@@ -431,6 +469,27 @@
     autosave();
   }
 
+  function setBulletFocus(type) {
+    const entry = getEntry(activeDate);
+    const current = (data.entries[activeDate] || {}).bulletFocus;
+    // Toggle off if same
+    const newFocus = current === type ? '' : type;
+    if (!data.entries[activeDate]) data.entries[activeDate] = {};
+    data.entries[activeDate].bulletFocus = newFocus;
+    // Update chip UI
+    document.querySelectorAll('.bf-chip').forEach(c => c.classList.toggle('active', c.dataset.bf === newFocus));
+    // Update textarea placeholder
+    const placeholders = { notes: 'Start writing freely — thoughts, reflections, gratitude…', tasks: '• Task I did\n• Task I started\n○ Task I want to do tomorrow', events: '○ 09:00 Standup\n○ 11:30 Design review\n• 15:00 1:1 with manager' };
+    const ta = document.getElementById('log-textarea');
+    if (ta) ta.placeholder = placeholders[newFocus] || 'Start writing…';
+    save();
+  }
+
+  function onLearningEdit() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveEntry, 2000);
+  }
+
   function onEdit() {
     document.getElementById('save-status').textContent = 'Unsaved changes…';
     document.getElementById('save-status').className = 'save-status';
@@ -441,9 +500,10 @@
   function saveEntry() {
     clearTimeout(saveTimer);
     const text = document.getElementById('log-textarea').value.trim();
+    const learning = (document.getElementById('learning-textarea')?.value || '').trim();
     const activeMood = parseInt(document.querySelector('.mood-btn.active')?.dataset.mood || '0');
 
-    if (!text && !activeMood) {
+    if (!text && !activeMood && !learning) {
       // Nothing to save; if exists, delete
       return;
     }
@@ -451,6 +511,7 @@
     if (!data.entries[activeDate]) data.entries[activeDate] = {};
     data.entries[activeDate].mood = activeMood;
     data.entries[activeDate].text = text;
+    data.entries[activeDate].learning = learning;
     data.entries[activeDate].updatedAt = new Date().toISOString();
 
     save();

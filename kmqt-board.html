@@ -437,11 +437,12 @@
       background: #2ecc7a;
     }
 
+    .item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     .item-text {
-      flex: 1;
-      min-width: 0;
       word-break: break-word;
     }
+    .item-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .item-tag { font-size: 10px; background: var(--accent-dim); color: var(--accent); border-radius: 3px; padding: 1px 5px; font-family: var(--font-mono); }
 
     .item-x {
       background: none;
@@ -943,6 +944,7 @@
         <button class="sbtn danger" onclick="closeEdit()">✕</button>
       </div>
       <textarea id="edit-text" class="input" placeholder="Edit text…"></textarea>
+      <input id="edit-tags" class="input" style="margin-top:8px" placeholder="Tags: topic, project… (comma-separated)" />
       <div class="row" style="justify-content:flex-end;">
         <button class="sbtn" onclick="closeEdit()">Cancel</button>
         <button class="sbtn accent" onclick="saveEdit()">Save</button>
@@ -1277,9 +1279,13 @@
           if (state.selectedItemId === it.id) div.classList.add('selected');
           if (state.connectFromId === it.id) div.classList.add('connect-src');
 
+          const tagsPillsHtml = (it.tags || []).map(tag => `<span class="item-tag">${HubUtils.esc(tag)}</span>`).join('');
           div.innerHTML = `
         <div class="item-dot dot-${col}"></div>
-        <div class="item-text"></div>
+        <div class="item-body">
+          <div class="item-text"></div>
+          ${tagsPillsHtml ? `<div class="item-tags">${tagsPillsHtml}</div>` : ''}
+        </div>
         <button class="item-x" title="Delete">✕</button>
       `;
           div.querySelector('.item-text').textContent = it.text;
@@ -1666,6 +1672,8 @@
       if (!item) return;
       state.editingId = itemId;
       el.editText.value = item.text;
+      const tagsInput = document.getElementById('edit-tags');
+      if (tagsInput) tagsInput.value = (item.tags || []).join(', ');
       el.modal.style.display = 'flex';
       setTimeout(() => el.editText.focus(), 30);
     }
@@ -1691,6 +1699,8 @@
         return;
       }
       item.text = t.slice(0, 240);
+      const tagsRaw = (document.getElementById('edit-tags')?.value || '').trim();
+      item.tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
       closeEdit();
       autosave();
       renderAll();

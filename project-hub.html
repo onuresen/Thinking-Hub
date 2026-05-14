@@ -1381,6 +1381,10 @@
       padding: 1px 7px;
       border-radius: 20px;
     }
+    .kanban-col-count.wip-over { background: color-mix(in srgb, var(--accent-nope) 15%, transparent); color: var(--accent-nope); font-weight: 700; }
+    .kanban-wip-input { margin-left: auto; width: 32px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text3); font-size: 10px; text-align: center; padding: 1px 3px; font-family: var(--font-mono); }
+    .kanban-wip-input:focus { outline: none; border-color: var(--accent); color: var(--text); }
+    .kanban-wip-input::placeholder { color: var(--text3); opacity: 0.5; }
 
     .kanban-col-body {
       flex: 1;
@@ -2068,7 +2072,13 @@
     }
 
     function saveState() {
-      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects });
+      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, kanbanWip: state.kanbanWip });
+    }
+
+    function setKanbanWip(colId, val) {
+      if (!state.kanbanWip) state.kanbanWip = {};
+      state.kanbanWip[colId] = Math.max(0, isNaN(val) ? 0 : val);
+      saveState(); renderContent();
     }
 
     // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -2848,12 +2858,15 @@
         const colTasks = allTasks.filter(t => (t.status || (t.done ? 'done' : 'todo')) === col.id);
         const colEl = document.createElement('div');
         colEl.className = 'kanban-col';
+        const wip = (state.kanbanWip || {})[col.id] || 0;
+        const overWip = wip > 0 && colTasks.length > wip;
 
         colEl.innerHTML = `
       <div class="kanban-col-header">
         <div class="kanban-col-dot" style="background:${col.color}"></div>
         <div class="kanban-col-title">${col.label}</div>
-        <div class="kanban-col-count">${colTasks.length}</div>
+        <div class="kanban-col-count${overWip ? ' wip-over' : ''}" title="${wip > 0 ? 'WIP limit: '+wip : 'No WIP limit'}">${colTasks.length}${wip > 0 ? '/'+wip : ''}</div>
+        <input class="kanban-wip-input" type="number" min="0" max="99" value="${wip||''}" placeholder="∞" title="WIP limit (0 = no limit, Kanban principle)" onclick="event.stopPropagation()" onchange="setKanbanWip('${col.id}',+this.value)" />
       </div>
     `;
 

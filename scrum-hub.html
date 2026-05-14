@@ -106,6 +106,13 @@
     .sgc-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
     .sgc-goal  { font-size: 12px; color: var(--text2); font-style: italic; margin-top: 5px; }
     .sgc-dates { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .sgc-goal-edit {
+      width: 100%; margin-top: 6px; padding: 5px 0; resize: none; border: none; outline: none;
+      background: transparent; font-size: 12px; font-style: italic; color: var(--text2);
+      font-family: var(--font-body); line-height: 1.5; cursor: text;
+    }
+    .sgc-goal-edit::placeholder { color: var(--text3); font-style: italic; }
+    .sgc-goal-edit:focus { color: var(--text); font-style: normal; }
     .status-chip {
       padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.5px;
@@ -127,6 +134,10 @@
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text2);
     }
     .kc-count { background: var(--surface3); color: var(--text3); border-radius: 10px; padding: 1px 7px; font-size: 10px; }
+    .kc-count.wip-over { background: color-mix(in srgb, var(--accent-nope) 15%, transparent); color: var(--accent-nope); font-weight: 700; }
+    .wip-limit-input { margin-left: auto; width: 32px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text3); font-size: 10px; text-align: center; padding: 1px 3px; font-family: var(--font-mono); }
+    .wip-limit-input:focus { outline: none; border-color: var(--accent); color: var(--text); }
+    .wip-limit-input::placeholder { color: var(--text3); opacity: 0.5; }
     .kc-card {
       background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
       padding: 10px; margin-bottom: 8px; cursor: grab; transition: box-shadow 0.15s, opacity 0.15s;
@@ -267,7 +278,7 @@
       </div>
       <div class="form-group">
         <label>Sprint Goal</label>
-        <textarea class="textarea" id="sp-goal" rows="2" placeholder="What will we achieve this sprint?"></textarea>
+        <textarea class="textarea" id="sp-goal" rows="2" placeholder='e.g. "Ship onboarding so new users activate in under 5 min" — the single outcome the team commits to'></textarea>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -355,6 +366,7 @@ function loadState() {
     state.dod = DEFAULT_DOD.map(d => ({ id: uid(), text: d.text, category: d.category, checked: true }));
   }
   if (!state.settings) state.settings = { linkedProjectId: '' };
+  if (!state.wipLimits) state.wipLimits = { todo: 0, inprogress: 0, done: 0 };
   if (!currentSprintId) {
     const active = state.sprints.find(s => s.status === 'active');
     currentSprintId = active ? active.id : (state.sprints[0]?.id || null);
@@ -362,6 +374,12 @@ function loadState() {
 }
 
 function saveState() { HubStorage.set(KEY, JSON.stringify(state)); }
+
+function setWipLimit(col, val) {
+  if (!state.wipLimits) state.wipLimits = {};
+  state.wipLimits[col] = Math.max(0, isNaN(val) ? 0 : val);
+  saveState(); render();
+}
 
 // ── Modals ────────────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.add('is-open'); }
@@ -497,12 +515,18 @@ function renderSprintBoard(c) {
   let kanban = `<div class="kanban-board">`;
   cols.forEach(col => {
     const colItems = sprintItems.filter(i => (i.sprintStatus || 'todo') === col.key);
+    const wip = (state.wipLimits || {})[col.key] || 0;
+    const overWip = wip > 0 && colItems.length > wip;
     kanban += `
       <div class="kanban-col" data-col="${col.key}"
         ondragover="event.preventDefault();this.classList.add('drop-target')"
         ondragleave="this.classList.remove('drop-target')"
         ondrop="onDrop('${sprint.id}','${col.key}',event)">
-        <div class="kc-header">${col.label} <span class="kc-count">${colItems.length}</span></div>
+        <div class="kc-header">
+          ${col.label}
+          <span class="kc-count${overWip ? ' wip-over' : ''}" title="${wip > 0 ? 'WIP limit: '+wip : 'No WIP limit'}">${colItems.length}${wip > 0 ? '/'+wip : ''}</span>
+          <input class="wip-limit-input" type="number" min="0" max="99" value="${wip||''}" placeholder="∞" title="WIP limit (0 = no limit)" onchange="setWipLimit('${col.key}',+this.value)" onclick="event.stopPropagation()" />
+        </div>
         ${colItems.map(item => `
           <div class="kc-card" draggable="true"
             ondragstart="_dragStoryId='${item.id}';this.classList.add('dragging')"
@@ -534,7 +558,9 @@ function renderSprintBoard(c) {
         ${HubUtils.esc(sprint.name)}
         <span class="status-chip status-${sprint.status}">${sprint.status}</span>
       </div>
-      ${sprint.goal   ? `<div class="sgc-goal">"${HubUtils.esc(sprint.goal)}"</div>` : ''}
+      <textarea class="sgc-goal-edit" rows="2"
+        placeholder='Sprint Goal — the "why" behind this sprint (e.g. "Ship onboarding so new users activate in under 5 min")'
+        onblur="saveSprintField('${sprint.id}','goal',this.value)">${HubUtils.esc(sprint.goal || '')}</textarea>
       ${sprint.startDate ? `<div class="sgc-dates">${sprint.startDate} → ${sprint.endDate || '?'}</div>` : ''}
     </div>
 

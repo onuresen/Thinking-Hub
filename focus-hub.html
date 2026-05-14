@@ -112,6 +112,14 @@
     }
     .session-badge.done { background: var(--accent-dim); color: var(--accent); }
     .session-badge.abandoned { background: rgba(255,80,80,0.1); color: var(--accent-nope); }
+    .session-energy-badge, .session-ctx-badge, .session-pom-badge { font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: var(--surface3); color: var(--text2); }
+    .focus-meta-row { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); margin-top: 4px; }
+    .focus-meta-field { display: flex; flex-direction: column; gap: 4px; }
+    .focus-meta-label { font-size: 10px; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.7px; }
+    .focus-meta-hint { font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+    .focus-meta-field select, .focus-meta-field input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 6px 10px; font-family: var(--font-body); font-size: 12px; }
+    .focus-meta-field select:focus, .focus-meta-field input:focus { outline: 1px solid var(--accent); }
+    .focus-meta-field input[type="number"] { width: 70px; }
 
     /* ── Histogram ── */
     .histogram-wrap { padding: 12px 12px 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
@@ -221,6 +229,7 @@
       duration: 25, intervalId: null,
       taskId: null, taskTitle: null, taskProjectId: null, taskProjectName: null,
       sessionStarted: null,
+      energy: '', context: '', pomodoroEst: 1,
     };
 
     function loadData() {
@@ -265,6 +274,33 @@
       area.innerHTML = `<div class="task-picker">
         <div class="task-picker-label">Focus on task</div>
         <select id="task-select"><option value="">— No specific task —</option>${opts}</select>
+        <div class="focus-meta-row">
+          <div class="focus-meta-field">
+            <div class="focus-meta-label">Energy level <span class="focus-meta-hint">(GTD context)</span></div>
+            <select id="energy-select" onchange="timerState.energy=this.value">
+              <option value="">— not set —</option>
+              <option value="high">⚡ High — deep work, hard problems</option>
+              <option value="medium">🌤 Medium — focused but flexible</option>
+              <option value="low">🌙 Low — admin, reviews, reading</option>
+            </select>
+          </div>
+          <div class="focus-meta-field">
+            <div class="focus-meta-label">Context tag <span class="focus-meta-hint">(@GTD context)</span></div>
+            <input list="context-list" id="context-input" placeholder="@deep-work" value="${esc(timerState.context||'')}" oninput="timerState.context=this.value" />
+            <datalist id="context-list">
+              <option value="@deep-work">
+              <option value="@admin">
+              <option value="@calls">
+              <option value="@creative">
+              <option value="@learning">
+              <option value="@errands">
+            </datalist>
+          </div>
+          <div class="focus-meta-field">
+            <div class="focus-meta-label">Pomodoro est. <span class="focus-meta-hint">(🍅 sessions)</span></div>
+            <input type="number" id="pom-est" min="1" max="20" value="${timerState.pomodoroEst||1}" oninput="timerState.pomodoroEst=Math.max(1,+this.value||1)" />
+          </div>
+        </div>
       </div>`;
       const sel = document.getElementById('task-select');
       if (timerState.taskId) sel.value = timerState.taskId;
@@ -275,6 +311,9 @@
         timerState.taskProjectName = sel.value ? opt.dataset.project : null;
         timerState.taskProjectId = sel.value ? opt.dataset.pid : null;
       };
+      // Restore energy/context selects
+      const esel = document.getElementById('energy-select');
+      if (esel && timerState.energy) esel.value = timerState.energy;
     }
 
     // ── Ring ──
@@ -367,6 +406,8 @@
         projectName: timerState.taskProjectName, projectId: timerState.taskProjectId,
         durationMin: timerState.duration, elapsedSec: durationSec,
         completed, startedAt: timerState.sessionStarted, endedAt: new Date().toISOString(),
+        energy: timerState.energy || '', context: timerState.context || '',
+        pomodoroEst: timerState.pomodoroEst || 1,
       });
       data.sessions = data.sessions.slice(0, 100);
       saveData();
@@ -411,9 +452,13 @@
           : `<span class="session-badge abandoned">stopped</span>`;
         const elapsed = s.completed ? `${s.durationMin}m` : `${Math.floor((s.elapsedSec||0)/60)}m`;
         const dateStr = s.startedAt ? new Date(s.startedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+        const energyMap = { high: '⚡', medium: '🌤', low: '🌙' };
+        const energyBadge = s.energy ? `<span class="session-energy-badge">${energyMap[s.energy]||''}</span>` : '';
+        const ctxBadge = s.context ? `<span class="session-ctx-badge">${esc(s.context)}</span>` : '';
+        const pomBadge = s.pomodoroEst > 1 ? `<span class="session-pom-badge">🍅×${s.pomodoroEst} est.</span>` : '';
         return `<div class="session-row${s.completed?' completed':''}">
           <div class="session-task">${esc(s.taskTitle || '(no task)')}</div>
-          <div class="session-meta">${badge} <span>${elapsed}</span> <span>${dateStr}</span></div>
+          <div class="session-meta">${badge} <span>${elapsed}</span> ${energyBadge}${ctxBadge}${pomBadge}<span>${dateStr}</span></div>
         </div>`;
       }).join('');
     }

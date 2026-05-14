@@ -414,6 +414,12 @@
           <div class="section-label">Notes</div>
           <textarea class="notes-textarea" id="notes-textarea" placeholder="Personal notes, reflections, to-do from reading…" onblur="saveNotes()">${_esc(item.notes||'')}</textarea>
         </div>
+        <div>
+          <div class="section-label">Key Insight <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— Feynman: explain it simply</span></div>
+          <textarea class="notes-textarea" id="key-insight-textarea"
+            placeholder="Explain the core idea as if teaching someone with no background here. Avoid jargon. Use a concrete analogy if possible. If you can't explain it simply, you don't understand it yet."
+            onblur="saveKeyInsight()">${_esc(item.keyInsight||'')}</textarea>
+        </div>
       </div>`;
   }
 
@@ -429,6 +435,12 @@
     const item = data.items.find(it => it.id === activeId);
     const ta = document.getElementById('notes-textarea');
     if (item && ta) { item.notes = ta.value; save(); }
+  }
+
+  function saveKeyInsight() {
+    const item = data.items.find(it => it.id === activeId);
+    const ta = document.getElementById('key-insight-textarea');
+    if (item && ta) { item.keyInsight = ta.value; save(); }
   }
 
   // ── Tags ─────────────────────────────────────────────────────────────────────

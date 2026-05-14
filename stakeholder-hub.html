@@ -253,6 +253,17 @@
         </div>
       </div>
       <div>
+        <div class="field-label">Engagement Level <span style="color:var(--text3);font-size:10px;font-weight:400">(PMBOK Ch.13)</span></div>
+        <select class="field-select" id="dp-engagement" onchange="dpChange()">
+          <option value="">— not assessed —</option>
+          <option value="unaware">😶 Unaware — doesn't know about the initiative</option>
+          <option value="resistant">🚫 Resistant — aware but actively opposed</option>
+          <option value="neutral">😐 Neutral — aware, neither supportive nor opposed</option>
+          <option value="supportive">👍 Supportive — aware and in favour</option>
+          <option value="leading">🚀 Leading — actively engaged and championing</option>
+        </select>
+      </div>
+      <div>
         <div class="field-label">Notes</div>
         <textarea class="field-textarea" id="dp-notes" oninput="dpChange()"></textarea>
       </div>
@@ -356,12 +367,15 @@
   }
 
   function renderCard(sh) {
+    const engEmoji = { unaware:'😶', resistant:'🚫', neutral:'😐', supportive:'👍', leading:'🚀' };
+    const engBadge = sh.engagement ? `<span style="font-size:13px" title="${sh.engagement}">${engEmoji[sh.engagement]||''}</span>` : '';
     return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" onclick="openDetail('${sh.id}')">
       <div class="sh-avatar">${_esc(initials(sh.name))}</div>
       <div class="sh-info">
         <div class="sh-name">${_esc(sh.name||'Unnamed')}</div>
         ${sh.role ? `<div class="sh-role">${_esc(sh.role)}</div>` : ''}
       </div>
+      ${engBadge}
       <div class="stance-dot ${sh.stance||'neutral'}" title="${sh.stance||'neutral'}"></div>
     </div>`;
   }
@@ -377,6 +391,7 @@
     document.getElementById('dp-name').value = sh.name || '';
     document.getElementById('dp-role').value = sh.role || '';
     document.getElementById('dp-stance').value = sh.stance || 'neutral';
+    document.getElementById('dp-engagement').value = sh.engagement || '';
     document.getElementById('dp-notes').value = sh.notes || '';
     const p = parseInt(sh.power)||3, i = parseInt(sh.interest)||3;
     document.getElementById('dp-power').value = p;
@@ -406,6 +421,7 @@
     sh.name = document.getElementById('dp-name').value.trim();
     sh.role = document.getElementById('dp-role').value.trim();
     sh.stance = document.getElementById('dp-stance').value;
+    sh.engagement = document.getElementById('dp-engagement').value;
     sh.power = parseInt(document.getElementById('dp-power').value);
     sh.interest = parseInt(document.getElementById('dp-interest').value);
     sh.notes = document.getElementById('dp-notes').value.trim();
@@ -438,7 +454,7 @@
     const [p, i] = QUADRANT_DEFAULTS[q] || [3,3];
     const sh = {
       id: uid(), name, role: document.getElementById('am-role').value.trim(),
-      stance: 'neutral', power: p, interest: i,
+      stance: 'neutral', engagement: '', power: p, interest: i,
       projectIds: projectFilter ? [projectFilter] : [],
       notes: '', createdAt: new Date().toISOString()
     };

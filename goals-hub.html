@@ -75,6 +75,7 @@
     .obj-card-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; }
     .obj-card-why { font-size: 11.5px; color: var(--text3); margin-top: 3px; line-height: 1.4; }
     .obj-proj-badge { display: inline-block; font-size: 10.5px; color: var(--text2); background: var(--surface3); border-radius: var(--r-sm); padding: 2px 7px; margin-top: 5px; }
+    .obj-risk-badge { display: inline-block; font-size: 10.5px; color: var(--accent-super); background: color-mix(in srgb, var(--accent-super) 12%, transparent); border-radius: var(--r-sm); padding: 2px 7px; margin-top: 4px; margin-left: 4px; font-weight: 600; cursor: default; }
     .obj-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .obj-action-btn {
       background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px;
@@ -213,6 +214,38 @@
     /* ── Quarter modal ── */
     .quarter-modal { width: 380px; }
 
+    /* ── OKR score on KR ── */
+    .kr-score-input {
+      width: 46px; background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text); font-size: 11px; padding: 3px 5px;
+      text-align: center; outline: none; font-family: var(--font-mono);
+    }
+    .kr-score-input:focus { border-color: var(--accent); }
+    .kr-score-badge {
+      font-size: 10px; font-family: var(--font-mono); font-weight: 700;
+      padding: 2px 5px; border-radius: 4px; flex-shrink: 0;
+    }
+    .kr-score-badge.good  { background: var(--accent-dim);          color: var(--accent); }
+    .kr-score-badge.ok    { background: rgba(245,158,11,0.12);      color: var(--accent-super); }
+    .kr-score-badge.low   { background: rgba(239,68,68,0.10);       color: var(--accent-nope); }
+
+    /* ── Committed / Aspirational toggle ── */
+    .obj-type-toggle { display: flex; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--border); }
+    .obj-type-btn {
+      flex: 1; padding: 6px 10px; background: var(--surface2); border: none; color: var(--text2);
+      font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+      transition: all 0.15s;
+    }
+    .obj-type-btn + .obj-type-btn { border-left: 1px solid var(--border); }
+    .obj-type-btn.active { background: var(--accent); color: #111; }
+    .obj-type-hint { font-size: 10.5px; color: var(--text3); margin-top: 4px; }
+    .obj-type-badge {
+      display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; margin-top: 4px;
+    }
+    .obj-type-badge.aspirational { background: rgba(56,189,248,0.12); color: #38bdf8; }
+    .obj-type-badge.committed    { background: var(--accent-dim); color: var(--accent); }
+
     /* ── KR inline progress edit ── */
     .kr-inline-input {
       width: 54px; background: var(--surface2); border: 1px solid var(--border);
@@ -256,6 +289,14 @@
       <div>
         <div class="field-label">Why it matters</div>
         <textarea class="field-textarea" id="om-why" placeholder="What impact does reaching this create?"></textarea>
+      </div>
+      <div>
+        <div class="field-label">Objective Type</div>
+        <div class="obj-type-toggle">
+          <button class="obj-type-btn" id="obj-type-committed"    onclick="setObjType('committed')">✅ Committed</button>
+          <button class="obj-type-btn" id="obj-type-aspirational" onclick="setObjType('aspirational')">🚀 Aspirational</button>
+        </div>
+        <div class="obj-type-hint">Committed = must hit · Aspirational = 70% is a win, 100% means it wasn't ambitious enough</div>
       </div>
       <div>
         <div class="field-label">Color</div>
@@ -444,6 +485,15 @@
     const pct = objProgress(obj);
     const color = obj.color || OBJ_COLORS[0];
     const fillColor = color;
+    // Risk count (COSO-ERM linkage)
+    let riskCount = 0;
+    if (obj.projectId) {
+      try {
+        const riskRaw = HubStorage.get('risk-hub-v1');
+        const risks = Array.isArray(riskRaw) ? riskRaw : (riskRaw?.risks || []);
+        riskCount = risks.filter(r => r.projectId === obj.projectId && r.status !== 'closed').length;
+      } catch {}
+    }
     const krsHtml = (obj.keyResults || []).map(kr => {
       const p = krProgress(kr);
       const checkCls = (kr.type === 'checkbox' && kr.done) ? 'done' : (kr.type !== 'checkbox' ? '' : '');
@@ -458,11 +508,14 @@
             title="Current / ${parseFloat(kr.target)||0} ${kr.unit||''}"/>
         </div>`;
       }
+      const scoreCls = kr.score >= 0.7 ? 'good' : kr.score >= 0.4 ? 'ok' : 'low';
+      const scoreBadge = (kr.score !== undefined && kr.score !== '') ? `<div class="kr-score-badge ${scoreCls}" title="OKR score">${parseFloat(kr.score).toFixed(1)}</div>` : '';
       return `<div class="kr-row">
         <div class="kr-check${isDone?' done':''}" onclick="toggleKR('${obj.id}','${kr.id}')" title="Toggle done"></div>
         <div class="kr-title${isDone?' done':''}">${_esc(kr.title||'Key Result')}</div>
         ${progressEl}
         ${kr.type === 'number' ? `<div class="kr-value-label">${Math.round(parseFloat(kr.target)||0)} ${_esc(kr.unit||'')}</div>` : ''}
+        ${scoreBadge}
       </div>`;
     }).join('');
 
@@ -473,6 +526,8 @@
           <div class="obj-card-title">${_esc(obj.title||'Objective')}</div>
           ${obj.why ? `<div class="obj-card-why">${_esc(obj.why)}</div>` : ''}
           ${obj.projectId ? `<div class="obj-proj-badge">📁 ${_esc(obj.projectName || obj.projectId)}</div>` : ''}
+          ${riskCount > 0 ? `<div class="obj-risk-badge" title="${riskCount} open risk${riskCount>1?'s':''} linked to this project (COSO-ERM)">⚠ ${riskCount} risk${riskCount>1?'s':''}</div>` : ''}
+          ${obj.type === 'aspirational' ? `<div class="obj-type-badge aspirational">🚀 Aspirational</div>` : ''}
           <div class="obj-progress-row">
             <div class="obj-progress-bar"><div class="obj-progress-fill" style="width:${pct}%;background:${color}"></div></div>
             <div class="obj-progress-pct">${pct}%</div>
@@ -579,6 +634,13 @@
   // ── Objective modal ──────────────────────────────────────────────────────────
 
   let modalKRs = [];
+  let modalObjType = 'committed';
+
+  function setObjType(type) {
+    modalObjType = type;
+    document.getElementById('obj-type-committed').classList.toggle('active', type === 'committed');
+    document.getElementById('obj-type-aspirational').classList.toggle('active', type === 'aspirational');
+  }
 
   function openObjModal(id) {
     editingObjId = id;
@@ -602,6 +664,9 @@
     const allProjects = (typeof HubData !== 'undefined') ? HubData.getProjects() : [];
     projSel.innerHTML = '<option value="">— none —</option>' +
       allProjects.map(p => `<option value="${_esc(p.id)}"${p.id === (obj && obj.projectId) ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
+
+    // Objective type (committed / aspirational)
+    setObjType(obj ? (obj.type || 'committed') : 'committed');
 
     // KRs
     modalKRs = obj ? JSON.parse(JSON.stringify(obj.keyResults || [])) : [];
@@ -637,6 +702,7 @@
             <input class="kr-unit-input" type="text" value="${kr.unit||''}" placeholder="unit" onchange="updateModalKR(${i},'unit',this.value)" title="Unit (%, pts, …)"/>
            </div>`
         : '';
+      const scoreVal = kr.score !== undefined && kr.score !== '' ? kr.score : '';
       return `<div class="kr-editor-row">
         <input class="kr-editor-title" type="text" placeholder="Key result…" value="${_esc(kr.title||'')}" onchange="updateModalKR(${i},'title',this.value)"/>
         <select class="kr-editor-type" onchange="updateModalKR(${i},'type',this.value)">
@@ -644,6 +710,10 @@
           <option value="number"${kr.type==='number'?' selected':''}>% num</option>
         </select>
         ${numFields}
+        <input class="kr-score-input" type="number" min="0" max="1" step="0.1"
+          value="${scoreVal}" placeholder="0.0"
+          onchange="updateModalKR(${i},'score', this.value===''?undefined:parseFloat(this.value))"
+          title="OKR score: 0.0–1.0 · 0.7 = healthy stretch goal hit · leave blank if not yet assessed"/>
         <button class="kr-editor-del" onclick="removeModalKR(${i})" title="Remove">✕</button>
       </div>`;
     }).join('');
@@ -684,6 +754,7 @@
       title,
       why: document.getElementById('om-why').value.trim(),
       color: getSelectedColor(),
+      type: modalObjType,
       keyResults: modalKRs.filter(kr => kr.title.trim()),
       createdAt: new Date().toISOString(),
       projectId: projId,

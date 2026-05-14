@@ -502,6 +502,8 @@
     .asm-card-main { flex: 1; min-width: 0; }
     .asm-card-stmt { font-size: 12.5px; color: var(--text); font-weight: 500; line-height: 1.4; }
     .asm-card-why { font-size: 11.5px; color: var(--text3); margin-top: 3px; }
+    .asm-card-abp { font-size: 11px; color: var(--accent-like); margin-top: 4px; line-height: 1.35; }
+    .asm-field-hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 10px; opacity: 0.7; margin-left: 4px; }
     .asm-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
     .asm-stars { display: flex; gap: 2px; font-size: 11px; color: var(--text3); }
     .asm-stars .lit { color: #f59e0b; }
@@ -740,6 +742,7 @@
         dec.projectId = document.getElementById('i-project').value;
         dec.type = document.getElementById('i-type').value;
         dec.confidence = document.getElementById('i-conf').value;
+        dec.cynefin = document.getElementById('i-cynefin').value;
         dec.summary = document.getElementById('i-summary').value;
         dec.reason = document.getElementById('i-reason').value;
         dec.tags = document.getElementById('i-tags').value;
@@ -773,7 +776,7 @@
       if (currentTab === 'log') {
         const projOpts = HubData.getProjects().map(p => `<option value="${p.id}" ${dec.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
-        const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote);
+        const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote || dec.cynefin);
         const obsidianLink = (() => { const v = (HubStorage.get('hub-settings-v1') || {}).obsidianVault || ''; return (dec.obsidianNote && v) ? `<a href="obsidian://open?vault=${encodeURIComponent(v)}&file=${encodeURIComponent(dec.obsidianNote)}" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;transition:background 0.12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface3)'">⟡ Open</a>` : ''; })();
         c.innerHTML = `
           <div class="card">
@@ -815,6 +818,17 @@
                     <option value="low" ${dec.confidence === 'low' ? 'selected' : ''}>Low</option>
                   </select>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Cynefin Domain <span style="color:var(--text3);font-size:11px;font-weight:400">(what type of problem is this?)</span></label>
+                <select class="form-select" id="i-cynefin">
+                  <option value="" ${!dec.cynefin ? 'selected' : ''}>— not set —</option>
+                  <option value="clear"       ${dec.cynefin === 'clear'       ? 'selected' : ''}>Clear — cause &amp; effect obvious, best practice applies</option>
+                  <option value="complicated" ${dec.cynefin === 'complicated' ? 'selected' : ''}>Complicated — needs expert analysis, good practices</option>
+                  <option value="complex"     ${dec.cynefin === 'complex'     ? 'selected' : ''}>Complex — probe first, pattern emerges in retrospect</option>
+                  <option value="chaotic"     ${dec.cynefin === 'chaotic'     ? 'selected' : ''}>Chaotic — act immediately to stabilize, then sense</option>
+                </select>
               </div>
 
               <div class="form-group">
@@ -1175,6 +1189,8 @@
               <div class="asm-card-main">
                 <div class="asm-card-stmt">${_esc(a.statement || 'No statement')}</div>
                 ${a.why ? `<div class="asm-card-why">${_esc(a.why)}</div>` : ''}
+                ${a.signpost ? `<div class="asm-card-abp">🎯 <em>${_esc(a.signpost)}</em></div>` : ''}
+                ${a.hedge ? `<div class="asm-card-abp" style="color:var(--accent-super)">🛡 <em>${_esc(a.hedge)}</em></div>` : ''}
               </div>
               <div class="asm-card-right">
                 <div class="asm-stars">${[1,2,3,4,5].map(i => `<span class="${i <= (a.confidence||0) ? 'lit' : ''}">★</span>`).join('')}</div>
@@ -1221,6 +1237,8 @@
       document.getElementById('asm-why').value = a.why || '';
       document.getElementById('asm-status').value = a.status || 'assumed';
       document.getElementById('asm-notes').value = a.notes || '';
+      document.getElementById('asm-signpost').value = a.signpost || '';
+      document.getElementById('asm-hedge').value = a.hedge || '';
       updateAsmStars(asmEditConf);
       document.getElementById('asm-modal').classList.add('open');
       setTimeout(() => document.getElementById('asm-stmt').focus(), 50);
@@ -1247,6 +1265,8 @@
       a.why = document.getElementById('asm-why').value.trim();
       a.status = document.getElementById('asm-status').value;
       a.notes = document.getElementById('asm-notes').value.trim();
+      a.signpost = document.getElementById('asm-signpost').value.trim();
+      a.hedge = document.getElementById('asm-hedge').value.trim();
       a.confidence = asmEditConf;
       a.updatedAt = new Date().toISOString();
       saveAsm();
@@ -1305,6 +1325,14 @@
       <div>
         <div class="asm-field-label">Notes</div>
         <textarea id="asm-notes" rows="2" placeholder="Evidence, context, updates…"></textarea>
+      </div>
+      <div>
+        <div class="asm-field-label">Signpost <span class="asm-field-hint">ABP: the observable event that would confirm this holds</span></div>
+        <textarea id="asm-signpost" rows="2" placeholder='e.g. "> 30% of free-trial users complete onboarding in week 1"'></textarea>
+      </div>
+      <div>
+        <div class="asm-field-label">Hedging Action <span class="asm-field-hint">ABP: what we do if this assumption is wrong</span></div>
+        <textarea id="asm-hedge" rows="2" placeholder='e.g. "Fall back to direct sales if self-serve conversion < 10%"'></textarea>
       </div>
       <div class="asm-modal-footer">
         <button class="btn-create" style="flex:1" onclick="saveAsmEdit()">Save</button>

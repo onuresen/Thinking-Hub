@@ -207,6 +207,29 @@
             min-width: 0;
         }
 
+        /* ── Ring badge ─────────────────────── */
+        .ring-badge {
+            font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 2px 5px; border-radius: 4px; flex-shrink: 0; white-space: nowrap;
+        }
+        .ring-adopt   { background: var(--accent-dim);         color: var(--accent); }
+        .ring-trial   { background: rgba(56,189,248,0.12);     color: #38bdf8; }
+        .ring-assess  { background: rgba(245,158,11,0.12);     color: var(--accent-super); }
+        .ring-hold    { background: rgba(239,68,68,0.10);      color: var(--accent-nope); }
+
+        /* ── Ring selector in detail ─────────── */
+        .ring-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+        .ring-pill-btn {
+            flex: 1; padding: 6px 4px; border-radius: var(--r-sm); border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600;
+            cursor: pointer; text-align: center; transition: all 0.15s;
+        }
+        .ring-pill-btn:hover { border-color: var(--accent); color: var(--text); }
+        .ring-pill-btn.active-adopt   { background: var(--accent-dim);       color: var(--accent);       border-color: var(--accent); }
+        .ring-pill-btn.active-trial   { background: rgba(56,189,248,0.12);   color: #38bdf8;             border-color: #38bdf8; }
+        .ring-pill-btn.active-assess  { background: rgba(245,158,11,0.12);   color: var(--accent-super); border-color: var(--accent-super); }
+        .ring-pill-btn.active-hold    { background: rgba(239,68,68,0.10);    color: var(--accent-nope);  border-color: var(--accent-nope); }
+
         /* ── Main ───────────────────────────── */
         .main {
             flex: 1;
@@ -358,6 +381,8 @@
                 icon: '🛠',
                 url: '',
                 status: 'exploring',
+                ring: 'assess',
+                archLayer: '',
                 category: '',
                 note: '',
                 order: 999999 // appended at end of its category
@@ -410,6 +435,7 @@
             t[key] = value;
             save();
             document.getElementById('topbar-title').textContent = t.name;
+            if (key === 'ring') renderDetail(); // re-render so ring pill active states update
         }
 
         // Normalize sequential order for a category (1..n)
@@ -542,10 +568,13 @@
                     row.dataset.cat = cat;
                     row.draggable = true;
 
+                    const ringLabel = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
+                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
           <div class="tool-icon">${escapeHtml(t.icon || '🛠')}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
+          ${ringHtml}
         `;
 
                     // Click = open (but ignore click immediately after drag)
@@ -659,7 +688,30 @@
             </select>
             <div class="field-hint">Current lifecycle stage</div>
           </div>
+          <div class="field">
+            <div class="field-label">Radar Ring <span style="color:var(--text3);font-size:10px;font-weight:400">(Technology Radar)</span></div>
+            <div class="ring-pill-row">
+              ${['adopt','trial','assess','hold'].map(r => {
+                const labels = { adopt:'✅ Adopt', trial:'🔬 Trial', assess:'🔍 Assess', hold:'⏸ Hold' };
+                const hints  = { adopt:'battle-tested', trial:'worth a project', assess:'worth exploring', hold:'use with caution' };
+                const active = (t.ring || 'assess') === r;
+                return `<button class="ring-pill-btn${active ? ' active-'+r : ''}" onclick="updateField('ring','${r}')" title="${hints[r]}">${labels[r]}</button>`;
+              }).join('')}
+            </div>
+            <div class="field-hint">Adopt = default choice · Trial = try on a project · Assess = explore · Hold = avoid for new work</div>
+          </div>
 
+          <div class="field">
+            <div class="field-label">TOGAF Architecture Layer</div>
+            <select class="select" onchange="updateField('archLayer', this.value)">
+              <option value="" ${!t.archLayer ? 'selected' : ''}>— Not assigned —</option>
+              <option value="business" ${t.archLayer === 'business' ? 'selected' : ''}>Business — processes, roles, org structure</option>
+              <option value="data" ${t.archLayer === 'data' ? 'selected' : ''}>Data — information assets &amp; flows</option>
+              <option value="application" ${t.archLayer === 'application' ? 'selected' : ''}>Application — software systems &amp; integrations</option>
+              <option value="technology" ${t.archLayer === 'technology' ? 'selected' : ''}>Technology — hardware, networks, platforms</option>
+            </select>
+            <div class="field-hint">TOGAF ADM domain — helps map tools to your enterprise architecture</div>
+          </div>
           <div class="field">
             <div class="field-label">Category</div>
             <input class="input"
