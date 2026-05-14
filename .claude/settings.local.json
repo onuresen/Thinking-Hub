@@ -4,7 +4,10 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(git checkout *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__esen-vault__create_note",
+      "mcp__esen-vault__list_notes",
+      "mcp__esen-vault__get_note"
     ]
   }
 }
