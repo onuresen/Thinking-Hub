@@ -42,6 +42,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `stakeholder-hub.html` | Visual power/interest stakeholder grid |
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker |
+| `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
