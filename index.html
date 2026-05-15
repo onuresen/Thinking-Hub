@@ -905,14 +905,120 @@
       color: var(--text3);
       line-height: 1.4;
     }
+
+    /* ── Mobile sidebar backdrop ────────────────────────────────── */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 199;
+    }
+    .sidebar-backdrop.open { display: block; }
+
+    /* ── Hamburger button (hidden on desktop) ───────────────────── */
+    .mob-menu-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 6px 8px;
+      line-height: 1;
+      border-radius: var(--r-sm);
+      flex-shrink: 0;
+      transition: color 0.1s, background 0.1s;
+    }
+    .mob-menu-btn:hover { color: var(--text); background: var(--surface2); }
+
+    /* ════════════════════════════════════════════════════════════
+       Mobile layout — ≤ 640px
+       ════════════════════════════════════════════════════════════ */
+    @media (max-width: 640px) {
+
+      /* Sidebar: fixed drawer, slides in from left */
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        width: 240px;
+        min-width: 240px;
+        box-shadow: 6px 0 32px rgba(0, 0, 0, 0.45);
+      }
+      .sidebar.open { transform: translateX(0); }
+
+      /* Nav items: bigger touch targets */
+      .nav-item {
+        padding: 12px 12px;
+        font-size: 14px;
+        gap: 11px;
+      }
+      .nav-icon { font-size: 15px; width: 18px; }
+
+      /* Profile chips: slightly larger */
+      .profile-chip { font-size: 10.5px; padding: 5px 10px; }
+
+      /* Main area fills full viewport width */
+      .main-area { width: 100%; }
+
+      /* Session bar: hide SESSION label, show hamburger */
+      .mob-menu-btn { display: flex; align-items: center; }
+      .session-label { display: none; }
+      #session-name { max-width: 140px; }
+
+      /* Hide tour button on mobile (secondary feature) */
+      .mob-tour-hide { display: none !important; }
+
+      /* Breadcrumb: show only tool name, truncated */
+      #breadcrumb {
+        font-size: 12px;
+        max-width: 90px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Home dashboard: tighter padding */
+      #home-dashboard { padding: 20px 14px 36px; }
+      .home-greeting { font-size: 20px; }
+      .home-sub { margin-bottom: 18px; }
+
+      /* App grid: 2 columns on mobile */
+      .app-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .app-card { padding: 12px 10px; gap: 4px; }
+      .app-card-desc { font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .app-card-icon { width: 28px; height: 28px; font-size: 13px; }
+
+      /* Status grid: 1 column */
+      .status-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      /* Recent strip: horizontal scroll instead of wrap */
+      .recent-strip { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; }
+      .recent-strip::-webkit-scrollbar { display: none; }
+    }
   </style>
 </head>
 
 <body>
   <a href="#home-dashboard" class="skip-link">Skip to main content</a>
 
+  <!-- Mobile sidebar backdrop -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
   <!-- Sidebar -->
-  <nav class="sidebar">
+  <nav class="sidebar" id="main-sidebar">
     <div class="sidebar-logo" onclick="goHome()" title="Home">
       <div class="sidebar-logo-mark">TH</div>
       <div class="sidebar-logo-text">Thinking Hub</div>
@@ -947,13 +1053,14 @@
 
     <!-- Session bar -->
     <div class="session-bar">
+      <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobileSidebar()" aria-label="Open navigation">☰</button>
       <span class="session-label" id="session-label-el">Session</span>
       <input id="session-name" type="text" placeholder="Name this session…" autocomplete="off" spellcheck="false">
       <div class="session-spacer"></div>
       <button
         style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:8px;font-family:var(--font-mono);"
         onclick="openDataModal()" title="Data & Backup" aria-label="Data &amp; Backup">⚙️</button>
-      <button
+      <button class="mob-tour-hide"
         style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:10px;font-family:var(--font-mono);"
         onclick="startTour()" title="Interactive Tour" aria-label="Interactive Tour">?</button>
       <button id="theme-toggle-btn" style="
@@ -1117,6 +1224,20 @@
       const s = loadSession();
       Object.assign(s, patch);
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    }
+
+    // ── Mobile sidebar ────────────────────────────────────────────────────────────
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('main-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      const isOpen = sidebar.classList.toggle('open');
+      backdrop.classList.toggle('open', isOpen);
+    }
+
+    function closeMobileSidebar() {
+      document.getElementById('main-sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('open');
     }
 
     // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -1286,6 +1407,7 @@
       if (id !== 'project-hub') updateProjectContextPanel(null);
 
       activeAppId = id;
+      closeMobileSidebar();
     }
 
     function goHome() {
@@ -1301,6 +1423,7 @@
       buildStatusWidgets();
       updateProjectContextPanel(null);
       activeAppId = null;
+      closeMobileSidebar();
     }
 
     // ── Greeting ──────────────────────────────────────────────────────────────────
