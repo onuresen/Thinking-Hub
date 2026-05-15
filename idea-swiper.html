@@ -2067,10 +2067,35 @@
       color: #60a5fa;
       border-color: #60a5fa;
     }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); }
+
+    @media (max-width: 640px) {
+      .panel-left {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 280px; min-width: 280px; max-width: 280px;
+        overflow-y: auto;
+      }
+      .panel-left.open { transform: translateX(0); }
+      /* Hide the resize handle on mobile */
+      #rh-left { display: none; }
+      .mob-nav-btn { display: flex; align-items: center; }
+      header { padding: 10px 12px; gap: 8px; }
+      .header-stats { gap: 8px; }
+    }
   </style>
 </head>
 
 <body>
+  <div class="sidebar-backdrop" id="is-backdrop" onclick="closeSidebar()"></div>
 
   <!-- ══ TEAM MODE OVERLAY ══ -->
   <div class="team-overlay hidden" id="team-overlay">
@@ -2200,6 +2225,7 @@
 
   <!-- ══ MAIN APP ══ -->
   <header>
+    <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open idea list">☰</button>
     <div class="logo">idea<span>swipe</span> <span
         style="font-size:10px;color:var(--text3);font-weight:400;letter-spacing:1px;font-family:'DM Sans',sans-serif;">v7</span>
     </div>
@@ -2409,7 +2435,18 @@ On-demand tutoring market"></textarea>
     /* drag setup guard — prevents listener stacking on reload */
     let dragSetupDone = false;
 
+    function toggleSidebar() {
+      const s = document.getElementById('panel-left');
+      const b = document.getElementById('is-backdrop');
+      b.classList.toggle('open', s.classList.toggle('open'));
+    }
+    function closeSidebar() {
+      document.getElementById('panel-left').classList.remove('open');
+      document.getElementById('is-backdrop').classList.remove('open');
+    }
+
     function loadIdeas() {
+      closeSidebar();
       const raw = document.getElementById('idea-input').value;
       const lines = raw.split('\n').map(l => l.replace(/^[\s•\-*\d.]+/, '').trim()).filter(l => l.length > 1);
       if (!lines.length) { alert('Add at least one idea!'); return; }
