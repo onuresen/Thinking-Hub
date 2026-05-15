@@ -1664,10 +1664,36 @@
     .animate-in {
       animation: fadeUp 0.2s ease forwards;
     }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 10px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); color: var(--text); }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 240px; min-width: 240px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mob-nav-btn { display: flex; align-items: center; }
+      .topbar { padding: 0 10px; gap: 6px; overflow-x: auto; }
+      .topbar-mob-hide { display: none !important; }
+      .content { padding: 14px 12px; gap: 14px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- Mobile sidebar backdrop -->
+  <div class="sidebar-backdrop" id="ph-backdrop" onclick="closeSidebar()"></div>
 
   <!-- TOAST -->
   <div id="toast"></div>
@@ -1717,6 +1743,7 @@
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
+      <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open navigation">☰</button>
       <div class="topbar-breadcrumb">
         <div class="topbar-title" id="topbar-title">Overview</div>
       </div>
@@ -1726,9 +1753,9 @@
       </div>
       <button class="btn btn-ghost" onclick="showAddProject()">+ Project</button>
       <button class="btn btn-primary" id="main-action-btn" onclick="handleMainAction()">+ Task</button>
-      <button class="btn btn-ghost" onclick="exportJSON()" title="Download a JSON backup">Export</button>
-      <button class="btn btn-ghost" onclick="importJSON()" title="Restore from a JSON backup">Import</button>
-      <button class="btn btn-danger" onclick="resetToDefault()"
+      <button class="btn btn-ghost topbar-mob-hide" onclick="exportJSON()" title="Download a JSON backup">Export</button>
+      <button class="btn btn-ghost topbar-mob-hide" onclick="importJSON()" title="Restore from a JSON backup">Import</button>
+      <button class="btn btn-danger topbar-mob-hide" onclick="resetToDefault()"
         title="Clear local data and restore defaults">Reset</button>
       <input type="file" id="import-file" accept="application/json" style="display:none" />
     </div>
@@ -2422,8 +2449,20 @@
       } catch { document.getElementById('badge-matrix').textContent = '0'; }
     }
 
+    // ─── Mobile sidebar ───────────────────────────────────────────────────────────
+    function toggleSidebar() {
+      const s = document.querySelector('.sidebar');
+      const b = document.getElementById('ph-backdrop');
+      b.classList.toggle('open', s.classList.toggle('open'));
+    }
+    function closeSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('ph-backdrop').classList.remove('open');
+    }
+
     // ─── VIEW ROUTING ─────────────────────────────────────────────────────────────
     function setView(view) {
+      closeSidebar();
       state.currentView = view;
       state.selectedProject = null;
       closePanel();

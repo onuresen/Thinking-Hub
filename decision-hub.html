@@ -526,10 +526,31 @@
     .asm-modal-star.lit { color: #f59e0b; }
     .asm-modal-star:hover { transform: scale(1.2); }
     .asm-modal-footer { display: flex; gap: 8px; margin-top: 4px; }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 10px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); color: var(--text); }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 240px; min-width: 240px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mob-nav-btn { display: flex; align-items: center; }
+      .topbar { padding: 0 8px; gap: 6px; }
+    }
   </style>
 </head>
 
 <body>
+  <div class="sidebar-backdrop" id="dh-backdrop" onclick="closeSidebar()"></div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -548,6 +569,7 @@
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
+      <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open navigation">☰</button>
       <div class="topbar-title" id="topbar-title">Select an item</div>
 
       <div class="view-toggle" id="view-toggle" style="display:none">
@@ -692,7 +714,18 @@
       });
     }
 
+    function toggleSidebar() {
+      const s = document.querySelector('.sidebar');
+      const b = document.getElementById('dh-backdrop');
+      b.classList.toggle('open', s.classList.toggle('open'));
+    }
+    function closeSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('dh-backdrop').classList.remove('open');
+    }
+
     function openDecision(id) {
+      closeSidebar();
       currentId = id;
       asmShowAll = false;
       document.getElementById('view-toggle').style.display = 'flex';

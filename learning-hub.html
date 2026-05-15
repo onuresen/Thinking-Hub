@@ -191,11 +191,33 @@
     .field-input:focus, .field-select:focus { border-color: var(--accent); }
     .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
     .modal-footer .spacer { flex: 1; }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 260px; min-width: 260px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mob-nav-btn { display: flex; align-items: center; }
+      .topbar { padding: 0 8px; gap: 8px; }
+    }
   </style>
 </head>
 <body>
+<div class="sidebar-backdrop" id="lrn-backdrop" onclick="closeSidebar()"></div>
 
 <div class="topbar">
+  <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open filter panel">☰</button>
   <div class="logo-mark">◈</div>
   <div class="logo-text">Learning Log</div>
   <div class="topbar-spacer"></div>
@@ -349,7 +371,18 @@
 
   // ── Detail ───────────────────────────────────────────────────────────────────
 
+  function toggleSidebar() {
+    const s = document.querySelector('.sidebar');
+    const b = document.getElementById('lrn-backdrop');
+    b.classList.toggle('open', s.classList.toggle('open'));
+  }
+  function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('lrn-backdrop').classList.remove('open');
+  }
+
   function openDetail(id) {
+    closeSidebar();
     activeId = id;
     renderList();
     renderDetail();

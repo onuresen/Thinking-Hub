@@ -154,9 +154,32 @@
     .done-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
     .done-sub { font-size: 13px; color: var(--text3); }
     .done-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-header { display: none; height: 44px; border-bottom: 1px solid var(--border); align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
+    .mob-nav-btn { background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); }
+    .mob-header-title { font-size: 13px; font-weight: 600; color: var(--text); }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 240px; min-width: 240px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mob-header { display: flex; }
+      .main { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
+  <div class="sidebar-backdrop" id="fh-backdrop" onclick="closeSidebar()"></div>
 
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -174,6 +197,10 @@
   </aside>
 
   <main class="main">
+    <div class="mob-header">
+      <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open sessions">☰</button>
+      <span class="mob-header-title">Focus Timer</span>
+    </div>
     <div class="timer-wrap">
 
       <div class="ring-container">
@@ -331,6 +358,17 @@
       if (timerState.running) lbl.textContent = 'Focusing…';
       else if (timerState.paused) lbl.textContent = 'Paused';
       else lbl.textContent = 'Ready';
+    }
+
+    // ── Mobile sidebar ──
+    function toggleSidebar() {
+      const s = document.querySelector('.sidebar');
+      const b = document.getElementById('fh-backdrop');
+      b.classList.toggle('open', s.classList.toggle('open'));
+    }
+    function closeSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('fh-backdrop').classList.remove('open');
     }
 
     // ── Controls ──

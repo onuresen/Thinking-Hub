@@ -152,12 +152,35 @@
 
     /* ── No results ── */
     .no-results { padding: 32px 20px; text-align: center; color: var(--text3); font-size: 13px; }
+
+    /* ── Mobile drawer ──────────────────────────────────────────── */
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .sidebar-backdrop.open { display: block; }
+    .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
+    .mob-nav-btn:hover { background: var(--surface2); }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.45);
+        width: 240px; min-width: 240px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mob-nav-btn { display: flex; align-items: center; }
+      .topbar { padding: 0 8px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+      .search-wrap { display: none; }
+    }
   </style>
 </head>
 <body>
+  <div class="sidebar-backdrop" id="hh-backdrop" onclick="closeSidebar()"></div>
 
   <!-- Top bar -->
   <div class="topbar">
+    <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open navigation">☰</button>
     <div class="topbar-logo">
       <div class="logo-mark">?</div>
       <span class="logo-text">Help &amp; Guide</span>
@@ -596,7 +619,18 @@ function renderSidebar() {
   }
 }
 
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const b = document.getElementById('hh-backdrop');
+  b.classList.toggle('open', s.classList.toggle('open'));
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('hh-backdrop').classList.remove('open');
+}
+
 function selectItem(id) {
+  closeSidebar();
   selectedId = id;
   renderSidebar();
   renderMain();
