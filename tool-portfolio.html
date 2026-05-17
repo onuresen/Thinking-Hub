@@ -70,6 +70,53 @@
         .sidebar-search-clear.visible { display: block; }
         .sidebar-search-clear:hover { color: var(--text); }
 
+        /* ── Ring filter chips ──────────────────────── */
+        .ring-filter-row {
+            display: flex; gap: 4px; flex-wrap: wrap;
+        }
+        .ring-chip {
+            flex: 1; min-width: 0;
+            padding: 4px 6px; border-radius: var(--r-sm);
+            border: 1px solid var(--border);
+            background: var(--surface2); color: var(--text3);
+            font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+            text-transform: uppercase; letter-spacing: 0.4px;
+            cursor: pointer; text-align: center;
+            transition: all 0.13s; white-space: nowrap;
+        }
+        .ring-chip:hover { color: var(--text); border-color: var(--text2); }
+        .ring-chip.active-adopt  { background: var(--accent-dim);       color: var(--accent);       border-color: var(--accent); }
+        .ring-chip.active-trial  { background: rgba(56,189,248,0.12);   color: #38bdf8;             border-color: #38bdf8; }
+        .ring-chip.active-assess { background: rgba(245,158,11,0.12);   color: var(--accent-super); border-color: var(--accent-super); }
+        .ring-chip.active-hold   { background: rgba(239,68,68,0.10);    color: var(--accent-nope);  border-color: var(--accent-nope); }
+
+        /* ── Stats bar ──────────────────────────────── */
+        .stats-bar {
+            display: flex; gap: 6px; flex-wrap: wrap;
+            padding: 10px 16px 0;
+        }
+        .stat-pill {
+            display: flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            font-size: 11px; font-family: var(--font-mono);
+            cursor: pointer; transition: all 0.13s;
+        }
+        .stat-pill:hover { border-color: var(--text2); }
+        .stat-pill .sp-count { font-weight: 700; }
+        .stat-pill .sp-label { color: var(--text3); font-size: 10px; }
+        .stat-pill.sp-adopt  { border-color: var(--accent);       background: var(--accent-dim); }
+        .stat-pill.sp-adopt .sp-count  { color: var(--accent); }
+        .stat-pill.sp-trial  { border-color: #38bdf8;             background: rgba(56,189,248,0.08); }
+        .stat-pill.sp-trial .sp-count  { color: #38bdf8; }
+        .stat-pill.sp-assess { border-color: var(--accent-super); background: rgba(245,158,11,0.08); }
+        .stat-pill.sp-assess .sp-count { color: var(--accent-super); }
+        .stat-pill.sp-hold   { border-color: var(--accent-nope);  background: rgba(239,68,68,0.07); }
+        .stat-pill.sp-hold .sp-count   { color: var(--accent-nope); }
+        .stat-pill.sp-total  { }
+        .stat-pill.sp-total .sp-count  { color: var(--text); }
+
         /* Category grouping */
         .tool-list {
             flex: 1;
@@ -326,6 +373,12 @@
             <input class="sidebar-search" id="sidebar-search" type="text" placeholder="Filter tools…" oninput="onSearchInput()" />
             <button class="sidebar-search-clear" id="search-clear" onclick="clearSearch()">✕</button>
         </div>
+        <div class="ring-filter-row" id="ring-filter-row">
+            <button class="ring-chip" id="chip-adopt"  onclick="toggleRingFilter('adopt')" >Adopt</button>
+            <button class="ring-chip" id="chip-trial"  onclick="toggleRingFilter('trial')" >Trial</button>
+            <button class="ring-chip" id="chip-assess" onclick="toggleRingFilter('assess')">Assess</button>
+            <button class="ring-chip" id="chip-hold"   onclick="toggleRingFilter('hold')"  >Hold</button>
+        </div>
         <div class="tool-list" id="tool-list"></div>
     </div>
 
@@ -334,6 +387,7 @@
             <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open tool list">☰</button>
             <div class="topbar-title" id="topbar-title">Select a tool</div>
         </div>
+        <div class="stats-bar" id="stats-bar"></div>
 
         <div class="content" id="content">
             <div class="empty">Select a tool or add a new one.</div>
@@ -358,12 +412,14 @@
             tools = HubStorage.get(STORAGE_KEY) || [];
             ensureOrderFields();
             renderList();
+            renderStatsBar();
             renderDetail();
         }
 
         function save() {
             HubStorage.set(STORAGE_KEY, tools);
             renderList();
+            renderStatsBar();
         }
 
         // Ensure tools have stable ordering inside each category
@@ -520,6 +576,7 @@
         }
 
         let _searchQuery = '';
+        let _ringFilter  = null; // null = show all, or 'adopt'|'trial'|'assess'|'hold'
 
         function onSearchInput() {
             _searchQuery = (document.getElementById('sidebar-search').value || '').toLowerCase().trim();
@@ -534,20 +591,55 @@
             renderList();
         }
 
+        function toggleRingFilter(ring) {
+            _ringFilter = (!ring || _ringFilter === ring) ? null : ring;
+            // Update chip active states
+            ['adopt','trial','assess','hold'].forEach(r => {
+                const chip = document.getElementById('chip-' + r);
+                if (!chip) return;
+                chip.className = 'ring-chip' + (_ringFilter === r ? ' active-' + r : '');
+            });
+            renderList();
+        }
+
+        function renderStatsBar() {
+            const bar = document.getElementById('stats-bar');
+            if (!bar) return;
+            const counts = { adopt: 0, trial: 0, assess: 0, hold: 0 };
+            tools.forEach(t => { if (counts[t.ring] !== undefined) counts[t.ring]++; });
+            const total = tools.length;
+            const labels = { adopt: 'Adopt', trial: 'Trial', assess: 'Assess', hold: 'Hold' };
+            bar.innerHTML = [
+                `<div class="stat-pill sp-total" title="All tools" onclick="toggleRingFilter(null)">
+                    <span class="sp-count">${total}</span><span class="sp-label">total</span>
+                </div>`,
+                ...['adopt','trial','assess','hold'].map(r =>
+                    counts[r] > 0 ? `<div class="stat-pill sp-${r}" title="Filter: ${labels[r]}" onclick="toggleRingFilter('${r}')">
+                        <span class="sp-count">${counts[r]}</span><span class="sp-label">${labels[r]}</span>
+                    </div>` : ''
+                )
+            ].join('');
+        }
+
         function renderList() {
             const listEl = document.getElementById('tool-list');
             listEl.innerHTML = '';
 
-            // Filter by search query
-            const filtered = _searchQuery
-                ? tools.filter(t =>
+            // Filter by ring chip, then by search query
+            let filtered = _ringFilter
+                ? tools.filter(t => t.ring === _ringFilter)
+                : tools;
+            if (_searchQuery) {
+                filtered = filtered.filter(t =>
                     (t.name || '').toLowerCase().includes(_searchQuery) ||
                     (t.category || '').toLowerCase().includes(_searchQuery) ||
-                    (t.description || '').toLowerCase().includes(_searchQuery))
-                : tools;
+                    (t.description || '').toLowerCase().includes(_searchQuery));
+            }
 
-            if (_searchQuery && !filtered.length) {
-                listEl.innerHTML = `<div class="empty" style="margin-top:12px;font-style:italic">No tools match "${escapeHtml(_searchQuery)}"</div>`;
+            if (!filtered.length) {
+                const hint = _ringFilter ? ` in <strong>${_ringFilter}</strong>` : '';
+                const q = _searchQuery ? ` matching "${escapeHtml(_searchQuery)}"` : '';
+                listEl.innerHTML = `<div class="empty" style="margin-top:12px;font-style:italic">No tools${hint}${q}.</div>`;
                 return;
             }
 
