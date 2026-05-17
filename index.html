@@ -1039,6 +1039,9 @@
         <span id="cloud-dot" class="cloud-status-dot local"></span>
         <span id="cloud-text" class="cloud-status-text">Local only</span>
         <button id="cloud-btn" class="cloud-connect-btn">Connect</button>
+        <button id="cloud-change-btn" onclick="changeCloudCredentials()" title="Change Supabase credentials"
+          style="display:none;background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:3px;line-height:1"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">⚙</button>
       </div>
       <div id="cloud-ws-row" class="cloud-workspace-row" style="display:none">
         <span class="cloud-ws-label">WS</span>
@@ -1126,6 +1129,21 @@
           <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()" style="font-size:12px;display:none">↻ Re-index</button>
         </div>
         <div id="obsidian-index-status" style="font-size:11px;color:var(--text3);margin-top:6px">Pick your vault folder to enable note autocomplete in Project Hub &amp; Decision Hub</div>
+      </div>
+
+      <div id="mcp-sync-panel" style="display:none;margin-bottom:20px">
+        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Local MCP Sync</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Writes a <code style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so the local MCP server can read your data without cloud.</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn btn-ghost" onclick="pickMcpFolder()" style="font-size:12px">📁 Pick Sync Folder</button>
+          <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)" style="font-size:12px;display:none">↑ Sync Now</button>
+          <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()" style="font-size:12px;display:none">↓ Load from file</button>
+        </div>
+        <div id="mcp-sync-status" style="font-size:11px;color:var(--text3);margin-top:4px">No folder selected — pick a folder to enable</div>
+        <div id="mcp-path-hint" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
+          <div id="mcp-path-value" style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
+        </div>
       </div>
 
       <div style="margin-bottom:20px">
@@ -1791,37 +1809,74 @@
         btn.onclick = () => { HubStorage.disconnect(); };
         wsRow.style.display = 'flex';
         wsCode.textContent = status.workspaceId || '';
+        document.getElementById('cloud-change-btn').style.display = 'none';
       } else {
         dot.className = 'cloud-status-dot local';
         text.textContent = 'Local only';
-        btn.textContent = 'Connect';
-        btn.onclick = promptConnect;
         wsRow.style.display = 'none';
+        // Show Reconnect (one-click) if credentials are saved, otherwise full Connect flow
+        const savedCreds = _getSavedCredentials();
+        if (savedCreds) {
+          btn.textContent = 'Reconnect';
+          btn.onclick = promptConnect;
+          document.getElementById('cloud-change-btn').style.display = '';
+        } else {
+          btn.textContent = 'Connect';
+          btn.onclick = promptConnect;
+          document.getElementById('cloud-change-btn').style.display = 'none';
+        }
       }
     }
 
-    function promptConnect() {
-      const url = prompt('Supabase Project URL:\n(e.g. https://xxxx.supabase.co)');
-      if (!url || !url.trim()) return;
-      const key = prompt('Supabase Anon Key:');
-      if (!key || !key.trim()) return;
-      const wsInput = prompt('Workspace ID (leave blank to create a new workspace):');
+    function _getSavedCredentials() {
+      try {
+        const raw = localStorage.getItem('hub-cloud-credentials-v1');
+        if (!raw) return null;
+        const cfg = JSON.parse(raw);
+        return (cfg && cfg.url && cfg.key) ? cfg : null;
+      } catch { return null; }
+    }
 
+    function _doConnect(url, key, workspaceId) {
       const dot = document.getElementById('cloud-dot');
       dot.className = 'cloud-status-dot syncing';
-
-      HubStorage.useSupabase(url.trim(), key.trim(), wsInput ? wsInput.trim() : null)
-        .then(() => {
-          return HubStorage.migrateToCloud(COLLABORATION_KEYS);
-        })
-        .then(() => {
-          updateCloudUI(HubStorage.getStatus());
-        })
+      HubStorage.useSupabase(url, key, workspaceId || null)
+        .then(() => HubStorage.migrateToCloud(COLLABORATION_KEYS))
+        .then(() => updateCloudUI(HubStorage.getStatus()))
         .catch(err => {
           dot.className = 'cloud-status-dot error';
           alert('Connection failed: ' + (err.message || err));
           setTimeout(() => updateCloudUI(HubStorage.getStatus()), 2500);
         });
+    }
+
+    function promptConnect() {
+      const saved = _getSavedCredentials();
+      if (saved) {
+        // One-click reconnect — no prompts needed
+        _doConnect(saved.url, saved.key, saved.workspaceId);
+        return;
+      }
+      // No saved credentials — show prompts
+      const url = prompt('Supabase Project URL:\n(e.g. https://xxxx.supabase.co)');
+      if (!url || !url.trim()) return;
+      const key = prompt('Supabase Anon Key:');
+      if (!key || !key.trim()) return;
+      const wsInput = prompt('Workspace ID (leave blank to create a new workspace):');
+      _doConnect(url.trim(), key.trim(), wsInput ? wsInput.trim() : null);
+    }
+
+    function changeCloudCredentials() {
+      const saved = _getSavedCredentials() || {};
+      const url = prompt('Supabase Project URL:', saved.url || '');
+      if (url === null) return;
+      const key = prompt('Supabase Anon Key:', saved.key || '');
+      if (key === null) return;
+      const wsInput = prompt('Workspace ID (leave blank to keep current):', saved.workspaceId || '');
+      if (wsInput === null) return;
+      // Clear old credentials so they get replaced on connect
+      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch {}
+      _doConnect(url.trim(), key.trim(), wsInput.trim() || saved.workspaceId || null);
     }
 
     function copyWorkspaceLink() {
@@ -1976,6 +2031,133 @@
       }
     }
 
+    // ── Local MCP Sync ────────────────────────────────────────────────────────────
+    // Writes thinking-hub-data.json into a user-chosen folder so the local
+    // MCP server (thinking-hub-local-mcp) can read hub data without Supabase.
+
+    let _mcpDirHandle      = null;   // FileSystemDirectoryHandle — lives for this session only
+    let _mcpLastSync       = null;   // ISO timestamp of last successful write
+    let _mcpFolderName     = '';     // Display name of chosen folder
+    let _mcpLoadingFromFile = false; // True while loadFromMcpFile() is running — suppresses auto-sync
+
+    const MCP_SYNC_KEYS = [
+      'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
+      'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
+      'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
+      'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1',
+      'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1',
+    ];
+
+    async function pickMcpFolder() {
+      try {
+        _mcpDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        _mcpFolderName = _mcpDirHandle.name;
+        // Do NOT auto-sync here — let the user choose to load or sync manually.
+        // Auto-syncing would overwrite any Claude-written data in the file.
+        _mcpLastSync = null;
+        updateMcpSyncUI();
+        showToast('Sync folder set — click ↑ Sync Now to push browser data, or ↓ Load from file to pull', 'success');
+      } catch (e) {
+        if (e.name !== 'AbortError') showToast('Could not access folder: ' + e.message, 'error');
+      }
+    }
+
+    async function syncToMcpFile(manual = false) {
+      if (!_mcpDirHandle) return;
+      try {
+        const payload = { syncedAt: new Date().toISOString() };
+        for (const key of MCP_SYNC_KEYS) {
+          try { payload[key] = JSON.parse(localStorage.getItem(key)); } catch { /* skip */ }
+        }
+        const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json', { create: true });
+        const writable   = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(payload, null, 2));
+        await writable.close();
+        _mcpLastSync = payload.syncedAt;
+        updateMcpSyncUI();
+        if (manual) showToast('MCP sync file updated', 'success');
+      } catch (e) {
+        if (manual) showToast('Sync failed: ' + e.message, 'error');
+      }
+    }
+
+    function updateMcpSyncUI() {
+      const statusEl = document.getElementById('mcp-sync-status');
+      const syncBtn  = document.getElementById('mcp-sync-now-btn');
+      const hintEl   = document.getElementById('mcp-path-hint');
+      const pathEl   = document.getElementById('mcp-path-value');
+      if (!statusEl) return;
+      const loadBtn  = document.getElementById('mcp-load-btn');
+      if (_mcpDirHandle && _mcpLastSync) {
+        const mins = Math.round((Date.now() - new Date(_mcpLastSync)) / 60000);
+        statusEl.textContent = `📂 ${_mcpFolderName} · synced ${mins < 1 ? 'just now' : mins + 'm ago'} · auto-syncing`;
+        if (syncBtn) syncBtn.style.display = '';
+        if (loadBtn) loadBtn.style.display = '';
+        if (hintEl)  hintEl.style.display  = '';
+        if (pathEl)  pathEl.textContent    = _mcpFolderName + '\\thinking-hub-data.json';
+      } else if (_mcpDirHandle) {
+        statusEl.textContent = `📂 ${_mcpFolderName} · ready — use ↑ Sync Now or ↓ Load from file`;
+        if (syncBtn) syncBtn.style.display = '';
+        if (loadBtn) loadBtn.style.display = '';
+      } else {
+        statusEl.textContent = 'No folder selected — pick a folder to enable';
+        if (syncBtn) syncBtn.style.display = 'none';
+        if (loadBtn) loadBtn.style.display = 'none';
+        if (hintEl)  hintEl.style.display  = 'none';
+      }
+    }
+
+    async function loadFromMcpFile() {
+      if (!_mcpDirHandle) { showToast('Pick a sync folder first', 'error'); return; }
+      try {
+        const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json');
+        const file       = await fileHandle.getFile();
+        const parsed     = JSON.parse(await file.text());
+
+        // Pause auto-sync so we don't overwrite the file with stale browser data
+        // while the loop is only halfway through loading.
+        _mcpLoadingFromFile = true;
+
+        let count = 0;
+        for (const [key, value] of Object.entries(parsed)) {
+          if (key === 'syncedAt' || value === null || typeof value !== 'object') continue;
+          // Write directly to localStorage — bypass HubStorage.set() to avoid
+          // triggering subscribers (and the auto-sync) on every single key.
+          try { localStorage.setItem(key, JSON.stringify(value)); count++; } catch {}
+        }
+
+        _mcpLoadingFromFile = false;
+
+        // Reload the active iframe so the tool re-reads fresh localStorage.
+        // The main window keeps _mcpDirHandle — settings stay open.
+        const frame = document.getElementById('app-frame');
+        if (frame && frame.src && !frame.src.endsWith('about:blank')) {
+          const currentSrc = frame.src;
+          frame.src = 'about:blank';
+          setTimeout(() => { frame.src = currentSrc; }, 80);
+        }
+
+        showToast(`Loaded ${count} keys — tool refreshed ✓`, 'success');
+        updateMcpSyncUI();
+      } catch (e) {
+        _mcpLoadingFromFile = false;
+        showToast('Load failed: ' + e.message, 'error');
+      }
+    }
+
+    // Auto-sync whenever any tracked key changes (same-tab writes).
+    // Skipped while loadFromMcpFile() is running to avoid overwriting the
+    // file with partial data mid-loop.
+    (function initMcpAutoSync() {
+      for (const key of MCP_SYNC_KEYS) {
+        HubStorage.subscribe(key, () => { if (!_mcpLoadingFromFile) syncToMcpFile(false); });
+      }
+      // Also catch cross-tab writes
+      window.addEventListener('storage', (e) => {
+        if (!_mcpLoadingFromFile && MCP_SYNC_KEYS.includes(e.key)) syncToMcpFile(false);
+      });
+    })();
+
     function updateExportSizeEstimate() {
       const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
       let storageKeys, toolLabel;
@@ -2008,6 +2190,10 @@
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
         document.getElementById('obsidian-vault-picker').style.display = '';
         updateObsidianIndexUI();
+      }
+      if ('showDirectoryPicker' in window) {
+        document.getElementById('mcp-sync-panel').style.display = '';
+        updateMcpSyncUI();
       }
       // Show which tool "Current Tool" scope would export
       const currentApp = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
@@ -2220,16 +2406,17 @@
 
           if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
             // v2 format — restore each section to its correct storage key
+            // Use HubStorage.set() so Supabase sync + local MCP file subscribers fire
             for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
               if (parsed.data[section] !== undefined) {
-                localStorage.setItem(storageKey, JSON.stringify(parsed.data[section]));
+                HubStorage.set(storageKey, parsed.data[section]);
               }
             }
           } else {
             // v1 legacy format — flat { storageKey: jsonString } map
             for (const k in parsed) {
               if (Object.prototype.hasOwnProperty.call(parsed, k) && typeof parsed[k] === 'string') {
-                localStorage.setItem(k, parsed[k]);
+                try { HubStorage.set(k, JSON.parse(parsed[k])); } catch { HubStorage.set(k, parsed[k]); }
               }
             }
           }

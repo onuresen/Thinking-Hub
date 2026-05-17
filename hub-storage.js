@@ -116,11 +116,10 @@ window.HubStorage = (() => {
 
     // Persist config so connection survives page reload
     try {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify({
-        url: supabaseUrl,
-        key: anonKey,
-        workspaceId: _workspaceId
-      }));
+      const cfg = { url: supabaseUrl, key: anonKey, workspaceId: _workspaceId };
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+      // Also save to credentials store — survives disconnect so user doesn't retype
+      localStorage.setItem('hub-cloud-credentials-v1', JSON.stringify(cfg));
     } catch {}
 
     // Subscribe realtime for all already-registered keys
@@ -158,7 +157,8 @@ window.HubStorage = (() => {
     _connected      = false;
     _writeQueue     = [];
 
-    // Remove persisted config
+    // Remove active config (prevents auto-reconnect on next page load)
+    // NOTE: hub-cloud-credentials-v1 is intentionally kept — allows one-click reconnect
     try { localStorage.removeItem(CONFIG_KEY); } catch {}
 
     _notifyStatusListeners();
