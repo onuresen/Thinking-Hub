@@ -687,6 +687,7 @@
     }
     .proj-link-badge.goals { background: var(--accent-dim); color: var(--accent); }
     .proj-link-badge.risks { background: color-mix(in srgb, var(--accent-nope) 12%, transparent); color: var(--accent-nope); }
+    .proj-link-badge.tools { background: rgba(56,189,248,0.12); color: #38bdf8; }
 
     /* ── DETAIL PANEL ────────────────────────────────────────── */
     .detail-panel {
@@ -2662,7 +2663,7 @@
       const ungrouped = groupMap.get('') || [];
       const renderOrder = [...namedGroups, ...(ungrouped.length ? [['', ungrouped]] : [])];
 
-      // Build project→goal and project→risk count maps
+      // Build project→goal, project→risk, and project→tool count maps
       const goalsData = HubStorage.get('goals-hub-v1') || {};
       const goalsMap = {};
       ((goalsData.quarters || []).flatMap(q => q.objectives || [])).forEach(o => {
@@ -2672,6 +2673,13 @@
       const risksMap = {};
       (risksData.risks || []).forEach(r => {
         if (r && r.projectId) risksMap[r.projectId] = (risksMap[r.projectId] || 0) + 1;
+      });
+      const toolsData = HubStorage.get('tool-portfolio-v1') || [];
+      const toolsMap = {};
+      toolsData.forEach(t => {
+        (t.projectIds || []).forEach(pid => {
+          toolsMap[pid] = (toolsMap[pid] || 0) + 1;
+        });
       });
 
       renderOrder.forEach(([groupName, projects]) => {
@@ -2751,6 +2759,7 @@
           <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
           ${goalsMap[proj.id] ? `<span class="proj-link-badge goals" title="${goalsMap[proj.id]} linked OKR${goalsMap[proj.id] !== 1 ? 's' : ''}">🎯 ${goalsMap[proj.id]}</span>` : ''}
           ${risksMap[proj.id] ? `<span class="proj-link-badge risks" title="${risksMap[proj.id]} risk${risksMap[proj.id] !== 1 ? 's' : ''}">⚠ ${risksMap[proj.id]}</span>` : ''}
+          ${toolsMap[proj.id] ? `<span class="proj-link-badge tools" title="${toolsMap[proj.id]} enabling tool${toolsMap[proj.id] !== 1 ? 's' : ''}">🛠 ${toolsMap[proj.id]}</span>` : ''}
         </div>
         <div style="margin-top:8px">${groupTagHtml}</div>
       `;

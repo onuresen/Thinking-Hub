@@ -407,6 +407,7 @@
                 archLayer: '',
                 category: '',
                 note: '',
+                projectIds: [],
                 order: 999999 // appended at end of its category
             };
             tools.push(t);
@@ -465,10 +466,18 @@
                 return;
             }
 
+            const oldRing = (key === 'ring') ? t.ring : null;
             t[key] = value;
             save();
             document.getElementById('topbar-title').textContent = t.name;
-            if (key === 'ring') renderDetail(); // re-render so ring pill active states update
+            if (key === 'ring') {
+                renderDetail(); // re-render so ring pill active states update
+                // Prompt decision log on meaningful ring promotions
+                const promotions = { assess: ['trial','adopt'], trial: ['adopt'], hold: ['trial','adopt'] };
+                if (oldRing && (promotions[oldRing] || []).includes(value)) {
+                    promptRingDecision(t, oldRing, value);
+                }
+            }
         }
 
         // Normalize sequential order for a category (1..n)
@@ -772,11 +781,134 @@
         <textarea class="textarea" oninput="updateField('note', this.value)">${escapeHtml(t.note || '')}</textarea>
       </div>
 
+      <div class="card">
+        <div class="label" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Enabled Projects</span>
+          ${(t.ring === 'assess' || t.ring === 'trial') ? `<button class="btn" style="font-size:11px;padding:3px 10px" onclick="createEvalTask()">＋ Evaluation Task</button>` : ''}
+        </div>
+        <div class="field-hint" style="margin-bottom:8px">Link this tool to projects it supports or enables — shows a 🛠 chip on project cards.</div>
+        <div id="tp-proj-links">${_renderProjectLinksHTML(t)}</div>
+      </div>
+
       <div class="actions">
         ${openBtn}
         <button class="btn danger" onclick="deleteTool()">Delete</button>
       </div>
     `;
+        }
+
+        // ── Enabled-projects helpers ──────────────────────────────────────────
+
+        function _renderProjectLinksHTML(t) {
+            const projects = (HubStorage.get('project-hub-v1') || {}).projects || [];
+            if (!projects.length) {
+                return '<div class="field-hint" style="padding:4px 0">No projects found in Project Hub yet.</div>';
+            }
+            const linked = t.projectIds || [];
+            return projects.map(p => {
+                const checked = linked.includes(p.id);
+                const statusColor = { active:'var(--accent)', planning:'#38bdf8', onhold:'var(--accent-super)', done:'var(--text3)' };
+                const col = statusColor[p.status] || 'var(--text3)';
+                return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">
+                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleProjectLink('${p.id}')" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0">
+                    <span style="flex:1;font-weight:${checked?'600':'400'}">${escapeHtml(p.name)}</span>
+                    <span style="font-size:10px;color:${col};font-family:var(--font-mono);text-transform:uppercase">${p.status || 'active'}</span>
+                </label>`;
+            }).join('');
+        }
+
+        function toggleProjectLink(projId) {
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+            if (!t.projectIds) t.projectIds = [];
+            const idx = t.projectIds.indexOf(projId);
+            if (idx >= 0) {
+                t.projectIds.splice(idx, 1);
+            } else {
+                t.projectIds.push(projId);
+            }
+            save();
+            // Refresh just the links section without full re-render
+            const el = document.getElementById('tp-proj-links');
+            if (el) el.innerHTML = _renderProjectLinksHTML(t);
+        }
+
+        // ── Evaluation task creator ───────────────────────────────────────────
+
+        function createEvalTask() {
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+
+            const raw = HubStorage.get('project-hub-v1') || {};
+            const projects = (raw.projects || []).filter(p => p.status === 'active' || p.status === 'planning');
+
+            if (!projects.length) {
+                alert('No active or planning projects found.\nCreate a project in Project Hub first.');
+                return;
+            }
+
+            // If tool already linked to projects, offer those first
+            const linked = (t.projectIds || []);
+            const preferred = projects.filter(p => linked.includes(p.id));
+            const rest = projects.filter(p => !linked.includes(p.id));
+            const ordered = [...preferred, ...rest];
+
+            const lines = ordered.map((p, i) => `${i + 1}. ${p.name}${linked.includes(p.id) ? ' ✓' : ''}`).join('\n');
+            const choice = prompt(
+                `Add "Evaluate ${t.name}" task to which project?\n\n${lines}\n\nEnter number (linked projects marked ✓):`
+            );
+            if (!choice) return;
+
+            const idx = parseInt(choice, 10) - 1;
+            if (isNaN(idx) || idx < 0 || idx >= ordered.length) {
+                alert('Invalid selection.');
+                return;
+            }
+
+            const proj = ordered[idx];
+            const taskTitle = `Evaluate ${t.name}`;
+            const newTask = {
+                id: 't-' + Date.now().toString(36),
+                title: taskTitle,
+                status: 'todo',
+                priority: 'medium',
+                due: '',
+                assignee: '',
+                note: `Technology Radar ring: ${t.ring || 'assess'}. ${t.url ? 'URL: ' + t.url : ''}`.trim(),
+                created: new Date().toISOString()
+            };
+
+            if (!proj.tasks) proj.tasks = [];
+            proj.tasks.push(newTask);
+            HubStorage.set('project-hub-v1', raw);
+            alert(`✓ Task "${taskTitle}" added to "${proj.name}"`);
+        }
+
+        // ── Ring promotion → Decision log ─────────────────────────────────────
+
+        function promptRingDecision(t, oldRing, newRing) {
+            const ringLabels = { adopt: 'Adopt', trial: 'Trial', assess: 'Assess', hold: 'Hold' };
+            const msg = `Log this radar ring change as a decision?\n\n"${t.name}": ${ringLabels[oldRing]} → ${ringLabels[newRing]}`;
+            if (!confirm(msg)) return;
+
+            const decisions = HubStorage.get('decision-hub-v1') || [];
+            const d = {
+                id: 'dh-' + Date.now().toString(36),
+                title: `Promote ${t.name} to "${ringLabels[newRing]}" on Technology Radar`,
+                type: 'tool',
+                status: 'decided',
+                confidence: newRing === 'adopt' ? 85 : newRing === 'trial' ? 65 : 50,
+                summary: `Changed Technology Radar ring from ${ringLabels[oldRing]} to ${ringLabels[newRing]}.`,
+                reasoning: `Category: ${t.category || 'Uncategorized'}. Lifecycle status: ${t.status || 'exploring'}.${t.url ? ' Reference: ' + t.url : ''}`,
+                tags: ['technology-radar', 'tool-evaluation'],
+                cynefin: 'complicated',
+                obsidianNote: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            decisions.push(d);
+            HubStorage.set('decision-hub-v1', decisions);
+            alert(`✓ Decision logged: "${d.title}"`);
         }
 
         // ── Hub Search integration ─────────────────

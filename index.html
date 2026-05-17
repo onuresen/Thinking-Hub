@@ -2045,7 +2045,7 @@
       'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
       'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
       'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1',
-      'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1',
+      'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
     ];
 
     async function pickMcpFolder() {
@@ -2145,18 +2145,10 @@
       }
     }
 
-    // Auto-sync whenever any tracked key changes (same-tab writes).
-    // Skipped while loadFromMcpFile() is running to avoid overwriting the
-    // file with partial data mid-loop.
-    (function initMcpAutoSync() {
-      for (const key of MCP_SYNC_KEYS) {
-        HubStorage.subscribe(key, () => { if (!_mcpLoadingFromFile) syncToMcpFile(false); });
-      }
-      // Also catch cross-tab writes
-      window.addEventListener('storage', (e) => {
-        if (!_mcpLoadingFromFile && MCP_SYNC_KEYS.includes(e.key)) syncToMcpFile(false);
-      });
-    })();
+    // Sync is manual-only (↑ Sync Now button).
+    // Auto-sync was removed because it overwrites Claude-written file edits
+    // whenever any tool saves to localStorage — defeating the load-from-file flow.
+    // Workflow: Claude writes → user clicks ↓ Load from file → user clicks ↑ Sync Now when ready.
 
     function updateExportSizeEstimate() {
       const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
@@ -2238,6 +2230,7 @@
       'hub-links-v1':         'cross_tool_links',
       'hub-activity-v1':      'activity_log',
       'hub-settings-v1':      'settings',
+      'tool-portfolio-v1':    'tool_portfolio',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -2261,6 +2254,7 @@
       'stakeholder-hub.html':  ['stakeholder-hub-v1'],
       'risk-hub.html':         ['risk-hub-v1'],
       'achievements-hub.html': ['hub-activity-v1'],
+      'tool-portfolio.html':   ['tool-portfolio-v1'],
     };
 
     // Storage keys included in each scope
@@ -2270,7 +2264,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1',
+        'retro-hub-v1', 'tool-portfolio-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
@@ -2279,6 +2273,7 @@
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
         'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
+        'tool-portfolio-v1',
       ],
     };
 
