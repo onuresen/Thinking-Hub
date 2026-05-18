@@ -13,6 +13,7 @@
   <script src="hub-i18n.js"></script>
   <script src="hub-tutorial.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-starter-data.js"></script>
   <script src="hub-obsidian.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-search.js"></script>
@@ -2460,8 +2461,31 @@
     initCloudPanel();
     applyI18n();
 
-    // Auto-start tutorial on first run
-    if (!HubStorage.get('tutorial-seen-v1')) {
+    // First-run: show welcome modal if no tutorial flag and no meaningful data exists
+    (function checkFirstRun() {
+      if (HubStorage.get('tutorial-seen-v1')) return;
+      if (window.HubStarter && HubStarter.hasAnyData()) {
+        // Data exists but flag was cleared — just mark as seen and skip modal
+        HubStorage.set('tutorial-seen-v1', true);
+        return;
+      }
+      const overlay = document.getElementById('welcome-overlay');
+      if (overlay) { overlay.style.display = 'flex'; }
+    })();
+
+    function welcomeSeedAndStart() {
+      const overlay = document.getElementById('welcome-overlay');
+      if (overlay) overlay.style.display = 'none';
+      if (window.HubStarter) HubStarter.seed();
+      HubStorage.set('tutorial-seen-v1', true);
+      buildHomeDashboard();
+      buildStatusWidgets();
+      setTimeout(startTour, 300);
+    }
+
+    function welcomeStartFresh() {
+      const overlay = document.getElementById('welcome-overlay');
+      if (overlay) overlay.style.display = 'none';
       HubStorage.set('tutorial-seen-v1', true);
       setTimeout(startTour, 300);
     }
@@ -2508,6 +2532,24 @@
       HubBootstrap.start('hub');
     });
   </script>
+
+  <!-- Welcome Modal (first-run only) -->
+  <div id="welcome-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)">
+      <div style="font-size:2.8rem;margin-bottom:.5rem">🧠</div>
+      <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;margin:0 0 .5rem;color:var(--text)">Welcome to Thinking Hub</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin:0 0 1.5rem;line-height:1.5">Your connected workspace for projects, goals, and decisions.<br>How would you like to get started?</p>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem">
+        <button class="btn btn-primary" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeSeedAndStart()">
+          ✦ Explore with sample data
+        </button>
+        <button class="btn btn-ghost" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeStartFresh()">
+          Start fresh
+        </button>
+      </div>
+      <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data &amp; Backup</p>
+    </div>
+  </div>
 </body>
 
 </html>

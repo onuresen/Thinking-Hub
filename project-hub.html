@@ -2029,50 +2029,7 @@
 
   <script>
     // ─── DEFAULTS ────────────────────────────────────────────────────────────────
-    const DEFAULT_STATE = {
-      members: [
-        { id: 'm0', name: 'Sato', role: 'Lead', color: '#c8f03e,#111' },
-        { id: 'm1', name: 'Onur', role: 'Engineer', color: '#c8f03e,#111' },
-        { id: 'm2', name: 'Sarah', role: 'Architect', color: '#3ecdf0,#111' },
-
-      ],
-      projects: [
-        {
-          id: 'p1', name: 'TPM', desc: 'Technical Appraisal and Portfoilio Management',
-          group: '', status: 'active', color: '#c8f03e', members: ['m1', 'm2', 'm3'],
-          goals: [
-            { id: 'g1', name: 'Complete Framework', desc: 'Stalegate is complete, reference available.', progress: 70 },
-            { id: 'g2', name: 'Solution List', desc: 'Complete list of potential solutions.', progress: 30 },
-          ],
-          milestones: [
-            { id: 'ms1', name: 'Team verification', date: '2026-05-15', color: '#c8f03e' },
-            { id: 'ms2', name: 'Manager validation', date: '2026-07-01', color: '#3ecdf0' },
-          ],
-          tasks: [
-            { id: 't1', title: 'Stalegate update', milestoneId: 'ms1', assigneeId: 'm1', priority: 'high', done: false, due: '2026-04-20', status: 'todo' },
-            { id: 't2', title: 'Framework reference', milestoneId: 'ms1', assigneeId: 'm2', priority: 'medium', done: true, due: '2026-04-15', status: 'done' },
-            { id: 't3', title: 'Manual update', milestoneId: 'ms2', assigneeId: 'm3', priority: 'high', done: false, due: '2026-06-10', status: 'inprogress' },
-            { id: 't4', title: 'Excel list update', milestoneId: '', assigneeId: 'm1', priority: 'low', done: false, due: '2026-05-01', status: 'todo' },
-          ]
-        },
-        {
-          id: 'p2', name: 'MCP Server', desc: 'Integration via Model Context Protocol',
-          status: 'active', color: '#9b3ef0', members: ['m1'],
-          goals: [
-            { id: 'g3', name: 'Phase 1: Read-only Vault Access', desc: 'Claude can query  model data via MCP tools.', progress: 85 },
-            { id: 'g4', name: 'Phase 2: Semantic data integration', desc: 'Typed objects flow through middleware.', progress: 10 },
-          ],
-          milestones: [
-            { id: 'ms3', name: 'Working Prototype', date: '2026-04-30', color: '#9b3ef0' },
-          ],
-          tasks: [
-            { id: 't5', title: 'Wrap  API in MCP tool schema', milestoneId: 'ms3', assigneeId: 'm1', priority: 'high', done: true, due: '2026-04-10', status: 'done' },
-            { id: 't6', title: 'Graphic override tool implementation', milestoneId: 'ms3', assigneeId: 'm1', priority: 'medium', done: false, due: '2026-04-25', status: 'inprogress' },
-            { id: 't7', title: 'Write SCHEMA.md contract', milestoneId: '', assigneeId: 'm1', priority: 'low', done: false, due: '2026-05-05', status: 'todo' },
-          ]
-        }
-      ],
-    };
+    const DEFAULT_STATE = { members: [], projects: [] };
 
     // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
     const STORAGE_KEY = 'project-hub-v1';
