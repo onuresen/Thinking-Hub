@@ -13,6 +13,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
+| `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
@@ -45,7 +46,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
