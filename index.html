@@ -2461,16 +2461,15 @@
     initCloudPanel();
     applyI18n();
 
-    // First-run: show welcome modal if no tutorial flag and no meaningful data exists
-    (function checkFirstRun() {
-      if (HubStorage.get('tutorial-seen-v1')) return;
+    // First-run detection — stored flag for use after DOM is ready
+    const _isFirstRun = (() => {
+      if (HubStorage.get('tutorial-seen-v1')) return false;
       if (window.HubStarter && HubStarter.hasAnyData()) {
-        // Data exists but flag was cleared — just mark as seen and skip modal
+        // Data exists but flag was cleared — treat as returning user
         HubStorage.set('tutorial-seen-v1', true);
-        return;
+        return false;
       }
-      const overlay = document.getElementById('welcome-overlay');
-      if (overlay) { overlay.style.display = 'flex'; }
+      return true;
     })();
 
     function welcomeSeedAndStart() {
@@ -2530,6 +2529,11 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('hub');
+      // Welcome modal must run after DOM is fully parsed (modal div is below the inline scripts)
+      if (_isFirstRun) {
+        const overlay = document.getElementById('welcome-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
     });
   </script>
 
