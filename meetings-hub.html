@@ -299,7 +299,7 @@
         <div class="mr-title">${_esc(m.title || 'Untitled meeting')}</div>
         <div class="mr-meta">
           <span>${dateLabel}</span>
-          ${m.projectName ? `<span>${_esc(m.projectName)}</span>` : ''}
+          ${m.projectName ? `<span class="proj-badge">📁 ${_esc(m.projectName)}</span>` : ''}
           ${openActions ? `<span class="mr-action-count">${openActions} action${openActions!==1?'s':''}</span>` : ''}
         </div>
       </div>`;

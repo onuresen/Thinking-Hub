@@ -459,7 +459,7 @@
           <div class="risk-meta">
             <span class="cat-badge ${r.category||'technical'}">${r.category||'technical'}</span>
             <span class="status-badge ${r.status||'open'}">${r.status||'open'}</span>
-            ${r.projectName ? `<span>${_esc(r.projectName)}</span>` : ''}
+            ${r.projectName ? `<span class="proj-badge">📁 ${_esc(r.projectName)}</span>` : ''}
           </div>
         </div>
         <div class="risk-score" style="color:${color}">${s}</div>
