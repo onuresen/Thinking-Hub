@@ -507,3 +507,10 @@ Four new home dashboard status widgets + profile-aware filtering.
 - **D2 — Profile filtering**: `buildHomeDashboard()` filters the app grid to only show tools in the active profile. `buildStatusWidgets()` filters widgets the same way. Profile chip onclick triggers both rebuilds. The `everything` profile (default) shows all tools and all widgets.
 
 **Files:** `index.html`
+
+---
+
+### ~~Priority 39 — Retro-hub drag-drop between columns (E1)~~ ✓ Done `[group: retro-ux]`
+Cards in retro-hub are now draggable across columns. Each card gets `draggable="true"` and `data-col` attributes. `initDragDrop()` wires a single delegated `dragstart`/`dragend` pair on document (so listeners survive innerHTML re-renders) plus `dragover`/`dragleave`/`drop` on each `.col-body`. Dropping on a different column splices the item from the source array, appends it to the target, saves, and re-renders both columns. Also fixed two hardcoded hex values in retro-hub CSS (`#f59e0b` → `var(--accent-super)`, `#a78bfa` → `var(--border-purple)`).
+
+**Files:** `retro-hub.html`
