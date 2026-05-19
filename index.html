@@ -1386,10 +1386,12 @@
           frame.contentWindow.postMessage({ type: 'hub-highlight', itemId: _pendingHighlight }, window.location.origin || '*');
           _pendingHighlight = null;
         }
-        // Sync theme into iframe
+        // Sync theme into iframe — set attribute AND notify tool so JS-rendered
+        // content (e.g. vis-network in graph-hub) can re-render with correct colors.
         const theme = document.documentElement.getAttribute('data-theme');
         if (theme) {
-          frame.contentDocument.documentElement.setAttribute('data-theme', theme);
+          try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch(e) {}
+          try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch(e) {}
         }
       };
 
