@@ -1284,7 +1284,7 @@
           const btn = document.createElement('button');
           btn.className = 'nav-item';
           btn.dataset.app = app.id;
-          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.name}`;
+          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.label}`;
           btn.addEventListener('click', () => openApp(app.id));
           groupEl.appendChild(btn);
         });
@@ -1746,7 +1746,7 @@
     const COLLABORATION_KEYS = [
       'project-hub-v1',
       'hub-links-v1',
-      'decision-log-v1',
+      'decision-hub-v1',
       'ideaswipe_history_v6',
       'schedule-v1',
       'kmqt_current_v2',
@@ -1767,7 +1767,7 @@
       // Live-refresh dashboard widgets when remote changes arrive
       HubStorage.subscribe('project-hub-v1', () => { buildStatusWidgets(); refreshRecentStrip(); });
       HubStorage.subscribe('kmqt_current_v2', buildStatusWidgets);
-      HubStorage.subscribe('decision-log-v1', buildStatusWidgets);
+      HubStorage.subscribe('decision-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('schedule-v1', buildStatusWidgets);
       HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
     }
@@ -2411,6 +2411,12 @@
     refreshRecentStrip();
     setGreeting();
     initCloudPanel();
+
+    // One-time migration: remove stale 'language' key left by old i18n system
+    (() => {
+      const s = HubStorage.get('hub-settings-v1');
+      if (s && 'language' in s) { delete s.language; HubStorage.set('hub-settings-v1', s); }
+    })();
 
     // First-run detection — stored flag for use after DOM is ready
     const _isFirstRun = (() => {
