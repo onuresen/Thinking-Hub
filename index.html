@@ -1246,7 +1246,7 @@
         btn.className = 'profile-chip' + (_activeProfile === key ? ' active' : '');
         btn.title = prof.label;
         btn.textContent = prof.label;
-        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); };
+        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); buildHomeDashboard(); buildStatusWidgets(); };
         strip.appendChild(btn);
       });
     }
@@ -1303,7 +1303,9 @@
     function buildHomeDashboard() {
       const grid = document.getElementById('app-grid');
       grid.innerHTML = '';
-      APPS.forEach(app => {
+      const profile = PROFILES[_activeProfile] || PROFILES.everything;
+      const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
+      visibleApps.forEach(app => {
         const card = document.createElement('div');
         card.className = 'app-card';
         card.dataset.app = app.id;
@@ -1707,11 +1709,113 @@
         }
       } catch { }
 
-      if (!widgets.length) { section.style.display = 'none'; return; }
+      // ── Risk Register (risk-hub-v1) ────────────────────────────────────────
+      try {
+        const rh = JSON.parse(localStorage.getItem('risk-hub-v1') || '{}');
+        const open = (rh.risks || []).filter(r => !['mitigated','closed','resolved'].includes(r.status));
+        if (open.length) {
+          const bandColor = s => s <= 4 ? 'var(--accent-like)' : s <= 9 ? 'var(--accent-super)' : 'var(--accent-nope)';
+          const shown = open.slice(0, 3);
+          const rows = shown.map(r => {
+            const s = (r.probability || 1) * (r.impact || 1);
+            return `<div class="stat-item" data-tool="risk-hub" data-item-id="${_esc(r.id || '')}">
+              <div class="stat-item-dot" style="background:${bandColor(s)}"></div>
+              <div class="stat-item-text">${_esc(r.title || 'Untitled risk')}</div>
+              <div class="stat-item-meta">${_esc(r.category || 'risk')}${r.projectName ? ' · ' + _esc(r.projectName) : ''}</div>
+            </div>`;
+          }).join('');
+          widgets.push({
+            id: 'risk-hub', icon: '⚠', title: 'Open Risks',
+            count: `${open.length} open`,
+            body: rows,
+            more: open.length > 3 ? `+${open.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(open))
+          });
+        }
+      } catch { }
+
+      // ── Meeting actions (meetings-hub-v1) ──────────────────────────────────
+      try {
+        const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+        const actions = (mh.meetings || []).flatMap(m =>
+          (m.actionItems || []).filter(a => !a.done && !a.taskCreated)
+            .map(a => ({ ...a, _meeting: m.title || 'Meeting' }))
+        );
+        if (actions.length) {
+          const shown = actions.slice(0, 3);
+          const rows = shown.map(a => `<div class="stat-item">
+            <div class="stat-item-dot" style="background:var(--accent);opacity:.5"></div>
+            <div class="stat-item-text">${_esc(a.text || '')}</div>
+            <div class="stat-item-meta">${_esc(a._meeting)}</div>
+          </div>`).join('');
+          widgets.push({
+            id: 'meetings-hub', icon: '▣', title: 'Meeting Actions',
+            count: `${actions.length} open`,
+            body: rows,
+            more: actions.length > 3 ? `+${actions.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(mh.meetings || []))
+          });
+        }
+      } catch { }
+
+      // ── Focus today (focus-hub-v1) ─────────────────────────────────────────
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const fh = JSON.parse(localStorage.getItem('focus-hub-v1') || '{}');
+        const todaySessions = (fh.sessions || []).filter(s => (s.endedAt || s.startedAt || '').slice(0, 10) === today);
+        if (todaySessions.length) {
+          const totalMin = todaySessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
+          const completed = todaySessions.filter(s => s.completed).length;
+          const shown = todaySessions.slice(0, 3);
+          const rows = shown.map(s => `<div class="stat-item">
+            <div class="stat-item-dot" style="background:${s.completed ? 'var(--accent-like)' : 'var(--text3)'}"></div>
+            <div class="stat-item-text">${_esc(s.taskTitle || 'Focus session')}</div>
+            <div class="stat-item-meta">${Math.round((s.elapsedSec || 0) / 60)}m</div>
+          </div>`).join('');
+          const h = Math.floor(totalMin / 60), m = totalMin % 60;
+          widgets.push({
+            id: 'focus-hub', icon: '⏱', title: 'Focus Today',
+            count: `${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} · ${completed} done`,
+            body: rows,
+            more: todaySessions.length > 3 ? `+${todaySessions.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(todaySessions, ['endedAt', 'startedAt']))
+          });
+        }
+      } catch { }
+
+      // ── Retro actions (retro-hub-v1) ───────────────────────────────────────
+      try {
+        const retroRaw = JSON.parse(localStorage.getItem('retro-hub-v1') || '{}');
+        const retros = retroRaw.retros || [];
+        if (retros.length) {
+          const retro = retros[retros.length - 1];
+          const actions = (retro.items && retro.items.actions) || [];
+          if (actions.length) {
+            const shown = actions.slice(0, 3);
+            const rows = shown.map(a => `<div class="stat-item" data-tool="retro-hub" data-item-id="${_esc(a.id || '')}">
+              <div class="stat-item-dot" style="background:var(--border-purple)"></div>
+              <div class="stat-item-text">${_esc(a.text || '')}</div>
+            </div>`).join('');
+            widgets.push({
+              id: 'retro-hub', icon: '⟲', title: `Retro — ${_esc(retro.name || 'Latest')}`,
+              count: `${actions.length} action${actions.length !== 1 ? 's' : ''}`,
+              body: rows,
+              more: actions.length > 3 ? `+${actions.length - 3} more` : '',
+              staleness: relativeAge(latestTimestamp(actions))
+            });
+          }
+        }
+      } catch { }
+
+      // ── Filter by active profile ───────────────────────────────────────────
+      const _profile = PROFILES[_activeProfile] || PROFILES.everything;
+      const _visibleWidgets = _profile.tools ? widgets.filter(w => _profile.tools.includes(w.id)) : widgets;
+
+      if (!_visibleWidgets.length) { section.style.display = 'none'; return; }
 
       section.style.display = '';
       grid.innerHTML = '';
-      widgets.forEach(w => {
+      _visibleWidgets.forEach(w => {
         const card = document.createElement('div');
         card.className = 'stat-card';
         card.innerHTML = `
@@ -1770,6 +1874,10 @@
       HubStorage.subscribe('decision-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('schedule-v1', buildStatusWidgets);
       HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('risk-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('meetings-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('focus-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('retro-hub-v1', buildStatusWidgets);
     }
 
     function updateCloudUI(status) {

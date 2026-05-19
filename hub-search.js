@@ -6,7 +6,10 @@
 
 const HubSearch = (() => {
 
-  const TOOLS = ['project-hub', 'schedule', 'idea-swiper', 'kmqt-board', 'decision-hub', 'canvas-hub'];
+  const TOOLS = [
+    'project-hub', 'schedule', 'idea-swiper', 'kmqt-board', 'decision-hub', 'canvas-hub',
+    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub', 'scrum-hub'
+  ];
 
   function init() {
     _injectStyles();

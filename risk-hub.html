@@ -452,14 +452,14 @@
       const s = score(r);
       const b = band(s);
       const color = bandColor(b);
-      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" onclick="openDetail('${r.id}')">
+      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" data-id="${r.id}" onclick="openDetail('${r.id}')">
         <div class="risk-severity-bar" style="background:${color}"></div>
         <div class="risk-info">
           <div class="risk-title">${_esc(r.title||'Untitled risk')}</div>
           <div class="risk-meta">
             <span class="cat-badge ${r.category||'technical'}">${r.category||'technical'}</span>
             <span class="status-badge ${r.status||'open'}">${r.status||'open'}</span>
-            ${r.projectName ? `<span>${_esc(r.projectName)}</span>` : ''}
+            ${r.projectName ? `<span class="proj-badge">📁 ${_esc(r.projectName)}</span>` : ''}
           </div>
         </div>
         <div class="risk-score" style="color:${color}">${s}</div>

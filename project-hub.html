@@ -1551,6 +1551,14 @@
       color: var(--text);
     }
 
+    .focus-time-badge {
+      display: inline-flex; align-items: center;
+      background: var(--surface3); color: var(--text3);
+      border-radius: 999px; padding: 2px 7px;
+      font-size: 11px; font-family: var(--font-mono);
+      border: 1px solid var(--border2); flex-shrink: 0; line-height: 1.4;
+    }
+
     /* ── PRIORITY MATRIX ────────────────────────────────────── */
     .mx-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .mx-show-done { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -2456,6 +2464,7 @@
 
     // ─── RENDER CONTENT ───────────────────────────────────────────────────────────
     function renderContent() {
+      buildFocusMap();
       const c = document.getElementById('main-content');
       c.innerHTML = '';
       updateBadges();
@@ -2965,6 +2974,8 @@
       const statusBadge = tsc ? `<span class="task-priority ${tsc}">${taskStatusLabel(task.status)}</span>` : '';
       const codeBadge = task.taskCode ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text3);background:var(--surface3);padding:1px 5px;border-radius:3px">${task.taskCode}</span>` : '';
       const typeBadge = task.taskType ? `<span style="font-size:10px;color:var(--text3)">${task.taskType}</span>` : '';
+      const focusMin = _focusMap[task.id] || 0;
+      const focusBadge = focusMin > 0 ? `<span class="focus-time-badge" title="Focus time logged">⏱ ${focusMin >= 60 ? Math.floor(focusMin/60)+'h '+(focusMin%60 ? focusMin%60+'m' : '') : focusMin+'m'}</span>` : '';
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
       return `
@@ -2980,6 +2991,7 @@
           ${projBadge}
           ${assignee ? `<span class="task-assignee"><div class="avatar" style="background:${bg};color:${fg};width:16px;height:16px;font-size:8px">${initials(assignee.name)}</div>${assignee.name}</span>` : ''}
           ${task.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${formatDate(task.due)}</span>` : ''}
+          ${focusBadge}
           ${linkBadge}
           ${obsidianBadge}
         </div>
@@ -3635,6 +3647,20 @@
     let _teamViewMode = 'list';
     let _dragSrcId = null;
     let _dragViaHandle = false;
+    let _focusMap = {};
+
+    function buildFocusMap() {
+      try {
+        const fh = HubStorage.get('focus-hub-v1');
+        const sessions = (fh && fh.sessions) ? fh.sessions : [];
+        _focusMap = {};
+        sessions.forEach(s => {
+          if (s.taskId && s.elapsedSec > 0) {
+            _focusMap[s.taskId] = (_focusMap[s.taskId] || 0) + Math.round(s.elapsedSec / 60);
+          }
+        });
+      } catch { _focusMap = {}; }
+    }
 
     function toggleTeamView() {
       _teamViewMode = _teamViewMode === 'list' ? 'org' : 'list';

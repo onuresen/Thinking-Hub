@@ -295,11 +295,11 @@
     list.innerHTML = items.map(m => {
       const openActions = (m.actionItems||[]).filter(a => !a.done && !a.taskCreated).length;
       const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
+      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" data-id="${m.id}" onclick="openMeeting('${m.id}')">
         <div class="mr-title">${_esc(m.title || 'Untitled meeting')}</div>
         <div class="mr-meta">
           <span>${dateLabel}</span>
-          ${m.projectName ? `<span>${_esc(m.projectName)}</span>` : ''}
+          ${m.projectName ? `<span class="proj-badge">📁 ${_esc(m.projectName)}</span>` : ''}
           ${openActions ? `<span class="mr-action-count">${openActions} action${openActions!==1?'s':''}</span>` : ''}
         </div>
       </div>`;
