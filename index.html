@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="theme.css">
 
   <script src="hub-storage.js"></script>
-  <script src="hub-i18n.js"></script>
   <script src="hub-tutorial.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-starter-data.js"></script>
@@ -830,20 +829,6 @@
       color: var(--text);
     }
 
-    .lang-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      color: var(--text2);
-      cursor: pointer;
-      font-family: var(--font-body);
-      font-size: 12px;
-      padding: 5px 12px;
-      transition: all 0.12s;
-    }
-    .lang-btn:hover { border-color: var(--border2); color: var(--text); }
-    .lang-btn.active { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
-
     /* ── Export Scope Selector ───────────────────── */
     .export-scope-label {
       font-size: 10px;
@@ -1147,15 +1132,6 @@
         </div>
       </div>
 
-      <div style="margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px" id="i18n-lang-label">Language</div>
-        <div style="display:flex;gap:6px">
-          <button class="lang-btn" data-lang="en" onclick="selectLanguage('en')">EN</button>
-          <button class="lang-btn" data-lang="ja" onclick="selectLanguage('ja')">日本語</button>
-          <button class="lang-btn" data-lang="tr" onclick="selectLanguage('tr')">TR</button>
-        </div>
-      </div>
-
       <div class="export-scope-label">Export scope</div>
       <div class="export-scope-options">
         <label class="export-scope-option">
@@ -1295,7 +1271,7 @@
 
         const label = document.createElement('div');
         label.className = 'nav-group-label collapsible';
-        label.innerHTML = `<span class="nav-group-arrow">${collapsed ? '▸' : '▾'}</span>${HubI18n.t('group.' + group)}`;
+        label.innerHTML = `<span class="nav-group-arrow">${collapsed ? '▸' : '▾'}</span>${group}`;
         label.onclick = () => {
           const isNowCollapsed = groupEl.classList.toggle('collapsed');
           if (isNowCollapsed) _collapsedGroups.add(group);
@@ -1308,7 +1284,7 @@
           const btn = document.createElement('button');
           btn.className = 'nav-item';
           btn.dataset.app = app.id;
-          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${HubI18n.t('tool.' + app.id)}`;
+          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.label}`;
           btn.addEventListener('click', () => openApp(app.id));
           groupEl.appendChild(btn);
         });
@@ -1450,7 +1426,7 @@
     function setGreeting() {
       const h = new Date().getHours();
       const s = loadSession();
-      const time = HubI18n.t(h < 12 ? 'greeting.morning' : h < 18 ? 'greeting.afternoon' : 'greeting.evening');
+      const time = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
       const name = s.sessionName ? ` — ${s.sessionName}` : '.';
       document.getElementById('greeting').textContent = time + (s.sessionName ? name : '.');
     }
@@ -1770,7 +1746,7 @@
     const COLLABORATION_KEYS = [
       'project-hub-v1',
       'hub-links-v1',
-      'decision-log-v1',
+      'decision-hub-v1',
       'ideaswipe_history_v6',
       'schedule-v1',
       'kmqt_current_v2',
@@ -1791,7 +1767,7 @@
       // Live-refresh dashboard widgets when remote changes arrive
       HubStorage.subscribe('project-hub-v1', () => { buildStatusWidgets(); refreshRecentStrip(); });
       HubStorage.subscribe('kmqt_current_v2', buildStatusWidgets);
-      HubStorage.subscribe('decision-log-v1', buildStatusWidgets);
+      HubStorage.subscribe('decision-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('schedule-v1', buildStatusWidgets);
       HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
     }
@@ -2177,7 +2153,6 @@
     function openDataModal() {
       _modalTrigger = document.activeElement;
       document.getElementById('data-modal').style.display = 'flex';
-      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === HubI18n.getLang()));
       const s = HubStorage.get('hub-settings-v1') || {};
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
@@ -2426,29 +2401,6 @@
       reader.readAsText(file);
     }
 
-    // ── i18n ──────────────────────────────────────────────────────────────────────
-
-    function applyI18n() {
-      const labelEl = document.getElementById('session-label-el');
-      if (labelEl) labelEl.textContent = HubI18n.t('session.label');
-      const nameEl = document.getElementById('session-name');
-      if (nameEl) nameEl.placeholder = HubI18n.t('session.placeholder');
-      const titleEl = document.getElementById('data-modal-title');
-      if (titleEl) titleEl.textContent = HubI18n.t('settings.title');
-      const langLabelEl = document.getElementById('i18n-lang-label');
-      if (langLabelEl) langLabelEl.textContent = HubI18n.t('settings.lang.label');
-      const closeBtn = document.querySelector('#data-modal .close-modal-btn');
-      if (closeBtn) closeBtn.textContent = HubI18n.t('settings.close');
-      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === HubI18n.getLang()));
-      buildSidebar();
-      setGreeting();
-    }
-
-    function selectLanguage(code) {
-      HubI18n.setLang(code);
-      applyI18n();
-    }
-
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
@@ -2459,7 +2411,12 @@
     refreshRecentStrip();
     setGreeting();
     initCloudPanel();
-    applyI18n();
+
+    // One-time migration: remove stale 'language' key left by old i18n system
+    (() => {
+      const s = HubStorage.get('hub-settings-v1');
+      if (s && 'language' in s) { delete s.language; HubStorage.set('hub-settings-v1', s); }
+    })();
 
     // First-run detection — stored flag for use after DOM is ready
     const _isFirstRun = (() => {
