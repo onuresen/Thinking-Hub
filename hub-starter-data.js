@@ -514,6 +514,49 @@ window.HubStarter = (() => {
     HubStorage.set('scrum-hub-v1', JSON.stringify(state));
   }
 
+  function seedIdeaSwiper() {
+    // Two past sessions of swiped ideas — website-focused and renovation-focused
+    const ts7 = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
+    const ts3 = Date.now() - 3 * 24 * 60 * 60 * 1000; // 3 days ago
+    const sid1 = 'S' + ts7;
+    const sid2 = 'S' + ts3;
+
+    const history = [
+      // Session 1 — website brainstorm
+      { idea: 'Add a portfolio gallery page to showcase past work',              vote: 'super', ts: ts7 + 1000,   sessionId: sid1 },
+      { idea: 'Redesign mobile navigation first, then adapt for desktop',        vote: 'super', ts: ts7 + 62000,  sessionId: sid1 },
+      { idea: 'Migrate the entire frontend to a custom React app',               vote: 'nope',  ts: ts7 + 125000, sessionId: sid1 },
+      { idea: 'Add a live chat widget so visitors can contact us instantly',      vote: 'like',  ts: ts7 + 188000, sessionId: sid1 },
+      { idea: 'Rebrand and redesign the logo at the same time as the website',   vote: 'nope',  ts: ts7 + 251000, sessionId: sid1 },
+      // Session 2 — renovation brainstorm
+      { idea: 'Use drone footage for weekly site progress documentation',         vote: 'super', ts: ts3 + 1000,   sessionId: sid2 },
+      { idea: 'Create a contractor performance scorecard for future projects',    vote: 'like',  ts: ts3 + 58000,  sessionId: sid2 },
+      { idea: 'Delay permit submission until Phase 2 design is also finalised',  vote: 'nope',  ts: ts3 + 115000, sessionId: sid2 },
+    ];
+    HubStorage.set('ideaswipe_history_v6', history);
+
+    // Canvas: position the liked/super ideas as spatial notes
+    const canvasData = {
+      canvasNotes: [
+        { id: 'cn-1', text: 'Add a portfolio gallery page to showcase past work',         type: 'super', x: -260, y: -80  },
+        { id: 'cn-2', text: 'Redesign mobile navigation first, then adapt for desktop',   type: 'super', x: -60,  y: -180 },
+        { id: 'cn-3', text: 'Add a live chat widget so visitors can contact us instantly', type: 'like',  x: -160, y: 60   },
+        { id: 'cn-4', text: 'Use drone footage for weekly site progress documentation',    type: 'super', x: 160,  y: -100 },
+        { id: 'cn-5', text: 'Create a contractor performance scorecard for future projects', type: 'like', x: 300,  y: 40   },
+      ],
+      canvasConnections: [
+        { id: 'cc-1', from: 'cn-1', to: 'cn-2' },
+        { id: 'cc-2', from: 'cn-4', to: 'cn-5' },
+      ],
+      canvasLabels: [
+        { id: 'lbl-1', text: 'Website Ideas',    x: -300, y: -200 },
+        { id: 'lbl-2', text: 'Renovation Ideas', x:  100, y: -200 },
+      ],
+      panX: 0, panY: 0, zoom: 1,
+    };
+    localStorage.setItem('ideaswipe_canvas_v5', JSON.stringify(canvasData));
+  }
+
   function seedSchedule() {
     const items = [
       {
@@ -559,6 +602,7 @@ window.HubStarter = (() => {
     seedLogHub();
     seedScrumHub();
     seedSchedule();
+    seedIdeaSwiper();
   }
 
   return { seed, hasAnyData };
