@@ -392,11 +392,12 @@
         done: false, createdAt: new Date().toISOString()
       });
     }
-    save(); closeAddModal(); renderMatrix();
+    save(); showToast('Item saved'); closeAddModal(); renderMatrix();
   }
 
   function deleteItem() {
     if (!editingId) return;
+    if (!confirm('Delete this item?')) return;
     data.items = data.items.filter(it => it.id !== editingId);
     save(); closeAddModal(); renderMatrix();
   }

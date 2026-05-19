@@ -306,6 +306,7 @@
   function deleteItem(col, itemId) {
     const retro = getActive();
     if (!retro) return;
+    if (!confirm('Delete this card?')) return;
     retro.items[col] = (retro.items[col] || []).filter(i => i.id !== itemId);
     save();
     renderCol(col, retro);
@@ -331,6 +332,17 @@
   // ── Render ────────────────────────────────────────────────────────────────
 
   function renderCol(col, retro) {
+    if (!retro) {
+      const container = document.getElementById('col-' + col);
+      const addForm = container.querySelector('.add-form');
+      container.innerHTML = '';
+      container.appendChild(addForm);
+      const msg = document.createElement('div');
+      msg.className = 'col-empty';
+      msg.textContent = 'Create a retro board above to get started.';
+      container.appendChild(msg);
+      return;
+    }
     const items = retro ? (retro.items[col] || []) : [];
     const container = document.getElementById('col-' + col);
     const addForm = container.querySelector('.add-form');

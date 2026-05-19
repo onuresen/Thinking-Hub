@@ -437,4 +437,8 @@ body {
   text-align: center;
   color: var(--text3);
   font-size: 13px;
+  padding: 40px 20px;
 }
+.empty-state .e-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; display: block; }
+.empty-state .e-title { font-size: 14px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.empty-state .e-sub { font-size: 12px; color: var(--text3); }

@@ -443,7 +443,8 @@
       : `${risks.length} of ${total} risk${total!==1?'s':''}`;
 
     if (!risks.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No risks match current filters.</div>';
+      const noData = !data.risks.length;
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">⚠</span><div class="e-title">${noData ? 'No risks logged' : 'No risks match filters'}</div><div class="e-sub">${noData ? 'Add a risk to start tracking.' : 'Try adjusting your filters or heatmap selection.'}</div></div>`;
       return;
     }
 
@@ -546,7 +547,7 @@
     r.projectId = projSel.value || null;
     r.projectName = projSel.value ? projSel.options[projSel.selectedIndex].text : null;
     r.updatedAt = new Date().toISOString();
-    save(); closeDetail(); renderAll();
+    save(); showToast('Risk saved'); closeDetail(); renderAll();
   }
 
   function deleteRisk() {
