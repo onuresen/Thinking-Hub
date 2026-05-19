@@ -154,6 +154,22 @@
     .chip-project { font-size: 10px; color: var(--text3); flex-shrink: 0; }
     .chip-add { font-size: 11px; color: #a78bfa; flex-shrink: 0; }
 
+    /* ── Activity section ── */
+    .activity-section {
+      border-top: 1px solid var(--border);
+      padding-top: 10px; margin-top: 2px;
+    }
+    .activity-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text3); margin-bottom: 6px;
+    }
+    .activity-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .activity-chip {
+      font-size: 11px; color: var(--text2); background: var(--surface3);
+      border-radius: var(--r-sm); padding: 3px 8px;
+      border: 1px solid var(--border);
+    }
+
     /* ── Scrollbar ── */
     .col-body::-webkit-scrollbar { width: 4px; }
     .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -298,6 +314,50 @@
     saveTimer = setTimeout(saveAll, 1200);
   }
 
+  // ── Activity summary ──────────────────────────────────────────────────────
+
+  function buildActivityHTML(monStr, sunStr) {
+    const chips = [];
+    try {
+      const dh = HubStorage.get('decision-hub-v1') || [];
+      const count = (Array.isArray(dh) ? dh : []).filter(d => {
+        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      }).length;
+      if (count) chips.push(`◎ ${count} decision${count > 1 ? 's' : ''}`);
+    } catch { }
+    try {
+      const mh = HubStorage.get('meetings-hub-v1') || {};
+      const count = ((mh.meetings) || []).filter(m => m.date >= monStr && m.date <= sunStr).length;
+      if (count) chips.push(`▣ ${count} meeting${count > 1 ? 's' : ''}`);
+    } catch { }
+    try {
+      const fh = HubStorage.get('focus-hub-v1') || {};
+      const sessions = (fh.sessions || []).filter(s => {
+        const at = (s.endedAt || s.startedAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      });
+      const totalMin = sessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
+      if (totalMin > 0) {
+        const h = Math.floor(totalMin / 60), m = totalMin % 60;
+        chips.push(`⏱ ${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} focus`);
+      }
+    } catch { }
+    try {
+      const lh = HubStorage.get('learning-hub-v1') || {};
+      const count = ((lh.items) || []).filter(it => {
+        const at = (it.updatedAt || it.createdAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      }).length;
+      if (count) chips.push(`◑ ${count} learning item${count > 1 ? 's' : ''}`);
+    } catch { }
+    if (!chips.length) return '';
+    return `<div class="activity-section">
+      <div class="activity-title">More this week</div>
+      <div class="activity-chips">${chips.map(c => `<span class="activity-chip">${c}</span>`).join('')}</div>
+    </div>`;
+  }
+
   // ── Done column ───────────────────────────────────────────────────────────
 
   function renderDoneCol() {
@@ -308,6 +368,7 @@
     const sunStr = isoDate(sunday);
 
     const col = document.getElementById('done-col');
+    const activityHTML = buildActivityHTML(monStr, sunStr);
     const allTasks = HubData.getAllTasks ? HubData.getAllTasks() : [];
     const projects = HubData.getProjects ? HubData.getProjects() : [];
     const projectMap = {};
@@ -321,7 +382,8 @@
 
     if (!done.length) {
       col.innerHTML = `<div class="done-empty">No completed tasks found for this week.</div>
-        <button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>`;
+        <button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>
+        ${activityHTML}`;
       return;
     }
 
@@ -334,7 +396,8 @@
           ${proj ? `<div class="task-pull-meta">${_esc(proj)}</div>` : ''}
         </div>
       </div>`;
-    }).join('') + `<button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>`;
+    }).join('') + `<button class="refresh-done" onclick="renderDoneCol()">↻ Refresh</button>
+      ${activityHTML}`;
   }
 
   function highlightTask(taskId) {
