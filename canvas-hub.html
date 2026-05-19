@@ -17,7 +17,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: #111;
+      background: var(--bg);
       color: var(--text);
       font-family: var(--font-body);
       display: flex;
@@ -32,7 +32,7 @@
       flex: 1;
       position: relative;
       overflow: hidden;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+      background-image: radial-gradient(var(--border2) 1px, transparent 1px);
       background-size: 20px 20px;
       background-position: 0 0;
       cursor: grab;
@@ -96,8 +96,8 @@
       position: absolute;
       width: 180px;
       min-height: 80px;
-      background: #2a2a30;
-      border: 1px solid #444;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       display: flex;
@@ -112,12 +112,12 @@
 
     .node.selected {
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(184, 240, 51, 0.25), 0 4px 16px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 0 2px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, 0.5);
       z-index: 10;
     }
 
     .node.connect-source {
-      border-color: #a78bfa;
+      border-color: var(--border-purple);
       box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3), 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
@@ -134,7 +134,7 @@
       outline: none;
       font-size: 13px;
       font-weight: 500;
-      color: #edece4;
+      color: var(--text);
       line-height: 1.45;
       word-wrap: break-word;
       overflow-y: hidden;
@@ -745,7 +745,7 @@
       const W = canvas.width, H = canvas.height;
 
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#18181c';
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#18181c';
       ctx.fillRect(0, 0, W, H);
 
       const pad = 50;
@@ -761,8 +761,9 @@
       const toMM = (cx, cy) => [(cx - minX) * scale, (cy - minY) * scale];
 
       // Edges
+      const _isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       if (db.edges && db.edges.length) {
-        ctx.strokeStyle = 'rgba(184,240,51,0.18)';
+        ctx.strokeStyle = _isDark ? 'rgba(184,240,51,0.18)' : 'rgba(0,0,0,0.25)';
         ctx.lineWidth = 0.8;
         db.edges.forEach(edge => {
           const f = db.nodes.find(n => n.id === edge.from);
@@ -775,17 +776,22 @@
       }
 
       // Nodes
-      const colorFill = {
+      const colorFillDark = {
         'c-gray': '#2a2a30', 'c-yellow': '#3d3318', 'c-green': '#1a3626',
         'c-blue': '#1a2e42', 'c-red': '#3a1e1e', 'c-purple': '#2e1e3a'
       };
+      const colorFillLight = {
+        'c-gray': '#e4e4ea', 'c-yellow': '#fae0a0', 'c-green': '#b8ecd4',
+        'c-blue': '#bed8f5', 'c-red': '#f5c0c0', 'c-purple': '#e0c8f8'
+      };
+      const colorFill = _isDark ? colorFillDark : colorFillLight;
       db.nodes.forEach(n => {
         const [mx, my] = toMM(n.x, n.y);
         const nw = Math.max(NODE_W * scale, 3);
         const nh = Math.max(NODE_H * scale, 3);
         ctx.fillStyle = colorFill[n.color || 'c-gray'];
         ctx.fillRect(mx, my, nw, nh);
-        ctx.strokeStyle = n.id === selectedNodeId ? '#b8f033' : 'rgba(255,255,255,0.18)';
+        ctx.strokeStyle = n.id === selectedNodeId ? '#b8f033' : (_isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)');
         ctx.lineWidth = n.id === selectedNodeId ? 1.2 : 0.5;
         ctx.strokeRect(mx, my, nw, nh);
       });
@@ -795,7 +801,7 @@
       const vx = -db.panX / db.zoom, vy = -db.panY / db.zoom;
       const vw = vpW / db.zoom, vh = vpH / db.zoom;
       const [mmx, mmy] = toMM(vx, vy);
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.strokeStyle = _isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
       ctx.lineWidth = 1;
       ctx.strokeRect(mmx, mmy, vw * scale, vh * scale);
     }
@@ -808,7 +814,7 @@
       btn.disabled = true;
 
       html2canvas(viewport, {
-        backgroundColor: '#111',
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#111',
         scale: window.devicePixelRatio || 1,
         logging: false,
         useCORS: true
