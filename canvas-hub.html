@@ -856,6 +856,11 @@
     });
 
     window.addEventListener('message', (e) => {
+      if (e.data?.type === 'hub-theme') {
+        document.documentElement.setAttribute('data-theme', e.data.theme);
+        renderMinimap();
+        return;
+      }
       if (!e.data || e.data.type !== 'hub-highlight') return;
       const nodeId = e.data.itemId;
       if (!nodeId) return;
