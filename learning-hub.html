@@ -360,7 +360,7 @@
       list.innerHTML = `<div class="empty-state"><span class="e-icon">◑</span><div class="e-title">${allEmpty ? 'Nothing logged yet' : 'No items found'}</div><div class="e-sub">${allEmpty ? 'Add a book, article, or course to start.' : 'Try adjusting your filters.'}</div></div>`;
       return;
     }
-    list.innerHTML = items.map(it => `<div class="list-item${it.id === activeId ? ' active' : ''}" onclick="openDetail('${it.id}')">
+    list.innerHTML = items.map(it => `<div class="list-item${it.id === activeId ? ' active' : ''}" data-id="${it.id}" onclick="openDetail('${it.id}')">
       <div class="li-type-badge ${it.type}">${it.type}</div>
       <div class="li-body">
         <div class="li-title">${_esc(it.title)}</div>

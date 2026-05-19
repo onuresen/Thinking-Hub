@@ -468,7 +468,7 @@ function blItemHTML(item) {
   const canMove = item.status !== 'done';
   const projName = (!state.settings.linkedProjectId && item.projectId) ? _blProjectMap[item.projectId] : null;
   return `
-    <div class="bl-item" onclick="openStoryModal('${item.id}')">
+    <div class="bl-item" data-id="${item.id}" onclick="openStoryModal('${item.id}')">
       <div class="bi-icon">${TYPE_ICON[item.type] || '📖'}</div>
       <div class="bi-main">
         <div class="bi-title">${HubUtils.esc(item.title)}</div>

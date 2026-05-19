@@ -356,7 +356,7 @@
           ${emoji} <span class="reaction-count">${reacters.length || ''}</span>
         </button>`;
       }).join('');
-      return `<div class="retro-card">
+      return `<div class="retro-card" data-id="${item.id}">
         <div class="card-text">${_esc(item.text)}</div>
         <div class="card-footer">
           ${reactionHTML}

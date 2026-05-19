@@ -27,7 +27,14 @@ window.HubLinks = (() => {
     'schedule': 'Schedule',
     'idea-swiper': 'Idea Swiper',
     'kmqt-board': 'KMQT Board',
-    'decision-hub': 'Decision Hub'
+    'decision-hub': 'Decision Hub',
+    'meetings-hub': 'Meetings',
+    'goals-hub': 'Goals',
+    'risk-hub': 'Risk Register',
+    'learning-hub': 'Learning Log',
+    'retro-hub': 'Retrospective',
+    'stakeholder-hub': 'Stakeholders',
+    'scrum-hub': 'Scrum Board'
   };
 
   let _currentTool = null;
@@ -137,6 +144,82 @@ window.HubLinks = (() => {
             const tmp = n.text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
             return { id: n.id, label: tmp.slice(0, 60) || '(canvas node)', subtitle: 'Canvas' };
           });
+      }
+
+      if (toolId === 'meetings-hub') {
+        const data = HubStorage.get('meetings-hub-v1');
+        if (!data) return [];
+        return (data.meetings || []).map(m => ({
+          id: m.id,
+          label: m.title || '(untitled meeting)',
+          subtitle: m.date || 'meeting'
+        }));
+      }
+
+      if (toolId === 'goals-hub') {
+        const data = HubStorage.get('goals-hub-v1');
+        if (!data) return [];
+        const items = [];
+        for (const q of (data.quarters || [])) {
+          for (const obj of (q.objectives || [])) {
+            items.push({ id: obj.id, label: obj.title || '(untitled objective)', subtitle: q.label || 'OKR' });
+          }
+        }
+        return items;
+      }
+
+      if (toolId === 'risk-hub') {
+        const data = HubStorage.get('risk-hub-v1');
+        if (!data) return [];
+        return (data.risks || []).map(r => ({
+          id: r.id,
+          label: r.title || '(untitled risk)',
+          subtitle: r.category || 'risk'
+        }));
+      }
+
+      if (toolId === 'learning-hub') {
+        const data = HubStorage.get('learning-hub-v1');
+        if (!data) return [];
+        return (data.items || []).map(it => ({
+          id: it.id,
+          label: it.title || '(untitled)',
+          subtitle: it.type || 'learning'
+        }));
+      }
+
+      if (toolId === 'retro-hub') {
+        const data = HubStorage.get('retro-hub-v1');
+        if (!data) return [];
+        const items = [];
+        for (const retro of (data.retros || [])) {
+          for (const col of ['well', 'improve', 'actions']) {
+            for (const item of (retro.items?.[col] || [])) {
+              items.push({ id: item.id, label: (item.text || '').slice(0, 60) || '(empty)', subtitle: retro.name || col });
+            }
+          }
+        }
+        return items;
+      }
+
+      if (toolId === 'stakeholder-hub') {
+        const data = HubStorage.get('stakeholder-hub-v1');
+        if (!data) return [];
+        return (data.stakeholders || []).map(sh => ({
+          id: sh.id,
+          label: sh.name || '(unnamed)',
+          subtitle: sh.role || 'stakeholder'
+        }));
+      }
+
+      if (toolId === 'scrum-hub') {
+        const data = HubStorage.get('scrum-hub-v1');
+        if (!data) return [];
+        return (data.backlogs || []).map(it => ({
+          id: it.id,
+          label: it.title || '(untitled story)',
+          subtitle: it.priority || 'backlog'
+        }));
       }
     } catch { }
     return [];

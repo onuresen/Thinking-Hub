@@ -452,7 +452,7 @@
       const s = score(r);
       const b = band(s);
       const color = bandColor(b);
-      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" onclick="openDetail('${r.id}')">
+      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" data-id="${r.id}" onclick="openDetail('${r.id}')">
         <div class="risk-severity-bar" style="background:${color}"></div>
         <div class="risk-info">
           <div class="risk-title">${_esc(r.title||'Untitled risk')}</div>
