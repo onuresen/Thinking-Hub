@@ -576,6 +576,7 @@
     }
 
     function deleteNode(id) {
+      if (!confirm('Delete this node and its connections?')) return;
       db.nodes = db.nodes.filter(n => n.id !== id);
       db.edges = (db.edges || []).filter(e => e.from !== id && e.to !== id);
       selectNode(null);

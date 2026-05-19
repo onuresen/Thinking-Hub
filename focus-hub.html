@@ -448,7 +448,7 @@
         pomodoroEst: timerState.pomodoroEst || 1,
       });
       data.sessions = data.sessions.slice(0, 100);
-      saveData();
+      saveData(); showToast(completed ? 'Session complete!' : 'Session logged');
       renderSessionList();
       renderHistogram();
     }

@@ -373,6 +373,7 @@
   }
 
   function removeRock(i) {
+    if (!confirm('Remove this big rock?')) return;
     const monday = getMondayOfWeek(weekOffset);
     const key = weekKey(monday);
     const wd = getWeekData(key);

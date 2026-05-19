@@ -356,7 +356,8 @@
     const list = document.getElementById('sidebar-list');
     const items = filteredItems();
     if (!items.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No items found.</div>';
+      const allEmpty = !data.items || !data.items.length;
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">◑</span><div class="e-title">${allEmpty ? 'Nothing logged yet' : 'No items found'}</div><div class="e-sub">${allEmpty ? 'Add a book, article, or course to start.' : 'Try adjusting your filters.'}</div></div>`;
       return;
     }
     list.innerHTML = items.map(it => `<div class="list-item${it.id === activeId ? ' active' : ''}" onclick="openDetail('${it.id}')">

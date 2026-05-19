@@ -289,7 +289,7 @@
     let items = data.meetings.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
     if (q) items = items.filter(m => (m.title||'').toLowerCase().includes(q) || (m.attendees||'').toLowerCase().includes(q));
     if (!items.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No meetings yet.</div>';
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results for your search.' : 'Log your first meeting to get started.'}</div></div>`;
       return;
     }
     list.innerHTML = items.map(m => {
@@ -486,7 +486,7 @@
     const m = activeMeeting(); if (!m) return;
     if (!m.actionItems) m.actionItems = [];
     m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, createdAt: new Date().toISOString() });
-    save(); closeActionModal(); renderDetail(); renderList();
+    save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 
   // ── New / Delete meeting ──────────────────────────────────────────────────────
