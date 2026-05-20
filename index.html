@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="theme.css">
 
   <script src="hub-storage.js"></script>
-  <script src="hub-i18n.js"></script>
   <script src="hub-tutorial.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-starter-data.js"></script>
   <script src="hub-obsidian.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-search.js"></script>
@@ -829,20 +829,6 @@
       color: var(--text);
     }
 
-    .lang-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      color: var(--text2);
-      cursor: pointer;
-      font-family: var(--font-body);
-      font-size: 12px;
-      padding: 5px 12px;
-      transition: all 0.12s;
-    }
-    .lang-btn:hover { border-color: var(--border2); color: var(--text); }
-    .lang-btn.active { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
-
     /* ── Export Scope Selector ───────────────────── */
     .export-scope-label {
       font-size: 10px;
@@ -1146,15 +1132,6 @@
         </div>
       </div>
 
-      <div style="margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px" id="i18n-lang-label">Language</div>
-        <div style="display:flex;gap:6px">
-          <button class="lang-btn" data-lang="en" onclick="selectLanguage('en')">EN</button>
-          <button class="lang-btn" data-lang="ja" onclick="selectLanguage('ja')">日本語</button>
-          <button class="lang-btn" data-lang="tr" onclick="selectLanguage('tr')">TR</button>
-        </div>
-      </div>
-
       <div class="export-scope-label">Export scope</div>
       <div class="export-scope-options">
         <label class="export-scope-option">
@@ -1269,7 +1246,7 @@
         btn.className = 'profile-chip' + (_activeProfile === key ? ' active' : '');
         btn.title = prof.label;
         btn.textContent = prof.label;
-        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); };
+        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); buildHomeDashboard(); buildStatusWidgets(); };
         strip.appendChild(btn);
       });
     }
@@ -1294,7 +1271,7 @@
 
         const label = document.createElement('div');
         label.className = 'nav-group-label collapsible';
-        label.innerHTML = `<span class="nav-group-arrow">${collapsed ? '▸' : '▾'}</span>${HubI18n.t('group.' + group)}`;
+        label.innerHTML = `<span class="nav-group-arrow">${collapsed ? '▸' : '▾'}</span>${group}`;
         label.onclick = () => {
           const isNowCollapsed = groupEl.classList.toggle('collapsed');
           if (isNowCollapsed) _collapsedGroups.add(group);
@@ -1307,7 +1284,7 @@
           const btn = document.createElement('button');
           btn.className = 'nav-item';
           btn.dataset.app = app.id;
-          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${HubI18n.t('tool.' + app.id)}`;
+          btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.label}`;
           btn.addEventListener('click', () => openApp(app.id));
           groupEl.appendChild(btn);
         });
@@ -1326,7 +1303,9 @@
     function buildHomeDashboard() {
       const grid = document.getElementById('app-grid');
       grid.innerHTML = '';
-      APPS.forEach(app => {
+      const profile = PROFILES[_activeProfile] || PROFILES.everything;
+      const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
+      visibleApps.forEach(app => {
         const card = document.createElement('div');
         card.className = 'app-card';
         card.dataset.app = app.id;
@@ -1407,10 +1386,12 @@
           frame.contentWindow.postMessage({ type: 'hub-highlight', itemId: _pendingHighlight }, window.location.origin || '*');
           _pendingHighlight = null;
         }
-        // Sync theme into iframe
+        // Sync theme into iframe — set attribute AND notify tool so JS-rendered
+        // content (e.g. vis-network in graph-hub) can re-render with correct colors.
         const theme = document.documentElement.getAttribute('data-theme');
         if (theme) {
-          frame.contentDocument.documentElement.setAttribute('data-theme', theme);
+          try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch(e) {}
+          try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch(e) {}
         }
       };
 
@@ -1449,7 +1430,7 @@
     function setGreeting() {
       const h = new Date().getHours();
       const s = loadSession();
-      const time = HubI18n.t(h < 12 ? 'greeting.morning' : h < 18 ? 'greeting.afternoon' : 'greeting.evening');
+      const time = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
       const name = s.sessionName ? ` — ${s.sessionName}` : '.';
       document.getElementById('greeting').textContent = time + (s.sessionName ? name : '.');
     }
@@ -1730,11 +1711,113 @@
         }
       } catch { }
 
-      if (!widgets.length) { section.style.display = 'none'; return; }
+      // ── Risk Register (risk-hub-v1) ────────────────────────────────────────
+      try {
+        const rh = JSON.parse(localStorage.getItem('risk-hub-v1') || '{}');
+        const open = (rh.risks || []).filter(r => !['mitigated','closed','resolved'].includes(r.status));
+        if (open.length) {
+          const bandColor = s => s <= 4 ? 'var(--accent-like)' : s <= 9 ? 'var(--accent-super)' : 'var(--accent-nope)';
+          const shown = open.slice(0, 3);
+          const rows = shown.map(r => {
+            const s = (r.probability || 1) * (r.impact || 1);
+            return `<div class="stat-item" data-tool="risk-hub" data-item-id="${_esc(r.id || '')}">
+              <div class="stat-item-dot" style="background:${bandColor(s)}"></div>
+              <div class="stat-item-text">${_esc(r.title || 'Untitled risk')}</div>
+              <div class="stat-item-meta">${_esc(r.category || 'risk')}${r.projectName ? ' · ' + _esc(r.projectName) : ''}</div>
+            </div>`;
+          }).join('');
+          widgets.push({
+            id: 'risk-hub', icon: '⚠', title: 'Open Risks',
+            count: `${open.length} open`,
+            body: rows,
+            more: open.length > 3 ? `+${open.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(open))
+          });
+        }
+      } catch { }
+
+      // ── Meeting actions (meetings-hub-v1) ──────────────────────────────────
+      try {
+        const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+        const actions = (mh.meetings || []).flatMap(m =>
+          (m.actionItems || []).filter(a => !a.done && !a.taskCreated)
+            .map(a => ({ ...a, _meeting: m.title || 'Meeting' }))
+        );
+        if (actions.length) {
+          const shown = actions.slice(0, 3);
+          const rows = shown.map(a => `<div class="stat-item">
+            <div class="stat-item-dot" style="background:var(--accent);opacity:.5"></div>
+            <div class="stat-item-text">${_esc(a.text || '')}</div>
+            <div class="stat-item-meta">${_esc(a._meeting)}</div>
+          </div>`).join('');
+          widgets.push({
+            id: 'meetings-hub', icon: '▣', title: 'Meeting Actions',
+            count: `${actions.length} open`,
+            body: rows,
+            more: actions.length > 3 ? `+${actions.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(mh.meetings || []))
+          });
+        }
+      } catch { }
+
+      // ── Focus today (focus-hub-v1) ─────────────────────────────────────────
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const fh = JSON.parse(localStorage.getItem('focus-hub-v1') || '{}');
+        const todaySessions = (fh.sessions || []).filter(s => (s.endedAt || s.startedAt || '').slice(0, 10) === today);
+        if (todaySessions.length) {
+          const totalMin = todaySessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
+          const completed = todaySessions.filter(s => s.completed).length;
+          const shown = todaySessions.slice(0, 3);
+          const rows = shown.map(s => `<div class="stat-item">
+            <div class="stat-item-dot" style="background:${s.completed ? 'var(--accent-like)' : 'var(--text3)'}"></div>
+            <div class="stat-item-text">${_esc(s.taskTitle || 'Focus session')}</div>
+            <div class="stat-item-meta">${Math.round((s.elapsedSec || 0) / 60)}m</div>
+          </div>`).join('');
+          const h = Math.floor(totalMin / 60), m = totalMin % 60;
+          widgets.push({
+            id: 'focus-hub', icon: '⏱', title: 'Focus Today',
+            count: `${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} · ${completed} done`,
+            body: rows,
+            more: todaySessions.length > 3 ? `+${todaySessions.length - 3} more` : '',
+            staleness: relativeAge(latestTimestamp(todaySessions, ['endedAt', 'startedAt']))
+          });
+        }
+      } catch { }
+
+      // ── Retro actions (retro-hub-v1) ───────────────────────────────────────
+      try {
+        const retroRaw = JSON.parse(localStorage.getItem('retro-hub-v1') || '{}');
+        const retros = retroRaw.retros || [];
+        if (retros.length) {
+          const retro = retros[retros.length - 1];
+          const actions = (retro.items && retro.items.actions) || [];
+          if (actions.length) {
+            const shown = actions.slice(0, 3);
+            const rows = shown.map(a => `<div class="stat-item" data-tool="retro-hub" data-item-id="${_esc(a.id || '')}">
+              <div class="stat-item-dot" style="background:var(--border-purple)"></div>
+              <div class="stat-item-text">${_esc(a.text || '')}</div>
+            </div>`).join('');
+            widgets.push({
+              id: 'retro-hub', icon: '⟲', title: `Retro — ${_esc(retro.name || 'Latest')}`,
+              count: `${actions.length} action${actions.length !== 1 ? 's' : ''}`,
+              body: rows,
+              more: actions.length > 3 ? `+${actions.length - 3} more` : '',
+              staleness: relativeAge(latestTimestamp(actions))
+            });
+          }
+        }
+      } catch { }
+
+      // ── Filter by active profile ───────────────────────────────────────────
+      const _profile = PROFILES[_activeProfile] || PROFILES.everything;
+      const _visibleWidgets = _profile.tools ? widgets.filter(w => _profile.tools.includes(w.id)) : widgets;
+
+      if (!_visibleWidgets.length) { section.style.display = 'none'; return; }
 
       section.style.display = '';
       grid.innerHTML = '';
-      widgets.forEach(w => {
+      _visibleWidgets.forEach(w => {
         const card = document.createElement('div');
         card.className = 'stat-card';
         card.innerHTML = `
@@ -1769,7 +1852,7 @@
     const COLLABORATION_KEYS = [
       'project-hub-v1',
       'hub-links-v1',
-      'decision-log-v1',
+      'decision-hub-v1',
       'ideaswipe_history_v6',
       'schedule-v1',
       'kmqt_current_v2',
@@ -1790,9 +1873,13 @@
       // Live-refresh dashboard widgets when remote changes arrive
       HubStorage.subscribe('project-hub-v1', () => { buildStatusWidgets(); refreshRecentStrip(); });
       HubStorage.subscribe('kmqt_current_v2', buildStatusWidgets);
-      HubStorage.subscribe('decision-log-v1', buildStatusWidgets);
+      HubStorage.subscribe('decision-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('schedule-v1', buildStatusWidgets);
       HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('risk-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('meetings-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('focus-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('retro-hub-v1', buildStatusWidgets);
     }
 
     function updateCloudUI(status) {
@@ -2176,7 +2263,6 @@
     function openDataModal() {
       _modalTrigger = document.activeElement;
       document.getElementById('data-modal').style.display = 'flex';
-      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === HubI18n.getLang()));
       const s = HubStorage.get('hub-settings-v1') || {};
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
@@ -2425,29 +2511,6 @@
       reader.readAsText(file);
     }
 
-    // ── i18n ──────────────────────────────────────────────────────────────────────
-
-    function applyI18n() {
-      const labelEl = document.getElementById('session-label-el');
-      if (labelEl) labelEl.textContent = HubI18n.t('session.label');
-      const nameEl = document.getElementById('session-name');
-      if (nameEl) nameEl.placeholder = HubI18n.t('session.placeholder');
-      const titleEl = document.getElementById('data-modal-title');
-      if (titleEl) titleEl.textContent = HubI18n.t('settings.title');
-      const langLabelEl = document.getElementById('i18n-lang-label');
-      if (langLabelEl) langLabelEl.textContent = HubI18n.t('settings.lang.label');
-      const closeBtn = document.querySelector('#data-modal .close-modal-btn');
-      if (closeBtn) closeBtn.textContent = HubI18n.t('settings.close');
-      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === HubI18n.getLang()));
-      buildSidebar();
-      setGreeting();
-    }
-
-    function selectLanguage(code) {
-      HubI18n.setLang(code);
-      applyI18n();
-    }
-
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
@@ -2458,10 +2521,37 @@
     refreshRecentStrip();
     setGreeting();
     initCloudPanel();
-    applyI18n();
 
-    // Auto-start tutorial on first run
-    if (!HubStorage.get('tutorial-seen-v1')) {
+    // One-time migration: remove stale 'language' key left by old i18n system
+    (() => {
+      const s = HubStorage.get('hub-settings-v1');
+      if (s && 'language' in s) { delete s.language; HubStorage.set('hub-settings-v1', s); }
+    })();
+
+    // First-run detection — stored flag for use after DOM is ready
+    const _isFirstRun = (() => {
+      if (HubStorage.get('tutorial-seen-v1')) return false;
+      if (window.HubStarter && HubStarter.hasAnyData()) {
+        // Data exists but flag was cleared — treat as returning user
+        HubStorage.set('tutorial-seen-v1', true);
+        return false;
+      }
+      return true;
+    })();
+
+    function welcomeSeedAndStart() {
+      const overlay = document.getElementById('welcome-overlay');
+      if (overlay) overlay.style.display = 'none';
+      if (window.HubStarter) HubStarter.seed();
+      HubStorage.set('tutorial-seen-v1', true);
+      buildHomeDashboard();
+      buildStatusWidgets();
+      setTimeout(startTour, 300);
+    }
+
+    function welcomeStartFresh() {
+      const overlay = document.getElementById('welcome-overlay');
+      if (overlay) overlay.style.display = 'none';
       HubStorage.set('tutorial-seen-v1', true);
       setTimeout(startTour, 300);
     }
@@ -2506,8 +2596,31 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('hub');
+      // Welcome modal must run after DOM is fully parsed (modal div is below the inline scripts)
+      if (_isFirstRun) {
+        const overlay = document.getElementById('welcome-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
     });
   </script>
+
+  <!-- Welcome Modal (first-run only) -->
+  <div id="welcome-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem">
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)">
+      <div style="font-size:2.8rem;margin-bottom:.5rem">🧠</div>
+      <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;margin:0 0 .5rem;color:var(--text)">Welcome to Thinking Hub</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin:0 0 1.5rem;line-height:1.5">Your connected workspace for projects, goals, and decisions.<br>How would you like to get started?</p>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem">
+        <button class="btn btn-primary" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeSeedAndStart()">
+          ✦ Explore with sample data
+        </button>
+        <button class="btn btn-ghost" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeStartFresh()">
+          Start fresh
+        </button>
+      </div>
+      <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data &amp; Backup</p>
+    </div>
+  </div>
 </body>
 
 </html>

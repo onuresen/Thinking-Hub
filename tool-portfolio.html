@@ -418,6 +418,7 @@
 
         function save() {
             HubStorage.set(STORAGE_KEY, tools);
+            showToast('Tool saved');
             renderList();
             renderStatsBar();
         }

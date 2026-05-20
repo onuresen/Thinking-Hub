@@ -369,7 +369,7 @@
   function renderCard(sh) {
     const engEmoji = { unaware:'😶', resistant:'🚫', neutral:'😐', supportive:'👍', leading:'🚀' };
     const engBadge = sh.engagement ? `<span style="font-size:13px" title="${sh.engagement}">${engEmoji[sh.engagement]||''}</span>` : '';
-    return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" onclick="openDetail('${sh.id}')">
+    return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" data-id="${sh.id}" onclick="openDetail('${sh.id}')">
       <div class="sh-avatar">${_esc(initials(sh.name))}</div>
       <div class="sh-info">
         <div class="sh-name">${_esc(sh.name||'Unnamed')}</div>

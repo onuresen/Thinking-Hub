@@ -55,8 +55,8 @@
     .col-title-wrap { flex: 1; }
     .col-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
     .col-title.went-well { color: var(--accent-like); }
-    .col-title.improve { color: #f59e0b; }
-    .col-title.actions { color: #a78bfa; }
+    .col-title.improve { color: var(--accent-super); }
+    .col-title.actions { color: var(--border-purple); }
     .col-count { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
 
     .col-body {
@@ -108,6 +108,12 @@
     }
     .retro-card:hover .card-delete { opacity: 1; }
     .card-delete:hover { color: var(--accent-nope); }
+
+    /* ── Drag and drop ── */
+    .retro-card[draggable="true"] { cursor: grab; }
+    .retro-card[draggable="true"]:active { cursor: grabbing; }
+    .retro-card.dragging { opacity: 0.35; pointer-events: none; }
+    .col-body.drag-over { background: var(--accent-dim); outline: 2px dashed var(--accent-glow); outline-offset: -4px; border-radius: var(--r-sm); }
 
     /* ── Empty state ── */
     .col-empty { font-size: 12px; color: var(--text3); padding: 8px 4px; font-style: italic; }
@@ -306,6 +312,7 @@
   function deleteItem(col, itemId) {
     const retro = getActive();
     if (!retro) return;
+    if (!confirm('Delete this card?')) return;
     retro.items[col] = (retro.items[col] || []).filter(i => i.id !== itemId);
     save();
     renderCol(col, retro);
@@ -331,6 +338,17 @@
   // ── Render ────────────────────────────────────────────────────────────────
 
   function renderCol(col, retro) {
+    if (!retro) {
+      const container = document.getElementById('col-' + col);
+      const addForm = container.querySelector('.add-form');
+      container.innerHTML = '';
+      container.appendChild(addForm);
+      const msg = document.createElement('div');
+      msg.className = 'col-empty';
+      msg.textContent = 'Create a retro board above to get started.';
+      container.appendChild(msg);
+      return;
+    }
     const items = retro ? (retro.items[col] || []) : [];
     const container = document.getElementById('col-' + col);
     const addForm = container.querySelector('.add-form');
@@ -344,7 +362,7 @@
           ${emoji} <span class="reaction-count">${reacters.length || ''}</span>
         </button>`;
       }).join('');
-      return `<div class="retro-card">
+      return `<div class="retro-card" draggable="true" data-id="${item.id}" data-col="${col}">
         <div class="card-text">${_esc(item.text)}</div>
         <div class="card-footer">
           ${reactionHTML}
@@ -407,6 +425,55 @@
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
+  // ── Drag between columns ──────────────────────────────────────────────────
+
+  function initDragDrop() {
+    // Drag source — delegated on document so it survives innerHTML re-renders
+    document.addEventListener('dragstart', e => {
+      const card = e.target.closest('.retro-card[draggable]');
+      if (!card) return;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify({ col: card.dataset.col, id: card.dataset.id }));
+      card.classList.add('dragging');
+    });
+    document.addEventListener('dragend', e => {
+      const card = e.target.closest('.retro-card');
+      if (card) card.classList.remove('dragging');
+    });
+
+    // Drop zones — each col-body
+    COLS.forEach(col => {
+      const el = document.getElementById('col-' + col);
+      el.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        el.classList.add('drag-over');
+      });
+      el.addEventListener('dragleave', e => {
+        if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+      });
+      el.addEventListener('drop', e => {
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        let payload;
+        try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+        const { col: srcCol, id } = payload;
+        if (srcCol === col) return;
+        const retro = getActive();
+        if (!retro) return;
+        const srcItems = retro.items[srcCol] || [];
+        const idx = srcItems.findIndex(i => i.id === id);
+        if (idx < 0) return;
+        const [item] = srcItems.splice(idx, 1);
+        if (!retro.items[col]) retro.items[col] = [];
+        retro.items[col].push(item);
+        save();
+        renderCol(srcCol, retro);
+        renderCol(col, retro);
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     load();
     if (!data.retros.length) {
@@ -419,6 +486,7 @@
       save();
     }
     renderSelectAndBoard();
+    initDragDrop();
     HubBootstrap.start('retro-hub');
   });
 </script>

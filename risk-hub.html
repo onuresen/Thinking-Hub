@@ -443,7 +443,8 @@
       : `${risks.length} of ${total} risk${total!==1?'s':''}`;
 
     if (!risks.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No risks match current filters.</div>';
+      const noData = !data.risks.length;
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">⚠</span><div class="e-title">${noData ? 'No risks logged' : 'No risks match filters'}</div><div class="e-sub">${noData ? 'Add a risk to start tracking.' : 'Try adjusting your filters or heatmap selection.'}</div></div>`;
       return;
     }
 
@@ -451,14 +452,14 @@
       const s = score(r);
       const b = band(s);
       const color = bandColor(b);
-      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" onclick="openDetail('${r.id}')">
+      return `<div class="risk-row${r.id === activeId ? ' selected' : ''}" data-id="${r.id}" onclick="openDetail('${r.id}')">
         <div class="risk-severity-bar" style="background:${color}"></div>
         <div class="risk-info">
           <div class="risk-title">${_esc(r.title||'Untitled risk')}</div>
           <div class="risk-meta">
             <span class="cat-badge ${r.category||'technical'}">${r.category||'technical'}</span>
             <span class="status-badge ${r.status||'open'}">${r.status||'open'}</span>
-            ${r.projectName ? `<span>${_esc(r.projectName)}</span>` : ''}
+            ${r.projectName ? `<span class="proj-badge">📁 ${_esc(r.projectName)}</span>` : ''}
           </div>
         </div>
         <div class="risk-score" style="color:${color}">${s}</div>
@@ -546,7 +547,7 @@
     r.projectId = projSel.value || null;
     r.projectName = projSel.value ? projSel.options[projSel.selectedIndex].text : null;
     r.updatedAt = new Date().toISOString();
-    save(); closeDetail(); renderAll();
+    save(); showToast('Risk saved'); closeDetail(); renderAll();
   }
 
   function deleteRisk() {

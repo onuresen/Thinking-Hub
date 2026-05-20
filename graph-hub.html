@@ -363,13 +363,21 @@
   </div>
 
   <script>
-    const TOOL_COLORS = {
+    const TOOL_COLORS_DARK = {
       'project-hub': { bg: '#1c2d47', border: '#3a5f96' },
       'decision-hub': { bg: '#3a1e1e', border: '#7a3535' },
       'kmqt-board': { bg: '#2b1e3a', border: '#5e3a7a' },
       'idea-swiper': { bg: '#1e3828', border: '#3a7a52' },
       'schedule': { bg: '#38321c', border: '#7a6a30' },
       'canvas-hub': { bg: '#1c3838', border: '#30787a' },
+    };
+    const TOOL_COLORS_LIGHT = {
+      'project-hub': { bg: '#bed8f5', border: '#4a90c8' },
+      'decision-hub': { bg: '#f5c0c0', border: '#c04040' },
+      'kmqt-board': { bg: '#e0c8f8', border: '#7a40b0' },
+      'idea-swiper': { bg: '#b8ecd4', border: '#2aaa6a' },
+      'schedule': { bg: '#fae0a0', border: '#b88020' },
+      'canvas-hub': { bg: '#b8ecd4', border: '#2aaa6a' },
     };
 
     const TOOL_LABELS = {
@@ -432,8 +440,10 @@
       label.textContent = 'Show:';
       bar.appendChild(label);
 
+      const _isDarkBar = document.documentElement.getAttribute('data-theme') !== 'light';
+      const _tcBar = _isDarkBar ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       tools.forEach(tool => {
-        const colors = TOOL_COLORS[tool] || { border: '#555' };
+        const colors = _tcBar[tool] || { border: _isDarkBar ? '#555' : '#8888a0' };
         const chip = document.createElement('button');
         chip.className = 'filter-chip active';
         chip.dataset.tool = tool;
@@ -467,7 +477,8 @@
       const body = document.createElement('div');
       body.className = 'legend-body';
       tools.forEach(tool => {
-        const c = TOOL_COLORS[tool] || { bg: '#333', border: '#555' };
+        const _isDarkLeg = document.documentElement.getAttribute('data-theme') !== 'light';
+        const c = (_isDarkLeg ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT)[tool] || (_isDarkLeg ? { bg: '#333', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
         const item = document.createElement('div');
         item.className = 'legend-item';
         item.innerHTML = `<div class="legend-swatch" style="background:${c.bg};border-color:${c.border}"></div><span>${TOOL_LABELS[tool] || tool}</span>`;
@@ -503,15 +514,16 @@
       function nodeId(tool, itemId) { return `${tool}::${itemId}`; }
 
       const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const TOOL_COLORS = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
-      const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.28)';
-      const edgeHover = isDark ? 'rgba(184,240,51,0.45)' : 'rgba(100,160,20,0.55)';
+      const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.60)';
+      const edgeHover = isDark ? 'rgba(184,240,51,0.45)' : 'rgba(100,160,20,0.65)';
 
       links.forEach(link => {
         [link.a, link.b].forEach(side => {
           const id = nodeId(side.tool, side.itemId);
           if (nodesMap.has(id)) return;
-          const c = TOOL_COLORS[side.tool] || { bg: '#2a2a30', border: '#555' };
+          const c = TOOL_COLORS[side.tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
           nodesMap.set(id, {
             id,
             label: (side.label || 'Untitled').slice(0, 40),
@@ -676,7 +688,7 @@
       const note = document.getElementById('edge-note').value.trim();
       const links = HubStorage.get('hub-links-v1') || [];
       const idx = links.findIndex(l => l.id === _currentEdgeId);
-      if (idx >= 0) { links[idx].note = note; HubStorage.set('hub-links-v1', links); }
+      if (idx >= 0) { links[idx].note = note; HubStorage.set('hub-links-v1', links); showToast('Note saved'); }
       closeEdgePanel();
     }
 

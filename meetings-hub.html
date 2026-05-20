@@ -289,17 +289,17 @@
     let items = data.meetings.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
     if (q) items = items.filter(m => (m.title||'').toLowerCase().includes(q) || (m.attendees||'').toLowerCase().includes(q));
     if (!items.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No meetings yet.</div>';
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results for your search.' : 'Log your first meeting to get started.'}</div></div>`;
       return;
     }
     list.innerHTML = items.map(m => {
       const openActions = (m.actionItems||[]).filter(a => !a.done && !a.taskCreated).length;
       const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
+      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" data-id="${m.id}" onclick="openMeeting('${m.id}')">
         <div class="mr-title">${_esc(m.title || 'Untitled meeting')}</div>
         <div class="mr-meta">
           <span>${dateLabel}</span>
-          ${m.projectName ? `<span>${_esc(m.projectName)}</span>` : ''}
+          ${m.projectName ? `<span class="proj-badge">📁 ${_esc(m.projectName)}</span>` : ''}
           ${openActions ? `<span class="mr-action-count">${openActions} action${openActions!==1?'s':''}</span>` : ''}
         </div>
       </div>`;
@@ -444,10 +444,11 @@
     const a = (m.actionItems||[]).find(x => x.id === actionId);
     if (!a) return;
 
-    const phRaw = HubStorage.get('project-hub-v1');
-    let ph = { projects: [] };
-    if (phRaw) { try { ph = typeof phRaw === 'string' ? JSON.parse(phRaw) : phRaw; } catch {} }
-    if (!ph.projects) ph.projects = [];
+    const ph = HubStorage.get('project-hub-v1');
+    if (!ph || !Array.isArray(ph.projects) || ph.projects.length === 0) {
+      showToast('Open Project Hub first to create a project', 'warn');
+      return;
+    }
 
     const taskId = uid();
     const task = {
@@ -486,7 +487,7 @@
     const m = activeMeeting(); if (!m) return;
     if (!m.actionItems) m.actionItems = [];
     m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, createdAt: new Date().toISOString() });
-    save(); closeActionModal(); renderDetail(); renderList();
+    save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 
   // ── New / Delete meeting ──────────────────────────────────────────────────────
@@ -519,6 +520,8 @@
     renderList();
     renderDetail();
     HubBootstrap.start('meetings-hub');
+    // Keep project select fresh if projects change while this meeting is open
+    HubData.onChange(() => { if (activeId) renderDetail(); });
   });
 
   document.getElementById('action-modal-overlay').addEventListener('click', e => {

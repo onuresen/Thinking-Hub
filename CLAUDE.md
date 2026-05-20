@@ -13,6 +13,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
+| `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
@@ -45,7 +46,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -467,3 +468,49 @@ Dedicated help/about page surfacing all 19 tools with framework connections, whe
 **Framework domains covered:** Project & Task (blue), Agile & Lean (green), Goal-Setting (yellow), Decision-Making (purple), Risk & Governance (red), Stakeholder & People (orange), Personal Productivity (cyan), Knowledge & Learning, Design & Ideation.
 
 **Files:** `help-hub.html` (new), `index.html` (APPS array), `CLAUDE.md` (file map)
+
+---
+
+### ~~Priority 35 — UX Safety & Polish (A1+A2+A3)~~ ✓ Done `[group: ux-polish]`
+Three quality-of-life passes across multiple tools.
+
+- **A1 — Delete confirmations**: `canvas-hub` (`deleteNode`), `matrix-hub` (`deleteItem`), `retro-hub` (`deleteItem`), `review-hub` (`removeRock`) — all guard with `confirm()` before mutation.
+- **A2 — Save toast feedback**: 9 tools now call `showToast()` after save: `goals-hub`, `meetings-hub`, `risk-hub`, `assumptions-hub`, `matrix-hub`, `graph-hub`, `focus-hub`, `tool-portfolio`, `scrum-hub`. (`log-hub` and `review-hub` already had save-status feedback; `canvas-hub` auto-saves silently by design.)
+- **A3 — Empty state messages**: Upgraded 4 tools that showed blank screens to first-time users: `goals-hub`, `meetings-hub`, `risk-hub`, `learning-hub`. Others already had adequate empties.
+
+**Files:** `canvas-hub.html`, `matrix-hub.html`, `retro-hub.html`, `review-hub.html`, `goals-hub.html`, `meetings-hub.html`, `risk-hub.html`, `assumptions-hub.html`, `graph-hub.html`, `focus-hub.html`, `tool-portfolio.html`, `learning-hub.html`, `theme.css`
+
+---
+
+### ~~Priority 36 — Cross-tool Data Surfacing (B1+B2+B3)~~ ✓ Done `[group: cross-tool-data]`
+Three data-surfacing improvements across tools.
+
+- **B1 — Project badges on tool list rows**: `meetings-hub`, `risk-hub`, `scrum-hub` backlog now show a `.proj-badge` chip when no project filter is active. `decision-hub` already groups by project; `stakeholder-hub` doesn't store `projectId`.
+- **B2 — Weekly Review auto-summary**: `review-hub` Done column now auto-pulls activity chips from decisions, risks, meetings, focus sessions, retro actions, and learning entries made in the review week — displayed as `buildActivityHTML()` section below existing task rows.
+- **B3 — Focus sessions → task time badges**: `project-hub` task rows show a `⏱ Xm` focus badge (monospace, surface3 bg) when `focus-hub` has sessions logged for that task ID. Uses module-level `_focusMap` built by `buildFocusMap()`.
+
+**Files:** `meetings-hub.html`, `risk-hub.html`, `scrum-hub.html`, `review-hub.html`, `project-hub.html`
+
+---
+
+### ~~Priority 37 — Global Search Expansion (C1)~~ ✓ Done `[group: search]`
+Cmd+K expanded from 6 to 13 tools. Added resolvers in `hub-links.js` for `meetings-hub`, `goals-hub`, `risk-hub`, `learning-hub`, `retro-hub`, `stakeholder-hub`, `scrum-hub`. Added all 7 to `TOOLS` array in `hub-search.js`. Each resolver returns `{id, label, subtitle}` items navigable via `hub-highlight` postMessage.
+
+**Files:** `hub-links.js`, `hub-search.js`
+
+---
+
+### ~~Priority 38 — Dashboard Widgets & Profile Filtering (D1+D2)~~ ✓ Done `[group: dashboard]`
+Four new home dashboard status widgets + profile-aware filtering.
+
+- **D1 — New widgets**: Open risks (with severity color dots), meeting action items (unresolved, non-task-created), focus sessions today (total time + completed count), retro actions from latest retro board. All subscribe to their storage keys for live updates.
+- **D2 — Profile filtering**: `buildHomeDashboard()` filters the app grid to only show tools in the active profile. `buildStatusWidgets()` filters widgets the same way. Profile chip onclick triggers both rebuilds. The `everything` profile (default) shows all tools and all widgets.
+
+**Files:** `index.html`
+
+---
+
+### ~~Priority 39 — Retro-hub drag-drop between columns (E1)~~ ✓ Done `[group: retro-ux]`
+Cards in retro-hub are now draggable across columns. Each card gets `draggable="true"` and `data-col` attributes. `initDragDrop()` wires a single delegated `dragstart`/`dragend` pair on document (so listeners survive innerHTML re-renders) plus `dragover`/`dragleave`/`drop` on each `.col-body`. Dropping on a different column splices the item from the source array, appends it to the target, saves, and re-renders both columns. Also fixed two hardcoded hex values in retro-hub CSS (`#f59e0b` → `var(--accent-super)`, `#a78bfa` → `var(--border-purple)`).
+
+**Files:** `retro-hub.html`

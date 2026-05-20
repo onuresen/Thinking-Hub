@@ -422,9 +422,13 @@ function moscowPill(p) { return `<span class="pill pill-${p}">${MOSCOW[p] || p}<
 function ptsPill(pts)  { return pts > 0 ? `<span class="pill pill-pts">${pts}pt</span>` : ''; }
 
 // ── Backlog ───────────────────────────────────────────────────────────────
+let _blProjectMap = {};
 function renderBacklog(c) {
   const filter = state.settings.linkedProjectId;
   let items = filter ? state.backlogs.filter(i => !i.projectId || i.projectId === filter) : state.backlogs;
+  _blProjectMap = {};
+  (typeof HubData !== 'undefined' && HubData.getProjects ? HubData.getProjects() : [])
+    .forEach(p => { _blProjectMap[p.id] = p.name; });
 
   const groups = [
     { key: 'backlog',   label: 'Backlog',   icon: '▤' },
@@ -462,8 +466,9 @@ function renderBacklog(c) {
 function blItemHTML(item) {
   const sprint = item.sprintId ? state.sprints.find(s => s.id === item.sprintId) : null;
   const canMove = item.status !== 'done';
+  const projName = (!state.settings.linkedProjectId && item.projectId) ? _blProjectMap[item.projectId] : null;
   return `
-    <div class="bl-item" onclick="openStoryModal('${item.id}')">
+    <div class="bl-item" data-id="${item.id}" onclick="openStoryModal('${item.id}')">
       <div class="bi-icon">${TYPE_ICON[item.type] || '📖'}</div>
       <div class="bi-main">
         <div class="bi-title">${HubUtils.esc(item.title)}</div>
@@ -472,6 +477,7 @@ function blItemHTML(item) {
           ${moscowPill(item.priority)}
           ${ptsPill(item.points)}
           ${sprint ? `<span class="pill pill-sprint">⚡ ${HubUtils.esc(sprint.name)}</span>` : ''}
+          ${projName ? `<span class="proj-badge">📁 ${HubUtils.esc(projName)}</span>` : ''}
         </div>
       </div>
       <div class="bi-actions" onclick="event.stopPropagation()">

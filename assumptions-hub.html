@@ -390,7 +390,7 @@
     a.linkedDecision = document.getElementById('dp-decision').value || null;
     a.notes = document.getElementById('dp-notes').value.trim();
     a.updatedAt = new Date().toISOString();
-    save();
+    save(); showToast('Assumption saved');
     renderLanes();
     closeDetail();
   }
