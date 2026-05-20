@@ -444,10 +444,11 @@
     const a = (m.actionItems||[]).find(x => x.id === actionId);
     if (!a) return;
 
-    const phRaw = HubStorage.get('project-hub-v1');
-    let ph = { projects: [] };
-    if (phRaw) { try { ph = typeof phRaw === 'string' ? JSON.parse(phRaw) : phRaw; } catch {} }
-    if (!ph.projects) ph.projects = [];
+    const ph = HubStorage.get('project-hub-v1');
+    if (!ph || !Array.isArray(ph.projects) || ph.projects.length === 0) {
+      showToast('Open Project Hub first to create a project', 'warn');
+      return;
+    }
 
     const taskId = uid();
     const task = {
@@ -519,6 +520,8 @@
     renderList();
     renderDetail();
     HubBootstrap.start('meetings-hub');
+    // Keep project select fresh if projects change while this meeting is open
+    HubData.onChange(() => { if (activeId) renderDetail(); });
   });
 
   document.getElementById('action-modal-overlay').addEventListener('click', e => {
