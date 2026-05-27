@@ -46,9 +46,11 @@
       font-family: var(--font-body); font-size: 12.5px; outline: none;
     }
     .search-input:focus { border-color: var(--accent); }
-    .meeting-list { flex: 1; overflow-y: auto; }
-    .meeting-list::-webkit-scrollbar { width: 4px; }
-    .meeting-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .meeting-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--text3) transparent; }
+    .meeting-list::-webkit-scrollbar { width: 5px; }
+    .meeting-list::-webkit-scrollbar-track { background: transparent; }
+    .meeting-list::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 3px; }
+    .meeting-list::-webkit-scrollbar-thumb:hover { background: var(--text2); }
     .meeting-row {
       padding: 10px 14px; border-bottom: 1px solid var(--border);
       cursor: pointer; transition: background 0.1s;
