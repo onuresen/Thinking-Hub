@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -519,9 +520,13 @@
     if (data.meetings.length) activeId = data.meetings[0].id;
     renderList();
     renderDetail();
+    // Register onChange BEFORE HubBootstrap so HubData.init()'s immediate
+    // _notifyListeners() call (the "populate dropdowns on load" hook) fires
+    // with a live listener — catches any cloud/cross-tab update that arrived
+    // before init() ran and ensures the project select always reflects the
+    // latest project-hub-v1 data.
+    HubData.onChange(() => renderDetail());
     HubBootstrap.start('meetings-hub');
-    // Keep project select fresh if projects change while this meeting is open
-    HubData.onChange(() => { if (activeId) renderDetail(); });
   });
 
   document.getElementById('action-modal-overlay').addEventListener('click', e => {
