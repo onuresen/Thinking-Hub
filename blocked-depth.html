@@ -6,11 +6,35 @@
 <title>Blocked Depth</title>
 <link rel="stylesheet" href="theme.css">
 <style>
-  /* ─── Tool-local sea colours (decorative only, not semantic) ─── */
+  /* ─── Watercolour water palette — semi-transparent so both themes work ─── */
   :root {
-    --_sea-top:  #071e35;
-    --_sea-mid:  #040f1d;
-    --_sea-deep: #020810;
+    --_wc-1:       rgba(68, 138, 198, 0.12);   /* lightest surface wash  */
+    --_wc-2:       rgba(46, 106, 168, 0.20);   /* mid depth wash         */
+    --_wc-3:       rgba(26, 76, 146, 0.29);    /* deep wash              */
+    --_wc-border:  rgba(78, 146, 210, 0.18);
+    --_wc-wave:    rgba(58, 118, 178, 0.72);   /* wave fill base         */
+    --_wc-wave2:   rgba(76, 140, 198, 0.52);   /* wave fill mid          */
+    --_wc-wave3:   rgba(98, 166, 218, 0.28);   /* wave surface shimmer   */
+    --_wc-gauge:   rgba(78, 146, 210, 0.20);
+    --_wc-conn:    rgba(78, 146, 210, 0.14);
+    --_wc-lbl:     rgba(88, 158, 218, 0.60);
+    --_wc-shimmer: rgba(118, 188, 240, 0.04);
+    --_wc-glow:    rgba(68, 138, 198, 0.18);
+  }
+
+  [data-theme="light"] {
+    --_wc-1:       rgba(128, 192, 232, 0.28);
+    --_wc-2:       rgba(84, 156, 208, 0.42);
+    --_wc-3:       rgba(48, 118, 182, 0.54);
+    --_wc-border:  rgba(68, 146, 212, 0.28);
+    --_wc-wave:    rgba(68, 134, 193, 0.84);
+    --_wc-wave2:   rgba(88, 155, 213, 0.66);
+    --_wc-wave3:   rgba(114, 180, 228, 0.44);
+    --_wc-gauge:   rgba(68, 138, 208, 0.32);
+    --_wc-conn:    rgba(68, 138, 208, 0.22);
+    --_wc-lbl:     rgba(44, 116, 188, 0.80);
+    --_wc-shimmer: rgba(148, 208, 248, 0.08);
+    --_wc-glow:    rgba(68, 138, 200, 0.22);
   }
 
   body {
@@ -280,28 +304,47 @@
 
   /* waterline */
   .waterline-wrap {
-    height: 18px;
+    height: 20px;
     overflow: hidden;
-    background: var(--surface2);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    background: var(--_wc-wave);
+    border-left: 1px solid var(--_wc-border);
+    border-right: 1px solid var(--_wc-border);
   }
 
   .wave-svg {
     width: 200%;
-    height: 18px;
-    animation: wave-scroll 4s linear infinite;
+    height: 20px;
+    animation: wave-scroll 5s linear infinite;
   }
+
+  /* wave path colours come from CSS so they respond to [data-theme] */
+  .wv-bg  { fill: var(--_wc-wave);  }
+  .wv-1   { fill: var(--_wc-wave2); }
+  .wv-2   { fill: var(--_wc-wave3); }
+  .wv-3   { fill: none; stroke: rgba(255,255,255,0.10); stroke-width: 1; }
 
   @keyframes wave-scroll {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
   }
 
-  /* below water */
+  /* below water — watercolour wash: semi-transparent blues over the theme surface */
   .below-water {
-    background: linear-gradient(180deg, var(--_sea-top) 0%, var(--_sea-mid) 55%, var(--_sea-deep) 100%);
-    border: 1px solid rgba(51,80,117,0.2);
+    background:
+      /* diagonal tint for painterly irregularity */
+      linear-gradient(148deg,
+        rgba(160, 218, 255, 0.04) 0%,
+        transparent 48%,
+        rgba(40, 96, 200, 0.04) 100%
+      ),
+      /* main depth gradient */
+      linear-gradient(180deg,
+        var(--_wc-1) 0%,
+        var(--_wc-2) 50%,
+        var(--_wc-3) 100%
+      ),
+      var(--surface);
+    border: 1px solid var(--_wc-border);
     border-top: none;
     border-radius: 0 0 var(--r) var(--r);
     padding: 13px 14px 15px;
@@ -311,17 +354,19 @@
   }
 
   .iceberg-card:hover .below-water {
-    box-shadow: 0 10px 36px rgba(0,0,0,0.6);
+    box-shadow:
+      0 8px 32px var(--_wc-glow),
+      0 2px 10px rgba(0,0,0,0.12);
   }
 
-  /* shimmer */
+  /* soft shimmer — lighter, more diffuse */
   .below-water::after {
     content: '';
     position: absolute;
     top: 0; left: -80%;
-    width: 50%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(91,156,246,0.03), transparent);
-    animation: shimmer 5s ease-in-out infinite;
+    width: 55%; height: 100%;
+    background: linear-gradient(90deg, transparent, var(--_wc-shimmer), transparent);
+    animation: shimmer 6s ease-in-out infinite;
     pointer-events: none;
   }
 
@@ -334,7 +379,7 @@
     position: absolute;
     right: 8px; top: 10px; bottom: 10px;
     width: 2px;
-    background: rgba(255,255,255,0.04);
+    background: var(--_wc-conn);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -343,7 +388,7 @@
     position: absolute;
     bottom: 0; left: 0; right: 0;
     border-radius: 2px;
-    background: linear-gradient(to top, var(--border-blue), rgba(51,80,117,0.2));
+    background: linear-gradient(to top, var(--_wc-gauge), transparent);
   }
 
   .under-label {
@@ -351,7 +396,7 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(51,80,117,0.7);
+    color: var(--_wc-lbl);
     margin-bottom: 11px;
     display: flex;
     align-items: center;
@@ -374,7 +419,7 @@
     position: absolute;
     left: 12px; top: 25px;
     width: 1px; bottom: 4px;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+    background: linear-gradient(to bottom, var(--_wc-conn), transparent);
   }
   .impact-layer:last-child .layer-connector { display: none; }
 
@@ -408,6 +453,7 @@
     line-height: 1;
     letter-spacing: -0.02em;
     font-family: var(--font-display);
+    text-shadow: 0 0 14px currentColor;
   }
 
   .lc-t { color: var(--accent-super); }
@@ -447,7 +493,7 @@
   .expand-row {
     margin-top: 12px;
     padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,0.04);
+    border-top: 1px solid var(--_wc-conn);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -667,11 +713,11 @@
       </div>
 
       <div class="waterline-wrap">
-        <svg class="wave-svg" viewBox="0 0 960 18" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-          <rect x="0" y="0" width="960" height="18" fill="#07192e"/>
-          <path d="M0,9 C80,3 160,15 240,9 C320,3 400,15 480,9 C560,3 640,15 720,9 C800,3 880,15 960,9 L960,18 L0,18 Z" fill="#0c2340" opacity="0.9"/>
-          <path d="M0,12 C60,7 120,16 180,12 C240,8 300,16 360,12 C420,8 480,16 540,12 C600,8 660,16 720,12 C780,8 840,16 900,12 C940,10 960,13 960,12 L960,18 L0,18 Z" fill="#0e2a4e" opacity="0.5"/>
-          <path d="M0,8.5 C80,3.5 160,13.5 240,8.5 C320,3.5 400,13.5 480,8.5 C560,3.5 640,13.5 720,8.5 C800,3.5 880,13.5 960,8.5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <svg class="wave-svg" viewBox="0 0 960 20" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <rect class="wv-bg" x="0" y="0" width="960" height="20"/>
+          <path class="wv-1" d="M0,10 C80,4 160,16 240,10 C320,4 400,16 480,10 C560,4 640,16 720,10 C800,4 880,16 960,10 L960,20 L0,20 Z"/>
+          <path class="wv-2" d="M0,13 C60,8 120,17 180,13 C240,9 300,17 360,13 C420,9 480,17 540,13 C600,9 660,17 720,13 C780,9 840,17 900,13 C940,11 960,14 960,13 L960,20 L0,20 Z"/>
+          <path class="wv-3" d="M0,9 C80,4 160,14 240,9 C320,4 400,14 480,9 C560,4 640,14 720,9 C800,4 880,14 960,9"/>
         </svg>
       </div>
 
@@ -681,7 +727,7 @@
         </div>
         <div class="under-label">
           <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-            <path d="M5 1v8M2 6l3 3 3-3" stroke="rgba(51,80,117,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 1v8M2 6l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           ${total} item${total !== 1 ? 's' : ''} beneath the surface
         </div>
