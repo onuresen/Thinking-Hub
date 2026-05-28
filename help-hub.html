@@ -214,7 +214,7 @@
 
 const TOOLS = [
   {
-    id: 'project-hub', label: 'Project Hub', icon: '◈', group: 'PLAN', wg: 'WEEKLY CYCLE',
+    id: 'project-hub', label: 'Project Hub', icon: '◈', group: 'TODAY', wg: 'TODAY',
     file: 'project-hub.html',
     desc: 'Track milestones, tasks and workstreams across a project.',
     frameworks: ['PMBOK', 'Kanban', 'Eisenhower Matrix', 'RACI / DACI'],
@@ -224,7 +224,17 @@ const TOOLS = [
     sample: 'You\'re kicking off "Brand Refresh Q3". Create the project, add teammates with roles (Design Lead, Content Contributor), break work into tasks. Open Kanban — the "In Progress" WIP limit of 3 lights up when the team is overloaded. Open Priority Matrix to find tasks that can wait vs. must happen this week.'
   },
   {
-    id: 'schedule', label: 'Schedule', icon: '▦', group: 'PLAN', wg: 'WEEKLY CYCLE',
+    id: 'blocked-depth', label: 'Blocked Depth', icon: '▾', group: 'TODAY', wg: 'TODAY',
+    file: 'blocked-depth.html',
+    desc: 'Surface and sequence your blocked tasks — see what\'s stuck and what unlocks it.',
+    frameworks: ['Critical Path Method', 'Systems Thinking', 'Theory of Constraints'],
+    fwIds: ['Critical-Path-Method', 'Systems-Thinking', 'Theory-of-Constraints'],
+    whenToUse: 'When your task list has grown stale and you\'re not sure what you\'re actually waiting on. Blocked Depth digs below the surface of "stuck" — it shows the chain of dependencies that explains why nothing is moving, so you can unblock the real constraint instead of just triaging symptoms.',
+    features: ['Visual depth layers — stack blocked tasks by their dependency chain', 'Blocker tagging: who or what is holding each task', 'Surface-to-depth view of cascading blockers', 'Unblock action prompts with owner and due date', 'Cross-links with Project Hub tasks and Decision Hub decisions', 'Watercolor depth aesthetic for calm visual scanning'],
+    sample: 'Four tasks are stuck. Open Blocked Depth — you can see "Write API docs" is blocked by "Finalize schema," which is blocked by "Architecture decision," which has no owner. Two levels deep and the root cause is a decision that never got made. Assign the decision, and the whole chain unfreezes. Without Blocked Depth you\'d have been nudging individuals for days without finding the real blocker.'
+  },
+  {
+    id: 'schedule', label: 'Schedule', icon: '▦', group: 'TODAY', wg: 'TODAY',
     file: 'schedule.html',
     desc: 'Timeline and calendar views for tasks, milestones, and events.',
     frameworks: ['Gantt Chart', 'Critical Path Method', 'PERT'],
@@ -234,7 +244,7 @@ const TOOLS = [
     sample: 'Three projects run in parallel. Open Schedule — a marketing campaign due April 15 and a product launch due April 20 both need the same designer. The overlap is obvious now, before it becomes a crisis. Negotiate priorities while there\'s still time.'
   },
   {
-    id: 'review-hub', label: 'Weekly Review', icon: '◈', group: 'DO', wg: 'WEEKLY CYCLE',
+    id: 'review-hub', label: 'Weekly Review', icon: '↺', group: 'WEEK', wg: 'THIS WEEK',
     file: 'review-hub.html',
     desc: 'Structured weekly ritual — done, capture, and next week\'s big rocks.',
     frameworks: ['GTD'],
@@ -244,7 +254,7 @@ const TOOLS = [
     sample: 'Friday, 4 pm. Open Weekly Review. Mark last week\'s big rock done (launched onboarding). Capture what\'s still open — 3 tasks pushed to next week. Set next week\'s big rock: "Finalize pricing page." Takes 15 minutes. Starts the weekend with a clean mind.'
   },
   {
-    id: 'goals-hub', label: 'Goals Hub', icon: '◎', group: 'PLAN', wg: 'WEEKLY CYCLE',
+    id: 'goals-hub', label: 'Goals Hub', icon: '◎', group: 'WEEK', wg: 'THIS WEEK',
     file: 'goals-hub.html',
     desc: 'Quarterly OKRs — connect daily work to strategic objectives.',
     frameworks: ['OKR', 'SMART Goals', 'Balanced Scorecard'],
@@ -254,7 +264,7 @@ const TOOLS = [
     sample: 'Q3 Objective: "Increase user activation." KR1: onboarding completion ≥ 65% (score 0.6). KR2: time-to-first-value < 3 days (score 0.8). Card shows 70% progress — satisfactory. An ⚠ 2 risks badge surfaces: two open risks in the linked project need attention before month-end.'
   },
   {
-    id: 'meetings-hub', label: 'Meeting Notes', icon: '▦', group: 'PLAN', wg: 'WEEKLY CYCLE',
+    id: 'meetings-hub', label: 'Meeting Notes', icon: '▣', group: 'WEEK', wg: 'THIS WEEK',
     file: 'meetings-hub.html',
     desc: 'Structured meeting notes with action items that flow into Project Hub.',
     frameworks: ['PMBOK', 'RACI / DACI'],
@@ -264,7 +274,7 @@ const TOOLS = [
     sample: 'Monday kick-off for the website launch. Add attendees, note the three decisions made (go/no-go criteria, launch date, comms lead), extract 5 action items each with a clear owner. By the end of the meeting, everyone knows exactly what they own — no follow-up email needed.'
   },
   {
-    id: 'kmqt-board', label: 'KMQT Board', icon: '⊞', group: 'THINK', wg: 'ALIGN & DECIDE',
+    id: 'kmqt-board', label: 'KMQT Board', icon: '⊞', group: 'SITUATION', wg: 'SITUATION',
     file: 'kmqt-board.html',
     desc: 'Known / Messy / Questions / Thinking — structured board for processing your thoughts.',
     frameworks: ['KPT Retrospective', 'Kaizen'],
@@ -274,7 +284,7 @@ const TOOLS = [
     sample: 'Monday morning brain dump: "We need a new pricing model" → Thinking. "What is our current churn rate?" → Questions. "We use Stripe for payments" → Known. Sorting takes 10 minutes. You discover the real decision: pricing strategy — not a task. Send it to Decision Hub.'
   },
   {
-    id: 'decision-hub', label: 'Decision Hub', icon: '◎', group: 'DECIDE', wg: 'ALIGN & DECIDE',
+    id: 'decision-hub', label: 'Decision Hub', icon: '⊕', group: 'SITUATION', wg: 'SITUATION',
     file: 'decision-hub.html',
     desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment.',
     frameworks: ['Decision Matrix', 'Cynefin Framework', 'Six Thinking Hats', 'Assumption-Based Planning'],
@@ -284,7 +294,7 @@ const TOOLS = [
     sample: 'Deciding: build vs. buy a data pipeline. Tag it "Complex" in Cynefin — cause and effect aren\'t obvious. List options. Add assumption: "We have 2 engineers available" with signpost: "Confirmed in planning meeting" and hedge: "Outsource if < 2 engineers available." Reach 80% alignment score before committing.'
   },
   {
-    id: 'risk-hub', label: 'Risk Register', icon: '◈', group: 'DECIDE', wg: 'ALIGN & DECIDE',
+    id: 'risk-hub', label: 'Risk Register', icon: '⚠', group: 'SITUATION', wg: 'SITUATION',
     file: 'risk-hub.html',
     desc: 'Track project risks with probability/impact heat-map and mitigation plans.',
     frameworks: ['ISO 31000', 'COSO ERM', 'PMBOK'],
@@ -294,7 +304,7 @@ const TOOLS = [
     sample: 'Launching a mobile app with a new payment provider. Risk: "Integration delays launch by 2+ weeks" (High × High → red). Treatment: Reduce — start integration 3 weeks early. Owner: Tech Lead. Review date: March 15. When March 15 arrives, status changes to Monitoring.'
   },
   {
-    id: 'stakeholder-hub', label: 'Stakeholder Map', icon: '◇', group: 'TEAM', wg: 'ALIGN & DECIDE',
+    id: 'stakeholder-hub', label: 'Stakeholder Map', icon: '◇', group: 'SITUATION', wg: 'SITUATION',
     file: 'stakeholder-hub.html',
     desc: 'Power/interest grid for mapping and managing project stakeholders.',
     frameworks: ['Mendelow Matrix', 'Salience Model', 'PMBOK'],
@@ -304,7 +314,7 @@ const TOOLS = [
     sample: 'New product launch. CEO (High Power, High Interest) → Manage Closely. Legal (High Power, Low Interest) → Keep Satisfied. Beta users (Low Power, High Interest) → Keep Informed. Legal\'s engagement is "Neutral" — plan a proactive briefing before it becomes "Resistant."'
   },
   {
-    id: 'scrum-hub', label: 'Scrum Board', icon: '⚡', group: 'DO', wg: 'EXECUTE',
+    id: 'scrum-hub', label: 'Scrum Board', icon: '⚡', group: 'WEEK', wg: 'THIS WEEK',
     file: 'scrum-hub.html',
     desc: 'Product backlog, sprint planning, velocity tracking, and Definition of Done.',
     frameworks: ['Scrum', 'MoSCoW', 'Kanban', 'Agile Retrospectives'],
@@ -314,7 +324,7 @@ const TOOLS = [
     sample: 'Sprint 7 goal: "Enable notification preferences." 12 story points committed. Day 4: 5 points done, 7 in progress. WIP limit on "In Progress" is 3 — currently hit. Team rule: swarm on something in-progress before pulling new work. Burndown is on track. Close sprint Friday with a 15-min retro.'
   },
   {
-    id: 'focus-hub', label: 'Focus Timer', icon: '◉', group: 'DO', wg: 'EXECUTE',
+    id: 'focus-hub', label: 'Focus Timer', icon: '◉', group: 'SYSTEM', wg: 'SYSTEM',
     file: 'focus-hub.html',
     desc: 'Pomodoro-style focus sessions linked to your tasks.',
     frameworks: ['Pomodoro Technique', 'GTD', 'Systems Thinking'],
@@ -324,7 +334,7 @@ const TOOLS = [
     sample: 'Two-hour window before lunch. Select "Write Q3 strategy doc", Energy: ⚡ High, Context: @deep-work, Estimate: 4 🍅. Start. 25 minutes of uninterrupted writing. 5-min break. Repeat. Three complete sessions logged. The fourth pomodoro went over — normal. The histogram shows Tuesday as your most productive writing day.'
   },
   {
-    id: 'log-hub', label: 'Daily Log', icon: '◷', group: 'DO', wg: 'EXECUTE',
+    id: 'log-hub', label: 'Daily Log', icon: '◷', group: 'TODAY', wg: 'TODAY',
     file: 'log-hub.html',
     desc: 'Private daily journal with mood tracking and streak calendar.',
     frameworks: ['Bullet Journal Method', 'GTD'],
@@ -334,7 +344,7 @@ const TOOLS = [
     sample: 'End of Tuesday. Mood: 🙂 Good. Mode: ✅ Tasks. Entry: "• Finished risk register for Project X. • Sent stakeholder update. ○ Still need to review PRD." Learning field: "ISO 31000 \'Accept\' is a valid treatment — not a failure to mitigate." 47-day streak. The heatmap shows a dip last Thursday — too many meetings.'
   },
   {
-    id: 'idea-swiper', label: 'Idea Swiper', icon: '⟳', group: 'THINK', wg: 'STRATEGY',
+    id: 'idea-swiper', label: 'Idea Swiper', icon: '⟳', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'idea-swiper.html',
     desc: 'Rapid triage — keep, park, or discard ideas before they pile up.',
     frameworks: ['Design Thinking', 'Mind Mapping'],
@@ -344,7 +354,7 @@ const TOOLS = [
     sample: 'You collected 40 feature ideas from customer interviews. Open Idea Swiper. In 10 minutes: 8 Super (must explore), 15 Like (interesting), 17 Nope (not now or not us). Send the 8 Supers to Project Hub as tasks under "Feature Backlog." Speed over perfection — you can always revisit the Likes.'
   },
   {
-    id: 'learning-hub', label: 'Learning Log', icon: '◈', group: 'THINK', wg: 'STRATEGY',
+    id: 'learning-hub', label: 'Learning Log', icon: '◑', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'learning-hub.html',
     desc: 'Track books, articles, and courses with highlights and key insights.',
     frameworks: ['PKM', 'Zettelkasten', 'Feynman Technique'],
@@ -354,7 +364,7 @@ const TOOLS = [
     sample: 'You finish Chapter 3 of "The Lean Startup." Log it (type: book, status: Reading). Highlight: "Build-Measure-Learn loop reduces waste by testing assumptions before building." Key Insight (Feynman): "Before writing a line of code, decide what you\'d need to see to know the idea is wrong." One entry. Two minutes. Permanently captured.'
   },
   {
-    id: 'graph-hub', label: 'Dependency Graph', icon: '🕸️', group: 'THINK', wg: 'STRATEGY',
+    id: 'graph-hub', label: 'Dependency Graph', icon: '🕸️', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'graph-hub.html',
     desc: 'Visual map of your tasks, decisions, and ideas as a linked graph.',
     frameworks: ['Critical Path Method', 'PERT', 'PMBOK'],
@@ -364,7 +374,7 @@ const TOOLS = [
     sample: 'You have 20 tasks for a product launch. Add them as nodes, draw links: "Finalize copy" → "Design assets" → "Dev build" → "QA" → "Deploy." The longest chain is 12 days — that\'s your critical path. You spot "Legal review" as an orphan with no connection. Someone forgot to sequence it. Fixed before it blocked launch.'
   },
   {
-    id: 'retro-hub', label: 'Retro Board', icon: '⟳', group: 'TEAM', wg: 'EXECUTE',
+    id: 'retro-hub', label: 'Retro Board', icon: '⟲', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'retro-hub.html',
     desc: 'Async retrospectives with emoji reactions and markdown export.',
     frameworks: ['Agile Retrospectives', 'KPT Retrospective', 'Kaizen'],
@@ -374,7 +384,7 @@ const TOOLS = [
     sample: 'Sprint 7 retro. Went Well: "WIP limit caught the overload before it caused a delay." Improve: "Stand-ups run long." Action: "Add a 15-minute hard stop to daily standup" — owner: Scrum Master. Kaizen principle: one small improvement per sprint. Over a year, that\'s 26 improvements compounding.'
   },
   {
-    id: 'achievements-hub', label: 'Achievements', icon: '🏅', group: 'ME', wg: 'WEEKLY CYCLE',
+    id: 'achievements-hub', label: 'Achievements', icon: '🏅', group: 'SYSTEM', wg: 'SYSTEM',
     file: 'achievements-hub.html',
     desc: 'Your productivity profile — badges, streaks, and activity heatmap.',
     frameworks: ['Systems Thinking'],
@@ -384,7 +394,7 @@ const TOOLS = [
     sample: 'You ship the redesigned onboarding flow. Log it: "Launched new onboarding — activation rate up 18%." Category: Product. Link to "Site Redesign Q3." The heatmap shows a 23-day active streak. The reinforcing loop is running: visible progress fuels the next sprint of work.'
   },
   {
-    id: 'canvas-hub', label: 'Spatial Canvas', icon: '✏️', group: 'THINK', wg: 'STRATEGY',
+    id: 'canvas-hub', label: 'Spatial Canvas', icon: '✏️', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'canvas-hub.html',
     desc: 'Unstructured spatial notes for limitless ideation and system mapping.',
     frameworks: ['Mind Mapping', 'Systems Thinking', 'Design Thinking'],
@@ -394,7 +404,7 @@ const TOOLS = [
     sample: 'Designing a new feature. Place "User Problem" in the center. Branch out: "Root Causes," "Existing Solutions," "Our Constraint." Connect feedback loops with arrows. After 20 minutes you have a system map that makes the real design decision obvious — before you wrote a single line of spec or code.'
   },
   {
-    id: 'tool-portfolio', label: 'Tool Portfolio', icon: '🧰', group: 'SENSE', wg: 'STRATEGY',
+    id: 'tool-portfolio', label: 'Tool Portfolio', icon: '🧰', group: 'SHELF', wg: 'BOOKSHELF',
     file: 'tool-portfolio.html',
     desc: 'Curated map of tools, platforms, and vendors with Technology Radar rings.',
     frameworks: ['Technology Radar', 'TOGAF'],
