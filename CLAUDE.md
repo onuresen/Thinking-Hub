@@ -44,6 +44,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
+| `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
@@ -514,3 +515,18 @@ Four new home dashboard status widgets + profile-aware filtering.
 Cards in retro-hub are now draggable across columns. Each card gets `draggable="true"` and `data-col` attributes. `initDragDrop()` wires a single delegated `dragstart`/`dragend` pair on document (so listeners survive innerHTML re-renders) plus `dragover`/`dragleave`/`drop` on each `.col-body`. Dropping on a different column splices the item from the source array, appends it to the target, saves, and re-renders both columns. Also fixed two hardcoded hex values in retro-hub CSS (`#f59e0b` → `var(--accent-super)`, `#a78bfa` → `var(--border-purple)`).
 
 **Files:** `retro-hub.html`
+
+---
+
+### ~~Priority 40 — New tool: Blocked Depth~~ ✓ Done `[group: new-tools-solo]`
+Iceberg cascade view: surface a blocked task above the waterline, reveal every open task, at-risk milestone, and affected person frozen beneath it. Proportional card heights encode cascade impact at a glance.
+
+**Concept:** Inspired by SmartPM's "size up the iceberg" risk-depth framing. Above the waterline = the visible blocked task (severity bar, owner chip, project chip, reason). Below the waterline = cascade depth (waiting tasks, milestones at risk, people affected). Impact score = `tasks × 1 + milestones × 1.8 + people × 0.8`. Cards are proportionally sized and sortable by deepest / longest blocked / milestone risk. Click any layer row to expand the item list.
+
+**Key decisions:**
+- Cascade heuristic: open, non-done siblings in the same project = "downstream" (no explicit `dependsOn` field in the data model)
+- Sea gradient uses tool-local CSS vars (`--_sea-top/mid/deep`) — decorative, not in theme.css
+- All semantic colors use theme.css tokens: `--accent-nope` (blocked), `--accent-super` (tasks), `--border-purple` (milestones), `--border-blue` (people)
+- Profiles: `dx` and `dev` (not `bim` — less relevant to BIM authoring workflow)
+
+**Files:** `blocked-depth.html` (new), `index.html` (APPS + PROFILES), `CLAUDE.md` (file map)

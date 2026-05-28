@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blocked Depth</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  /* ─── Tool-local sea colours (decorative only, not semantic) ─── */
+  :root {
+    --_sea-top:  #071e35;
+    --_sea-mid:  #040f1d;
+    --_sea-deep: #020810;
+  }
+
+  body {
+    margin: 0;
+    padding: 28px 32px 72px;
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: var(--font-body);
+  }
+
+  /* ─── CONCEPT INTRO ─────────────────────────────────────────── */
+  .concept-intro {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px 20px;
+    margin-bottom: 18px;
+  }
+
+  .iceberg-glyph {
+    width: 58px;
+    height: auto;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 14px rgba(51,80,117,0.5));
+  }
+
+  .intro-body { flex: 1; min-width: 0; }
+
+  .intro-body h1 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  .intro-body p {
+    font-size: 12.5px;
+    color: var(--text3);
+    line-height: 1.55;
+    max-width: 480px;
+  }
+
+  .intro-body p strong { color: var(--border-blue); font-weight: 500; }
+
+  .intro-divider {
+    width: 1px;
+    height: 44px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .intro-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+
+  .legend-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .legend-depth-hint {
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text3);
+    opacity: 0.6;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ─── SUMMARY BAR ───────────────────────────────────────────── */
+  .summary-bar {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .summary-stat {
+    flex: 1;
+    padding: 13px 18px;
+    border-right: 1px solid var(--border);
+  }
+  .summary-stat:last-child { border-right: none; }
+
+  .summary-stat .num {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-family: var(--font-display);
+  }
+
+  .summary-stat .lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text3);
+    margin-top: 3px;
+    font-family: var(--font-body);
+  }
+
+  /* ─── SORT ROW ──────────────────────────────────────────────── */
+  .sort-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .sort-lbl {
+    font-size: 10.5px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 2px;
+  }
+
+  .sort-btn {
+    font-size: 11.5px;
+    color: var(--text3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 11px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: all 0.14s;
+  }
+
+  .sort-btn:hover  { color: var(--text); border-color: var(--border2); }
+  .sort-btn.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-dim); }
+
+  /* ─── CARDS GRID ────────────────────────────────────────────── */
+  .cards-grid {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* ─── ICEBERG CARD ──────────────────────────────────────────── */
+  .iceberg-card {
+    width: 264px;
+    border-radius: var(--r);
+    overflow: visible;
+    cursor: pointer;
+    transition: transform 0.18s ease;
+  }
+
+  .iceberg-card:hover { transform: translateY(-2px); }
+
+  /* above water */
+  .above-water {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: var(--r) var(--r) 0 0;
+    padding: 13px 14px 12px;
+    position: relative;
+  }
+
+  .sev-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: var(--r) 0 0 0;
+  }
+  .sev-critical { background: linear-gradient(180deg, var(--accent-nope), rgba(232,69,90,0.25)); }
+  .sev-high     { background: linear-gradient(180deg, var(--accent-super), rgba(245,166,35,0.25)); }
+  .sev-medium   { background: linear-gradient(180deg, var(--border-blue), rgba(51,80,117,0.25)); }
+
+  .card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .blocked-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-nope);
+    font-family: var(--font-body);
+  }
+
+  .pulse-dot {
+    width: 5px;
+    height: 5px;
+    background: var(--accent-nope);
+    border-radius: 50%;
+    animation: pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.75); }
+  }
+
+  .days-txt { font-size: 10.5px; color: var(--text3); }
+
+  .task-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    margin-bottom: 7px;
+    letter-spacing: -0.01em;
+  }
+
+  .task-chips {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    font-size: 10.5px;
+    color: var(--text2);
+    background: var(--surface3);
+    border-radius: var(--r-sm);
+    padding: 2px 7px;
+    white-space: nowrap;
+  }
+
+  .chip-project { color: var(--text3); }
+
+  .block-reason {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.5;
+    padding: 6px 8px;
+    background: color-mix(in srgb, var(--accent-super) 7%, transparent);
+    border-left: 2px solid color-mix(in srgb, var(--accent-super) 35%, transparent);
+    border-radius: 2px;
+    font-style: italic;
+  }
+
+  /* waterline */
+  .waterline-wrap {
+    height: 18px;
+    overflow: hidden;
+    background: var(--surface2);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  .wave-svg {
+    width: 200%;
+    height: 18px;
+    animation: wave-scroll 4s linear infinite;
+  }
+
+  @keyframes wave-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* below water */
+  .below-water {
+    background: linear-gradient(180deg, var(--_sea-top) 0%, var(--_sea-mid) 55%, var(--_sea-deep) 100%);
+    border: 1px solid rgba(51,80,117,0.2);
+    border-top: none;
+    border-radius: 0 0 var(--r) var(--r);
+    padding: 13px 14px 15px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.25s;
+  }
+
+  .iceberg-card:hover .below-water {
+    box-shadow: 0 10px 36px rgba(0,0,0,0.6);
+  }
+
+  /* shimmer */
+  .below-water::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -80%;
+    width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(91,156,246,0.03), transparent);
+    animation: shimmer 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes shimmer {
+    0%   { left: -80%; }
+    100% { left: 180%; }
+  }
+
+  .depth-gauge {
+    position: absolute;
+    right: 8px; top: 10px; bottom: 10px;
+    width: 2px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .depth-gauge-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    border-radius: 2px;
+    background: linear-gradient(to top, var(--border-blue), rgba(51,80,117,0.2));
+  }
+
+  .under-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(51,80,117,0.7);
+    margin-bottom: 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* impact layers */
+  .impact-layers { display: flex; flex-direction: column; gap: 0; }
+
+  .impact-layer {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding-bottom: 10px;
+    position: relative;
+  }
+  .impact-layer:last-child { padding-bottom: 0; }
+
+  .layer-connector {
+    position: absolute;
+    left: 12px; top: 25px;
+    width: 1px; bottom: 4px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+  }
+  .impact-layer:last-child .layer-connector { display: none; }
+
+  .layer-icon {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .li-t { background: color-mix(in srgb, var(--accent-super) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent-super) 18%, transparent); }
+  .li-m { background: color-mix(in srgb, var(--border-purple) 25%, transparent); border: 1px solid color-mix(in srgb, var(--border-purple) 30%, transparent); }
+  .li-p { background: color-mix(in srgb, var(--border-blue) 25%, transparent); border: 1px solid color-mix(in srgb, var(--border-blue) 30%, transparent); }
+
+  .layer-body { flex: 1; min-width: 0; }
+
+  .layer-main-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .layer-count {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-family: var(--font-display);
+  }
+
+  .lc-t { color: var(--accent-super); }
+  .lc-m { color: var(--border-purple); }
+  .lc-p { color: var(--border-blue); }
+
+  .layer-lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+  }
+
+  .layer-items { display: none; margin-top: 5px; }
+
+  .layer-item {
+    font-size: 11px;
+    color: var(--text3);
+    padding: 2px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.4;
+  }
+
+  .layer-item::before {
+    content: '—';
+    color: var(--border2);
+    flex-shrink: 0;
+    font-size: 9px;
+    margin-top: 2px;
+  }
+
+  .iceberg-card.expanded .layer-items { display: block; }
+
+  /* expand hint */
+  .expand-row {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 10.5px;
+    color: var(--text3);
+    opacity: 0.5;
+    transition: opacity 0.18s;
+    letter-spacing: 0.03em;
+  }
+
+  .iceberg-card:hover .expand-row { opacity: 1; }
+
+  .expand-chevron { transition: transform 0.28s ease; }
+  .iceberg-card.expanded .expand-chevron { transform: rotate(180deg); }
+
+  /* ─── EMPTY STATE ───────────────────────────────────────────── */
+  .empty-state {
+    width: 100%;
+    text-align: center;
+    padding: 56px 20px;
+    color: var(--text3);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--r);
+  }
+
+  .empty-state .e-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; display: block; }
+  .empty-state .e-title { font-size: 14px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+  .empty-state .e-sub { font-size: 12px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<!-- ── CONCEPT INTRO ──────────────────────────────────────────────── -->
+<div class="concept-intro">
+  <svg class="iceberg-glyph" viewBox="0 0 100 118" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="50,4 6,50 94,50" fill="#8ecae6"/>
+    <polygon points="50,4 24,32 6,50 34,50" fill="#4aa8d0"/>
+    <polygon points="50,4 58,18 76,38 94,50 66,50" fill="#1d7db8"/>
+    <polygon points="50,4 44,22 58,18" fill="#c6e9f7"/>
+    <polygon points="76,38 94,50 80,50" fill="#155e8e"/>
+    <rect x="0" y="47" width="100" height="10" rx="2.5" fill="#1565a8"/>
+    <polygon points="12,57 88,57 74,102 26,102" fill="#4a9fd4"/>
+    <polygon points="50,57 88,57 74,102 52,102" fill="#1d6fa8"/>
+    <polygon points="26,57 40,57 36,88 28,88" fill="#1d6fa8" opacity="0.5"/>
+    <polygon points="42,57 58,57 54,95 46,95" fill="#0e4878" opacity="0.45"/>
+  </svg>
+
+  <div class="intro-body">
+    <h1>Blocked Depth</h1>
+    <p>A blocked task is rarely just one problem. <strong>Everything depending on it is frozen underneath.</strong> Each card is an iceberg — the blocked task is the tip, the cascade of waiting tasks, at-risk milestones, and affected people is below the waterline.</p>
+  </div>
+
+  <div class="intro-divider"></div>
+
+  <div class="intro-legend">
+    <div class="legend-row">
+      <span class="legend-swatch" style="background:var(--accent-super)"></span>
+      Tasks waiting
+    </div>
+    <div class="legend-row">
+      <span class="legend-swatch" style="background:var(--border-purple)"></span>
+      Milestones at risk
+    </div>
+    <div class="legend-row">
+      <span class="legend-swatch" style="background:var(--border-blue)"></span>
+      People affected
+    </div>
+    <div class="legend-depth-hint">Card height = depth</div>
+  </div>
+</div>
+
+<!-- ── SUMMARY BAR ────────────────────────────────────────────────── -->
+<div class="summary-bar">
+  <div class="summary-stat">
+    <div class="num" style="color:var(--accent-nope)" id="s-blocked">—</div>
+    <div class="lbl">Blocked tasks</div>
+  </div>
+  <div class="summary-stat">
+    <div class="num" style="color:var(--accent-super)" id="s-downstream">—</div>
+    <div class="lbl">Tasks downstream</div>
+  </div>
+  <div class="summary-stat">
+    <div class="num" style="color:var(--border-purple)" id="s-milestones">—</div>
+    <div class="lbl">Milestones at risk</div>
+  </div>
+  <div class="summary-stat">
+    <div class="num" style="color:var(--border-blue)" id="s-people">—</div>
+    <div class="lbl">People affected</div>
+  </div>
+</div>
+
+<!-- ── SORT ROW ───────────────────────────────────────────────────── -->
+<div class="sort-row">
+  <span class="sort-lbl">Sort by</span>
+  <button class="sort-btn active" onclick="setSort('impact', this)">Deepest first</button>
+  <button class="sort-btn" onclick="setSort('days', this)">Longest blocked</button>
+  <button class="sort-btn" onclick="setSort('milestones', this)">Milestone risk</button>
+</div>
+
+<!-- ── CARDS ──────────────────────────────────────────────────────── -->
+<div class="cards-grid" id="cards-grid"></div>
+
+<!-- ── SCRIPTS ───────────────────────────────────────────────────── -->
+<script src="hub-storage.js"></script>
+<script src="hub-utils.js"></script>
+<script src="hub-data.js"></script>
+<script src="hub-links.js"></script>
+<script src="hub-toast.js"></script>
+<script>
+  const _esc = s => HubUtils.esc(s);
+
+  // ── Cascade logic ──────────────────────────────────────────────────
+  function buildCascade(blockedTask, allTasks, members, project) {
+    // open non-done tasks in same project, excluding this blocked task itself
+    const siblings = allTasks.filter(t =>
+      t._projectId === blockedTask._projectId &&
+      t.id         !== blockedTask.id &&
+      t.done       !== true &&
+      t.status     !== 'done'
+    );
+
+    // waiting tasks = siblings that are not themselves blocked
+    const waiting = siblings.filter(t => t.status !== 'blocked');
+
+    // milestones at risk: unique milestones referenced by blocked + waiting tasks
+    const atRiskIds = new Set();
+    if (blockedTask.milestoneId) atRiskIds.add(blockedTask.milestoneId);
+    waiting.forEach(t => { if (t.milestoneId) atRiskIds.add(t.milestoneId); });
+
+    const milestoneMap = {};
+    (project?.milestones || []).forEach(m => { milestoneMap[m.id] = m; });
+    const atRiskMilestones = [...atRiskIds]
+      .map(id => milestoneMap[id])
+      .filter(Boolean);
+
+    // people affected: unique assignees across waiting tasks
+    const memberMap = {};
+    members.forEach(m => { memberMap[m.id] = m; });
+    const affectedIds = new Set(waiting.map(t => t.assigneeId).filter(Boolean));
+    const affectedPeople = [...affectedIds]
+      .map(id => memberMap[id])
+      .filter(Boolean);
+
+    return {
+      tasks: {
+        count: waiting.length,
+        items: waiting.slice(0, 10).map(t => t.title || 'Untitled task'),
+      },
+      milestones: {
+        count: atRiskMilestones.length,
+        items: atRiskMilestones.map(m => m.date ? `${m.name} (${m.date})` : m.name),
+      },
+      people: {
+        count: affectedPeople.length,
+        items: affectedPeople.map(m => m.name),
+      },
+    };
+  }
+
+  function impactScore(b) {
+    return b.cascade.tasks.count
+         + b.cascade.milestones.count * 1.8
+         + b.cascade.people.count * 0.8;
+  }
+
+  function daysAgo(dateStr) {
+    if (!dateStr) return null;
+    const diff = Date.now() - new Date(dateStr).getTime();
+    return Math.max(0, Math.round(diff / 86400000));
+  }
+
+  // ── Sort state ─────────────────────────────────────────────────────
+  let _sort = 'impact';
+
+  function setSort(mode, btn) {
+    _sort = mode;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  // ── Card builder ───────────────────────────────────────────────────
+  let _maxScore = 1;
+
+  function buildCard(b) {
+    const score  = impactScore(b);
+    const gaugeH = Math.round((score / _maxScore) * 100);
+    const underH = 84 + Math.round((score / _maxScore) * 150);
+    const total  = b.cascade.tasks.count + b.cascade.milestones.count + b.cascade.people.count;
+    const sevCls = b.severity === 'critical' ? 'sev-critical' : b.severity === 'high' ? 'sev-high' : 'sev-medium';
+    const daysTxt = b.daysBlocked != null ? (b.daysBlocked === 1 ? '1 day' : `${b.daysBlocked}d`) : '';
+
+    const itemList = arr => arr.map(i => `<div class="layer-item">${_esc(i)}</div>`).join('');
+
+    const card = document.createElement('div');
+    card.className = 'iceberg-card';
+    card.dataset.id    = b.id;
+    card.dataset.score = score;
+    card.dataset.days  = b.daysBlocked ?? 0;
+    card.dataset.miles = b.cascade.milestones.count;
+
+    card.innerHTML = `
+      <div class="above-water">
+        <div class="sev-bar ${_esc(sevCls)}"></div>
+        <div class="card-top-row">
+          <span class="blocked-badge"><span class="pulse-dot"></span> Blocked</span>
+          <span class="days-txt">${_esc(daysTxt)}</span>
+        </div>
+        <div class="task-name">${_esc(b.task)}</div>
+        <div class="task-chips">
+          <span class="chip">👤 ${_esc(b.owner)}</span>
+          <span class="chip chip-project">${_esc(b.project)}</span>
+        </div>
+        ${b.reason ? `<div class="block-reason">${_esc(b.reason)}</div>` : ''}
+      </div>
+
+      <div class="waterline-wrap">
+        <svg class="wave-svg" viewBox="0 0 960 18" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <rect x="0" y="0" width="960" height="18" fill="#07192e"/>
+          <path d="M0,9 C80,3 160,15 240,9 C320,3 400,15 480,9 C560,3 640,15 720,9 C800,3 880,15 960,9 L960,18 L0,18 Z" fill="#0c2340" opacity="0.9"/>
+          <path d="M0,12 C60,7 120,16 180,12 C240,8 300,16 360,12 C420,8 480,16 540,12 C600,8 660,16 720,12 C780,8 840,16 900,12 C940,10 960,13 960,12 L960,18 L0,18 Z" fill="#0e2a4e" opacity="0.5"/>
+          <path d="M0,8.5 C80,3.5 160,13.5 240,8.5 C320,3.5 400,13.5 480,8.5 C560,3.5 640,13.5 720,8.5 C800,3.5 880,13.5 960,8.5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        </svg>
+      </div>
+
+      <div class="below-water" style="min-height:${underH}px">
+        <div class="depth-gauge">
+          <div class="depth-gauge-fill" style="height:${gaugeH}%"></div>
+        </div>
+        <div class="under-label">
+          <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+            <path d="M5 1v8M2 6l3 3 3-3" stroke="rgba(51,80,117,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          ${total} item${total !== 1 ? 's' : ''} beneath the surface
+        </div>
+
+        <div class="impact-layers">
+          <div class="impact-layer">
+            <div class="layer-connector"></div>
+            <div class="layer-icon li-t">⚙</div>
+            <div class="layer-body">
+              <div class="layer-main-row">
+                <span class="layer-count lc-t">${b.cascade.tasks.count}</span>
+                <span class="layer-lbl">tasks waiting</span>
+              </div>
+              <div class="layer-items">${itemList(b.cascade.tasks.items)}</div>
+            </div>
+          </div>
+          <div class="impact-layer">
+            <div class="layer-connector"></div>
+            <div class="layer-icon li-m">🏁</div>
+            <div class="layer-body">
+              <div class="layer-main-row">
+                <span class="layer-count lc-m">${b.cascade.milestones.count}</span>
+                <span class="layer-lbl">milestone${b.cascade.milestones.count !== 1 ? 's' : ''} at risk</span>
+              </div>
+              <div class="layer-items">${itemList(b.cascade.milestones.items)}</div>
+            </div>
+          </div>
+          <div class="impact-layer">
+            <div class="layer-connector"></div>
+            <div class="layer-icon li-p">👥</div>
+            <div class="layer-body">
+              <div class="layer-main-row">
+                <span class="layer-count lc-p">${b.cascade.people.count}</span>
+                <span class="layer-lbl">people affected</span>
+              </div>
+              <div class="layer-items">${itemList(b.cascade.people.items)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="expand-row">
+          <svg class="expand-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+          reveal all
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      const expanded = card.classList.toggle('expanded');
+      const hint = card.querySelector('.expand-row');
+      hint.innerHTML = `
+        <svg class="expand-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="${expanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}"/>
+        </svg>
+        ${expanded ? 'collapse' : 'reveal all'}
+      `;
+      if (expanded) card.querySelector('.expand-chevron').style.transform = 'rotate(180deg)';
+    });
+
+    return card;
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────
+  function render() {
+    const grid    = document.getElementById('cards-grid');
+    const projects = HubData.getProjects();
+    const allTasks = HubData.getAllTasks();
+    const members  = HubData.getMembers();
+
+    // collect blocked tasks
+    const raw = allTasks.filter(t => t.status === 'blocked' && t.done !== true);
+
+    if (raw.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <span class="e-icon">🟢</span>
+          <div class="e-title">Clear skies — no blocked tasks</div>
+          <div class="e-sub">Mark tasks as "blocked" in Project Hub to see their depth here.</div>
+        </div>`;
+      document.getElementById('s-blocked').textContent    = '0';
+      document.getElementById('s-downstream').textContent = '0';
+      document.getElementById('s-milestones').textContent = '0';
+      document.getElementById('s-people').textContent     = '0';
+      return;
+    }
+
+    // build data objects with cascade
+    const blocks = raw.map(t => {
+      const project  = projects.find(p => p.id === t._projectId) || null;
+      const cascade  = buildCascade(t, allTasks, members, project);
+      const assignee = members.find(m => m.id === t.assigneeId);
+      const days     = daysAgo(t.taskCreated || t.completedAt || null);
+      const score    = cascade.tasks.count + cascade.milestones.count * 1.8 + cascade.people.count * 0.8;
+      const severity = score >= 8 ? 'critical' : score >= 3 ? 'high' : 'medium';
+      return {
+        id:          t.id,
+        task:        t.title || 'Untitled',
+        project:     t._projectName || '',
+        owner:       assignee?.name || '—',
+        daysBlocked: days,
+        reason:      t.blockedReason || '',
+        severity,
+        cascade,
+      };
+    });
+
+    // summary totals
+    let totalDown = 0, totalMiles = 0;
+    const allPeople = new Set();
+    blocks.forEach(b => {
+      totalDown  += b.cascade.tasks.count;
+      totalMiles += b.cascade.milestones.count;
+      b.cascade.people.items.forEach(p => allPeople.add(p));
+    });
+    document.getElementById('s-blocked').textContent    = blocks.length;
+    document.getElementById('s-downstream').textContent = totalDown;
+    document.getElementById('s-milestones').textContent = totalMiles;
+    document.getElementById('s-people').textContent     = allPeople.size;
+
+    _maxScore = Math.max(1, ...blocks.map(impactScore));
+
+    // sort
+    const sorted = [...blocks].sort((a, b) => {
+      if (_sort === 'impact')     return impactScore(b) - impactScore(a);
+      if (_sort === 'days')       return (b.daysBlocked ?? 0) - (a.daysBlocked ?? 0);
+      if (_sort === 'milestones') return b.cascade.milestones.count - a.cascade.milestones.count;
+      return 0;
+    });
+
+    // preserve expanded state across re-renders
+    const expandedIds = new Set(
+      [...document.querySelectorAll('.iceberg-card.expanded')].map(c => c.dataset.id)
+    );
+
+    grid.innerHTML = '';
+    sorted.forEach(b => {
+      const card = buildCard(b);
+      if (expandedIds.has(b.id)) {
+        card.classList.add('expanded');
+        const chevron = card.querySelector('.expand-chevron');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+        const hint = card.querySelector('.expand-row');
+        if (hint) hint.innerHTML = `
+          <svg class="expand-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+          collapse
+        `;
+      }
+      grid.appendChild(card);
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────
+  HubData.onChange(render);
+  HubData.init('blocked-depth');
+</script>
+<script src="hub-bootstrap.js"></script>
+</body>
+</html>
