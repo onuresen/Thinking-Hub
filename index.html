@@ -3193,8 +3193,14 @@
       resultArea.innerHTML = '<span style="color:var(--text3)">Thinking…</span>';
 
       try {
-        const result = await HubAI.capture(text);
-        resultArea.innerHTML = _renderAiCaptureResult(result, text);
+        const intent = HubAI.detectIntent(text);
+        if (intent === 'capture') {
+          const result = await HubAI.capture(text);
+          resultArea.innerHTML = _renderAiCaptureResult(result, text);
+        } else {
+          const answer = await HubAI.query(text);
+          resultArea.innerHTML = _renderAiQueryResult(answer);
+        }
         inp.value = '';
       } catch (err) {
         resultArea.innerHTML = `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
@@ -3202,6 +3208,17 @@
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
       }
+    }
+
+    function _renderAiQueryResult(text) {
+      // Convert basic markdown (bold, bullets) to HTML
+      const escaped = HubUtils.esc(text);
+      const html = escaped
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^• /gm, '· ')
+        .replace(/^- /gm, '· ')
+        .split('\n').join('<br>');
+      return `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>`;
     }
 
     function _renderAiCaptureResult(r, originalText) {
