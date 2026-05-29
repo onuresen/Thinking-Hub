@@ -12,6 +12,8 @@ const HubAI = (() => {
   let _sdkPromise = null;
   let _clientCache = null;
 
+  // ── Key management ────────────────────────────────────────────────────────────
+
   function getKey() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -24,15 +26,14 @@ const HubAI = (() => {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
       s.anthropicKey = key.trim();
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-      _clientCache = null; // reset cached client when key changes
+      _clientCache = null;
     } catch {}
   }
 
-  function isConfigured() {
-    return getKey().length > 10;
-  }
+  function isConfigured() { return getKey().length > 10; }
 
-  // Load SDK once, reuse the promise on subsequent calls
+  // ── SDK loading ───────────────────────────────────────────────────────────────
+
   async function _loadSDK() {
     if (!_sdkPromise) {
       _sdkPromise = import(SDK_URL).then(m => m.default || m.Anthropic || m);
@@ -40,7 +41,6 @@ const HubAI = (() => {
     return _sdkPromise;
   }
 
-  // Get or create Anthropic client instance
   async function _getClient() {
     const key = getKey();
     if (!key) throw new Error('No API key configured. Add your Anthropic API key in Settings → Integrations.');
@@ -50,6 +50,8 @@ const HubAI = (() => {
     _clientCache = { _key: key, _client: client };
     return client;
   }
+
+  // ── Context builders ──────────────────────────────────────────────────────────
 
   function _getContext() {
     const today = new Date().toISOString().split('T')[0];
@@ -64,11 +66,92 @@ const HubAI = (() => {
     return { today, projects, members };
   }
 
-  /**
-   * Parse natural language into structured Thinking Hub data.
-   * Returns { type, title, description?, dueDate?, assignee?, projectId?,
-   *           projectName?, priority?, confidence, clarificationNeeded? }
-   */
+  /** Richer context for actions — includes item IDs for linking/updating */
+  function _getRichContext() {
+    const today = new Date().toISOString().split('T')[0];
+    const lines = [`Today: ${today}`];
+    const items = []; // flat list of all referenceable items
+
+    try {
+      const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+      const members = (raw.members || []).map(m => m.name);
+      if (members.length) lines.push(`Team: ${members.join(', ')}`);
+
+      (raw.projects || []).filter(p => !p.archived).forEach(p => {
+        items.push({ id: p.id, tool: 'project-hub', label: p.name, type: 'project', status: p.status });
+        lines.push(`\nProject "${p.name}" [id:${p.id}] (${p.status})`);
+        (p.tasks || []).filter(t => !t.archived).slice(0, 20).forEach(t => {
+          items.push({ id: t.id, tool: 'project-hub', label: t.title, type: 'task', projectId: p.id, projectName: p.name, status: t.status, due: t.due });
+          lines.push(`  Task "${t.title}" [id:${t.id}] status:${t.status}${t.due ? ' due:' + t.due : ''}${t.assigned ? ' @' + t.assigned : ''}`);
+        });
+      });
+    } catch {}
+
+    try {
+      const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+      decisions.filter(d => !d.archived).slice(0, 15).forEach(d => {
+        items.push({ id: d.id, tool: 'decision-hub', label: d.title, type: 'decision', status: d.status });
+        lines.push(`Decision "${d.title}" [id:${d.id}] (${d.status || 'open'})`);
+      });
+    } catch {}
+
+    try {
+      const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
+      risks.filter(r => !r.archived && r.status === 'open').slice(0, 10).forEach(r => {
+        items.push({ id: r.id, tool: 'risk-hub', label: r.title, type: 'risk' });
+        lines.push(`Risk "${r.title}" [id:${r.id}]`);
+      });
+    } catch {}
+
+    try {
+      const raw = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
+      (raw.quarters || []).slice(-1).forEach(q => {
+        (q.objectives || []).forEach(o => {
+          items.push({ id: o.id, tool: 'goals-hub', label: o.title, type: 'goal' });
+          lines.push(`Goal "${o.title}" [id:${o.id}]`);
+        });
+      });
+    } catch {}
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
+      if (existing.length) lines.push(`\nExisting links (${existing.length} total): ${
+        existing.slice(0, 8).map(l => `"${l.a?.label || l.a?.itemId}" ↔ "${l.b?.label || l.b?.itemId}"`).join(', ')
+      }${existing.length > 8 ? '…' : ''}`);
+    } catch {}
+
+    return { today, lines: lines.join('\n'), items };
+  }
+
+  // ── Intent detection ──────────────────────────────────────────────────────────
+
+  function detectIntent(text) {
+    const t = text.toLowerCase().trim();
+
+    // Explicit action requests
+    const actionPatterns = [
+      /\b(link|connect|create link|add link|link together|make.*connection|set up.*dependenc|create.*dependenc)\b/,
+      /\b(mark.*done|mark.*complete|close.*task|finish.*task|complete.*task|set.*status)\b/,
+      /\b(can you (do|apply|make|set|link|connect|update|change|create))\b/,
+      /\b(go ahead|do it|apply|execute|make it happen)\b/,
+      /\b(update.*status|change.*status)\b/,
+    ];
+    if (actionPatterns.some(p => p.test(t))) return 'action';
+
+    // Create/capture intents
+    const createPatterns = [
+      /^(add|create|new|log|schedule|remind|record|track|note down|write down|set up|plan)\b/,
+      /^(i (need to|have to|want to|should|must|will)|we need to|we should)\b/,
+      /\b(by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|tomorrow|end of week))\b/,
+      /\bremind me\b/,
+    ];
+    if (createPatterns.some(p => p.test(t))) return 'capture';
+
+    return 'query';
+  }
+
+  // ── Capture (single item creation) ───────────────────────────────────────────
+
   async function capture(text) {
     const client = await _getClient();
     const { today, projects, members } = _getContext();
@@ -115,9 +198,119 @@ Rules:
     return JSON.parse(jsonMatch[0]);
   }
 
-  /**
-   * General chat — returns plain text response.
-   */
+  // ── Act (multi-action with confirmation) ─────────────────────────────────────
+
+  async function act(text) {
+    const client = await _getClient();
+    const { today, lines, items } = _getRichContext();
+
+    const systemPrompt = `You are an AI assistant for Thinking Hub that can PROPOSE ACTIONS in the app.
+The user will review and confirm before anything is applied.
+
+Current workspace data:
+${lines}
+
+Available action types:
+- create_link: link two items in the dependency graph
+- update_task_status: change a task's status (open/done/blocked)
+- create_task: add a new task to a project
+- create_risk: log a new risk
+- create_decision: log a new decision
+
+Return ONLY valid JSON in this format:
+{
+  "message": "brief explanation of what you're proposing and why",
+  "actions": [
+    {
+      "type": "create_link",
+      "aId": "item id from context",
+      "aTool": "project-hub | decision-hub | risk-hub | goals-hub | meetings-hub",
+      "aLabel": "human readable name",
+      "bId": "item id from context",
+      "bTool": "project-hub | decision-hub | risk-hub | goals-hub | meetings-hub",
+      "bLabel": "human readable name",
+      "reason": "why these should be linked"
+    },
+    {
+      "type": "update_task_status",
+      "taskId": "task id",
+      "projectId": "project id",
+      "taskTitle": "task name",
+      "projectName": "project name",
+      "newStatus": "done | open | blocked",
+      "reason": "why"
+    },
+    {
+      "type": "create_task",
+      "title": "task title",
+      "projectId": "project id",
+      "projectName": "project name",
+      "priority": "high | medium | low",
+      "dueDate": "YYYY-MM-DD (optional)",
+      "assignee": "name (optional)"
+    },
+    {
+      "type": "create_risk",
+      "title": "risk title",
+      "description": "details",
+      "projectId": "project id (optional)"
+    },
+    {
+      "type": "create_decision",
+      "title": "decision title",
+      "summary": "details",
+      "projectId": "project id (optional)"
+    }
+  ]
+}
+
+Rules:
+- Only use IDs that appear in the workspace data above — never invent IDs
+- For create_link: only link items that genuinely have a logical dependency or relationship
+- Keep "message" to 1-2 sentences max
+- If you cannot find matching IDs for a requested link, explain in "message" and return empty actions array
+- Propose up to 8 actions at once`;
+
+    const msg = await client.messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: text }]
+    });
+
+    const content = msg.content?.[0]?.text || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse AI response');
+    const result = JSON.parse(jsonMatch[0]);
+    // Attach full item data for execution
+    result._items = items;
+    return result;
+  }
+
+  // ── Query (read-only chat with data context) ──────────────────────────────────
+
+  async function query(userMessage) {
+    const client = await _getClient();
+    const { today, lines } = _getRichContext();
+
+    const system = `You are a helpful productivity assistant for Thinking Hub. Answer questions about the user's work clearly and concisely.
+
+Current workspace:
+${lines}
+
+Keep answers short and actionable. Use bullet points for lists. Suggest relevant actions the user could take.`;
+
+    const msg = await client.messages.create({
+      model: MODEL,
+      max_tokens: 800,
+      system,
+      messages: [{ role: 'user', content: userMessage }]
+    });
+    return msg.content?.[0]?.text || '';
+  }
+
+  // ── General chat ──────────────────────────────────────────────────────────────
+
   async function chat(userMessage, systemContext = '') {
     const client = await _getClient();
     const msg = await client.messages.create({
@@ -129,10 +322,8 @@ Rules:
     return msg.content?.[0]?.text || '';
   }
 
-  /**
-   * Test connectivity with the stored key.
-   * Returns { ok: bool, message: string }
-   */
+  // ── Test key ──────────────────────────────────────────────────────────────────
+
   async function testKey(keyOverride) {
     const key = keyOverride || getKey();
     if (!key) return { ok: false, message: 'No key provided' };
@@ -150,78 +341,5 @@ Rules:
     }
   }
 
-  /**
-   * Detect whether input is a "create" intent or a "query" intent.
-   * Returns 'capture' or 'query'.
-   */
-  function detectIntent(text) {
-    const t = text.toLowerCase().trim();
-    const createPatterns = [
-      /^(add|create|new|log|schedule|remind|record|track|note down|write down|set up|plan)\b/,
-      /^(i (need to|have to|want to|should|must|will)|we need to|we should)\b/,
-      /\b(task|todo|to-do|risk|decision|meeting|action item|milestone|goal)\b.*\b(add|create|log|record|schedule)\b/,
-      /\b(add|create|log|record|schedule)\b.*\b(task|todo|risk|decision|meeting|action item)\b/,
-      /\bby (monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|tomorrow|end of week)\b/,
-      /\bdue (date|monday|tuesday|wednesday|thursday|friday|next week|tomorrow)\b/,
-      /\bremind me\b/,
-      /\basign\b|\bassign\b/,
-    ];
-    return createPatterns.some(p => p.test(t)) ? 'capture' : 'query';
-  }
-
-  /**
-   * Chat with context — provides the user's current data as context
-   * for answering questions about projects, tasks, risks, etc.
-   */
-  async function query(userMessage) {
-    const client = await _getClient();
-    const { today, projects, members } = _getContext();
-
-    // Build a rich context snapshot
-    let contextLines = [`Today: ${today}`, `Team: ${members.join(', ') || 'none'}`];
-
-    try {
-      const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
-      (raw.projects || []).forEach(p => {
-        const open = (p.tasks || []).filter(t => !t.archived && t.status !== 'done').length;
-        const overdue = (p.tasks || []).filter(t => !t.archived && t.status !== 'done' && t.due && t.due < today).length;
-        contextLines.push(`Project: "${p.name}" (${p.status}) — ${open} open tasks${overdue ? `, ${overdue} overdue` : ''}`);
-      });
-    } catch {}
-
-    try {
-      const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
-      const open = decisions.filter(d => !d.archived && d.status !== 'decided').length;
-      if (open) contextLines.push(`Open decisions: ${open}`);
-    } catch {}
-
-    try {
-      const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
-      const open = risks.filter(r => !r.archived && r.status === 'open').length;
-      if (open) contextLines.push(`Open risks: ${open}`);
-    } catch {}
-
-    try {
-      const raw = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
-      const quarters = raw.quarters || [];
-      if (quarters.length) contextLines.push(`Active quarter: ${quarters[quarters.length - 1].name || 'current'}`);
-    } catch {}
-
-    const system = `You are a helpful productivity assistant for Thinking Hub, a personal project management app. Answer questions about the user's work clearly and concisely.
-
-Current data snapshot:
-${contextLines.join('\n')}
-
-Keep answers short and actionable. Use bullet points for lists. If you don't have enough data to answer precisely, say so.`;
-
-    const msg = await client.messages.create({
-      model: MODEL,
-      max_tokens: 800,
-      system,
-      messages: [{ role: 'user', content: userMessage }]
-    });
-    return msg.content?.[0]?.text || '';
-  }
-
-  return { getKey, saveKey, isConfigured, capture, chat, query, detectIntent, testKey };
+  return { getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey };
 })();

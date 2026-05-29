@@ -396,7 +396,6 @@
       flex: 1;
       position: relative;
       overflow: hidden;
-      padding-bottom: 44px; /* AI drawer bar height */
     }
 
     /* ── Home dashboard ─────────────────────────────── */
@@ -946,89 +945,161 @@
     .sfield-status.info { display: block; background: var(--accent-dim); color: var(--accent); }
 
     /* ── AI Bottom Drawer ───────────────────────── */
+    /* ── AI Floating Chat Panel ─────────────────── */
     #ai-drawer {
       position: fixed;
-      left: 210px;
-      right: 0;
+      right: 20px;
       bottom: 0;
-      z-index: calc(var(--z-sticky) + 1);
+      z-index: calc(var(--z-sticky) + 10);
       display: flex;
       flex-direction: column;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      transition: height 0.22s cubic-bezier(.4,0,.2,1);
-      height: 44px;
+      align-items: flex-end;
+      pointer-events: none; /* children handle events */
     }
-    #ai-drawer.open { height: 320px; }
 
-    #ai-drawer-bar {
-      height: 44px;
-      min-height: 44px;
+    /* Collapsed tab button */
+    #ai-tab {
+      pointer-events: auto;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 0 16px;
+      gap: 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--r) var(--r) 0 0;
+      padding: 9px 16px;
       cursor: pointer;
       user-select: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.15s;
-    }
-    #ai-drawer.open #ai-drawer-bar { border-bottom-color: var(--border); cursor: default; }
-
-    #ai-drawer-icon {
-      font-size: 15px;
-      color: var(--accent);
-      font-family: var(--font-mono);
-    }
-    #ai-drawer-label {
       font-size: 12px;
       font-weight: 600;
       color: var(--text2);
-      flex: 1;
+      transition: background 0.15s, color 0.15s;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.18);
     }
-    #ai-drawer-label span { color: var(--text3); font-weight: 400; }
-    #ai-drawer-toggle {
-      font-size: 11px;
-      color: var(--text3);
+    #ai-tab:hover { background: var(--surface2); color: var(--text); }
+    #ai-tab .ai-tab-icon { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
+    #ai-tab .ai-tab-hint { color: var(--text3); font-weight: 400; font-size: 11px; }
+    #ai-drawer.open #ai-tab { display: none; }
+
+    /* Floating panel */
+    #ai-panel {
+      pointer-events: auto;
+      display: none;
+      flex-direction: column;
+      width: 380px;
+      height: 420px;
+      min-height: 200px;
+      max-height: 80vh;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--r) var(--r) 0 0;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+    #ai-drawer.open #ai-panel { display: flex; }
+
+    /* Drag-resize handle */
+    #ai-resize-handle {
+      height: 6px;
+      cursor: ns-resize;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #ai-resize-handle::after {
+      content: '';
+      display: block;
+      width: 32px;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border2);
+      transition: background 0.15s;
+    }
+    #ai-resize-handle:hover::after { background: var(--text3); }
+
+    /* Panel header */
+    #ai-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #ai-panel-header .ai-tab-icon { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
+    #ai-panel-title {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+    #ai-panel-close {
       background: none;
       border: none;
+      color: var(--text3);
+      font-size: 16px;
       cursor: pointer;
-      padding: 4px 6px;
-      border-radius: var(--r-sm);
+      padding: 0 2px;
+      line-height: 1;
       transition: color 0.15s;
     }
-    #ai-drawer-toggle:hover { color: var(--text); }
+    #ai-panel-close:hover { color: var(--text); }
 
-    #ai-drawer-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 12px 16px 12px;
-      gap: 10px;
-      overflow: hidden;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s;
-    }
-    #ai-drawer.open #ai-drawer-body { opacity: 1; pointer-events: auto; }
-
+    /* Result / conversation area */
     #ai-result-area {
       flex: 1;
       overflow-y: auto;
+      padding: 10px 14px;
+      display: none;
       font-size: 12px;
       color: var(--text2);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      padding: 10px 12px;
-      display: none;
+      line-height: 1.6;
     }
     #ai-result-area.visible { display: block; }
 
+    /* Sample prompts */
+    #ai-prompts {
+      flex: 1;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+    }
+    #ai-prompts.hidden { display: none; }
+    .ai-prompt-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+    .ai-prompt-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--text2);
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-body);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .ai-prompt-chip:hover { border-color: var(--accent); color: var(--text); }
+
+    /* Input row */
     #ai-input-row {
       display: flex;
       gap: 8px;
       align-items: flex-end;
+      padding: 10px 14px 14px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
     }
     #ai-input {
       flex: 1;
@@ -1042,7 +1113,7 @@
       resize: none;
       outline: none;
       line-height: 1.5;
-      max-height: 80px;
+      max-height: 100px;
       transition: border-color 0.15s;
     }
     #ai-input:focus { border-color: var(--accent); }
@@ -1059,17 +1130,25 @@
       cursor: pointer;
       white-space: nowrap;
       transition: opacity 0.15s;
+      align-self: flex-end;
     }
     #ai-send-btn:hover { opacity: 0.88; }
     #ai-send-btn:disabled { opacity: 0.45; cursor: default; }
 
+    #ai-no-key-hint {
+      font-size: 11px;
+      color: var(--text3);
+      padding: 0 14px 10px;
+    }
+
     /* AI capture result card */
     .ai-capture-card {
-      background: var(--surface3, var(--surface2));
+      background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: var(--r-sm);
       padding: 10px 12px;
       font-size: 12px;
+      margin-bottom: 6px;
     }
     .ai-capture-type {
       font-size: 10px;
@@ -1093,7 +1172,7 @@
     }
     .ai-capture-chip {
       font-size: 10px;
-      background: var(--surface2);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 2px 7px;
@@ -1117,9 +1196,9 @@
       margin-bottom: 8px;
     }
 
-    /* Drawer responsive */
     @media (max-width: 700px) {
-      #ai-drawer { left: 0; }
+      #ai-drawer { right: 8px; }
+      #ai-panel { width: calc(100vw - 16px); }
     }
 
     /* ── Export Scope Selector ───────────────────── */
@@ -3153,32 +3232,69 @@
       reader.readAsText(file);
     }
 
-    // ── AI Drawer ─────────────────────────────────────────────────────────────────
+    // ── AI Floating Panel ─────────────────────────────────────────────────────────
 
     let _aiDrawerOpen = false;
 
-    function toggleAiDrawer(e) {
-      if (e && e.target && e.target.id === 'ai-drawer-bar' && _aiDrawerOpen) return; // clicking bar when open: do nothing
+    function toggleAiDrawer() {
       _aiDrawerOpen = !_aiDrawerOpen;
-      const drawer = document.getElementById('ai-drawer');
-      const toggleBtn = document.getElementById('ai-drawer-toggle');
-      drawer.classList.toggle('open', _aiDrawerOpen);
-      if (toggleBtn) toggleBtn.textContent = _aiDrawerOpen ? '▼' : '▲';
+      document.getElementById('ai-drawer').classList.toggle('open', _aiDrawerOpen);
       if (_aiDrawerOpen) {
         _updateAiDrawerHint();
-        setTimeout(() => document.getElementById('ai-input')?.focus(), 250);
+        setTimeout(() => document.getElementById('ai-input')?.focus(), 120);
       }
     }
 
     function _updateAiDrawerHint() {
-      const hintEl = document.getElementById('ai-drawer-hint');
+      const hintEl  = document.getElementById('ai-drawer-hint');
       const noKeyEl = document.getElementById('ai-no-key-hint');
       const sendBtn = document.getElementById('ai-send-btn');
       const configured = typeof HubAI !== 'undefined' && HubAI.isConfigured();
-      if (hintEl) hintEl.textContent = configured ? '· Add a task, risk, decision…' : '· API key not configured';
-      if (noKeyEl) noKeyEl.style.display = configured ? 'none' : '';
-      if (sendBtn) sendBtn.disabled = !configured;
+      if (hintEl)   hintEl.textContent = configured ? '· ask anything' : '· key not set';
+      if (noKeyEl)  noKeyEl.style.display = configured ? 'none' : '';
+      if (sendBtn)  sendBtn.disabled = !configured;
     }
+
+    function aiPromptClick(btn) {
+      const text = btn.textContent.trim();
+      const inp = document.getElementById('ai-input');
+      if (!inp) return;
+      // Prompts ending with ': ' are starters — place cursor after them
+      if (text.endsWith(': ')) {
+        inp.value = text;
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+      } else {
+        inp.value = text;
+        aiCaptureSend();
+      }
+    }
+
+    // ── Drag-to-resize ────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const handle = document.getElementById('ai-resize-handle');
+      const panel  = document.getElementById('ai-panel');
+      if (!handle || !panel) return;
+      let startY = 0, startH = 0;
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        startY = e.clientY;
+        startH = panel.getBoundingClientRect().height;
+        document.body.style.userSelect = 'none';
+        const onMove = ev => {
+          const delta = startY - ev.clientY; // drag up = bigger
+          const newH = Math.max(200, Math.min(window.innerHeight * 0.85, startH + delta));
+          panel.style.height = newH + 'px';
+        };
+        const onUp = () => {
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
 
     async function aiCaptureSend() {
       const inp = document.getElementById('ai-input');
@@ -3191,10 +3307,15 @@
       sendBtn.textContent = '…';
       resultArea.className = 'visible';
       resultArea.innerHTML = '<span style="color:var(--text3)">Thinking…</span>';
+      const promptsEl = document.getElementById('ai-prompts');
+      if (promptsEl) promptsEl.classList.add('hidden');
 
       try {
         const intent = HubAI.detectIntent(text);
-        if (intent === 'capture') {
+        if (intent === 'action') {
+          const result = await HubAI.act(text);
+          resultArea.innerHTML = _renderAiActions(result);
+        } else if (intent === 'capture') {
           const result = await HubAI.capture(text);
           resultArea.innerHTML = _renderAiCaptureResult(result, text);
         } else {
@@ -3211,14 +3332,207 @@
     }
 
     function _renderAiQueryResult(text) {
-      // Convert basic markdown (bold, bullets) to HTML
       const escaped = HubUtils.esc(text);
       const html = escaped
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/^• /gm, '· ')
         .replace(/^- /gm, '· ')
         .split('\n').join('<br>');
-      return `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>`;
+      return `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>
+        ${_aiClearBtn()}`;
+    }
+
+    function _aiClearBtn() {
+      return `<div style="margin-top:10px">
+        <button onclick="aiClearResult()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0;font-family:var(--font-body)">↩ Back to prompts</button>
+      </div>`;
+    }
+
+    function aiClearResult() {
+      const ra = document.getElementById('ai-result-area');
+      const prompts = document.getElementById('ai-prompts');
+      if (ra) { ra.className = ''; ra.innerHTML = ''; }
+      if (prompts) prompts.classList.remove('hidden');
+    }
+
+    // ── Action rendering + execution ──────────────────────────────────────────
+
+    function _renderAiActions(result) {
+      const actions = result.actions || [];
+      const msg = result.message || '';
+
+      let html = '';
+      if (msg) {
+        html += `<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">${HubUtils.esc(msg)}</div>`;
+      }
+
+      if (!actions.length) {
+        return html + _aiClearBtn();
+      }
+
+      // Store result on window for apply functions
+      window._aiPendingResult = result;
+
+      const actionIcons = { create_link: '🔗', update_task_status: '✅', create_task: '📋', create_risk: '⚠', create_decision: '⊕' };
+      const actionLabels = { create_link: 'Link', update_task_status: 'Update status', create_task: 'New task', create_risk: 'New risk', create_decision: 'New decision' };
+
+      html += `<div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">${actions.length} proposed action${actions.length > 1 ? 's' : ''}</div>`;
+
+      actions.forEach((a, i) => {
+        const icon = actionIcons[a.type] || '•';
+        const typeLabel = actionLabels[a.type] || a.type;
+        let desc = '';
+        if (a.type === 'create_link') {
+          desc = `${HubUtils.esc(a.aLabel || a.aId)} ↔ ${HubUtils.esc(a.bLabel || a.bId)}`;
+        } else if (a.type === 'update_task_status') {
+          desc = `"${HubUtils.esc(a.taskTitle)}" → ${a.newStatus}`;
+        } else if (a.type === 'create_task') {
+          desc = `"${HubUtils.esc(a.title)}" in ${HubUtils.esc(a.projectName || '?')}`;
+        } else if (a.type === 'create_risk') {
+          desc = `"${HubUtils.esc(a.title)}"`;
+        } else if (a.type === 'create_decision') {
+          desc = `"${HubUtils.esc(a.title)}"`;
+        }
+        const reason = a.reason || a.description || '';
+
+        html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:5px;display:flex;align-items:flex-start;gap:8px">
+          <span style="font-size:13px;flex-shrink:0;margin-top:1px">${icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px">${typeLabel}: ${desc}</div>
+            ${reason ? `<div style="font-size:10px;color:var(--text3);line-height:1.4">${HubUtils.esc(reason)}</div>` : ''}
+          </div>
+          <button onclick="aiApplyOneAction(${i})"
+            style="flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);font-size:10px;color:var(--text2);cursor:pointer;padding:3px 7px;font-family:var(--font-body);white-space:nowrap;transition:border-color .15s"
+            onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Apply</button>
+        </div>`;
+      });
+
+      if (actions.length > 1) {
+        html += `<div style="display:flex;gap:6px;margin-top:8px">
+          <button onclick="aiApplyAllActions()"
+            style="flex:1;background:var(--accent);color:#111;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:600;padding:7px 0;cursor:pointer;font-family:var(--font-body)">Apply all ${actions.length}</button>
+          <button onclick="aiClearResult()"
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--text2);padding:7px 12px;cursor:pointer;font-family:var(--font-body)">Cancel</button>
+        </div>`;
+      } else {
+        html += `<div style="margin-top:4px">${_aiClearBtn()}</div>`;
+      }
+
+      return html;
+    }
+
+    function aiApplyAllActions() {
+      const result = window._aiPendingResult;
+      if (!result || !result.actions) return;
+      let ok = 0, fail = 0;
+      result.actions.forEach(a => { _executeAction(a, result._items) ? ok++ : fail++; });
+      showToast(`Applied ${ok} action${ok !== 1 ? 's' : ''}${fail ? ` (${fail} skipped)` : ''} ✓`);
+      aiClearResult();
+      window._aiPendingResult = null;
+    }
+
+    function aiApplyOneAction(index) {
+      const result = window._aiPendingResult;
+      if (!result || !result.actions) return;
+      const action = result.actions[index];
+      if (!action) return;
+      if (_executeAction(action, result._items)) {
+        showToast('Applied ✓');
+        // Remove the applied action row from the UI
+        result.actions.splice(index, 1);
+        if (result.actions.length === 0) {
+          aiClearResult();
+          window._aiPendingResult = null;
+        } else {
+          document.getElementById('ai-result-area').innerHTML = _renderAiActions(result);
+        }
+      } else {
+        showToast('Could not apply — item not found', 'error');
+      }
+    }
+
+    function _executeAction(action, items) {
+      try {
+        if (action.type === 'create_link') {
+          // Use HubLinks.addLink if available, otherwise write directly
+          if (typeof HubLinks !== 'undefined') {
+            HubLinks.addLink(
+              { tool: action.aTool, itemId: action.aId, label: action.aLabel || action.aId },
+              { tool: action.bTool, itemId: action.bId, label: action.bLabel || action.bId }
+            );
+          } else {
+            const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
+            links.push({
+              id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+              a: { tool: action.aTool, itemId: action.aId, label: action.aLabel || action.aId },
+              b: { tool: action.bTool, itemId: action.bId, label: action.bLabel || action.bId },
+              createdAt: new Date().toISOString()
+            });
+            localStorage.setItem('hub-links-v1', JSON.stringify(links));
+          }
+          return true;
+        }
+
+        if (action.type === 'update_task_status') {
+          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          const proj = (raw.projects || []).find(p => p.id === action.projectId);
+          if (!proj) return false;
+          const task = (proj.tasks || []).find(t => t.id === action.taskId);
+          if (!task) return false;
+          task.status = action.newStatus;
+          if (action.newStatus === 'done') task.completedAt = new Date().toISOString();
+          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_task') {
+          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          const proj = (raw.projects || []).find(p => p.id === action.projectId);
+          if (!proj) return false;
+          proj.tasks = proj.tasks || [];
+          proj.tasks.push({
+            id: 'task-' + Date.now(),
+            title: action.title,
+            status: 'open',
+            priority: action.priority || 'medium',
+            due: action.dueDate || null,
+            assigned: action.assignee || null,
+            taskCreated: new Date().toISOString()
+          });
+          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_risk') {
+          const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
+          risks.push({
+            id: 'risk-' + Date.now(),
+            title: action.title,
+            description: action.description || '',
+            probability: 'medium', impact: 'medium', status: 'open',
+            projectId: action.projectId || null,
+            created: new Date().toISOString()
+          });
+          localStorage.setItem('risk-hub-v1', JSON.stringify(risks));
+          return true;
+        }
+
+        if (action.type === 'create_decision') {
+          const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+          decisions.push({
+            id: 'dh-' + Date.now(),
+            title: action.title,
+            summary: action.summary || '',
+            status: 'open', confidence: 'medium',
+            projectId: action.projectId || null,
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('decision-hub-v1', JSON.stringify(decisions));
+          return true;
+        }
+
+        return false;
+      } catch { return false; }
     }
 
     function _renderAiCaptureResult(r, originalText) {
@@ -3247,7 +3561,7 @@
         <button class="btn btn-primary" style="font-size:11px;padding:4px 10px"
           onclick="aiSaveCapture(${JSON.stringify(JSON.stringify(r))})">Save to Hub</button>
         <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
-          onclick="document.getElementById('ai-result-area').className='';document.getElementById('ai-result-area').innerHTML=''">Dismiss</button>
+          onclick="aiClearResult()">Dismiss</button>
       </div></div>`;
       return html;
     }
@@ -3459,21 +3773,43 @@
       <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data &amp; Backup</p>
     </div>
   </div>
-  <!-- AI Bottom Drawer -->
+  <!-- AI Floating Chat Panel -->
   <div id="ai-drawer">
-    <div id="ai-drawer-bar" onclick="toggleAiDrawer(event)">
-      <span id="ai-drawer-icon">✦</span>
-      <span id="ai-drawer-label">AI Assistant <span id="ai-drawer-hint">· Add a task, risk, decision…</span></span>
-      <button id="ai-drawer-toggle" onclick="event.stopPropagation();toggleAiDrawer(event)" title="Toggle AI drawer">▲</button>
+    <!-- Collapsed tab -->
+    <div id="ai-tab" onclick="toggleAiDrawer()">
+      <span class="ai-tab-icon">✦</span>
+      AI Assistant
+      <span class="ai-tab-hint" id="ai-drawer-hint">· ask anything</span>
     </div>
-    <div id="ai-drawer-body">
-      <div id="ai-result-area"></div>
-      <div id="ai-input-row">
-        <textarea id="ai-input" rows="2" placeholder="Add a task to review foundation loads with Mehmet by next Friday…"></textarea>
-        <button id="ai-send-btn" onclick="aiCaptureSend()">Send</button>
+
+    <!-- Expanded panel -->
+    <div id="ai-panel">
+      <div id="ai-resize-handle"></div>
+      <div id="ai-panel-header">
+        <span class="ai-tab-icon">✦</span>
+        <span id="ai-panel-title">AI Assistant</span>
+        <button id="ai-panel-close" onclick="toggleAiDrawer()" title="Close">×</button>
       </div>
-      <div id="ai-no-key-hint" style="font-size:11px;color:var(--text3);display:none">
-        Add your Anthropic API key in <a href="#" onclick="openDataModal();return false;" style="color:var(--accent)">Settings → Integrations</a> to enable AI capture.
+
+      <div id="ai-result-area"></div>
+
+      <div id="ai-prompts">
+        <div class="ai-prompt-label">Try asking</div>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Summarise my projects</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">What tasks are overdue?</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Any open risks?</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Suggest links for the dependency graph</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Add a task: </button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Log a decision: </button>
+      </div>
+
+      <div id="ai-no-key-hint" style="display:none">
+        Add your Anthropic API key in <a href="#" onclick="openDataModal('integrations');return false;" style="color:var(--accent)">Settings → Integrations</a> to enable AI.
+      </div>
+
+      <div id="ai-input-row">
+        <textarea id="ai-input" rows="2" placeholder="Ask anything or add a task, risk, decision…"></textarea>
+        <button id="ai-send-btn" onclick="aiCaptureSend()">Send</button>
       </div>
     </div>
   </div>
