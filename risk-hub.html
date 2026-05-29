@@ -235,6 +235,7 @@
     <div class="risk-list-section">
       <div class="risk-list-header">
         <div class="rlist-label" id="list-label">All risks</div>
+        <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:3px 8px">📦 Archived (0)</button>
       </div>
       <div id="risk-list"></div>
     </div>
@@ -324,6 +325,7 @@
       <button class="btn btn-primary" onclick="saveDetail()">Save</button>
       <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
       <div class="spacer"></div>
+      <button class="btn btn-ghost" id="dp-archive-btn" onclick="archiveRisk()">📦 Archive</button>
       <button class="btn btn-danger" onclick="deleteRisk()">Delete</button>
     </div>
   </div>
@@ -363,6 +365,7 @@
   let data = { risks: [] };
   let activeId = null;
   let hmFilter = null; // {p, i} cell filter
+  let showArchived = false;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -410,6 +413,8 @@
     const proj = document.getElementById('project-filter').value;
     const status = document.getElementById('status-filter').value;
     return data.risks.filter(r => {
+      if (!showArchived && r.archived) return false;
+      if (showArchived && !r.archived) return false;
       if (proj && r.projectId !== proj) return false;
       if (status && r.status !== status) return false;
       if (hmFilter && (parseInt(r.probability) !== hmFilter.p || parseInt(r.impact) !== hmFilter.i)) return false;
@@ -467,6 +472,9 @@
     label.textContent = hmFilter
       ? `P=${hmFilter.p} × I=${hmFilter.i} — ${risks.length} risk${risks.length!==1?'s':''}`
       : `${risks.length} of ${total} risk${total!==1?'s':''}`;
+    const archivedCount = data.risks.filter(r => r.archived).length;
+    const archBtn = document.getElementById('show-archived-btn');
+    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
 
     if (!risks.length) {
       const noData = !data.risks.length;
@@ -519,6 +527,8 @@
     document.getElementById('dp-treatment').value = r.treatment || '';
     document.getElementById('dp-owner').value = r.owner || '';
     document.getElementById('dp-review-date').value = r.reviewDate || '';
+    const archBtn = document.getElementById('dp-archive-btn');
+    if (archBtn) archBtn.textContent = r.archived ? '↩ Restore' : '📦 Archive';
 
     // Populate member datalist
     const members = (() => { try { return HubData.getMembers(); } catch { return []; } })();
@@ -574,6 +584,26 @@
     r.projectName = projSel.value ? projSel.options[projSel.selectedIndex].text : null;
     r.updatedAt = new Date().toISOString();
     save(); showToast('Risk saved'); closeDetail(); renderAll();
+  }
+
+  function archiveRisk() {
+    if (!activeId) return;
+    const r = data.risks.find(x => x.id === activeId);
+    if (!r) return;
+    r.archived = !r.archived;
+    save(); closeDetail(); renderAll();
+    showToast(r.archived ? 'Risk archived' : 'Risk restored');
+  }
+
+  function toggleShowArchived() {
+    showArchived = !showArchived;
+    const btn = document.getElementById('show-archived-btn');
+    if (btn) {
+      const n = data.risks.filter(r => r.archived).length;
+      btn.textContent = showArchived ? '← Active' : `📦 Archived (${n})`;
+      btn.classList.toggle('active', showArchived);
+    }
+    renderAll();
   }
 
   function deleteRisk() {

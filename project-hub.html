@@ -2139,6 +2139,7 @@
     }
 
     // ─── STATE ───────────────────────────────────────────────────────────────────
+    let showArchivedTasks = false;
     const persisted = loadState();
     let state = {
       ...persisted,
@@ -2832,7 +2833,9 @@
     // ─── ALL TASKS (LIST) ─────────────────────────────────────────────────────────
     function renderAllTasks(container) {
       const atf = state.allTasksFilter;
-      let tasks = state.projects.flatMap(p => p.tasks.map(t => ({ ...t, projectId: p.id, projectName: p.name, projectColor: p.color })));
+      let tasks = state.projects.flatMap(p => p.tasks
+        .filter(t => showArchivedTasks ? t.archived : !t.archived)
+        .map(t => ({ ...t, projectId: p.id, projectName: p.name, projectColor: p.color })));
 
       // ── All Tasks filter bar ──
       const filterBar = document.createElement('div');
@@ -3071,6 +3074,7 @@
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
         <button class="task-action-btn obsidian" title="Link Obsidian note" onclick="promptObsidianNote(event,'${task.id}','${task.projectId || ''}')">⟡</button>
         <button class="task-action-btn edit" title="Edit" onclick="openEditTask('${task.id}','${task.projectId || ''}')">✎</button>
+        <button class="task-action-btn" title="${task.archived ? 'Restore task' : 'Archive task'}" onclick="archiveTask(event,'${task.id}','${task.projectId || ''}')">📦</button>
         <button class="task-action-btn del" title="Delete" onclick="deleteTask(event,'${task.id}','${task.projectId || ''}')">✕</button>
       </div>
     </div>
@@ -3111,6 +3115,17 @@
         if (e.key === 'Escape') { committed = true; renderContent(); if (state.selectedProject) renderPanel(state.selectedProject); }
       });
       input.addEventListener('blur', commit);
+    }
+
+    function archiveTask(e, taskId, projectId) {
+      e.stopPropagation();
+      const task = findTask(taskId, projectId);
+      if (!task) return;
+      task.archived = !task.archived;
+      saveState();
+      renderContent();
+      if (state.selectedProject) renderPanel(state.selectedProject);
+      showToast(task.archived ? 'Task archived' : 'Task restored');
     }
 
     function deleteTask(e, taskId, projectId) {
@@ -3305,8 +3320,17 @@
         if (state.compactMode) body.classList.add('compact-mode');
         else body.classList.remove('compact-mode');
 
+        // Archive toggle chip
+        const archChip = document.createElement('button');
+        archChip.className = 'tf-chip' + (showArchivedTasks ? ' active' : '');
+        const archCount = proj.tasks.filter(t => t.archived).length;
+        archChip.textContent = showArchivedTasks ? '← Active' : `📦 ${archCount}`;
+        archChip.title = showArchivedTasks ? 'Show active tasks' : `${archCount} archived task${archCount !== 1 ? 's' : ''}`;
+        archChip.onclick = () => { showArchivedTasks = !showArchivedTasks; renderPanel(projId); };
+        filterBar.appendChild(archChip);
+
         // ── Apply filters ──
-        let tasks = proj.tasks;
+        let tasks = proj.tasks.filter(t => showArchivedTasks ? t.archived : !t.archived);
         if (state.overviewFilter.members.length > 0) tasks = tasks.filter(t => state.overviewFilter.members.includes(t.assigneeId));
         if (tf.status === 'open') tasks = tasks.filter(t => !t.done);
         else if (tf.status === 'done') tasks = tasks.filter(t => t.done);

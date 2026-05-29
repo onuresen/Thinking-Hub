@@ -232,8 +232,9 @@
       <input class="search-input" id="list-search" placeholder="Search meetings…" oninput="renderList()">
     </div>
     <div class="meeting-list" id="meeting-list"></div>
-    <div class="list-new-btn">
-      <button class="btn btn-ghost" onclick="newMeeting()" style="width:100%;font-size:12px">+ New meeting</button>
+    <div class="list-new-btn" style="display:flex;gap:6px">
+      <button class="btn btn-ghost" onclick="newMeeting()" style="flex:1;font-size:12px">+ New meeting</button>
+      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived meetings">📦</button>
     </div>
   </div>
 
@@ -272,6 +273,7 @@
   let data = { meetings: [] };
   let activeId = null;
   let saveTimer = null;
+  let showArchived = false;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -289,8 +291,12 @@
   function renderList() {
     const q = (document.getElementById('list-search').value || '').toLowerCase();
     const list = document.getElementById('meeting-list');
-    let items = data.meetings.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+    let items = data.meetings.filter(m => showArchived ? m.archived : !m.archived)
+      .sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
     if (q) items = items.filter(m => (m.title||'').toLowerCase().includes(q) || (m.attendees||'').toLowerCase().includes(q));
+    const archivedCount = data.meetings.filter(m => m.archived).length;
+    const archToggle = document.getElementById('show-archived-btn');
+    if (archToggle) archToggle.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
     if (!items.length) {
       list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results for your search.' : 'Log your first meeting to get started.'}</div></div>`;
       return;
@@ -328,6 +334,9 @@
     activeId = id;
     renderList();
     renderDetail();
+    const m = data.meetings.find(x => x.id === id);
+    const btn = document.getElementById('archive-meeting-btn');
+    if (btn && m) btn.textContent = m.archived ? '↩ Restore' : '📦 Archive';
   }
 
   function renderDetail() {
@@ -367,6 +376,7 @@
         <div class="detail-actions-row">
           <span class="save-indicator" id="save-indicator"></span>
           <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">📦 Archive</button>
           <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete meeting</button>
         </div>
       </div>
@@ -505,6 +515,25 @@
     data.meetings.unshift(m);
     save(); activeId = m.id; renderList(); renderDetail();
     setTimeout(() => { const t = document.getElementById('dt-title'); if (t) t.focus(); }, 80);
+  }
+
+  function archiveMeeting() {
+    if (!activeId) return;
+    const m = data.meetings.find(x => x.id === activeId);
+    if (!m) return;
+    m.archived = !m.archived;
+    save(); activeId = null; renderList();
+    document.getElementById('detail-empty').style.display = 'flex';
+    document.getElementById('detail-content').style.display = 'none';
+    showToast(m.archived ? 'Meeting archived' : 'Meeting restored');
+  }
+
+  function toggleShowArchived() {
+    showArchived = !showArchived;
+    activeId = null;
+    renderList();
+    document.getElementById('detail-empty').style.display = 'flex';
+    document.getElementById('detail-content').style.display = 'none';
   }
 
   function deleteMeeting() {

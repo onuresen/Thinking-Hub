@@ -580,6 +580,7 @@
       </div>
 
       <button class="btn-ghost" id="btn-save" style="display:none" onclick="saveCurrent()">Save Changes</button>
+      <button class="btn-ghost" id="btn-archive" style="display:none" onclick="archiveCurrent()">📦 Archive</button>
       <button class="btn-danger" id="btn-delete" style="display:none" onclick="deleteCurrent()">Delete</button>
     </div>
 
@@ -604,6 +605,7 @@
     let decisions = [];
     let currentId = null;
     let currentTab = 'log';
+    let showArchived = false;
 
     const PROBLEM_FIELDS = [
       { id: 'prob1', label: 'Problem to Be Solved', placeholder: 'What problem are we actually trying to solve?' },
@@ -659,10 +661,12 @@
 
         const label = document.createElement('div');
         label.className = 'nav-group-label';
-        label.innerHTML = `<span>${getProjectName(pid === 'none' ? null : pid)}</span> <span class="nav-badge">${byProject[pid].length}</span>`;
+        const visible = byProject[pid].filter(d => showArchived ? d.archived : !d.archived);
+        const archivedCount = byProject[pid].filter(d => d.archived).length;
+        label.innerHTML = `<span>${getProjectName(pid === 'none' ? null : pid)}</span> <span class="nav-badge">${visible.length}</span>${!showArchived && archivedCount ? `<span class="nav-badge" style="background:rgba(148,163,184,0.15);color:var(--text3);cursor:pointer;margin-left:4px" onclick="toggleShowArchived()" title="Show archived">📦 ${archivedCount}</span>` : ''}`;
         group.appendChild(label);
 
-        byProject[pid].forEach(d => {
+        visible.forEach(d => {
           const item = document.createElement('div');
           item.className = 'nav-item' + (currentId === d.id ? ' active' : '');
           item.dataset.id = d.id;
@@ -731,6 +735,12 @@
       document.getElementById('view-toggle').style.display = 'flex';
       document.getElementById('btn-save').style.display = 'block';
       document.getElementById('btn-delete').style.display = 'block';
+      const archBtn = document.getElementById('btn-archive');
+      if (archBtn) {
+        archBtn.style.display = 'block';
+        const d = decisions.find(x => x.id === id);
+        archBtn.textContent = d && d.archived ? '↩ Restore' : '📦 Archive';
+      }
       renderSidebar();
       renderContent();
     }
@@ -744,6 +754,23 @@
       document.querySelectorAll('.view-toggle-btn').forEach(btn => btn.classList.remove('active'));
       document.getElementById('tab-' + tab).classList.add('active');
       renderContent();
+    }
+
+    function archiveCurrent() {
+      if (!currentId) return;
+      const d = decisions.find(x => x.id === currentId);
+      if (!d) return;
+      d.archived = !d.archived;
+      saveData();
+      const archBtn = document.getElementById('btn-archive');
+      if (archBtn) archBtn.textContent = d.archived ? '↩ Restore' : '📦 Archive';
+      renderSidebar();
+      if (typeof showToast === 'function') showToast(d.archived ? 'Decision archived' : 'Decision restored');
+    }
+
+    function toggleShowArchived() {
+      showArchived = !showArchived;
+      renderSidebar();
     }
 
     function deleteCurrent() {

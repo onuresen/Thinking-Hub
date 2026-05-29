@@ -275,8 +275,9 @@
       </div>
     </div>
     <div class="sidebar-list" id="sidebar-list"></div>
-    <div class="sidebar-add-btn">
-      <button class="btn btn-ghost" onclick="openAddModal(null)" style="width:100%;font-size:12px">+ Add item</button>
+    <div class="sidebar-add-btn" style="display:flex;gap:6px">
+      <button class="btn btn-ghost" onclick="openAddModal(null)" style="flex:1;font-size:12px">+ Add item</button>
+      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived">📦</button>
     </div>
   </aside>
 
@@ -333,6 +334,7 @@
       <button class="btn btn-primary" onclick="saveItem()">Save</button>
       <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
       <div class="spacer"></div>
+      <button class="btn btn-ghost" id="am-archive-btn" onclick="archiveCurrentItem()" style="display:none">📦 Archive</button>
       <button class="btn btn-danger" id="am-delete-btn" onclick="deleteItem()" style="display:none">Delete</button>
     </div>
   </div>
@@ -343,6 +345,7 @@
   let data = { items: [] };
   let activeId = null;
   let editingId = null;
+  let showArchived = false;
   let statusFilter = 'all';
   let typeFilter = 'all';
 
@@ -370,7 +373,11 @@
 
   function filteredItems() {
     const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const archivedCount = (data.items||[]).filter(it => it.archived).length;
+    const archBtn = document.getElementById('show-archived-btn');
+    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
     return data.items.filter(it => {
+      if (showArchived ? !it.archived : it.archived) return false;
       if (statusFilter !== 'all' && it.status !== statusFilter) return false;
       if (typeFilter !== 'all' && it.type !== typeFilter) return false;
       if (q && !it.title.toLowerCase().includes(q) && !(it.author||'').toLowerCase().includes(q) && !(it.tags||[]).join(' ').toLowerCase().includes(q)) return false;
@@ -582,6 +589,8 @@
     document.getElementById('am-status').value = item ? item.status : 'to-read';
     document.getElementById('am-url').value = item ? (item.url||'') : '';
     document.getElementById('am-delete-btn').style.display = item ? '' : 'none';
+    const archBtn = document.getElementById('am-archive-btn');
+    if (archBtn) { archBtn.style.display = item ? '' : 'none'; archBtn.textContent = item && item.archived ? '↩ Restore' : '📦 Archive'; }
     document.getElementById('add-modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('am-title').focus(), 50);
   }
@@ -617,6 +626,23 @@
       activeId = newItem.id;
     }
     save(); closeAddModal(); renderList(); renderDetail();
+  }
+
+  function archiveCurrentItem() {
+    if (!editingId) return;
+    const it = data.items.find(x => x.id === editingId);
+    if (!it) return;
+    it.archived = !it.archived;
+    save(); closeAddModal(); renderList();
+    showToast(it.archived ? 'Item archived' : 'Item restored');
+  }
+
+  function toggleShowArchived() {
+    showArchived = !showArchived;
+    activeId = null;
+    renderList();
+    document.getElementById('detail-empty').style.display = 'flex';
+    document.getElementById('detail-content').style.display = 'none';
   }
 
   function deleteItem() {

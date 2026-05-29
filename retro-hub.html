@@ -157,6 +157,8 @@
   <div class="retro-selector">
     <select class="retro-select" id="retro-select" onchange="switchRetro(this.value)"></select>
     <button class="btn btn-ghost" onclick="openNewRetroModal()" style="font-size:12px;padding:5px 12px">+ New retro</button>
+    <button class="btn btn-ghost" id="retro-archive-toggle" onclick="toggleArchivedRetros()" style="font-size:11px;padding:5px 8px" title="Toggle archived retros">📦 (0)</button>
+    <button class="btn btn-ghost" onclick="archiveRetro()" style="font-size:12px;padding:5px 10px" title="Archive current retro">Archive</button>
   </div>
   <button class="export-btn" onclick="exportMarkdown()">↓ Export</button>
 </div>
@@ -235,6 +237,7 @@
   const COLS = ['well', 'improve', 'actions'];
 
   let data = { retros: [], activeId: null };
+  let showArchivedRetros = false;
   let myId = 'user-' + Math.random().toString(36).slice(2, 8);
 
   function load() {
@@ -391,13 +394,31 @@
   function renderSelectAndBoard() {
     const sel = document.getElementById('retro-select');
     const active = getActive();
-    sel.innerHTML = data.retros.length
-      ? data.retros.map(r => `<option value="${r.id}"${r.id === (active && active.id) ? ' selected' : ''}>${_esc(r.name)}</option>`).join('')
+    const visibleRetros = data.retros.filter(r => showArchivedRetros ? r.archived : !r.archived);
+    const archivedCount = data.retros.filter(r => r.archived).length;
+    const archToggle = document.getElementById('retro-archive-toggle');
+    if (archToggle) archToggle.textContent = showArchivedRetros ? '← Active' : `📦 (${archivedCount})`;
+    sel.innerHTML = visibleRetros.length
+      ? visibleRetros.map(r => `<option value="${r.id}"${r.id === (active && active.id) ? ' selected' : ''}>${_esc(r.name)}</option>`).join('')
       : '<option disabled>No retros yet</option>';
     renderBoard();
   }
 
   // ── Export ────────────────────────────────────────────────────────────────
+
+  function archiveRetro() {
+    const retro = getActive();
+    if (!retro) return;
+    retro.archived = !retro.archived;
+    save();
+    renderSelectAndBoard();
+    showToast(retro.archived ? 'Retro archived' : 'Retro restored');
+  }
+
+  function toggleArchivedRetros() {
+    showArchivedRetros = !showArchivedRetros;
+    renderSelectAndBoard();
+  }
 
   function exportMarkdown() {
     const retro = getActive();
