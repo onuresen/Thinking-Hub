@@ -254,6 +254,19 @@
             min-width: 0;
         }
 
+        /* ── Status dot ─────────────────────── */
+        .status-dot {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+            padding: 2px 6px; border-radius: 999px; flex-shrink: 0; white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        .status-dot::before { content: '●'; font-size: 7px; }
+        .status-exploring { background: var(--surface3); color: var(--text3); border-color: var(--border); }
+        .status-piloting  { background: rgba(56,189,248,0.10); color: #38bdf8; border-color: rgba(56,189,248,0.3); }
+        .status-using     { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-glow); }
+        .status-retired   { background: var(--surface2); color: var(--text3); border-color: var(--border); opacity: 0.7; }
+
         /* ── Ring badge ─────────────────────── */
         .ring-badge {
             font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
@@ -704,12 +717,13 @@
                     row.draggable = true;
 
                     const ringLabel = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
-                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
+                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}" title="Radar: ${ringLabel[t.ring]||t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
+                    const statusHtml = t.status ? `<span class="status-dot status-${t.status}" title="Stage: ${t.status}">${t.status}</span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
           <div class="tool-icon">${escapeHtml(t.icon || '🛠')}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
-          ${ringHtml}
+          ${statusHtml}${ringHtml}
         `;
 
                     // Click = open (but ignore click immediately after drag)
@@ -821,7 +835,7 @@
               <option ${t.status === 'using' ? 'selected' : ''}>using</option>
               <option ${t.status === 'retired' ? 'selected' : ''}>retired</option>
             </select>
-            <div class="field-hint">Current lifecycle stage</div>
+            <div class="field-hint">Your adoption journey — where are you with this tool?</div>
           </div>
           <div class="field">
             <div class="field-label">Radar Ring <span style="color:var(--text3);font-size:10px;font-weight:400">(Technology Radar)</span></div>
@@ -833,7 +847,7 @@
                 return `<button class="ring-pill-btn${active ? ' active-'+r : ''}" onclick="updateField('ring','${r}')" title="${hints[r]}">${labels[r]}</button>`;
               }).join('')}
             </div>
-            <div class="field-hint">Adopt = default choice · Trial = try on a project · Assess = explore · Hold = avoid for new work</div>
+            <div class="field-hint">Your recommendation — would you use this again? (Technology Radar framework)</div>
           </div>
 
           <div class="field">
