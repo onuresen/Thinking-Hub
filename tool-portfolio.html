@@ -713,13 +713,14 @@
                     row.draggable = true;
 
                     const ringLabel = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
-                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}" title="Radar: ${ringLabel[t.ring]||t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
-                    const statusHtml = t.status ? `<span class="status-dot status-${t.status}" title="Stage: ${t.status}"></span>` : '';
+                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
+                    const statusColors = { exploring:'var(--text3)', piloting:'#38bdf8', using:'var(--accent)', retired:'var(--border)' };
+                    const statusDot = t.status ? `<span style="width:7px;height:7px;border-radius:50%;background:${statusColors[t.status]||'var(--text3)'};flex-shrink:0;display:inline-block" title="Stage: ${t.status}"></span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
           <div class="tool-icon">${escapeHtml(t.icon || '🛠')}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
-          ${statusHtml}${ringHtml}
+          ${statusDot}${ringHtml}
         `;
 
                     // Click = open (but ignore click immediately after drag)
