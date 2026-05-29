@@ -21,6 +21,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
+| `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API |
 | `supabase-schema.sql` | Cloud DB schema |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
@@ -47,7 +48,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html only)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:

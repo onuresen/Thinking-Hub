@@ -18,6 +18,7 @@
   <script src="hub-search.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="hub-ai.js"></script>
   <style>
     html,
     body {
@@ -395,6 +396,7 @@
       flex: 1;
       position: relative;
       overflow: hidden;
+      padding-bottom: 44px; /* AI drawer bar height */
     }
 
     /* ── Home dashboard ─────────────────────────────── */
@@ -853,6 +855,273 @@
       color: var(--text);
     }
 
+    /* ── Settings Modal Tabs ────────────────────── */
+    .settings-tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .settings-tab {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      color: var(--text3);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .settings-tab:hover { color: var(--text); }
+    .settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .settings-pane { display: none; }
+    .settings-pane.active { display: block; }
+
+    /* ── Settings field groups ──────────────────── */
+    .sfield-group {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sfield-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .sfield-group-title {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sfield-group-title .badge {
+      font-family: var(--font-body);
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 20px;
+    }
+    .sfield-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .sfield-row input, .sfield-row select {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: var(--font-body);
+      outline: none;
+    }
+    .sfield-row input:focus, .sfield-row select:focus {
+      border-color: var(--accent);
+    }
+    .sfield-hint {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .sfield-status {
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 5px 8px;
+      border-radius: var(--r-sm);
+      display: none;
+    }
+    .sfield-status.ok { display: block; background: rgba(100,200,100,.12); color: #6db86d; }
+    .sfield-status.err { display: block; background: rgba(220,80,80,.12); color: var(--accent-nope); }
+    .sfield-status.info { display: block; background: var(--accent-dim); color: var(--accent); }
+
+    /* ── AI Bottom Drawer ───────────────────────── */
+    #ai-drawer {
+      position: fixed;
+      left: 210px;
+      right: 0;
+      bottom: 0;
+      z-index: calc(var(--z-sticky) + 1);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      transition: height 0.22s cubic-bezier(.4,0,.2,1);
+      height: 44px;
+    }
+    #ai-drawer.open { height: 320px; }
+
+    #ai-drawer-bar {
+      height: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+    #ai-drawer.open #ai-drawer-bar { border-bottom-color: var(--border); cursor: default; }
+
+    #ai-drawer-icon {
+      font-size: 15px;
+      color: var(--accent);
+      font-family: var(--font-mono);
+    }
+    #ai-drawer-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      flex: 1;
+    }
+    #ai-drawer-label span { color: var(--text3); font-weight: 400; }
+    #ai-drawer-toggle {
+      font-size: 11px;
+      color: var(--text3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: var(--r-sm);
+      transition: color 0.15s;
+    }
+    #ai-drawer-toggle:hover { color: var(--text); }
+
+    #ai-drawer-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px 12px;
+      gap: 10px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    #ai-drawer.open #ai-drawer-body { opacity: 1; pointer-events: auto; }
+
+    #ai-result-area {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 12px;
+      color: var(--text2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      display: none;
+    }
+    #ai-result-area.visible { display: block; }
+
+    #ai-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    #ai-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font-body);
+      padding: 8px 12px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      max-height: 80px;
+      transition: border-color 0.15s;
+    }
+    #ai-input:focus { border-color: var(--accent); }
+    #ai-input::placeholder { color: var(--text3); }
+    #ai-send-btn {
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: var(--r-sm);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      padding: 8px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    #ai-send-btn:hover { opacity: 0.88; }
+    #ai-send-btn:disabled { opacity: 0.45; cursor: default; }
+
+    /* AI capture result card */
+    .ai-capture-card {
+      background: var(--surface3, var(--surface2));
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+    .ai-capture-type {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .ai-capture-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .ai-capture-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .ai-capture-chip {
+      font-size: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 7px;
+      color: var(--text2);
+    }
+    .ai-capture-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .ai-capture-actions .btn {
+      font-size: 11px;
+      padding: 4px 10px;
+    }
+    .ai-clarify {
+      background: var(--accent-dim);
+      border-radius: var(--r-sm);
+      padding: 7px 10px;
+      color: var(--accent);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    /* Drawer responsive */
+    @media (max-width: 700px) {
+      #ai-drawer { left: 0; }
+    }
+
     /* ── Export Scope Selector ───────────────────── */
     .export-scope-label {
       font-size: 10px;
@@ -1072,7 +1341,7 @@
       <div class="session-spacer"></div>
       <button
         style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:8px;font-family:var(--font-mono);"
-        onclick="openDataModal()" title="Data & Backup" aria-label="Data &amp; Backup">⚙️</button>
+        onclick="openDataModal()" title="Settings" aria-label="Settings">⚙️</button>
       <button class="mob-tour-hide"
         style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:10px;font-family:var(--font-mono);"
         onclick="startTour()" title="Interactive Tour" aria-label="Interactive Tour">?</button>
@@ -1124,75 +1393,140 @@
     </div>
   </div>
 
-  <!-- Data Backup Modal -->
+  <!-- Settings Modal -->
   <div id="data-modal" class="data-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="data-modal-title"
     onclick="if(event.target===this) closeDataModal()">
-    <div class="data-modal">
-      <div class="data-modal-title" id="data-modal-title">Data & Backup</div>
-      <div class="data-modal-desc">Export your data as structured JSON — for backup &amp; restore, or to share context with an AI assistant.</div>
-      <div class="data-size" id="data-size-str">0 KB in local storage</div>
-
-      <div style="margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Obsidian Vault Name</div>
-        <input id="obsidian-vault-name" placeholder="e.g. My Vault" oninput="saveVaultSetting(this.value)"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 10px;font-size:13px;font-family:var(--font-body);outline:none;box-sizing:border-box">
-        <div style="font-size:11px;color:var(--text3);margin-top:5px">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
+    <div class="data-modal" style="width:460px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="data-modal-title" id="data-modal-title" style="margin-bottom:0">Settings</div>
+        <button onclick="closeDataModal()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
       </div>
 
-      <div id="obsidian-vault-picker" style="display:none;margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Obsidian Vault Index</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn btn-ghost" onclick="pickObsidianVault()" style="font-size:12px">📁 Pick Vault Folder</button>
-          <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()" style="font-size:12px;display:none">↻ Re-index</button>
-        </div>
-        <div id="obsidian-index-status" style="font-size:11px;color:var(--text3);margin-top:6px">Pick your vault folder to enable note autocomplete in Project Hub &amp; Decision Hub</div>
+      <!-- Tabs -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" id="stab-integrations" onclick="switchSettingsTab('integrations')">Integrations</button>
+        <button class="settings-tab" id="stab-data" onclick="switchSettingsTab('data')">Data &amp; Backup</button>
       </div>
 
-      <div id="mcp-sync-panel" style="display:none;margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Local MCP Sync</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Writes a <code style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so the local MCP server can read your data without cloud.</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-          <button class="btn btn-ghost" onclick="pickMcpFolder()" style="font-size:12px">📁 Pick Sync Folder</button>
-          <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)" style="font-size:12px;display:none">↑ Sync Now</button>
-          <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()" style="font-size:12px;display:none">↓ Load from file</button>
-        </div>
-        <div id="mcp-sync-status" style="font-size:11px;color:var(--text3);margin-top:4px">No folder selected — pick a folder to enable</div>
-        <div id="mcp-path-hint" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
-          <div id="mcp-path-value" style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
-        </div>
-      </div>
+      <!-- ── Integrations pane ── -->
+      <div class="settings-pane active" id="spane-integrations">
 
-      <div class="export-scope-label">Export scope</div>
-      <div class="export-scope-options">
-        <label class="export-scope-option">
-          <input type="radio" name="export-scope" value="full" checked onchange="updateExportSizeEstimate()">
-          <div class="export-scope-card">
-            <div class="export-scope-title">Full Backup</div>
-            <div class="export-scope-desc">All tools — restorable</div>
+        <!-- AI Assistant -->
+        <div class="sfield-group">
+          <div class="sfield-group-title">✦ AI Assistant <span class="badge">Claude Haiku</span></div>
+          <div class="sfield-hint" style="margin-bottom:8px">Your key is stored locally only — never sent anywhere except Anthropic's API.</div>
+          <div class="sfield-row">
+            <input type="password" id="ai-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
+              oninput="onAiKeyInput(this.value)">
+            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="toggleAiKeyVisible()">Show</button>
+            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" id="ai-key-test-btn" onclick="testAiKey()">Test</button>
           </div>
-        </label>
-        <label class="export-scope-option">
-          <input type="radio" name="export-scope" value="curated" onchange="updateExportSizeEstimate()">
-          <div class="export-scope-card">
-            <div class="export-scope-title">AI Context</div>
-            <div class="export-scope-desc">Projects, goals, decisions…</div>
-          </div>
-        </label>
-        <label class="export-scope-option">
-          <input type="radio" name="export-scope" value="current" onchange="updateExportSizeEstimate()">
-          <div class="export-scope-card">
-            <div class="export-scope-title">Current Tool</div>
-            <div class="export-scope-desc" id="export-current-tool-label">—</div>
-          </div>
-        </label>
-      </div>
+          <div class="sfield-status" id="ai-key-status"></div>
+          <div class="sfield-hint">Powers the AI Assistant drawer (bottom of screen). Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
+        </div>
 
-      <div class="data-btn-row">
-        <button class="data-btn primary" onclick="exportHubData()">Export (.json)</button>
-        <button class="data-btn secondary" onclick="triggerImport()">Import Backup</button>
-      </div>
-      <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
+        <!-- Supabase -->
+        <div class="sfield-group">
+          <div class="sfield-group-title">☁ Supabase Cloud Sync</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Optional — enables real-time sync across devices. Leave blank to stay local-only.</div>
+          <div style="margin-bottom:6px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Project URL</div>
+            <input type="text" id="sb-url-input" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false"
+              style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Anon Key</div>
+            <div class="sfield-row" style="margin-bottom:0">
+              <input type="password" id="sb-key-input" placeholder="eyJ…" autocomplete="off" spellcheck="false">
+              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="toggleSbKeyVisible()">Show</button>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Workspace ID <span style="color:var(--text3);font-weight:400">(leave blank to create new)</span></div>
+            <input type="text" id="sb-ws-input" placeholder="optional — shared workspace ID"
+              style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary" style="font-size:12px" onclick="connectSupabase()">Connect</button>
+            <button class="btn btn-ghost" style="font-size:12px" id="sb-disconnect-btn" onclick="disconnectSupabase()" style="display:none">Disconnect</button>
+          </div>
+          <div class="sfield-status" id="sb-status"></div>
+        </div>
+
+        <!-- Obsidian -->
+        <div class="sfield-group">
+          <div class="sfield-group-title">⟡ Obsidian</div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Vault Name</div>
+            <input type="text" id="obsidian-vault-name" placeholder="e.g. My Vault" oninput="saveVaultSetting(this.value)"
+              style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
+            <div class="sfield-hint">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
+          </div>
+          <div id="obsidian-vault-picker" style="display:none">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-ghost" onclick="pickObsidianVault()" style="font-size:12px">📁 Pick Vault Folder</button>
+              <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()" style="font-size:12px;display:none">↻ Re-index</button>
+            </div>
+            <div id="obsidian-index-status" class="sfield-hint" style="margin-top:6px">Pick your vault folder to enable note autocomplete</div>
+          </div>
+        </div>
+
+      </div><!-- /integrations pane -->
+
+      <!-- ── Data & Backup pane ── -->
+      <div class="settings-pane" id="spane-data">
+
+        <div class="data-size" id="data-size-str" style="margin-bottom:16px">0 KB in local storage</div>
+
+        <!-- MCP Sync -->
+        <div id="mcp-sync-panel" style="display:none;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+          <div class="sfield-group-title">⬡ Local MCP Sync</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Writes a <code style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so the local MCP server can read your data without cloud.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn btn-ghost" onclick="pickMcpFolder()" style="font-size:12px">📁 Pick Sync Folder</button>
+            <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)" style="font-size:12px;display:none">↑ Sync Now</button>
+            <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()" style="font-size:12px;display:none">↓ Load from file</button>
+          </div>
+          <div id="mcp-sync-status" class="sfield-hint">No folder selected — pick a folder to enable</div>
+          <div id="mcp-path-hint" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
+            <div id="mcp-path-value" style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="export-scope-label">Export scope</div>
+        <div class="export-scope-options">
+          <label class="export-scope-option">
+            <input type="radio" name="export-scope" value="full" checked onchange="updateExportSizeEstimate()">
+            <div class="export-scope-card">
+              <div class="export-scope-title">Full Backup</div>
+              <div class="export-scope-desc">All tools — restorable</div>
+            </div>
+          </label>
+          <label class="export-scope-option">
+            <input type="radio" name="export-scope" value="curated" onchange="updateExportSizeEstimate()">
+            <div class="export-scope-card">
+              <div class="export-scope-title">AI Context</div>
+              <div class="export-scope-desc">Projects, goals, decisions…</div>
+            </div>
+          </label>
+          <label class="export-scope-option">
+            <input type="radio" name="export-scope" value="current" onchange="updateExportSizeEstimate()">
+            <div class="export-scope-card">
+              <div class="export-scope-title">Current Tool</div>
+              <div class="export-scope-desc" id="export-current-tool-label">—</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="data-btn-row">
+          <button class="data-btn primary" onclick="exportHubData()">Export (.json)</button>
+          <button class="data-btn secondary" onclick="triggerImport()">Import Backup</button>
+        </div>
+        <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
+
+      </div><!-- /data pane -->
 
       <div class="data-modal-footer">
         <button class="close-modal-btn" onclick="closeDataModal()">Close</button>
@@ -2132,16 +2466,13 @@
         _doConnect(saved.url, saved.key, saved.workspaceId);
         return;
       }
-      // No saved credentials — show prompts
-      const url = prompt('Supabase Project URL:\n(e.g. https://xxxx.supabase.co)');
-      if (!url || !url.trim()) return;
-      const key = prompt('Supabase Anon Key:');
-      if (!key || !key.trim()) return;
-      const wsInput = prompt('Workspace ID (leave blank to create a new workspace):');
-      _doConnect(url.trim(), key.trim(), wsInput ? wsInput.trim() : null);
+      // No saved credentials — open Settings → Integrations
+      openDataModal('integrations');
     }
 
     function changeCloudCredentials() {
+      openDataModal('integrations');
+      return;
       const saved = _getSavedCredentials() || {};
       const url = prompt('Supabase Project URL:', saved.url || '');
       if (url === null) return;
@@ -2448,11 +2779,126 @@
         `~${(bytes / 1024).toFixed(1)} KB (${toolLabel})`;
     }
 
-    function openDataModal() {
+    // ── Settings tabs ─────────────────────────────────────────────────────────────
+
+    function switchSettingsTab(tab) {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('stab-' + tab).classList.add('active');
+      document.getElementById('spane-' + tab).classList.add('active');
+      if (tab === 'data') updateExportSizeEstimate();
+    }
+
+    // ── AI key helpers ────────────────────────────────────────────────────────────
+
+    function onAiKeyInput(val) {
+      if (typeof HubAI !== 'undefined') HubAI.saveKey(val);
+      _updateAiKeyStatus('');
+      _updateAiDrawerHint();
+    }
+
+    function toggleAiKeyVisible() {
+      const inp = document.getElementById('ai-key-input');
+      if (!inp) return;
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    function _setAiKeyStatus(msg, type) {
+      const el = document.getElementById('ai-key-status');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'sfield-status ' + (type || '');
+    }
+
+    function _updateAiKeyStatus(msg, type) {
+      if (msg) _setAiKeyStatus(msg, type);
+      else {
+        const el = document.getElementById('ai-key-status');
+        if (el) el.className = 'sfield-status';
+      }
+    }
+
+    async function testAiKey() {
+      const inp = document.getElementById('ai-key-input');
+      const key = inp ? inp.value.trim() : '';
+      if (!key) { _setAiKeyStatus('Enter a key first', 'err'); return; }
+      const btn = document.getElementById('ai-key-test-btn');
+      if (btn) { btn.textContent = 'Testing…'; btn.disabled = true; }
+      if (typeof HubAI !== 'undefined') {
+        const res = await HubAI.testKey(key);
+        _setAiKeyStatus(res.message, res.ok ? 'ok' : 'err');
+      }
+      if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
+    }
+
+    // ── Supabase form helpers ──────────────────────────────────────────────────────
+
+    function _loadSupabaseFields() {
+      try {
+        const raw = localStorage.getItem('hub-cloud-credentials-v1');
+        if (!raw) return;
+        const creds = JSON.parse(raw);
+        if (creds.url) document.getElementById('sb-url-input').value = creds.url;
+        if (creds.key) document.getElementById('sb-key-input').value = creds.key;
+        if (creds.workspaceId) document.getElementById('sb-ws-input').value = creds.workspaceId;
+      } catch {}
+    }
+
+    function toggleSbKeyVisible() {
+      const inp = document.getElementById('sb-key-input');
+      if (!inp) return;
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    function _setSbStatus(msg, type) {
+      const el = document.getElementById('sb-status');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'sfield-status ' + (type || '');
+    }
+
+    function connectSupabase() {
+      const url = (document.getElementById('sb-url-input')?.value || '').trim();
+      const key = (document.getElementById('sb-key-input')?.value || '').trim();
+      const ws  = (document.getElementById('sb-ws-input')?.value || '').trim();
+      if (!url || !key) { _setSbStatus('URL and Anon Key are required', 'err'); return; }
+      _setSbStatus('Connecting…', 'info');
+      HubStorage.useSupabase(url, key, ws || null)
+        .then(() => HubStorage.migrateToCloud(COLLABORATION_KEYS))
+        .then(() => {
+          const status = HubStorage.getStatus();
+          _setSbStatus('Connected ✓' + (status.workspaceId ? ' · WS: ' + status.workspaceId : ''), 'ok');
+          updateCloudUI(status);
+          // Persist credentials
+          try {
+            localStorage.setItem('hub-cloud-credentials-v1', JSON.stringify({ url, key, workspaceId: status.workspaceId || ws }));
+          } catch {}
+        })
+        .catch(err => {
+          _setSbStatus('Connection failed: ' + (err.message || err), 'err');
+        });
+    }
+
+    function disconnectSupabase() {
+      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch {}
+      location.reload();
+    }
+
+    // ── openDataModal / closeDataModal ────────────────────────────────────────────
+
+    function openDataModal(tab) {
       _modalTrigger = document.activeElement;
       document.getElementById('data-modal').style.display = 'flex';
+
+      // Load settings values
       const s = HubStorage.get('hub-settings-v1') || {};
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
+      if (typeof HubAI !== 'undefined') {
+        document.getElementById('ai-key-input').value = HubAI.getKey();
+      }
+      _loadSupabaseFields();
+      _updateSupabaseDisconnectBtn();
+
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
         document.getElementById('obsidian-vault-picker').style.display = '';
         updateObsidianIndexUI();
@@ -2465,17 +2911,21 @@
       const currentApp = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
       document.getElementById('export-current-tool-label').textContent =
         currentApp ? currentApp.label : 'Home (no data)';
-      // Move focus inside the modal
-      const firstBtn = document.querySelector('#data-modal .data-btn');
-      if (firstBtn) setTimeout(() => firstBtn.focus(), 50);
-      // Show size estimate for the currently selected scope
-      updateExportSizeEstimate();
+
+      // Switch to requested tab or default
+      switchSettingsTab(tab || 'integrations');
+    }
+
+    function _updateSupabaseDisconnectBtn() {
+      const btn = document.getElementById('sb-disconnect-btn');
+      if (!btn) return;
+      const hasCredentials = !!localStorage.getItem('hub-cloud-credentials-v1');
+      btn.style.display = hasCredentials ? '' : 'none';
     }
 
     function closeDataModal() {
       document.getElementById('data-modal').style.display = 'none';
       document.getElementById('import-file').value = '';
-      // Return focus to the element that opened the modal
       if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
     }
 
@@ -2703,6 +3153,184 @@
       reader.readAsText(file);
     }
 
+    // ── AI Drawer ─────────────────────────────────────────────────────────────────
+
+    let _aiDrawerOpen = false;
+
+    function toggleAiDrawer(e) {
+      if (e && e.target && e.target.id === 'ai-drawer-bar' && _aiDrawerOpen) return; // clicking bar when open: do nothing
+      _aiDrawerOpen = !_aiDrawerOpen;
+      const drawer = document.getElementById('ai-drawer');
+      const toggleBtn = document.getElementById('ai-drawer-toggle');
+      drawer.classList.toggle('open', _aiDrawerOpen);
+      if (toggleBtn) toggleBtn.textContent = _aiDrawerOpen ? '▼' : '▲';
+      if (_aiDrawerOpen) {
+        _updateAiDrawerHint();
+        setTimeout(() => document.getElementById('ai-input')?.focus(), 250);
+      }
+    }
+
+    function _updateAiDrawerHint() {
+      const hintEl = document.getElementById('ai-drawer-hint');
+      const noKeyEl = document.getElementById('ai-no-key-hint');
+      const sendBtn = document.getElementById('ai-send-btn');
+      const configured = typeof HubAI !== 'undefined' && HubAI.isConfigured();
+      if (hintEl) hintEl.textContent = configured ? '· Add a task, risk, decision…' : '· API key not configured';
+      if (noKeyEl) noKeyEl.style.display = configured ? 'none' : '';
+      if (sendBtn) sendBtn.disabled = !configured;
+    }
+
+    async function aiCaptureSend() {
+      const inp = document.getElementById('ai-input');
+      const text = inp ? inp.value.trim() : '';
+      if (!text) return;
+
+      const sendBtn = document.getElementById('ai-send-btn');
+      const resultArea = document.getElementById('ai-result-area');
+      sendBtn.disabled = true;
+      sendBtn.textContent = '…';
+      resultArea.className = 'visible';
+      resultArea.innerHTML = '<span style="color:var(--text3)">Thinking…</span>';
+
+      try {
+        const result = await HubAI.capture(text);
+        resultArea.innerHTML = _renderAiCaptureResult(result, text);
+        inp.value = '';
+      } catch (err) {
+        resultArea.innerHTML = `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+      }
+    }
+
+    function _renderAiCaptureResult(r, originalText) {
+      const typeIcons = { task:'📋', risk:'⚠', decision:'⊕', meeting:'▣', idea:'💡', note:'📝' };
+      const icon = typeIcons[r.type] || '📋';
+      const chips = [];
+      if (r.dueDate)     chips.push(`📅 ${r.dueDate}`);
+      if (r.assignee)    chips.push(`👤 ${HubUtils.esc(r.assignee)}`);
+      if (r.projectName) chips.push(`◈ ${HubUtils.esc(r.projectName)}`);
+      if (r.priority)    chips.push(r.priority === 'high' ? '🔴 High' : r.priority === 'low' ? '🟢 Low' : '🟡 Med');
+
+      let html = '';
+      if (r.clarificationNeeded) {
+        html += `<div class="ai-clarify">❓ ${HubUtils.esc(r.clarificationNeeded)}</div>`;
+      }
+      html += `<div class="ai-capture-card">
+        <div class="ai-capture-type">${icon} ${HubUtils.esc(r.type || 'task')}</div>
+        <div class="ai-capture-title">${HubUtils.esc(r.title || originalText)}</div>`;
+      if (chips.length) {
+        html += `<div class="ai-capture-meta">${chips.map(c => `<span class="ai-capture-chip">${c}</span>`).join('')}</div>`;
+      }
+      if (r.description) {
+        html += `<div style="font-size:11px;color:var(--text3);margin-bottom:6px">${HubUtils.esc(r.description)}</div>`;
+      }
+      html += `<div class="ai-capture-actions">
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px"
+          onclick="aiSaveCapture(${JSON.stringify(JSON.stringify(r))})">Save to Hub</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+          onclick="document.getElementById('ai-result-area').className='';document.getElementById('ai-result-area').innerHTML=''">Dismiss</button>
+      </div></div>`;
+      return html;
+    }
+
+    function aiSaveCapture(jsonStr) {
+      let r;
+      try { r = JSON.parse(jsonStr); } catch { return; }
+
+      const type = r.type || 'task';
+      if (type === 'task') {
+        // Save to project hub
+        try {
+          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          const projects = raw.projects || [];
+          let target = r.projectId ? projects.find(p => p.id === r.projectId) : null;
+          if (!target) target = projects[0]; // fallback to first project
+          if (!target) { showToast('No project found — open Project Hub to create one first', 'error'); return; }
+          target.tasks = target.tasks || [];
+          target.tasks.push({
+            id: 'task-' + Date.now(),
+            title: r.title || 'New Task',
+            status: 'open',
+            priority: r.priority || 'medium',
+            due: r.dueDate || null,
+            assigned: r.assignee || null,
+            notes: r.description || '',
+            taskCreated: new Date().toISOString()
+          });
+          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
+          showToast(`Task saved to "${target.name}" ✓`);
+        } catch (e) { showToast('Save failed: ' + e.message, 'error'); return; }
+      } else if (type === 'risk') {
+        try {
+          const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
+          risks.push({
+            id: 'risk-' + Date.now(),
+            title: r.title || 'New Risk',
+            description: r.description || '',
+            probability: 'medium', impact: 'medium', status: 'open',
+            projectId: r.projectId || null,
+            created: new Date().toISOString()
+          });
+          localStorage.setItem('risk-hub-v1', JSON.stringify(risks));
+          showToast('Risk saved ✓');
+        } catch (e) { showToast('Save failed: ' + e.message, 'error'); return; }
+      } else if (type === 'decision') {
+        try {
+          const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+          decisions.push({
+            id: 'dh-' + Date.now(),
+            title: r.title || 'New Decision',
+            summary: r.description || '',
+            status: 'open', confidence: 'medium',
+            projectId: r.projectId || null,
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('decision-hub-v1', JSON.stringify(decisions));
+          showToast('Decision logged ✓');
+        } catch (e) { showToast('Save failed: ' + e.message, 'error'); return; }
+      } else if (type === 'meeting') {
+        try {
+          const raw = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{"meetings":[]}');
+          (raw.meetings = raw.meetings || []).push({
+            id: 'mtg-' + Date.now(),
+            title: r.title || 'New Meeting',
+            date: r.dueDate || new Date().toISOString().split('T')[0],
+            notes: r.description || '',
+            projectId: r.projectId || null,
+            actionItems: []
+          });
+          localStorage.setItem('meetings-hub-v1', JSON.stringify(raw));
+          showToast('Meeting saved ✓');
+        } catch (e) { showToast('Save failed: ' + e.message, 'error'); return; }
+      } else {
+        showToast(`Saved as ${type} — navigate to the relevant tool to view it`);
+      }
+
+      // Clear result
+      const ra = document.getElementById('ai-result-area');
+      if (ra) { ra.className = ''; ra.innerHTML = ''; }
+    }
+
+    // Enter to send (Shift+Enter for newline)
+    document.addEventListener('DOMContentLoaded', () => {
+      const aiInput = document.getElementById('ai-input');
+      if (aiInput) {
+        aiInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiCaptureSend(); }
+        });
+      }
+      // Keyboard shortcut: Cmd/Ctrl+Shift+Space to open drawer
+      document.addEventListener('keydown', e => {
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === ' ') {
+          e.preventDefault();
+          if (!_aiDrawerOpen) toggleAiDrawer(null);
+          else document.getElementById('ai-input')?.focus();
+        }
+      });
+    });
+
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
@@ -2713,6 +3341,7 @@
     refreshRecentStrip();
     setGreeting();
     initCloudPanel();
+    _updateAiDrawerHint();
 
     // One-time migration: remove stale 'language' key left by old i18n system
     (() => {
@@ -2813,6 +3442,25 @@
       <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data &amp; Backup</p>
     </div>
   </div>
+  <!-- AI Bottom Drawer -->
+  <div id="ai-drawer">
+    <div id="ai-drawer-bar" onclick="toggleAiDrawer(event)">
+      <span id="ai-drawer-icon">✦</span>
+      <span id="ai-drawer-label">AI Assistant <span id="ai-drawer-hint">· Add a task, risk, decision…</span></span>
+      <button id="ai-drawer-toggle" onclick="event.stopPropagation();toggleAiDrawer(event)" title="Toggle AI drawer">▲</button>
+    </div>
+    <div id="ai-drawer-body">
+      <div id="ai-result-area"></div>
+      <div id="ai-input-row">
+        <textarea id="ai-input" rows="2" placeholder="Add a task to review foundation loads with Mehmet by next Friday…"></textarea>
+        <button id="ai-send-btn" onclick="aiCaptureSend()">Send</button>
+      </div>
+      <div id="ai-no-key-hint" style="font-size:11px;color:var(--text3);display:none">
+        Add your Anthropic API key in <a href="#" onclick="openDataModal();return false;" style="color:var(--accent)">Settings → Integrations</a> to enable AI capture.
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>
