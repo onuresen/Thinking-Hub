@@ -1151,6 +1151,122 @@
       .mob-nav-btn { display: flex; align-items: center; }
       .sch-toolbar { padding: 0 8px; gap: 6px; }
     }
+
+    /* ═══════════════════════════════════════════════════════════
+       Multi-Project Gantt
+    ═══════════════════════════════════════════════════════════ */
+    #view-multi {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .multi-toolbar {
+      height: 44px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 14px; border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .multi-range-label {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text2);
+      min-width: 160px; text-align: center;
+    }
+    .multi-gantt-scroll {
+      flex: 1; overflow: auto;
+      position: relative;
+    }
+
+    /* ── Header row ─────────────────────────────────────────── */
+    .multi-hdr-row {
+      display: flex; position: sticky; top: 0; z-index: 10;
+      background: var(--surface); border-bottom: 2px solid var(--border);
+      min-width: max-content;
+    }
+    .multi-hdr-corner {
+      width: 220px; min-width: 220px; flex-shrink: 0;
+      position: sticky; left: 0; z-index: 11;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 14px;
+      font-size: 10px; font-family: var(--font-mono); letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text3);
+    }
+    .multi-col-hdr {
+      flex-shrink: 0; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3);
+      border-right: 1px solid var(--border);
+      white-space: nowrap; padding: 0 4px;
+    }
+    .multi-col-hdr.is-today { color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Rows ───────────────────────────────────────────────── */
+    .mrow {
+      display: flex; min-width: max-content;
+      border-bottom: 1px solid var(--border);
+    }
+    .mrow-label {
+      width: 220px; min-width: 220px; flex-shrink: 0;
+      position: sticky; left: 0; z-index: 2;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 10px; overflow: hidden;
+    }
+    .mrow-gantt {
+      position: relative; flex-shrink: 0;
+    }
+
+    /* ── Project swimlane header ────────────────────────────── */
+    .mrow-proj { height: 36px; }
+    .mrow-proj .mrow-label {
+      background: var(--surface2); cursor: pointer;
+      font-weight: 700; font-size: 12px;
+    }
+    .mrow-proj .mrow-label:hover { background: var(--surface3); }
+    .mrow-proj .mrow-gantt { background: var(--surface2); }
+    .proj-color-bar { width: 4px; min-width: 4px; height: 18px; border-radius: 2px; flex-shrink: 0; }
+    .proj-chevron { font-size: 9px; color: var(--text3); flex-shrink: 0; }
+    .proj-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .proj-meta { font-size: 10px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; }
+
+    /* ── Task / Milestone rows ──────────────────────────────── */
+    .mrow-item { height: 28px; }
+    .mrow-item .mrow-label { font-size: 11.5px; color: var(--text2); padding-left: 26px; }
+    .mrow-item.is-done .mrow-label { color: var(--text3); text-decoration: line-through; }
+    .item-label-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-due-badge {
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; flex-shrink: 0;
+    }
+    .item-due-badge.overdue { color: var(--accent-nope); }
+    .ms-icon { font-size: 9px; flex-shrink: 0; }
+
+    /* ── Gantt bars & markers ───────────────────────────────── */
+    .g-bar {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      height: 8px; border-radius: 3px; min-width: 6px;
+      opacity: 0.85; cursor: default;
+    }
+    .g-bar.is-done { opacity: 0.35; }
+    .g-diamond {
+      position: absolute; top: 50%; transform: translate(-50%, -50%) rotate(45deg);
+      width: 10px; height: 10px; border-radius: 2px; cursor: default;
+    }
+    .g-diamond.is-done { opacity: 0.35; }
+
+    /* ── Grid lines & today ─────────────────────────────────── */
+    .g-col-band {
+      position: absolute; top: 0; bottom: 0;
+      border-right: 1px solid var(--border); pointer-events: none;
+    }
+    .g-today-line {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+      background: var(--accent); opacity: 0.55; pointer-events: none; z-index: 1;
+    }
+
+    /* ── Empty state ────────────────────────────────────────── */
+    .multi-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; gap: 8px;
+      color: var(--text3); font-size: 13px; text-align: center; padding: 40px;
+    }
+    .multi-empty-icon { font-size: 36px; opacity: 0.3; margin-bottom: 6px; }
   </style>
 </head>
 
@@ -1167,6 +1283,7 @@
     <div class="sch-view-toggle">
       <button class="sch-view-btn active" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
       <button class="sch-view-btn" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+      <button class="sch-view-btn" id="btn-multi" onclick="switchView('multi')">Projects</button>
     </div>
 
     <div class="sch-sidebar-actions">
@@ -1209,6 +1326,21 @@
             <div class="gantt-header" id="gantt-header"></div>
             <div class="gantt-body" id="gantt-body"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Multi-Project Gantt -->
+      <div id="view-multi" class="view-hidden">
+        <div class="multi-toolbar" id="multi-toolbar">
+          <button class="sch-toolbar-btn" onclick="multiNav(-1)">&#8249;</button>
+          <span class="multi-range-label" id="multi-range-label"></span>
+          <button class="sch-toolbar-btn" onclick="multiNav(1)">&#8250;</button>
+          <button class="sch-toolbar-today" onclick="multiToday()">Today</button>
+          <div style="flex:1"></div>
+          <button class="sch-toolbar-btn" id="multi-zoom-btn" onclick="toggleMultiZoom()">Month</button>
+        </div>
+        <div class="multi-gantt-scroll" id="multi-gantt-scroll">
+          <!-- built by renderMultiView() -->
         </div>
       </div>
 
@@ -1406,6 +1538,9 @@
       filterType: 'all',
       selectedId: null,
       drawerItemId: null,
+      multiZoom: 'week',
+      multiOffset: 0,
+      collapsedProjects: new Set(),
     };
     let _pendingImport = [];
     let _drawerColor = PALETTE[2];
@@ -1741,10 +1876,202 @@
     // ═══════════════════════════════════════════════════════════════
     // Full render
     // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
+    // Multi-Project Gantt
+    // ═══════════════════════════════════════════════════════════════
+
+    const MULTI_LABEL_W = 220;
+    const MULTI_COL_W   = 112;
+
+    function getMultiConfig() {
+      const isWeek    = ui.multiZoom !== 'month';
+      const daysPerCol = isWeek ? 7 : 28;
+      const numCols    = isWeek ? 14 : 13;
+      const dayPx      = MULTI_COL_W / daysPerCol;
+      const totalPx    = numCols * MULTI_COL_W;
+      const lookBack   = isWeek ? Math.floor(numCols / 3) * daysPerCol : daysPerCol;
+      const startIso   = addDays(TODAY, -lookBack + ui.multiOffset);
+      const endIso     = addDays(startIso, numCols * daysPerCol);
+      return { isWeek, daysPerCol, numCols, dayPx, totalPx, startIso, endIso };
+    }
+
+    function multiDateX(iso, cfg) {
+      if (!iso) return null;
+      const ms = isoToDate(iso) - isoToDate(cfg.startIso);
+      return Math.round(ms / 86400000 * cfg.dayPx);
+    }
+
+    function renderMultiView() {
+      const scroll = document.getElementById('multi-gantt-scroll');
+      if (!scroll) return;
+
+      const cfg = getMultiConfig();
+
+      // Update range label
+      const rangeLabel = document.getElementById('multi-range-label');
+      if (rangeLabel) {
+        const fmt = iso => isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: cfg.isWeek ? undefined : '2-digit' });
+        rangeLabel.textContent = fmt(cfg.startIso) + ' – ' + fmt(cfg.endIso);
+      }
+
+      // Load projects
+      let projects = [];
+      try { projects = (JSON.parse(localStorage.getItem('project-hub-v1') || '{}').projects || []); } catch {}
+      const visible = projects.filter(p => p.status !== 'done');
+
+      if (!visible.length) {
+        scroll.innerHTML = `<div class="multi-empty">
+          <div class="multi-empty-icon">📅</div>
+          <div style="font-weight:600;color:var(--text2)">No active projects yet.</div>
+          <div style="font-size:12px">Add projects in Project Hub — they'll appear here automatically.</div>
+        </div>`;
+        return;
+      }
+
+      // Build column headers
+      const cols = [];
+      for (let i = 0; i < cfg.numCols; i++) {
+        const iso = addDays(cfg.startIso, i * cfg.daysPerCol);
+        const isToday = iso <= TODAY && addDays(iso, cfg.daysPerCol) > TODAY;
+        const label = cfg.isWeek
+          ? isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : isoToDate(iso).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        cols.push({ iso, label, isToday, x: i * MULTI_COL_W });
+      }
+
+      const todayX = multiDateX(TODAY, cfg);
+      const todayVisible = todayX !== null && todayX >= 0 && todayX <= cfg.totalPx;
+
+      // Build gantt background (grid cols + today line) — reused in every gantt cell
+      function ganttBg(rowH) {
+        const bands = cols.map(c =>
+          `<div class="g-col-band" style="left:${c.x}px;width:${MULTI_COL_W}px${c.isToday ? ';background:rgba(184,240,51,0.06)' : ''}"></div>`
+        ).join('');
+        const tl = todayVisible ? `<div class="g-today-line" style="left:${todayX}px;height:${rowH}px"></div>` : '';
+        return bands + tl;
+      }
+
+      // Header row
+      const hdrColsHTML = cols.map(c =>
+        `<div class="multi-col-hdr${c.isToday ? ' is-today' : ''}" style="width:${MULTI_COL_W}px">${esc(c.label)}</div>`
+      ).join('');
+      let html = `
+        <div class="multi-hdr-row">
+          <div class="multi-hdr-corner">Project / Task</div>
+          ${hdrColsHTML}
+        </div>`;
+
+      // Project rows
+      visible.forEach(proj => {
+        const color  = proj.color || 'var(--text3)';
+        const collapsed = ui.collapsedProjects.has(proj.id);
+        const chevron   = collapsed ? '▸' : '▾';
+        const tasks      = (proj.tasks || []).filter(t => t.due && !t.done);
+        const doneTasks  = (proj.tasks || []).filter(t => t.done).length;
+        const noDue      = (proj.tasks || []).filter(t => !t.due && !t.done).length;
+        const milestones = (proj.milestones || []);
+        const openCount  = (proj.tasks || []).filter(t => !t.done).length;
+        const metaParts  = [`${openCount} open`];
+        if (noDue) metaParts.push(`${noDue} no date`);
+
+        html += `
+          <div class="mrow mrow-proj">
+            <div class="mrow-label" onclick="toggleProjectCollapse('${esc(proj.id)}')">
+              <span class="proj-chevron">${chevron}</span>
+              <span class="proj-color-bar" style="background:${color}"></span>
+              <span class="proj-name">${esc(proj.name)}</span>
+              <span class="proj-meta">${metaParts.join(' · ')}</span>
+            </div>
+            <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:36px;background:${color}14">
+              ${ganttBg(36)}
+            </div>
+          </div>`;
+
+        if (!collapsed) {
+          // Milestone rows
+          milestones.forEach(ms => {
+            if (!ms.date) return;
+            const x = multiDateX(ms.date, cfg);
+            const inRange = x !== null && x > -20 && x < cfg.totalPx + 20;
+            const markerHTML = inRange
+              ? `<div class="g-diamond${ms.done ? ' is-done' : ''}" style="left:${x}px;background:${color}"></div>`
+              : '';
+            html += `
+              <div class="mrow mrow-item${ms.done ? ' is-done' : ''}">
+                <div class="mrow-label">
+                  <span class="ms-icon" style="color:${color}">◆</span>
+                  <span class="item-label-text">${esc(ms.title || 'Milestone')}</span>
+                  <span class="item-due-badge${ms.date < TODAY && !ms.done ? ' overdue' : ''}">${fmtDate(ms.date)}</span>
+                </div>
+                <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:28px">
+                  ${ganttBg(28)}${markerHTML}
+                </div>
+              </div>`;
+          });
+
+          // Task rows (with due dates)
+          tasks.forEach(t => {
+            const x   = multiDateX(t.due, cfg);
+            const inRange = x !== null && x > -50 && x < cfg.totalPx + 20;
+            const barW = Math.max(8, Math.round(cfg.dayPx * 5));
+            const barL = Math.max(0, (x || 0) - barW);
+            const barHTML = inRange
+              ? `<div class="g-bar${t.done ? ' is-done' : ''}" style="left:${barL}px;width:${barW}px;background:${color}"></div>`
+              : '';
+            const overdue = t.due < TODAY && !t.done;
+            html += `
+              <div class="mrow mrow-item${t.done ? ' is-done' : ''}">
+                <div class="mrow-label">
+                  <span style="color:var(--text3);font-size:10px;flex-shrink:0">●</span>
+                  <span class="item-label-text">${esc(t.title)}</span>
+                  <span class="item-due-badge${overdue ? ' overdue' : ''}">${fmtDate(t.due)}</span>
+                </div>
+                <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:28px">
+                  ${ganttBg(28)}${barHTML}
+                </div>
+              </div>`;
+          });
+        }
+      });
+
+      scroll.innerHTML = html;
+
+      // Scroll so today is roughly 1/3 from the left
+      if (todayVisible) {
+        setTimeout(() => { scroll.scrollLeft = Math.max(0, todayX - cfg.totalPx * 0.28); }, 30);
+      }
+    }
+
+    function toggleProjectCollapse(projId) {
+      if (ui.collapsedProjects.has(projId)) ui.collapsedProjects.delete(projId);
+      else ui.collapsedProjects.add(projId);
+      renderMultiView();
+    }
+
+    function multiNav(dir) {
+      const cfg = getMultiConfig();
+      ui.multiOffset += dir * cfg.daysPerCol * 2;
+      renderMultiView();
+    }
+
+    function multiToday() {
+      ui.multiOffset = 0;
+      renderMultiView();
+    }
+
+    function toggleMultiZoom() {
+      ui.multiZoom = ui.multiZoom === 'week' ? 'month' : 'week';
+      ui.multiOffset = 0;
+      const btn = document.getElementById('multi-zoom-btn');
+      if (btn) btn.textContent = ui.multiZoom === 'week' ? 'Month' : 'Week';
+      renderMultiView();
+    }
+
     function render() {
       renderSidebar();
       renderToolbar();
       if (ui.activeView === 'timeline') renderTimeline();
+      else if (ui.activeView === 'multi') renderMultiView();
       else renderCalendar();
     }
 
@@ -1766,8 +2093,10 @@
       ui.activeView = view;
       document.getElementById('btn-timeline').classList.toggle('active', view === 'timeline');
       document.getElementById('btn-calendar').classList.toggle('active', view === 'calendar');
+      document.getElementById('btn-multi').classList.toggle('active', view === 'multi');
       document.getElementById('view-timeline').classList.toggle('view-hidden', view !== 'timeline');
       document.getElementById('view-calendar').classList.toggle('view-hidden', view !== 'calendar');
+      document.getElementById('view-multi').classList.toggle('view-hidden', view !== 'multi');
       render();
       if (view === 'timeline') setTimeout(scrollToToday, 60);
     }
@@ -2176,6 +2505,7 @@
         _populateProjectSelect();
         syncFromProjectHub();
         updateImportBadge();
+        if (ui.activeView === 'multi') renderMultiView();
       });
     } catch { }
     render();
