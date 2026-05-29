@@ -351,6 +351,44 @@
             opacity: 0.8;
         }
 
+        /* ── Compare split view ─────────────────────── */
+        .compare-split {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+            flex: 1; overflow: hidden;
+        }
+        .compare-col {
+            overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .compare-col + .compare-col { border-left: 1px solid var(--border); }
+        .compare-col-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+        }
+        .compare-col-icon {
+            width: 36px; height: 36px; border-radius: 10px; background: var(--surface3);
+            display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+        }
+        .compare-col-name {
+            font-family: var(--font-display); font-weight: 800; font-size: 15px; flex: 1;
+        }
+        .compare-row {
+            display: flex; flex-direction: column; gap: 3px;
+            padding: 10px 12px; border-radius: var(--r-sm);
+            background: var(--surface2); border: 1px solid var(--border);
+        }
+        .compare-row-label {
+            font-size: 9px; font-family: var(--font-mono); letter-spacing: 1px;
+            text-transform: uppercase; color: var(--text3);
+        }
+        .compare-row-value {
+            font-size: 13px; color: var(--text); line-height: 1.45;
+        }
+        .compare-row-empty { color: var(--text3); font-style: italic; font-size: 12px; }
+        .compare-picker-label {
+            font-size: 10px; font-family: var(--font-mono); letter-spacing: 1px;
+            text-transform: uppercase; color: var(--text3); margin-bottom: 6px;
+        }
+
         /* ── Mobile drawer ──────────────────────────────────────── */
         .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
         .sidebar-backdrop.open { display: block; }
@@ -395,6 +433,7 @@
         <div class="topbar">
             <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open tool list">☰</button>
             <div class="topbar-title" id="topbar-title">Select a tool</div>
+            <button class="btn btn-ghost" id="compare-btn" onclick="toggleCompare()" style="display:none;font-size:12px">⇄ Compare</button>
         </div>
         <div class="stats-bar" id="stats-bar"></div>
 
@@ -407,6 +446,8 @@
         const STORAGE_KEY = 'tool-portfolio-v1';
         let tools = [];
         let currentId = null;
+        let compareMode = false;
+        let compareId = null;
 
         // Drag state
         let dragId = null;
@@ -495,6 +536,9 @@
         function openTool(id) {
             closeSidebar();
             currentId = id;
+            compareMode = false;
+            const btn = document.getElementById('compare-btn');
+            if (btn) { btn.style.display = ''; btn.textContent = '⇄ Compare'; btn.style.color = ''; }
             renderList();
             renderDetail();
         }
@@ -777,13 +821,93 @@
             }
         }
 
+        function toggleCompare() {
+            compareMode = !compareMode;
+            const btn = document.getElementById('compare-btn');
+            if (compareMode) {
+                btn.textContent = '✕ Exit Compare';
+                btn.style.color = 'var(--accent-nope)';
+                // default compareId to a different tool
+                if (!compareId || compareId === currentId) {
+                    const other = tools.find(t => t.id !== currentId);
+                    compareId = other ? other.id : null;
+                }
+                renderCompare();
+            } else {
+                btn.textContent = '⇄ Compare';
+                btn.style.color = '';
+                renderDetail();
+            }
+        }
+
+        function renderCompare() {
+            const c = document.getElementById('content');
+            const tA = tools.find(t => t.id === currentId);
+            const tB = tools.find(t => t.id === compareId);
+            if (!tA) return;
+
+            const ringLabels = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
+            const ringColors = { adopt:'var(--accent)', trial:'#38bdf8', assess:'var(--accent-super)', hold:'var(--accent-nope)' };
+            const statusColors = { exploring:'var(--text3)', piloting:'#38bdf8', using:'var(--accent)', retired:'var(--text3)' };
+
+            function toolCol(t, isB) {
+                if (!t) return `<div class="compare-col">
+                    ${isB ? `<div class="compare-picker-label">Compare with</div>
+                    <select class="select" onchange="compareId=this.value;renderCompare()" style="margin-bottom:12px">
+                        ${tools.filter(x=>x.id!==currentId).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.icon||'🛠')} ${escapeHtml(x.name)}</option>`).join('')}
+                    </select>` : ''}
+                    <div class="empty-state" style="padding:40px 0">No tool selected</div>
+                </div>`;
+
+                const linkedProjects = (() => {
+                    try {
+                        const ph = JSON.parse(localStorage.getItem('project-hub-v1')||'{}');
+                        return (ph.projects||[]).filter(p=>(t.linkedProjects||[]).includes(p.id)).map(p=>p.name);
+                    } catch { return []; }
+                })();
+
+                const rows = [
+                    ['Category',   t.category  || ''],
+                    ['Status',     t.status    ? `<span style="color:${statusColors[t.status]||'var(--text3)'}">${t.status}</span>` : ''],
+                    ['Radar Ring', t.ring      ? `<span style="color:${ringColors[t.ring]||'var(--text3)'}">${ringLabels[t.ring]||t.ring}</span>` : ''],
+                    ['TOGAF Layer',t.archLayer || ''],
+                    ['URL',        t.url       ? `<a href="${escapeHtml(t.url)}" target="_blank" style="color:var(--accent);font-size:12px">${escapeHtml(t.url)}</a>` : ''],
+                    ['Projects',   linkedProjects.length ? linkedProjects.map(n=>`<span style="font-size:12px;background:var(--surface3);border-radius:3px;padding:1px 5px">${escapeHtml(n)}</span>`).join(' ') : ''],
+                    ['Notes',      t.note      || ''],
+                ].map(([label, val]) => `
+                    <div class="compare-row">
+                        <div class="compare-row-label">${label}</div>
+                        <div class="compare-row-value ${val ? '' : 'compare-row-empty'}">${val || '—'}</div>
+                    </div>`).join('');
+
+                const pickerHtml = isB ? `
+                    <div class="compare-picker-label">Compare with</div>
+                    <select class="select" onchange="compareId=this.value;renderCompare()" style="margin-bottom:4px">
+                        ${tools.filter(x=>x.id!==currentId).map(x=>`<option value="${escapeHtml(x.id)}" ${x.id===compareId?'selected':''}>${escapeHtml(x.icon||'🛠')} ${escapeHtml(x.name)}</option>`).join('')}
+                    </select>` : '';
+
+                return `<div class="compare-col">
+                    ${pickerHtml}
+                    <div class="compare-col-header">
+                        <div class="compare-col-icon">${escapeHtml(t.icon||'🛠')}</div>
+                        <div class="compare-col-name">${escapeHtml(t.name)}</div>
+                    </div>
+                    ${rows}
+                </div>`;
+            }
+
+            c.innerHTML = `<div class="compare-split">${toolCol(tA, false)}${toolCol(tB, true)}</div>`;
+        }
+
         function renderDetail() {
             const c = document.getElementById('content');
             const title = document.getElementById('topbar-title');
 
+            const compareBtn = document.getElementById('compare-btn');
             if (!currentId) {
                 title.textContent = 'Select a tool';
                 c.innerHTML = '<div class="empty">Select a tool or add a new one.</div>';
+                if (compareBtn) compareBtn.style.display = 'none';
                 return;
             }
 
@@ -791,6 +915,7 @@
             if (!t) return;
 
             title.textContent = t.name;
+            if (compareBtn) compareBtn.style.display = '';
 
             const openBtn = t.url
                 ? '<a class="btn" href="' + t.url + '" target="_blank">Open</a>'

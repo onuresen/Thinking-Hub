@@ -687,6 +687,30 @@
     }
     .stat-stale { color: var(--accent-like); }
 
+    /* ── Dashboard view tabs ──────────────────────── */
+    .dash-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dash-tab {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: 6px 18px; margin-bottom: -1px;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--text3); cursor: pointer; transition: color 0.12s, border-color 0.12s;
+    }
+    .dash-tab:hover { color: var(--text); }
+    .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Today view ───────────────────────────────── */
+    .today-card-urgent { border-color: rgba(239,68,68,0.3) !important; }
+    .today-all-clear {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 64px 0; gap: 8px; color: var(--text3); font-size: 13px; text-align: center;
+    }
+    .today-all-clear-icon { font-size: 38px; opacity: 0.35; margin-bottom: 6px; }
+
     /* ── iframe ─────────────────────────────────────── */
     #app-frame {
       position: absolute;
@@ -1072,7 +1096,14 @@
       <!-- Home dashboard -->
       <div id="home-dashboard">
         <div class="home-greeting" id="greeting">Good morning.</div>
-        <div class="home-sub">What are we working on?</div>
+        <div class="home-sub" style="margin-bottom:16px">What are we working on?</div>
+
+        <div class="dash-tabs">
+          <button class="dash-tab" id="dash-tab-today"    onclick="switchDashView('today')">Today</button>
+          <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
+        </div>
+
+        <div id="today-view"></div>
 
         <div id="status-section" style="display:none">
           <div class="home-section-label">Overview</div>
@@ -1851,6 +1882,157 @@
       });
     }
 
+    // ── Today dashboard ───────────────────────────────────────────────────────────
+
+    function buildTodayView() {
+      const container = document.getElementById('today-view');
+      if (!container) return;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const sections = [];
+
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        const allTasks = (ph.projects || []).flatMap(p =>
+          (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color }))
+        );
+        const dueToday = allTasks.filter(t => !t.done && t.due === todayStr);
+        const overdue  = allTasks.filter(t => !t.done && t.due && t.due < todayStr)
+                                 .sort((a, b) => a.due.localeCompare(b.due));
+        if (dueToday.length || true) sections.push({ type: 'due-today', items: dueToday });
+        if (overdue.length)          sections.push({ type: 'overdue',   items: overdue });
+      } catch {}
+
+      try {
+        const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+        const todayMeetings = (mh.meetings || []).filter(m => (m.date || '').slice(0, 10) === todayStr);
+        if (todayMeetings.length) sections.push({ type: 'meetings', items: todayMeetings });
+      } catch {}
+
+      try {
+        const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const entries = Array.isArray(dl) ? dl : (dl.entries || []);
+        const open = entries.filter(e => !e.status || e.status === 'considering' || e.status === 'revisiting');
+        if (open.length) sections.push({ type: 'decisions', items: open });
+      } catch {}
+
+      const hasContent = sections.some(s => s.items.length > 0);
+      if (!hasContent) {
+        container.innerHTML = `<div class="today-all-clear">
+          <div class="today-all-clear-icon">✓</div>
+          <div style="font-weight:600;color:var(--text2)">You're all clear for today.</div>
+          <div style="font-size:12px">No tasks due, no meetings, no pending decisions.</div>
+        </div>`;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'status-grid';
+
+      sections.forEach(sec => {
+        const { type, items } = sec;
+        if (!items.length && type !== 'due-today') return;
+
+        let icon, title, urgent = false;
+        let rows = '';
+
+        if (type === 'due-today') {
+          icon = '📅'; title = 'Due Today';
+          if (!items.length) {
+            rows = `<div style="color:var(--text3);font-size:12px;padding:4px 0">Nothing due today — clear schedule ✓</div>`;
+          } else {
+            rows = items.slice(0, 5).map(t => {
+              const prio = t.priority === 'high' ? '↑' : t.priority === 'low' ? '↓' : '–';
+              return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id||'')}">
+                <div class="stat-item-dot" style="background:${t._pColor||'var(--text3)'}"></div>
+                <div class="stat-item-text">${_esc(t.title)}</div>
+                <div class="stat-item-meta">${prio} ${_esc(t._pName)}</div>
+              </div>`;
+            }).join('');
+          }
+        } else if (type === 'overdue') {
+          icon = '⚠'; title = 'Overdue'; urgent = true;
+          rows = items.slice(0, 5).map(t => {
+            const days = Math.floor((new Date(todayStr) - new Date(t.due)) / 86400000);
+            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id||'')}">
+              <div class="stat-item-dot" style="background:var(--accent-nope)"></div>
+              <div class="stat-item-text">${_esc(t.title)}</div>
+              <div class="stat-item-meta">${days}d · ${_esc(t._pName)}</div>
+            </div>`;
+          }).join('');
+        } else if (type === 'meetings') {
+          icon = '▣'; title = "Today's Meetings";
+          rows = items.slice(0, 5).map(m => `<div class="stat-item" data-tool="meetings-hub" data-item-id="${_esc(m.id||'')}">
+            <div class="stat-item-dot" style="background:var(--border-blue)"></div>
+            <div class="stat-item-text">${_esc(m.title||'Meeting')}</div>
+            <div class="stat-item-meta">${_esc(m.time||'')}</div>
+          </div>`).join('');
+        } else if (type === 'decisions') {
+          icon = '◎'; title = 'Pending Decisions';
+          rows = items.slice(0, 5).map(e => `<div class="stat-item" data-tool="decision-hub" data-item-id="${_esc(e.id||'')}">
+            <span class="stat-badge ${_esc(e.type||'note')}">${_esc(e.type||'note')}</span>
+            <div class="stat-item-text">${_esc(e.title||'(untitled)')}</div>
+          </div>`).join('');
+        }
+
+        const count = type === 'due-today'
+          ? `${items.length} task${items.length !== 1 ? 's' : ''}`
+          : `${items.length}`;
+        const more  = items.length > 5 ? `+${items.length - 5} more` : '';
+        const toolId = type === 'decisions' ? 'decision-hub' : type === 'meetings' ? 'meetings-hub' : 'project-hub';
+        const card = _buildTodayCard(icon, title, count, rows, more, toolId, urgent);
+        grid.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+
+    function _buildTodayCard(icon, title, count, body, more, toolId, urgent) {
+      const card = document.createElement('div');
+      card.className = 'stat-card' + (urgent ? ' today-card-urgent' : '');
+      card.innerHTML = `
+        <div class="stat-card-header">
+          <span class="stat-card-icon">${icon}</span>
+          <span class="stat-card-title">${title}</span>
+          <span class="stat-count">${count}</span>
+        </div>
+        <div class="stat-card-body">${body}</div>
+        <div class="stat-card-footer">
+          <span>${more}</span>
+          <span>Open →</span>
+        </div>`;
+      card.addEventListener('click', e => {
+        const item = e.target.closest('.stat-item[data-item-id]');
+        if (item && item.dataset.itemId) {
+          e.stopPropagation();
+          _pendingHighlight = item.dataset.itemId;
+          openApp(item.dataset.tool);
+        } else {
+          openApp(toolId);
+        }
+      });
+      return card;
+    }
+
+    function switchDashView(v) {
+      saveSession({ dashView: v });
+      document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+      const tab = document.getElementById('dash-tab-' + v);
+      if (tab) tab.classList.add('active');
+
+      const todayView     = document.getElementById('today-view');
+      const statusSection = document.getElementById('status-section');
+
+      if (v === 'today') {
+        todayView.style.display = '';
+        statusSection.style.display = 'none';
+        buildTodayView();
+      } else {
+        todayView.style.display = 'none';
+        buildStatusWidgets(); // will set statusSection display itself
+      }
+    }
+
     // ── Cloud panel ───────────────────────────────────────────────────────────────
 
     // Collaboration keys: shared work content that should sync across collaborators.
@@ -2527,7 +2709,7 @@
     buildProfileStrip();
     buildSidebar();
     buildHomeDashboard();
-    buildStatusWidgets();
+    switchDashView(loadSession().dashView || 'today');
     refreshRecentStrip();
     setGreeting();
     initCloudPanel();
@@ -2555,7 +2737,7 @@
       if (window.HubStarter) HubStarter.seed();
       HubStorage.set('tutorial-seen-v1', true);
       buildHomeDashboard();
-      buildStatusWidgets();
+      switchDashView(loadSession().dashView || 'today');
       setTimeout(startTour, 300);
     }
 
