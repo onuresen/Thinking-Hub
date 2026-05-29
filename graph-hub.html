@@ -302,6 +302,7 @@
     <button class="btn" id="physics-btn" onclick="togglePhysics()">Freeze Layout</button>
     <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
     <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
+    <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
     <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
   </div>
 
@@ -364,29 +365,38 @@
 
   <script>
     const TOOL_COLORS_DARK = {
-      'project-hub': { bg: '#1c2d47', border: '#3a5f96' },
+      'project-hub':  { bg: '#1c2d47', border: '#3a5f96' },
       'decision-hub': { bg: '#3a1e1e', border: '#7a3535' },
-      'kmqt-board': { bg: '#2b1e3a', border: '#5e3a7a' },
-      'idea-swiper': { bg: '#1e3828', border: '#3a7a52' },
-      'schedule': { bg: '#38321c', border: '#7a6a30' },
-      'canvas-hub': { bg: '#1c3838', border: '#30787a' },
+      'kmqt-board':   { bg: '#2b1e3a', border: '#5e3a7a' },
+      'idea-swiper':  { bg: '#1e3828', border: '#3a7a52' },
+      'schedule':     { bg: '#38321c', border: '#7a6a30' },
+      'canvas-hub':   { bg: '#1c3838', border: '#30787a' },
+      'risk-hub':     { bg: '#3a1516', border: '#be3030' },
+      'goals-hub':    { bg: '#332e14', border: '#a08020' },
+      'meetings-hub': { bg: '#152838', border: '#2868a8' },
     };
     const TOOL_COLORS_LIGHT = {
-      'project-hub': { bg: '#bed8f5', border: '#4a90c8' },
+      'project-hub':  { bg: '#bed8f5', border: '#4a90c8' },
       'decision-hub': { bg: '#f5c0c0', border: '#c04040' },
-      'kmqt-board': { bg: '#e0c8f8', border: '#7a40b0' },
-      'idea-swiper': { bg: '#b8ecd4', border: '#2aaa6a' },
-      'schedule': { bg: '#fae0a0', border: '#b88020' },
-      'canvas-hub': { bg: '#b8ecd4', border: '#2aaa6a' },
+      'kmqt-board':   { bg: '#e0c8f8', border: '#7a40b0' },
+      'idea-swiper':  { bg: '#b8ecd4', border: '#2aaa6a' },
+      'schedule':     { bg: '#fae0a0', border: '#b88020' },
+      'canvas-hub':   { bg: '#b8ecd4', border: '#2aaa6a' },
+      'risk-hub':     { bg: '#fcd0d0', border: '#c83030' },
+      'goals-hub':    { bg: '#faeab0', border: '#a07820' },
+      'meetings-hub': { bg: '#b8d4f0', border: '#3060a8' },
     };
 
     const TOOL_LABELS = {
-      'project-hub': 'Project Hub',
+      'project-hub':  'Project Hub',
       'decision-hub': 'Decision Hub',
-      'kmqt-board': 'KMQT Board',
-      'idea-swiper': 'Idea Swiper',
-      'schedule': 'Schedule',
-      'canvas-hub': 'Canvas',
+      'kmqt-board':   'KMQT Board',
+      'idea-swiper':  'Idea Swiper',
+      'schedule':     'Schedule',
+      'canvas-hub':   'Canvas',
+      'risk-hub':     'Risk Register',
+      'goals-hub':    'Goals Hub',
+      'meetings-hub': 'Meetings',
     };
 
     let network = null;
@@ -395,6 +405,7 @@
     let nodesMap = new Map();
     let hiddenTools = new Set();
     let physicsEnabled = true;
+    let autoLinksEnabled = true;
 
     // ── Controls ──────────────────────────────────────────────
 
@@ -491,71 +502,142 @@
       legend.appendChild(body);
     }
 
+    // ── Auto-node loader ──────────────────────────────────────
+
+    function loadAutoNodes(isDark) {
+      const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
+      const fontColor = isDark ? '#e8e8f0' : '#1a1a2e';
+      const autoEdgeColor = isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.25)';
+
+      const nodes = new Map();
+      const edges = [];
+
+      function addNode(tool, itemId, label) {
+        const id = `${tool}::${itemId}`;
+        if (nodes.has(id)) return id;
+        const c = TC[tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
+        nodes.set(id, {
+          id, label: (label || 'Untitled').slice(0, 40), tool, itemId,
+          title: `<b>${TOOL_LABELS[tool] || tool}</b><br>${label || 'Untitled'}`,
+          hidden: hiddenTools.has(tool),
+          color: { background: c.bg, border: c.border,
+            highlight: { background: c.bg, border: '#b8f033' },
+            hover: { background: c.bg, border: c.border } },
+          font: { color: fontColor, size: 12, face: 'DM Sans, sans-serif' },
+          shape: 'box', borderWidth: 1,
+          margin: { top: 8, bottom: 8, left: 10, right: 10 }
+        });
+        return id;
+      }
+
+      function addAutoEdge(fromId, toId, label) {
+        edges.push({
+          id: `auto::${fromId}__${toId}`, from: fromId, to: toId,
+          _auto: true, title: label,
+          color: { color: autoEdgeColor, highlight: '#b8f033', hover: autoEdgeColor },
+          width: 1, dashes: [5, 5],
+          arrows: { to: { enabled: true, scaleFactor: 0.45 } },
+          smooth: { type: 'continuous' }, selectionWidth: 1.5
+        });
+      }
+
+      // Projects (parent nodes — always load so edges can reference them)
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        (ph.projects || []).forEach(p => addNode('project-hub', p.id, p.name));
+      } catch {}
+
+      // Decisions → project
+      try {
+        const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const decisions = Array.isArray(dl) ? dl : (dl.entries || []);
+        decisions.forEach(d => {
+          const dId = addNode('decision-hub', d.id, d.title || 'Decision');
+          if (d.projectId && nodes.has(`project-hub::${d.projectId}`))
+            addAutoEdge(dId, `project-hub::${d.projectId}`, 'decision → project');
+        });
+      } catch {}
+
+      // Risks → project
+      try {
+        const rh = JSON.parse(localStorage.getItem('risk-hub-v1') || '{}');
+        (rh.risks || []).forEach(r => {
+          const rId = addNode('risk-hub', r.id, r.title || 'Risk');
+          if (r.projectId && nodes.has(`project-hub::${r.projectId}`))
+            addAutoEdge(rId, `project-hub::${r.projectId}`, 'risk → project');
+        });
+      } catch {}
+
+      // Goals (objectives) → project
+      try {
+        const gh = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
+        (gh.quarters || []).forEach(q =>
+          (q.objectives || []).forEach(o => {
+            const oId = addNode('goals-hub', o.id, o.title || 'Objective');
+            if (o.projectId && nodes.has(`project-hub::${o.projectId}`))
+              addAutoEdge(oId, `project-hub::${o.projectId}`, 'goal → project');
+          })
+        );
+      } catch {}
+
+      // Meetings → project
+      try {
+        const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+        (mh.meetings || []).forEach(m => {
+          const mId = addNode('meetings-hub', m.id, m.title || 'Meeting');
+          if (m.projectId && nodes.has(`project-hub::${m.projectId}`))
+            addAutoEdge(mId, `project-hub::${m.projectId}`, 'meeting → project');
+        });
+      } catch {}
+
+      return { nodes: Array.from(nodes.values()), edges };
+    }
+
     // ── Build graph ───────────────────────────────────────────
 
     function buildGraph() {
-      const links = HubLinks.getAll();
-
-      if (!links || links.length === 0) {
-        document.getElementById('empty').classList.add('visible');
-        if (network) { network.destroy(); network = null; }
-        nodesDS = null; edgesDS = null;
-        nodesMap.clear();
-        document.getElementById('stats').textContent = '0 nodes · 0 links';
-        document.getElementById('filter-bar').innerHTML = '';
-        document.getElementById('legend').classList.remove('visible');
-        return;
-      }
-
-      document.getElementById('empty').classList.remove('visible');
-      nodesMap = new Map();
-      const edges = [];
-
-      function nodeId(tool, itemId) { return `${tool}::${itemId}`; }
-
       const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-      const TOOL_COLORS = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
+      const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.60)';
       const edgeHover = isDark ? 'rgba(184,240,51,0.45)' : 'rgba(100,160,20,0.65)';
+
+      // Seed with auto-generated nodes + dashed edges
+      const auto = autoLinksEnabled ? loadAutoNodes(isDark) : { nodes: [], edges: [] };
+      nodesMap = new Map();
+      auto.nodes.forEach(n => nodesMap.set(n.id, n));
+      const edges = [...auto.edges];
+
+      // Overlay manual link nodes (merge — don't overwrite if auto already added it)
+      const links = HubLinks.getAll();
+      function nodeId(tool, itemId) { return `${tool}::${itemId}`; }
 
       links.forEach(link => {
         [link.a, link.b].forEach(side => {
           const id = nodeId(side.tool, side.itemId);
           if (nodesMap.has(id)) return;
-          const c = TOOL_COLORS[side.tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
+          const c = TC[side.tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
           nodesMap.set(id, {
             id,
             label: (side.label || 'Untitled').slice(0, 40),
-            tool: side.tool,
-            itemId: side.itemId,
+            tool: side.tool, itemId: side.itemId,
             title: `<b>${TOOL_LABELS[side.tool] || side.tool}</b><br>${side.label || 'Untitled'}`,
             hidden: hiddenTools.has(side.tool),
-            color: {
-              background: c.bg,
-              border: c.border,
+            color: { background: c.bg, border: c.border,
               highlight: { background: c.bg, border: '#b8f033' },
-              hover: { background: c.bg, border: c.border }
-            },
+              hover: { background: c.bg, border: c.border } },
             font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
-            shape: 'box',
-            borderWidth: 1,
+            shape: 'box', borderWidth: 1,
             margin: { top: 8, bottom: 8, left: 10, right: 10 }
           });
         });
-
         const edgeTitle = link.note ? `📝 ${link.note}` : undefined;
         edges.push({
-          id: link.id,
-          _linkId: link.id,
+          id: link.id, _linkId: link.id,
           from: nodeId(link.a.tool, link.a.itemId),
           to: nodeId(link.b.tool, link.b.itemId),
           title: edgeTitle,
-          color: {
-            color: edgeColor,
-            highlight: '#b8f033',
-            hover: edgeHover
-          },
+          color: { color: edgeColor, highlight: '#b8f033', hover: edgeHover },
           width: link.note ? 2.5 : 1.5,
           selectionWidth: 2,
           smooth: { type: 'curvedCW', roundness: 0.1 }
@@ -563,6 +645,18 @@
       });
 
       const nodes = Array.from(nodesMap.values());
+
+      if (!nodes.length) {
+        document.getElementById('empty').classList.add('visible');
+        if (network) { network.destroy(); network = null; }
+        nodesDS = null; edgesDS = null; nodesMap.clear();
+        document.getElementById('stats').textContent = '0 nodes · 0 links';
+        document.getElementById('filter-bar').innerHTML = '';
+        document.getElementById('legend').classList.remove('visible');
+        return;
+      }
+
+      document.getElementById('empty').classList.remove('visible');
       const tools = [...new Set(nodes.map(n => n.tool))];
 
       buildFilterBar(tools);
@@ -716,6 +810,12 @@
     // ── New Link modal ────────────────────────────────────────
     const LINKABLE_TOOLS = Object.keys(TOOL_LABELS);
 
+    function toggleAutoLinks() {
+      autoLinksEnabled = !autoLinksEnabled;
+      document.getElementById('auto-btn').classList.toggle('frozen', autoLinksEnabled);
+      buildGraph();
+    }
+
     function openNewLinkModal() {
       const overlay = document.getElementById('link-overlay');
       ['a', 'b'].forEach(side => {
@@ -763,7 +863,8 @@
     }
 
     buildGraph();
-    HubStorage.subscribe('hub-links-v1', buildGraph);
+    ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1']
+      .forEach(k => HubStorage.subscribe(k, buildGraph));
     window.__hl_onLinkChange = buildGraph;
 
     window.addEventListener('message', e => {
