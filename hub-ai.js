@@ -6,7 +6,7 @@
 const HubAI = (() => {
   const SETTINGS_KEY = 'hub-settings-v1';
   const MODEL = 'claude-haiku-4-5';
-  const SDK_URL = 'https://esm.sh/@anthropic-ai/sdk';
+  const SDK_URL = 'https://esm.sh/@anthropic-ai/sdk@0.52.0'; // pinned — update manually after testing
 
   let _sdkPromise = null;
   let _clientCache = null;

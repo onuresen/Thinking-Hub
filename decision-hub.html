@@ -676,7 +676,7 @@
           if (d.type === 'risk') icon = '⚠';
           if (d.type === 'open') icon = '？';
 
-          item.innerHTML = `<span class="nav-icon">${icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.title || 'Untitled'}</span>`;
+          item.innerHTML = `<span class="nav-icon">${icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${HubUtils.esc(d.title || 'Untitled')}</span>`;
           item.onclick = () => openDecision(d.id);
           group.appendChild(item);
         });
@@ -1408,6 +1408,7 @@
     });
 
     window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'hub-highlight' && e.data.itemId) {
         const dec = decisions.find(d => d.id === e.data.itemId);
         if (dec) openDecision(dec.id);

@@ -868,6 +868,7 @@
     window.__hl_onLinkChange = buildGraph;
 
     window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'hub-theme') {
         document.documentElement.setAttribute('data-theme', e.data.theme);
         buildGraph();

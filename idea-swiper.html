@@ -3591,7 +3591,7 @@ On-demand tutoring market"></textarea>
         sel.disabled = true;
       } else {
         sel.disabled = false;
-        sel.innerHTML = projects.map(p => `<option value="${p.id}">${p.name || 'Untitled'}</option>`).join('');
+        sel.innerHTML = projects.map(p => `<option value="${p.id}">${HubUtils.esc(p.name || 'Untitled')}</option>`).join('');
       }
       document.getElementById('send-idea-preview').textContent = idea;
       document.getElementById('send-modal-overlay').classList.remove('hidden');

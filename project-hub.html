@@ -2618,7 +2618,7 @@
           const chip = document.createElement('button');
           chip.className = 'ov-chip member-chip' + (sel ? ' active' : '');
           chip.title = m.name;
-          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${m.name}`;
+          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${HubUtils.esc(m.name)}`;
           chip.onclick = () => toggleOverviewMember(m.id);
           memberWrap.appendChild(chip);
         });
@@ -2783,10 +2783,10 @@
           card.innerHTML = `
         <div class="project-card-stripe" style="background:${proj.color}"></div>
         <div class="project-card-header">
-          <div class="project-name">${proj.name}</div>
+          <div class="project-name">${HubUtils.esc(proj.name)}</div>
           <div class="project-status ${statusClass(proj.status)}">${statusLabel(proj.status)}</div>
         </div>
-        <div class="project-desc">${proj.desc}</div>
+        <div class="project-desc">${HubUtils.esc(proj.desc || '')}</div>
         <div class="project-progress-wrap">
           <div class="progress-label"><span>Progress</span><span>${prog}%</span></div>
           <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
@@ -2857,7 +2857,7 @@
           const chip = document.createElement('button');
           chip.className = 'ov-chip member-chip' + (sel ? ' active' : '');
           chip.title = m.name;
-          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${m.name}`;
+          chip.innerHTML = `<span class="ov-chip-av" style="background:${bg};color:${fg}">${initials(m.name)}</span>${HubUtils.esc(m.name)}`;
           chip.onclick = () => toggleAllTasksMember(m.id);
           memberWrap.appendChild(chip);
         });
@@ -3202,7 +3202,7 @@
       const wrap = document.createElement('div'); wrap.className = 'animate-in';
       state.projects.forEach(proj => {
         if (!proj.milestones.length) return;
-        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${proj.name}</div><div class="ui-section-line"></div></div>`;
+        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${HubUtils.esc(proj.name)}</div><div class="ui-section-line"></div></div>`;
         proj.milestones.forEach(ms => {
           const msTasks = proj.tasks.filter(t => t.milestoneId === ms.id);
           const doneCount = msTasks.filter(t => t.done).length;
@@ -3224,9 +3224,9 @@
       const wrap = document.createElement('div'); wrap.className = 'animate-in';
       state.projects.forEach(proj => {
         if (!proj.goals.length) return;
-        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${proj.name}</div><div class="ui-section-line"></div></div>`;
+        wrap.innerHTML += `<div class="ui-section-header" style="margin-bottom:10px"><div class="ui-section-title" style="color:${proj.color}">${HubUtils.esc(proj.name)}</div><div class="ui-section-line"></div></div>`;
         proj.goals.forEach(g => {
-          wrap.innerHTML += `<div class="goal-item"><div class="goal-header"><div class="goal-name">${g.name}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span></div><div class="goal-desc">${g.desc}</div><div class="goal-bar"><div class="goal-fill" style="width:${g.progress}%"></div></div></div>`;
+          wrap.innerHTML += `<div class="goal-item"><div class="goal-header"><div class="goal-name">${HubUtils.esc(g.name)}</div><span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span></div><div class="goal-desc">${HubUtils.esc(g.desc || '')}</div><div class="goal-bar"><div class="goal-fill" style="width:${g.progress}%"></div></div></div>`;
         });
       });
       if (!wrap.innerHTML) wrap.innerHTML = `<div class="empty-state"><div class="e-icon">◇</div><div class="e-title">No goals defined</div></div>`;
@@ -3404,12 +3404,12 @@
           const el = document.createElement('div'); el.className = 'goal-item';
           el.innerHTML = `
         <div class="goal-header" style="display:flex;align-items:center;gap:6px">
-          <div class="goal-name" style="flex:1">${g.name}</div>
+          <div class="goal-name" style="flex:1">${HubUtils.esc(g.name)}</div>
           <span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span>
           <button class="task-action-btn edit" title="Edit goal" onclick="openEditGoal('${g.id}','${projId}')">✎</button>
           <button class="task-action-btn del" title="Delete goal" onclick="deleteGoal('${g.id}','${projId}')">✕</button>
         </div>
-        <div class="goal-desc">${g.desc}</div>
+        <div class="goal-desc">${HubUtils.esc(g.desc || '')}</div>
         <div class="goal-progress-label"><span>Progress</span><span>${g.progress}%</span></div>
         <div class="goal-bar"><div class="goal-fill" style="width:${g.progress}%"></div></div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
@@ -3567,7 +3567,7 @@
       const c = document.getElementById('proj-members');
       c.innerHTML = state.members.map(m => {
         const { bg, fg } = avatarColors(m.color);
-        return `<div class="checkbox-item"><input type="checkbox" id="pm-${m.id}" value="${m.id}" checked><label for="pm-${m.id}"><div class="avatar" style="background:${bg};color:${fg};width:20px;height:20px;font-size:9px">${initials(m.name)}</div>${m.name} <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${m.role}</span></label></div>`;
+        return `<div class="checkbox-item"><input type="checkbox" id="pm-${m.id}" value="${m.id}" checked><label for="pm-${m.id}"><div class="avatar" style="background:${bg};color:${fg};width:20px;height:20px;font-size:9px">${initials(m.name)}</div>${HubUtils.esc(m.name)} <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${HubUtils.esc(m.role || '')}</span></label></div>`;
       }).join('');
       document.getElementById('proj-name').value = '';
       document.getElementById('proj-desc').value = '';
@@ -3589,7 +3589,7 @@
       document.querySelector('#modal-task .modal-sub').textContent = 'Add a task to the project';
       document.querySelector('#modal-task .btn-primary').textContent = 'Add Task';
       const sel = document.getElementById('task-project');
-      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === preProjectId ? 'selected' : ''}>${p.name}</option>`).join('');
+      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === preProjectId ? 'selected' : ''}>${HubUtils.esc(p.name)}</option>`).join('');
       populateTaskProjectDependents(preProjectId || state.projects[0]?.id);
       sel.onchange = () => populateTaskProjectDependents(sel.value);
       document.getElementById('task-title').value = '';
@@ -3633,7 +3633,7 @@
       const members = (proj && proj.members && proj.members.length)
         ? getProjMemberIds(proj).map(id => getMember(id)).filter(Boolean)
         : state.members;
-      document.getElementById('task-assignee').innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      document.getElementById('task-assignee').innerHTML = members.map(m => `<option value="${m.id}">${HubUtils.esc(m.name)}</option>`).join('');
     }
 
     function openEditTask(taskId, projectId) {
@@ -3641,7 +3641,7 @@
       const task = proj.tasks.find(t => t.id === taskId); if (!task) return;
       _editingTaskId = taskId; _editingTaskProjId = projectId;
       const sel = document.getElementById('task-project');
-      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === projectId ? 'selected' : ''}>${p.name}</option>`).join('');
+      sel.innerHTML = state.projects.map(p => `<option value="${p.id}" ${p.id === projectId ? 'selected' : ''}>${HubUtils.esc(p.name)}</option>`).join('');
       populateTaskProjectDependents(projectId);
       sel.onchange = () => populateTaskProjectDependents(sel.value);
       document.getElementById('task-title').value = task.title || '';
@@ -3995,6 +3995,7 @@
     // Handles navigation from Decision Log (or any tool) to a specific task/project.
     window.addEventListener('message', e => {
       if (!e.data || e.data.type !== 'hub-highlight' || !e.data.itemId) return;
+      if (e.origin !== window.location.origin) return;
       const itemId = e.data.itemId;
 
       // Try task ID first
