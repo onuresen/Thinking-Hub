@@ -3373,8 +3373,21 @@
       // Store result on window for apply functions
       window._aiPendingResult = result;
 
-      const actionIcons = { create_link: '🔗', update_task_status: '✅', create_task: '📋', create_risk: '⚠', create_decision: '⊕' };
-      const actionLabels = { create_link: 'Link', update_task_status: 'Update status', create_task: 'New task', create_risk: 'New risk', create_decision: 'New decision' };
+      const actionIcons = {
+        create_link: '🔗', remove_link: '✂',
+        update_task_status: '✅', update_task_priority: '⬆', update_task_due: '📅', assign_task: '👤',
+        create_project: '◈', create_task: '📋', create_milestone: '◆',
+        create_risk: '⚠', create_decision: '⊕', create_goal: '◎',
+        add_kmqt_item: '⊞', add_backlog_item: '⚡', create_schedule_event: '▦'
+      };
+      const actionLabels = {
+        create_link: 'Create link', remove_link: 'Remove link',
+        update_task_status: 'Update status', update_task_priority: 'Change priority',
+        update_task_due: 'Set due date', assign_task: 'Assign task',
+        create_project: 'New project', create_task: 'New task', create_milestone: 'New milestone',
+        create_risk: 'New risk', create_decision: 'New decision', create_goal: 'New goal',
+        add_kmqt_item: 'Add to KMQT', add_backlog_item: 'Add to backlog', create_schedule_event: 'Schedule event'
+      };
 
       html += `<div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">${actions.length} proposed action${actions.length > 1 ? 's' : ''}</div>`;
 
@@ -3384,14 +3397,35 @@
         let desc = '';
         if (a.type === 'create_link') {
           desc = `${HubUtils.esc(a.aLabel || a.aId)} ↔ ${HubUtils.esc(a.bLabel || a.bId)}`;
+        } else if (a.type === 'remove_link') {
+          desc = `${HubUtils.esc(a.aLabel)} ↔ ${HubUtils.esc(a.bLabel)}`;
         } else if (a.type === 'update_task_status') {
           desc = `"${HubUtils.esc(a.taskTitle)}" → ${a.newStatus}`;
+        } else if (a.type === 'update_task_priority') {
+          desc = `"${HubUtils.esc(a.taskTitle)}" → ${a.newPriority} priority`;
+        } else if (a.type === 'update_task_due') {
+          desc = `"${HubUtils.esc(a.taskTitle)}" → due ${a.newDue}`;
+        } else if (a.type === 'assign_task') {
+          desc = `"${HubUtils.esc(a.taskTitle)}" → ${HubUtils.esc(a.assignee)}`;
+        } else if (a.type === 'create_project') {
+          desc = `"${HubUtils.esc(a.name)}" (${a.status || 'planning'})`;
         } else if (a.type === 'create_task') {
           desc = `"${HubUtils.esc(a.title)}" in ${HubUtils.esc(a.projectName || '?')}`;
+        } else if (a.type === 'create_milestone') {
+          desc = `"${HubUtils.esc(a.name)}" in ${HubUtils.esc(a.projectName || '?')}${a.date ? ' · ' + a.date : ''}`;
         } else if (a.type === 'create_risk') {
           desc = `"${HubUtils.esc(a.title)}"`;
         } else if (a.type === 'create_decision') {
           desc = `"${HubUtils.esc(a.title)}"`;
+        } else if (a.type === 'create_goal') {
+          desc = `"${HubUtils.esc(a.title)}"${a.quarterName ? ' in ' + HubUtils.esc(a.quarterName) : ''}`;
+        } else if (a.type === 'add_kmqt_item') {
+          const colNames = { K:'Known', M:'MoyaMoya', Q:'Question', T:'Try' };
+          desc = `[${colNames[a.column] || a.column}] ${HubUtils.esc(a.text)}`;
+        } else if (a.type === 'add_backlog_item') {
+          desc = `"${HubUtils.esc(a.title)}" (${a.priority || 'should'})`;
+        } else if (a.type === 'create_schedule_event') {
+          desc = `"${HubUtils.esc(a.title)}" · ${a.start}`;
         }
         const reason = a.reason || a.description || '';
 
@@ -3451,10 +3485,10 @@
       }
     }
 
-    function _executeAction(action, items) {
+    function _executeAction(action) {
       try {
+        // ── Links ───────────────────────────────────────────────────
         if (action.type === 'create_link') {
-          // Use HubLinks.addLink if available, otherwise write directly
           if (typeof HubLinks !== 'undefined') {
             HubLinks.addLink(
               { tool: action.aTool, itemId: action.aId, label: action.aLabel || action.aId },
@@ -3462,25 +3496,59 @@
             );
           } else {
             const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
-            links.push({
-              id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+            links.push({ id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
               a: { tool: action.aTool, itemId: action.aId, label: action.aLabel || action.aId },
               b: { tool: action.bTool, itemId: action.bId, label: action.bLabel || action.bId },
-              createdAt: new Date().toISOString()
-            });
+              createdAt: new Date().toISOString() });
             localStorage.setItem('hub-links-v1', JSON.stringify(links));
           }
           return true;
         }
 
-        if (action.type === 'update_task_status') {
+        if (action.type === 'remove_link') {
+          if (typeof HubLinks !== 'undefined') {
+            HubLinks.removeLink(action.linkId);
+          } else {
+            const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
+            localStorage.setItem('hub-links-v1', JSON.stringify(links.filter(l => l.id !== action.linkId)));
+          }
+          return true;
+        }
+
+        // ── Task mutations ─────────────────────────────────────────
+        if (['update_task_status','update_task_priority','update_task_due','assign_task'].includes(action.type)) {
           const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
           const proj = (raw.projects || []).find(p => p.id === action.projectId);
           if (!proj) return false;
           const task = (proj.tasks || []).find(t => t.id === action.taskId);
           if (!task) return false;
-          task.status = action.newStatus;
-          if (action.newStatus === 'done') task.completedAt = new Date().toISOString();
+          if (action.type === 'update_task_status') {
+            task.status = action.newStatus;
+            if (action.newStatus === 'done') task.completedAt = new Date().toISOString();
+          } else if (action.type === 'update_task_priority') {
+            task.priority = action.newPriority;
+          } else if (action.type === 'update_task_due') {
+            task.due = action.newDue;
+          } else if (action.type === 'assign_task') {
+            task.assigned = action.assignee;
+          }
+          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        // ── Create items ───────────────────────────────────────────
+        if (action.type === 'create_project') {
+          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          raw.projects = raw.projects || [];
+          raw.projects.push({
+            id: 'proj-' + Date.now(),
+            name: action.name,
+            description: action.description || '',
+            status: action.status || 'planning',
+            color: action.color || '#6366f1',
+            tasks: [], milestones: [], members: [],
+            createdAt: new Date().toISOString()
+          });
           localStorage.setItem('project-hub-v1', JSON.stringify(raw));
           return true;
         }
@@ -3490,49 +3558,103 @@
           const proj = (raw.projects || []).find(p => p.id === action.projectId);
           if (!proj) return false;
           proj.tasks = proj.tasks || [];
-          proj.tasks.push({
-            id: 'task-' + Date.now(),
-            title: action.title,
-            status: 'open',
-            priority: action.priority || 'medium',
-            due: action.dueDate || null,
-            assigned: action.assignee || null,
-            taskCreated: new Date().toISOString()
-          });
+          proj.tasks.push({ id: 'task-' + Date.now(), title: action.title, status: 'open',
+            priority: action.priority || 'medium', due: action.dueDate || null,
+            assigned: action.assignee || null, taskCreated: new Date().toISOString() });
+          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_milestone') {
+          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+          const proj = (raw.projects || []).find(p => p.id === action.projectId);
+          if (!proj) return false;
+          proj.milestones = proj.milestones || [];
+          proj.milestones.push({ id: 'ms-' + Date.now(), name: action.name,
+            date: action.date || null, description: action.description || '',
+            done: false, createdAt: new Date().toISOString() });
           localStorage.setItem('project-hub-v1', JSON.stringify(raw));
           return true;
         }
 
         if (action.type === 'create_risk') {
           const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
-          risks.push({
-            id: 'risk-' + Date.now(),
-            title: action.title,
-            description: action.description || '',
-            probability: 'medium', impact: 'medium', status: 'open',
-            projectId: action.projectId || null,
-            created: new Date().toISOString()
-          });
+          risks.push({ id: 'risk-' + Date.now(), title: action.title,
+            description: action.description || '', probability: 'medium', impact: 'medium',
+            status: 'open', projectId: action.projectId || null, created: new Date().toISOString() });
           localStorage.setItem('risk-hub-v1', JSON.stringify(risks));
           return true;
         }
 
         if (action.type === 'create_decision') {
           const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
-          decisions.push({
-            id: 'dh-' + Date.now(),
-            title: action.title,
-            summary: action.summary || '',
-            status: 'open', confidence: 'medium',
-            projectId: action.projectId || null,
-            createdAt: new Date().toISOString()
-          });
+          decisions.push({ id: 'dh-' + Date.now(), title: action.title,
+            summary: action.summary || '', status: 'open', confidence: 'medium',
+            projectId: action.projectId || null, createdAt: new Date().toISOString() });
           localStorage.setItem('decision-hub-v1', JSON.stringify(decisions));
           return true;
         }
 
+        if (action.type === 'create_goal') {
+          const raw = JSON.parse(localStorage.getItem('goals-hub-v1') || '{"quarters":[]}');
+          raw.quarters = raw.quarters || [];
+          // Find target quarter or use the latest one
+          let quarter = action.quarterId
+            ? raw.quarters.find(q => q.id === action.quarterId)
+            : raw.quarters[raw.quarters.length - 1];
+          // Create a quarter if none exists
+          if (!quarter) {
+            const now = new Date();
+            quarter = { id: 'q-' + Date.now(), name: `Q${Math.ceil((now.getMonth()+1)/3)} ${now.getFullYear()}`, objectives: [] };
+            raw.quarters.push(quarter);
+          }
+          quarter.objectives = quarter.objectives || [];
+          quarter.objectives.push({ id: 'obj-' + Date.now(), title: action.title,
+            description: action.description || '', projectId: action.projectId || null,
+            keyResults: [], createdAt: new Date().toISOString() });
+          localStorage.setItem('goals-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'add_kmqt_item') {
+          const raw = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
+          raw.columns = raw.columns || { K:[], M:[], Q:[], T:[] };
+          const col = action.column;
+          if (!['K','M','Q','T'].includes(col)) return false;
+          raw.columns[col] = raw.columns[col] || [];
+          raw.columns[col].push({ id: 'kmqt-' + Date.now(), text: action.text,
+            tags: [], createdAt: new Date().toISOString() });
+          localStorage.setItem('kmqt_current_v2', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'add_backlog_item') {
+          const raw = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{"backlogs":[],"sprints":[],"dod":[],"settings":{}}');
+          raw.backlogs = raw.backlogs || [];
+          raw.backlogs.push({ id: 'story-' + Date.now(), title: action.title,
+            description: action.description || '', type: action.itemType || 'story',
+            priority: action.priority || 'should', points: action.points || 0,
+            projectId: action.projectId || null, status: 'backlog', sprintId: null,
+            sprintStatus: 'todo', createdAt: new Date().toISOString() });
+          localStorage.setItem('scrum-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_schedule_event') {
+          const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{"items":[]}');
+          raw.items = raw.items || [];
+          const start = action.start || new Date().toISOString().split('T')[0];
+          raw.items.push({ id: 'sch-' + Date.now(), title: action.title,
+            type: action.eventType || 'event', start, end: action.end || start,
+            projectId: action.projectId || null, notes: action.notes || '',
+            done: false, sourceTool: null, sourceId: null,
+            createdAt: new Date().toISOString() });
+          localStorage.setItem('schedule-v1', JSON.stringify(raw));
+          return true;
+        }
+
         return false;
-      } catch { return false; }
+      } catch (e) { console.warn('Action failed:', e); return false; }
     }
 
     function _renderAiCaptureResult(r, originalText) {
@@ -3797,9 +3919,10 @@
         <div class="ai-prompt-label">Try asking</div>
         <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Summarise my projects</button>
         <button class="ai-prompt-chip" onclick="aiPromptClick(this)">What tasks are overdue?</button>
-        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Any open risks?</button>
-        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Suggest links for the dependency graph</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Suggest dependency graph links</button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Mark all overdue tasks as blocked</button>
         <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Add a task: </button>
+        <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Create a project: </button>
         <button class="ai-prompt-chip" onclick="aiPromptClick(this)">Log a decision: </button>
       </div>
 
