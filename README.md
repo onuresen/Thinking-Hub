@@ -63,6 +63,14 @@ Tools are grouped by the phase of work they support.
 | **Focus Hub** | Pomodoro timer with GTD energy levels, context tags, and session history |
 | **Achievements** | Milestones and achievements tracker — what shipped, when, with what impact |
 
+### AI Assistant
+
+| Tool | What it does |
+|------|-------------|
+| **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Add your Anthropic API key in ⚙️ Settings → Integrations. |
+
+> **API key note:** The key is stored in your browser's localStorage and sent directly to Anthropic from your browser. Nothing is stored server-side. The app uses `dangerouslyAllowBrowser: true` in the Anthropic SDK — this is intentional for a local-first tool. Do not share your browser storage or export files that contain `hub-settings-v1` with others.
+
 ### Knowledge & Goals
 
 | Tool | What it does |
@@ -101,8 +109,9 @@ postMessage ◄─────────────────────�
 | `hub-search.js` | Global Cmd+K search — injected into shell only |
 | `hub-toast.js` | Lightweight toast notifications |
 | `hub-bootstrap.js` | Init coordinator — call last in each tool |
+| `hub-ai.js` | AI Assistant — Anthropic SDK (esm.sh, pinned), capture / query / act modes, loaded in shell only |
 
-Load order: `hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js`
+Load order: `hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js`
 
 ---
 
