@@ -52,12 +52,20 @@
     #tab-overlap, #tab-me { overflow: hidden; gap: 0; }
 
     /* ── Org Tree ── */
-    .org-card {
+    .org-section-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-left: 3px solid var(--_depth-clr, var(--border));
-      border-radius: var(--r); padding: 10px 14px;
+      border-left: 3px solid var(--_d, var(--border));
+      border-radius: var(--r); padding: 10px 14px; margin-bottom: 4px;
     }
-    .org-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .org-leaf-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--_d, var(--border));
+      border-radius: var(--r); padding: 9px 12px; min-width: 0;
+    }
+    .org-leaf-card.muted { opacity: 0.5; }
+    .org-leaf-card.muted:hover { opacity: 1; transition: opacity 0.15s; }
+    .org-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .org-card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
     .org-name { font-weight: 700; font-size: 13px; }
     .me-badge {
       font-size: 9px; font-family: var(--font-mono); font-weight: 700;
@@ -70,44 +78,64 @@
       border-radius: 3px; padding: 1px 5px; border: 1px solid var(--border);
       flex-shrink: 0;
     }
-    .org-actions { margin-left: auto; display: flex; gap: 4px; }
-    .org-role { font-size: 11px; color: var(--text2); }
+    .org-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+    .org-role { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .org-dept { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
-    .load-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-    .load-track { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .load-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .load-track { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; min-width: 0; }
     .load-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
     .load-fill.low { background: var(--accent-like); }
     .load-fill.mid { background: var(--accent-super); }
     .load-fill.high { background: var(--accent-nope); }
-    .load-pct { font-size: 10px; font-family: var(--font-mono); color: var(--text2); min-width: 32px; text-align: right; }
-    .load-tasks { font-size: 10px; color: var(--text3); }
-    .skills-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .load-pct { font-size: 10px; font-family: var(--font-mono); color: var(--text2); min-width: 28px; text-align: right; flex-shrink: 0; }
+    .load-tasks { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    .skills-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
     .skill-pill {
       font-size: 9px; font-family: var(--font-mono); color: var(--text3);
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 1px 7px;
+      border-radius: 10px; padding: 1px 6px;
     }
-    .avail-note { font-size: 10px; color: var(--text3); margin-top: 4px; font-style: italic; }
+    .avail-note { font-size: 10px; color: var(--text3); margin-top: 3px; font-style: italic;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ── Load Matrix ── */
     .matrix-wrap { overflow-x: auto; }
-    .matrix-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
-    .matrix-table th {
+    .matrix-table { border-collapse: collapse; font-size: 12px; }
+    .matrix-table td, .matrix-table th { border: 1px solid var(--border); }
+    .mx-proj-th {
       background: var(--surface2); padding: 8px 12px; font-size: 10px;
       font-family: var(--font-mono); color: var(--text3); text-transform: uppercase;
-      border: 1px solid var(--border); white-space: nowrap; font-weight: 600; text-align: left;
+      font-weight: 600; text-align: left; white-space: nowrap;
     }
-    .matrix-table th.num { text-align: center; }
-    .matrix-table td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: middle; }
-    .m-name-cell { font-weight: 600; font-size: 12px; white-space: nowrap; }
-    .m-cell { text-align: center; font-family: var(--font-mono); font-size: 11px; }
-    .m-cell.has { font-weight: 700; }
-    .m-total { font-weight: 700; background: var(--surface2); text-align: center; font-family: var(--font-mono); font-size: 11px; }
-    .m-load-cell { white-space: nowrap; }
-    .m-load-bar { display: flex; align-items: center; gap: 6px; }
-    .m-load-mini { height: 4px; width: 44px; background: var(--surface3); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
-    .m-load-mini-fill { height: 100%; border-radius: 2px; }
-    .m-load-pct { font-size: 10px; font-family: var(--font-mono); min-width: 30px; }
+    .mx-member-th {
+      background: var(--surface2); min-width: 44px; height: 90px;
+      vertical-align: bottom; padding: 0 0 8px 0; text-align: center;
+    }
+    .mx-rot {
+      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      font-size: 10px; font-family: var(--font-mono); color: var(--text3); font-weight: 600;
+      white-space: nowrap; display: inline-block;
+    }
+    .mx-rot.me { color: var(--accent); }
+    .mx-proj-cell {
+      padding: 7px 12px; font-size: 11px; white-space: nowrap;
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mx-cell {
+      text-align: center; font-family: var(--font-mono); font-size: 11px;
+      padding: 7px 8px; color: var(--text3);
+    }
+    .mx-cell.has { font-weight: 700; color: var(--text); }
+    .mx-total {
+      text-align: center; font-family: var(--font-mono); font-size: 11px;
+      background: var(--surface2); font-weight: 700; padding: 7px 10px;
+    }
+    .mx-foot-cell {
+      padding: 6px 8px; background: var(--surface2); vertical-align: middle;
+    }
+    .mx-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .mx-bar-mini { width: 30px; height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+    .mx-bar-mini-fill { height: 100%; border-radius: 2px; }
 
     /* ── Overlap ── */
     .overlap-header {
@@ -116,7 +144,7 @@
     .overlap-header .select { flex: 1; }
     .overlap-vs { font-family: var(--font-mono); font-size: 13px; color: var(--text3); flex-shrink: 0; }
     .overlap-grid {
-      flex: 1; display: grid; grid-template-columns: 1fr 180px 1fr; gap: 12px;
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
       padding: 0 20px 20px; min-height: 0; overflow: hidden;
     }
     .ov-col {
@@ -235,10 +263,9 @@
     <div class="ph-header-row">
       <div>
         <div class="ph-title">People Hub</div>
-        <div class="ph-subtitle">Org tree · load balancing · overlap</div>
+        <div class="ph-subtitle">Synced from Project Hub · <span id="ph-count">—</span></div>
       </div>
       <div class="ph-actions">
-        <button class="btn btn-ghost" onclick="openImportModal()">⊕ Import from Project Hub</button>
         <button class="btn btn-primary" onclick="openMemberModal(null)">+ Add Member</button>
       </div>
     </div>
@@ -345,23 +372,6 @@
     </div>
   </div>
 
-  <!-- Import modal -->
-  <div class="ph-overlay" id="import-modal">
-    <div class="ph-modal">
-      <div class="ph-modal-title">Import from Project Hub</div>
-      <div id="import-preview" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
-      <p style="font-size:11px;color:var(--text3);line-height:1.5">
-        Imports using the same member IDs as Project Hub so task assignments link automatically.
-        Existing People Hub members with the same ID will have name/role/department refreshed;
-        custom fields (capacity, skills, reportsTo) are preserved.
-      </p>
-      <div class="ph-modal-footer">
-        <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmImport()">Import</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     const STORAGE_KEY = 'people-hub-v1';
     let _tab = 'org';
@@ -459,46 +469,99 @@
 
     // ── Org Tree ─────────────────────────────────────────────────────────────────
 
+    function updateMemberCount(n) {
+      const el = document.getElementById('ph-count');
+      if (el) el.textContent = n + ' member' + (n !== 1 ? 's' : '');
+    }
+
     function renderOrgTree() {
       const members = getMembers();
       const el = document.getElementById('org-content');
+      updateMemberCount(members.length);
 
       if (!members.length) {
         el.innerHTML = `<div class="ph-empty">
           <div class="ph-empty-icon">👥</div>
           <div class="ph-empty-title">No members yet</div>
-          <div class="ph-empty-desc">Add members manually or import them from Project Hub to build the org tree.</div>
+          <div class="ph-empty-desc">Members sync automatically from Project Hub. Add one there or use + Add Member here.</div>
         </div>`;
         return;
       }
 
-      el.innerHTML = orderedMembers(members).map(m => renderOrgCard(m)).join('');
+      const tree = buildTree(members);
+      const inTree = new Set(flattenTree(tree).map(m => m.id));
+      const dangling = members.filter(m => !inTree.has(m.id)).map(m => ({ ...m, depth: 0, children: [] }));
+
+      function renderGroup(nodes) {
+        let h = '';
+        const leaves = nodes.filter(n => n.children.length === 0);
+        const branches = nodes.filter(n => n.children.length > 0);
+        if (leaves.length) {
+          h += `<div class="org-grid">${leaves.map(renderLeafCard).join('')}</div>`;
+        }
+        for (const branch of branches) {
+          h += renderSectionCard(branch);
+          h += renderGroup(branch.children);
+        }
+        return h;
+      }
+
+      let html = '';
+      for (const root of tree) {
+        html += renderSectionCard(root);
+        html += renderGroup(root.children);
+      }
+      if (dangling.length) {
+        html += `<div class="org-grid">${dangling.map(renderLeafCard).join('')}</div>`;
+      }
+      el.innerHTML = html;
     }
 
-    function renderOrgCard(m) {
+    function renderSectionCard(m) {
       const load = calcLoad(m);
       const open = getOpenTasksFor(m.id).length;
-      const depth = m.depth || 0;
-      const indent = depth * 26;
-      const skillsHtml = (m.skills || []).map(s => `<span class="skill-pill">${esc(s)}</span>`).join('');
+      const indent = (m.depth || 0) * 20;
+      const dept = m.department ? `<span class="org-dept"> · ${esc(m.department)}</span>` : '';
 
-      return `<div class="org-card" style="margin-left:${indent}px;--_depth-clr:${depthColor(depth)}">
+      return `<div class="org-section-card" style="margin-left:${indent}px;--_d:${depthColor(m.depth||0)}">
         <div class="org-card-top">
           ${m.isMe ? `<span class="me-badge">ME</span>` : ''}
           <span class="org-name">${esc(m.name)}</span>
-          ${m.confidence === 'estimated' ? `<span class="est-badge">~estimated</span>` : ''}
+          ${m.confidence === 'estimated' ? `<span class="est-badge">~</span>` : ''}
           <div class="org-actions">
-            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px"
-              onclick="openMemberModal('${m.id}')">edit</button>
-            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px;color:var(--accent-nope)"
-              onclick="deleteMember('${m.id}')">✕</button>
+            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px" onclick="openMemberModal('${m.id}')">edit</button>
+            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px;color:var(--accent-nope)" onclick="deleteMember('${m.id}')">✕</button>
           </div>
         </div>
-        <div class="org-role">${esc(m.role || '')}${m.department ? `<span class="org-dept"> · ${esc(m.department)}</span>` : ''}</div>
+        <div class="org-role">${esc(m.role || '')}${dept}</div>
+        ${open > 0 ? `<div class="load-row">
+          <div class="load-track"><div class="load-fill ${loadCls(load)}" style="width:${load}%"></div></div>
+          <span class="load-pct">${load}%</span>
+          <span class="load-tasks">${open} tasks</span>
+        </div>` : ''}
+      </div>`;
+    }
+
+    function renderLeafCard(m) {
+      const load = calcLoad(m);
+      const open = getOpenTasksFor(m.id).length;
+      const muted = open === 0;
+      const skillsHtml = (m.skills || []).slice(0, 3).map(s => `<span class="skill-pill">${esc(s)}</span>`).join('');
+
+      return `<div class="org-leaf-card${muted ? ' muted' : ''}" style="--_d:${depthColor(m.depth||0)}">
+        <div class="org-card-top">
+          ${m.isMe ? `<span class="me-badge">ME</span>` : ''}
+          <span class="org-name" style="font-size:12px">${esc(m.name)}</span>
+          ${m.confidence === 'estimated' ? `<span class="est-badge">~</span>` : ''}
+          <div class="org-actions">
+            <button class="btn btn-ghost" style="font-size:10px;padding:1px 6px" onclick="openMemberModal('${m.id}')">✎</button>
+          </div>
+        </div>
+        <div class="org-role" style="font-size:10px">${esc(m.role || '')}</div>
         <div class="load-row">
           <div class="load-track"><div class="load-fill ${loadCls(load)}" style="width:${load}%"></div></div>
           <span class="load-pct">${load}%</span>
-          <span class="load-tasks">${open} open task${open !== 1 ? 's' : ''}</span>
+          <span class="load-tasks">${open}t</span>
         </div>
         ${skillsHtml ? `<div class="skills-row">${skillsHtml}</div>` : ''}
         ${m.availability ? `<div class="avail-note">⏱ ${esc(m.availability)}</div>` : ''}
@@ -515,50 +578,54 @@
         el.innerHTML = `<div class="ph-empty">
           <div class="ph-empty-icon">📊</div>
           <div class="ph-empty-title">No members yet</div>
-          <div class="ph-empty-desc">Add members to see the load matrix across projects.</div>
+          <div class="ph-empty-desc">Members sync from Project Hub automatically. Add a project with tasks to see the matrix.</div>
         </div>`;
         return;
       }
 
       const ph = getPHData();
-      const projects = (ph.projects || []).slice(0, 8);
-      const sorted = orderedMembers(members);
+      const projects = ph.projects || [];
+      // Rows = projects; Columns = members (up to 10, hierarchically sorted)
+      const sorted = orderedMembers(members).slice(0, 10);
 
-      const headerCells = `<th>Member</th>` +
-        projects.map(p => `<th class="num" title="${esc(p.name)}">${esc(p.name.length > 12 ? p.name.slice(0, 11) + '…' : p.name)}</th>`).join('') +
-        `<th class="num">Total</th><th>Load</th>`;
+      const memberHeaders = sorted.map(m => {
+        const nameShort = m.name.length > 14 ? m.name.slice(0, 13) + '…' : m.name;
+        const meMark = m.isMe ? '<span class="me-badge" style="font-size:7px;display:inline-block;margin-bottom:2px">ME</span><br>' : '';
+        return `<th class="mx-member-th" title="${esc(m.name)}">
+          <div class="mx-rot${m.isMe ? ' me' : ''}">${meMark}${esc(nameShort)}</div>
+        </th>`;
+      }).join('');
 
-      const rows = sorted.map(m => {
-        const indent = (m.depth || 0) * 14;
+      const headerRow = `<tr><th class="mx-proj-th">Project</th>${memberHeaders}<th class="mx-proj-th" style="text-align:center">Total</th></tr>`;
+
+      const dataRows = projects.map(proj => {
+        const cells = sorted.map(m => {
+          const n = (proj.tasks || []).filter(t => t.assigneeId === m.id && !t.done && t.status !== 'done').length;
+          return `<td class="mx-cell${n > 0 ? ' has' : ''}">${n || '—'}</td>`;
+        }).join('');
+        const projTotal = sorted.reduce((s, m) =>
+          s + (proj.tasks || []).filter(t => t.assigneeId === m.id && !t.done && t.status !== 'done').length, 0);
+        const nameShort = proj.name.length > 32 ? proj.name.slice(0, 31) + '…' : proj.name;
+        return `<tr><td class="mx-proj-cell" title="${esc(proj.name)}">${esc(nameShort)}</td>${cells}<td class="mx-total">${projTotal || '—'}</td></tr>`;
+      }).join('');
+
+      const footCells = sorted.map(m => {
         const total = getOpenTasksFor(m.id).length;
         const load = calcLoad(m);
-        const mark = m.isMe ? `<span class="me-badge" style="margin-right:4px">ME</span>` : '';
-        const est = m.confidence === 'estimated' ? ` <span class="est-badge">~</span>` : '';
-
-        const projCells = projects.map(p => {
-          const n = (p.tasks || []).filter(t => t.assigneeId === m.id && !t.done && t.status !== 'done').length;
-          return `<td class="m-cell ${n > 0 ? 'has' : ''}">${n || '—'}</td>`;
-        }).join('');
-
-        return `<tr>
-          <td class="m-name-cell" style="padding-left:${12 + indent}px">${mark}${esc(m.name)}${est}</td>
-          ${projCells}
-          <td class="m-total">${total}</td>
-          <td class="m-load-cell">
-            <div class="m-load-bar">
-              <div class="m-load-mini">
-                <div class="m-load-mini-fill" style="width:${load}%;background:${loadColor(load)}"></div>
-              </div>
-              <span class="m-load-pct">${load}%</span>
-            </div>
-          </td>
-        </tr>`;
+        return `<td class="mx-foot-cell">
+          <div class="mx-bar-wrap">
+            <span style="font-size:10px;font-family:var(--font-mono);font-weight:700">${total}</span>
+            <div class="mx-bar-mini"><div class="mx-bar-mini-fill" style="width:${load}%;background:${loadColor(load)}"></div></div>
+            <span style="font-size:9px;font-family:var(--font-mono);color:var(--text3)">${load}%</span>
+          </div>
+        </td>`;
       }).join('');
 
       el.innerHTML = `<div class="matrix-wrap">
         <table class="matrix-table">
-          <thead><tr>${headerCells}</tr></thead>
-          <tbody>${rows}</tbody>
+          <thead>${headerRow}</thead>
+          <tbody>${dataRows || `<tr><td colspan="${sorted.length + 2}" style="padding:20px;text-align:center;color:var(--text3);font-size:12px">No projects yet</td></tr>`}</tbody>
+          <tfoot><tr><td class="mx-proj-th">Open tasks / Load</td>${footCells}<td class="mx-foot-cell"></td></tr></tfoot>
         </table>
       </div>`;
     }
@@ -814,38 +881,27 @@
       showToast('Member removed');
     }
 
-    // ── Import from Project Hub ───────────────────────────────────────────────────
+    // ── Auto-sync from Project Hub ────────────────────────────────────────────────
 
-    function openImportModal() {
+    function syncFromProjectHub() {
       const phMembers = getPHData().members || [];
-      const preview = document.getElementById('import-preview');
-      if (!phMembers.length) {
-        preview.innerHTML = `<span style="color:var(--text3)">No members found in Project Hub. Add members there first.</span>`;
-      } else {
-        preview.innerHTML = `Found <strong>${phMembers.length}</strong> member${phMembers.length !== 1 ? 's' : ''} in Project Hub:<br><br>` +
-          phMembers.map(m => `&nbsp;· ${esc(m.name)}${m.role ? ` <span style="color:var(--text3)">(${esc(m.role)})</span>` : ''}`).join('<br>');
-      }
-      document.getElementById('import-modal').classList.add('open');
-    }
-
-    function closeImportModal() {
-      document.getElementById('import-modal').classList.remove('open');
-    }
-
-    function confirmImport() {
-      const phMembers = getPHData().members || [];
-      if (!phMembers.length) { showToast('No members in Project Hub'); closeImportModal(); return; }
+      if (!phMembers.length) return;
 
       const data = getData();
-      let added = 0, updated = 0;
+      let changed = false;
+
       for (const phm of phMembers) {
         const existing = data.members.find(m => m.id === phm.id);
         if (existing) {
-          existing.name = phm.name || existing.name;
-          existing.role = phm.role || existing.role;
-          existing.department = phm.department || existing.department;
-          if (!existing.reportsTo && phm.managerId) existing.reportsTo = phm.managerId;
-          updated++;
+          if (existing.name !== phm.name ||
+              existing.role !== (phm.role || '') ||
+              existing.department !== (phm.department || '')) {
+            existing.name = phm.name;
+            if (phm.role) existing.role = phm.role;
+            if (phm.department) existing.department = phm.department;
+            if (!existing.reportsTo && phm.managerId) existing.reportsTo = phm.managerId;
+            changed = true;
+          }
         } else {
           data.members.push({
             id: phm.id,
@@ -859,27 +915,40 @@
             isMe: false,
             confidence: 'confirmed',
           });
-          added++;
+          changed = true;
         }
       }
-      saveData(data);
-      closeImportModal();
-      showToast(`Imported: ${added} added, ${updated} updated`);
-      renderAll();
+
+      // Sync isMe from project-hub session selfMemberId
+      try {
+        const session = JSON.parse(localStorage.getItem('hub-session-v1') || '{}');
+        const selfId = session.selfMemberId;
+        if (selfId) {
+          const me = data.members.find(m => m.id === selfId);
+          if (me && !me.isMe) {
+            data.members.forEach(m => { m.isMe = false; });
+            me.isMe = true;
+            changed = true;
+          }
+        }
+      } catch {}
+
+      if (changed) saveData(data);
     }
 
     // ── Keyboard & subscriptions ──────────────────────────────────────────────────
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeMemberModal(); closeImportModal(); }
+      if (e.key === 'Escape') closeMemberModal();
     });
 
     HubStorage.subscribe(STORAGE_KEY, renderAll);
-    HubStorage.subscribe('project-hub-v1', renderAll);
+    HubStorage.subscribe('project-hub-v1', () => { syncFromProjectHub(); renderAll(); });
 
     // ── Init ─────────────────────────────────────────────────────────────────────
     HubData.onChange(renderAll);
     HubData.init('people-hub');
+    syncFromProjectHub();
     renderOrgTree();
   </script>
   <script>
