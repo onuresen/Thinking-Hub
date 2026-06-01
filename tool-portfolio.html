@@ -558,22 +558,33 @@
             renderDetail();
         }
 
+        let _saveTimer = null;
+        function debouncedSave() {
+            clearTimeout(_saveTimer);
+            _saveTimer = setTimeout(save, 600);
+        }
+
         function updateField(key, value) {
             const t = tools.find(x => x.id === currentId);
             if (!t) return;
 
-            // If category changes, we must re-normalize ordering in both old+new category
+            // Text inputs: update in-memory immediately, debounce save so cursor never jumps
+            if (key === 'name' || key === 'icon' || key === 'url' || key === 'note') {
+                t[key] = value;
+                if (key === 'name') document.getElementById('topbar-title').textContent = value;
+                debouncedSave();
+                return;
+            }
+
+            // Category: re-normalize ordering but never re-render detail (would eject cursor)
             if (key === 'category') {
                 const oldCat = normCat(t.category);
                 t[key] = value;
                 const newCat = normCat(t.category);
-                // put it at end of new category
                 t.order = 999999;
                 normalizeOrdersInCategory(oldCat);
                 normalizeOrdersInCategory(newCat);
-                save();
-                renderDetail();
-                document.getElementById('topbar-title').textContent = t.name;
+                debouncedSave();
                 return;
             }
 
