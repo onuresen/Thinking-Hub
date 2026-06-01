@@ -1636,7 +1636,7 @@
     const APPS = [
       // ── TODAY ──────────────────────────────────────────────────────────
       { id: 'project-hub',     label: 'Project Hub',      group: 'TODAY',     wg: 'TODAY',      icon: '◈',   file: 'project-hub.html',     desc: 'Track milestones, tasks and workstreams across a project' },
-      { id: 'blocked-depth',   label: 'Blocked Depth',    group: 'TODAY',     wg: 'TODAY',      icon: '▾',   file: 'blocked-depth.html',   desc: 'Visualise blocked task cascade — every task, milestone, and person frozen downstream' },
+      { id: 'frameworks-hub',   label: 'Frameworks',       group: 'TODAY',     wg: 'TODAY',      icon: '▾',   file: 'frameworks-hub.html',  desc: 'Visual methodology tools — Blocked Depth iceberg, V-Model, and more' },
       { id: 'schedule',        label: 'Schedule',          group: 'TODAY',     wg: 'TODAY',      icon: '▦',   file: 'schedule.html',        desc: 'Timeline and calendar views for tasks, milestones and events' },
       { id: 'log-hub',         label: 'Daily Log',         group: 'TODAY',     wg: 'TODAY',      icon: '◷',   file: 'log-hub.html',         desc: 'Private daily journal with mood tracking and streak calendar' },
       // ── THIS WEEK ───────────────────────────────────────────────────────
@@ -1664,9 +1664,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','blocked-depth','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','learning-hub','focus-hub','log-hub','schedule'] },
+      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','frameworks-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','learning-hub','focus-hub','log-hub','schedule'] },
       bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','goals-hub','focus-hub','log-hub'] },
-      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','blocked-depth','scrum-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
+      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','frameworks-hub','scrum-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
