@@ -373,30 +373,33 @@
       'canvas-hub':   { bg: '#1c3838', border: '#30787a' },
       'risk-hub':     { bg: '#3a1516', border: '#be3030' },
       'goals-hub':    { bg: '#332e14', border: '#a08020' },
-      'meetings-hub': { bg: '#152838', border: '#2868a8' },
+      'meetings-hub':   { bg: '#152838', border: '#2868a8' },
+      'tool-portfolio': { bg: '#1a2e1a', border: '#3a8040' },
     };
     const TOOL_COLORS_LIGHT = {
-      'project-hub':  { bg: '#bed8f5', border: '#4a90c8' },
-      'decision-hub': { bg: '#f5c0c0', border: '#c04040' },
-      'kmqt-board':   { bg: '#e0c8f8', border: '#7a40b0' },
-      'idea-swiper':  { bg: '#b8ecd4', border: '#2aaa6a' },
-      'schedule':     { bg: '#fae0a0', border: '#b88020' },
-      'canvas-hub':   { bg: '#b8ecd4', border: '#2aaa6a' },
-      'risk-hub':     { bg: '#fcd0d0', border: '#c83030' },
-      'goals-hub':    { bg: '#faeab0', border: '#a07820' },
-      'meetings-hub': { bg: '#b8d4f0', border: '#3060a8' },
+      'project-hub':    { bg: '#bed8f5', border: '#4a90c8' },
+      'decision-hub':   { bg: '#f5c0c0', border: '#c04040' },
+      'kmqt-board':     { bg: '#e0c8f8', border: '#7a40b0' },
+      'idea-swiper':    { bg: '#b8ecd4', border: '#2aaa6a' },
+      'schedule':       { bg: '#fae0a0', border: '#b88020' },
+      'canvas-hub':     { bg: '#b8ecd4', border: '#2aaa6a' },
+      'risk-hub':       { bg: '#fcd0d0', border: '#c83030' },
+      'goals-hub':      { bg: '#faeab0', border: '#a07820' },
+      'meetings-hub':   { bg: '#b8d4f0', border: '#3060a8' },
+      'tool-portfolio': { bg: '#c8ecc8', border: '#3a9040' },
     };
 
     const TOOL_LABELS = {
-      'project-hub':  'Project Hub',
-      'decision-hub': 'Decision Hub',
-      'kmqt-board':   'KMQT Board',
-      'idea-swiper':  'Idea Swiper',
-      'schedule':     'Schedule',
-      'canvas-hub':   'Canvas',
-      'risk-hub':     'Risk Register',
-      'goals-hub':    'Goals Hub',
-      'meetings-hub': 'Meetings',
+      'project-hub':    'Project Hub',
+      'decision-hub':   'Decision Hub',
+      'kmqt-board':     'KMQT Board',
+      'idea-swiper':    'Idea Swiper',
+      'schedule':       'Schedule',
+      'canvas-hub':     'Canvas',
+      'risk-hub':       'Risk Register',
+      'goals-hub':      'Goals Hub',
+      'meetings-hub':   'Meetings',
+      'tool-portfolio': 'Tool Portfolio',
     };
 
     let network = null;
@@ -587,6 +590,18 @@
           const mId = addNode('meetings-hub', m.id, m.title || 'Meeting');
           if (m.projectId && nodes.has(`project-hub::${m.projectId}`))
             addAutoEdge(mId, `project-hub::${m.projectId}`, 'meeting → project');
+        });
+      } catch {}
+
+      // Tool Portfolio → linked projects
+      try {
+        const tp = JSON.parse(localStorage.getItem('tool-portfolio-v1') || '[]');
+        tp.forEach(t => {
+          const tId = addNode('tool-portfolio', t.id, t.name || 'Tool');
+          (t.projectIds || []).forEach(projId => {
+            if (nodes.has(`project-hub::${projId}`))
+              addAutoEdge(tId, `project-hub::${projId}`, 'tool → project');
+          });
         });
       } catch {}
 
