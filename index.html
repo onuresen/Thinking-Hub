@@ -1939,6 +1939,7 @@
       // ── SITUATION ───────────────────────────────────────────────────────
       { id: 'risk-hub', label: 'Risk Register', group: 'SITUATION', wg: 'SITUATION', icon: '⚠', file: 'risk-hub.html', desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
       { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'SITUATION', wg: 'SITUATION', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
+      { id: 'people-hub', label: 'People Hub', group: 'SITUATION', wg: 'SITUATION', icon: '◉', file: 'people-hub.html', desc: 'Org tree, load balancing, and workload overlap across your team' },
       { id: 'decision-hub', label: 'Decision Hub', group: 'SITUATION', wg: 'SITUATION', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
       { id: 'kmqt-board', label: 'KMQT Board', group: 'SITUATION', wg: 'SITUATION', icon: '⊞', file: 'kmqt-board.html', desc: 'Known / Messy / Questions / Thinking structured board' },
       // ── BOOKSHELF ───────────────────────────────────────────────────────
@@ -1956,9 +1957,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'kmqt-board', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'review-hub', 'learning-hub', 'focus-hub', 'log-hub', 'schedule'] },
-      bim: { label: 'BIM Mgmt', icon: '⬡', tools: ['project-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'review-hub', 'decision-hub', 'goals-hub', 'focus-hub', 'log-hub'] },
-      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'frameworks-hub', 'scrum-hub', 'graph-hub', 'decision-hub', 'kmqt-board', 'risk-hub', 'review-hub', 'focus-hub', 'log-hub', 'meetings-hub', 'retro-hub', 'goals-hub'] },
+      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'kmqt-board', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'review-hub', 'learning-hub', 'focus-hub', 'log-hub', 'schedule'] },
+      bim: { label: 'BIM Mgmt', icon: '⬡', tools: ['project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'review-hub', 'decision-hub', 'goals-hub', 'focus-hub', 'log-hub'] },
+      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'scrum-hub', 'graph-hub', 'decision-hub', 'kmqt-board', 'risk-hub', 'review-hub', 'focus-hub', 'log-hub', 'meetings-hub', 'retro-hub', 'goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────

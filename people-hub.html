@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>People Hub</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="theme.css">
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .ph-header {
+      padding: 12px 20px 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .ph-header-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .ph-title { font-family: var(--font-display); font-size: 15px; font-weight: 800; }
+    .ph-subtitle { font-size: 11px; color: var(--text3); font-family: var(--font-mono); flex: 1; }
+    .ph-actions { display: flex; gap: 8px; }
+
+    /* ── Tabs ── */
+    .ph-tabs { display: flex; }
+    .ph-tab {
+      padding: 8px 16px;
+      font-size: 12px; font-family: var(--font-body); font-weight: 500;
+      color: var(--text2); background: transparent; border: none;
+      border-bottom: 2px solid transparent; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .ph-tab:hover { color: var(--text); }
+    .ph-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Content ── */
+    .ph-content { flex: 1; overflow: hidden; }
+    .ph-panel { display: none; height: 100%; overflow-y: auto; padding: 20px; flex-direction: column; gap: 12px; }
+    .ph-panel.active { display: flex; }
+    .ph-panel::-webkit-scrollbar { width: 4px; }
+    .ph-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    #tab-overlap, #tab-me { overflow: hidden; gap: 0; }
+
+    /* ── Org Tree ── */
+    .org-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--_depth-clr, var(--border));
+      border-radius: var(--r); padding: 10px 14px;
+    }
+    .org-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .org-name { font-weight: 700; font-size: 13px; }
+    .me-badge {
+      font-size: 9px; font-family: var(--font-mono); font-weight: 700;
+      background: var(--accent); color: #111; border-radius: 3px; padding: 1px 5px;
+      flex-shrink: 0;
+    }
+    .est-badge {
+      font-size: 9px; font-family: var(--font-mono);
+      background: var(--surface3); color: var(--text2);
+      border-radius: 3px; padding: 1px 5px; border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .org-actions { margin-left: auto; display: flex; gap: 4px; }
+    .org-role { font-size: 11px; color: var(--text2); }
+    .org-dept { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+    .load-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .load-track { flex: 1; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .load-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .load-fill.low { background: var(--accent-like); }
+    .load-fill.mid { background: var(--accent-super); }
+    .load-fill.high { background: var(--accent-nope); }
+    .load-pct { font-size: 10px; font-family: var(--font-mono); color: var(--text2); min-width: 32px; text-align: right; }
+    .load-tasks { font-size: 10px; color: var(--text3); }
+    .skills-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .skill-pill {
+      font-size: 9px; font-family: var(--font-mono); color: var(--text3);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1px 7px;
+    }
+    .avail-note { font-size: 10px; color: var(--text3); margin-top: 4px; font-style: italic; }
+
+    /* ── Load Matrix ── */
+    .matrix-wrap { overflow-x: auto; }
+    .matrix-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
+    .matrix-table th {
+      background: var(--surface2); padding: 8px 12px; font-size: 10px;
+      font-family: var(--font-mono); color: var(--text3); text-transform: uppercase;
+      border: 1px solid var(--border); white-space: nowrap; font-weight: 600; text-align: left;
+    }
+    .matrix-table th.num { text-align: center; }
+    .matrix-table td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: middle; }
+    .m-name-cell { font-weight: 600; font-size: 12px; white-space: nowrap; }
+    .m-cell { text-align: center; font-family: var(--font-mono); font-size: 11px; }
+    .m-cell.has { font-weight: 700; }
+    .m-total { font-weight: 700; background: var(--surface2); text-align: center; font-family: var(--font-mono); font-size: 11px; }
+    .m-load-cell { white-space: nowrap; }
+    .m-load-bar { display: flex; align-items: center; gap: 6px; }
+    .m-load-mini { height: 4px; width: 44px; background: var(--surface3); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .m-load-mini-fill { height: 100%; border-radius: 2px; }
+    .m-load-pct { font-size: 10px; font-family: var(--font-mono); min-width: 30px; }
+
+    /* ── Overlap ── */
+    .overlap-header {
+      display: flex; gap: 12px; align-items: center; padding: 16px 20px 12px; flex-shrink: 0;
+    }
+    .overlap-header .select { flex: 1; }
+    .overlap-vs { font-family: var(--font-mono); font-size: 13px; color: var(--text3); flex-shrink: 0; }
+    .overlap-grid {
+      flex: 1; display: grid; grid-template-columns: 1fr 180px 1fr; gap: 12px;
+      padding: 0 20px 20px; min-height: 0; overflow: hidden;
+    }
+    .ov-col {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 12px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0;
+    }
+    .ov-col::-webkit-scrollbar { width: 3px; }
+    .ov-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .ov-center {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 0;
+    }
+    .ov-center::-webkit-scrollbar { width: 3px; }
+    .ov-center::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .ov-col-label {
+      font-size: 10px; font-family: var(--font-mono); text-transform: uppercase;
+      letter-spacing: 0.07em; flex-shrink: 0; padding-bottom: 4px; border-bottom: 1px solid var(--border);
+    }
+    .ov-proj-name { font-size: 10px; font-family: var(--font-mono); color: var(--text3); margin: 6px 0 3px; }
+    .ov-task {
+      background: var(--surface2); border-radius: 4px; padding: 5px 8px;
+      font-size: 11px; border-left: 2px solid var(--border);
+    }
+    .ov-shared-group {
+      background: var(--accent-dim); border: 1px solid var(--accent-glow);
+      border-radius: var(--r-sm); padding: 8px;
+    }
+    .ov-shared-proj { font-size: 10px; font-family: var(--font-mono); font-weight: 700; color: var(--accent); margin-bottom: 5px; }
+    .ov-a-task, .ov-b-task { font-size: 10px; color: var(--text2); margin-bottom: 2px; display: flex; gap: 4px; }
+    .ov-a-label { font-size: 9px; color: var(--border-blue); font-weight: 700; flex-shrink: 0; }
+    .ov-b-label { font-size: 9px; color: var(--border-purple); font-weight: 700; flex-shrink: 0; }
+    .ov-empty { font-size: 11px; color: var(--text3); text-align: center; padding: 20px 0; }
+
+    /* ── Me View ── */
+    .me-layout {
+      flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 16px;
+      padding: 20px; overflow: hidden; min-height: 0;
+    }
+    .me-left { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+    .me-left::-webkit-scrollbar { width: 3px; }
+    .me-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .me-right { display: flex; flex-direction: column; overflow: hidden; gap: 8px; }
+    .me-section-label {
+      font-size: 10px; font-family: var(--font-mono); text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text3); flex-shrink: 0;
+    }
+    .me-main-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: var(--r); padding: 12px;
+    }
+    .me-mgr-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--border-purple); border-radius: var(--r); padding: 10px 12px;
+    }
+    .me-peer-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--border-blue); border-radius: var(--r); padding: 8px 12px;
+    }
+    .me-card-name { font-weight: 700; font-size: 13px; }
+    .me-card-role { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .task-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+    .task-list::-webkit-scrollbar { width: 3px; }
+    .task-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .me-task {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 12px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .me-task-title { font-size: 12px; font-weight: 500; }
+    .me-task-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .me-task-proj { font-size: 10px; font-family: var(--font-mono); color: var(--text3); }
+    .me-task-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+    .me-task-status.open { background: var(--accent-dim); color: var(--accent); }
+    .me-task-status.prog { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .me-task-prio { font-size: 9px; font-family: var(--font-mono); }
+    .me-task-prio.high { color: var(--accent-nope); }
+    .me-task-prio.med { color: var(--accent-super); }
+    .me-task-prio.low { color: var(--accent-like); }
+    .me-task-due { font-size: 10px; color: var(--text3); }
+
+    /* ── Empty state ── */
+    .ph-empty {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; padding: 60px 20px; text-align: center;
+    }
+    .ph-empty-icon { font-size: 36px; opacity: 0.3; }
+    .ph-empty-title { font-size: 14px; font-weight: 700; color: var(--text2); }
+    .ph-empty-desc { font-size: 12px; color: var(--text3); max-width: 300px; line-height: 1.5; }
+
+    /* ── Modal ── */
+    .ph-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none;
+      align-items: center; justify-content: center; z-index: var(--z-modal);
+    }
+    .ph-overlay.open { display: flex; }
+    .ph-modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 20px; width: 460px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .ph-modal::-webkit-scrollbar { width: 4px; }
+    .ph-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .ph-modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; }
+    .ph-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ph-form-group { display: flex; flex-direction: column; gap: 5px; }
+    .ph-form-label { font-size: 11px; color: var(--text2); font-family: var(--font-mono); }
+    .ph-cap-row { display: flex; align-items: center; gap: 10px; }
+    .ph-cap-row input[type=range] { flex: 1; accent-color: var(--accent); }
+    .ph-cap-val { font-size: 12px; font-family: var(--font-mono); min-width: 36px; }
+    .ph-check-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .ph-modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+  <div class="ph-header">
+    <div class="ph-header-row">
+      <div>
+        <div class="ph-title">People Hub</div>
+        <div class="ph-subtitle">Org tree · load balancing · overlap</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-ghost" onclick="openImportModal()">⊕ Import from Project Hub</button>
+        <button class="btn btn-primary" onclick="openMemberModal(null)">+ Add Member</button>
+      </div>
+    </div>
+    <div class="ph-tabs">
+      <button class="ph-tab active" data-tab="org" onclick="switchTab('org')">Org Tree</button>
+      <button class="ph-tab" data-tab="matrix" onclick="switchTab('matrix')">Load Matrix</button>
+      <button class="ph-tab" data-tab="overlap" onclick="switchTab('overlap')">Overlap</button>
+      <button class="ph-tab" data-tab="me" onclick="switchTab('me')">Me View</button>
+    </div>
+  </div>
+
+  <div class="ph-content">
+    <div id="tab-org" class="ph-panel active">
+      <div id="org-content" style="display:flex;flex-direction:column;gap:8px;flex:1"></div>
+    </div>
+
+    <div id="tab-matrix" class="ph-panel">
+      <div id="matrix-content" style="flex:1"></div>
+    </div>
+
+    <div id="tab-overlap" class="ph-panel">
+      <div class="overlap-header">
+        <select class="select" id="overlap-a" onchange="renderOverlap()">
+          <option value="">— Member A —</option>
+        </select>
+        <span class="overlap-vs">vs</span>
+        <select class="select" id="overlap-b" onchange="renderOverlap()">
+          <option value="">— Member B —</option>
+        </select>
+      </div>
+      <div class="overlap-grid" id="overlap-grid">
+        <div style="grid-column:1/-1" class="ov-empty">Select two members to compare workloads</div>
+      </div>
+    </div>
+
+    <div id="tab-me" class="ph-panel">
+      <div id="me-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+    </div>
+  </div>
+
+  <!-- Member modal -->
+  <div class="ph-overlay" id="member-modal">
+    <div class="ph-modal">
+      <div class="ph-modal-title" id="modal-title">Add Member</div>
+      <input type="hidden" id="m-id">
+      <div class="ph-form-row">
+        <div class="ph-form-group">
+          <label class="ph-form-label">Name *</label>
+          <input class="input" type="text" id="m-name" placeholder="Full name">
+        </div>
+        <div class="ph-form-group">
+          <label class="ph-form-label">Role</label>
+          <input class="input" type="text" id="m-role" placeholder="e.g. Section Head">
+        </div>
+      </div>
+      <div class="ph-form-row">
+        <div class="ph-form-group">
+          <label class="ph-form-label">Department</label>
+          <input class="input" type="text" id="m-dept" placeholder="e.g. Digital Strategy">
+        </div>
+        <div class="ph-form-group">
+          <label class="ph-form-label">Reports To</label>
+          <select class="select" id="m-reports"></select>
+        </div>
+      </div>
+      <div class="ph-form-group">
+        <label class="ph-form-label">
+          Capacity % <span style="color:var(--text3)">(what share of their tasks you're tracking)</span>
+        </label>
+        <div class="ph-cap-row">
+          <input type="range" id="m-capacity" min="10" max="100" step="10" value="100"
+            oninput="document.getElementById('m-cap-disp').textContent=this.value+'%'">
+          <span class="ph-cap-val" id="m-cap-disp">100%</span>
+        </div>
+      </div>
+      <div class="ph-form-group">
+        <label class="ph-form-label">Skills <span style="color:var(--text3)">(comma-separated)</span></label>
+        <input class="input" type="text" id="m-skills" placeholder="e.g. excel, powerpoint, stakeholder mgmt">
+      </div>
+      <div class="ph-form-group">
+        <label class="ph-form-label">Availability Note</label>
+        <input class="input" type="text" id="m-avail" placeholder="e.g. Full time · Mon–Thu · On leave until July">
+      </div>
+      <div class="ph-form-row">
+        <div class="ph-form-group">
+          <label class="ph-form-label">Confidence</label>
+          <select class="select" id="m-confidence">
+            <option value="confirmed">Confirmed</option>
+            <option value="estimated">Estimated (~)</option>
+          </select>
+        </div>
+        <div class="ph-form-group">
+          <label class="ph-form-label">&nbsp;</label>
+          <label class="ph-check-row">
+            <input type="checkbox" id="m-isme" style="accent-color:var(--accent)">
+            This is me
+          </label>
+        </div>
+      </div>
+      <div class="ph-modal-footer">
+        <button class="btn btn-ghost" onclick="closeMemberModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMember()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import modal -->
+  <div class="ph-overlay" id="import-modal">
+    <div class="ph-modal">
+      <div class="ph-modal-title">Import from Project Hub</div>
+      <div id="import-preview" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
+      <p style="font-size:11px;color:var(--text3);line-height:1.5">
+        Imports using the same member IDs as Project Hub so task assignments link automatically.
+        Existing People Hub members with the same ID will have name/role/department refreshed;
+        custom fields (capacity, skills, reportsTo) are preserved.
+      </p>
+      <div class="ph-modal-footer">
+        <button class="btn btn-ghost" onclick="closeImportModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmImport()">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'people-hub-v1';
+    let _tab = 'org';
+
+    // ── Data ─────────────────────────────────────────────────────────────────────
+
+    function getData() { return HubStorage.get(STORAGE_KEY) || { members: [] }; }
+    function saveData(d) { HubStorage.set(STORAGE_KEY, d); }
+    function getMembers() { return getData().members || []; }
+
+    function getPHData() { return HubStorage.get('project-hub-v1') || { members: [], projects: [] }; }
+
+    function getTasksFor(memberId) {
+      const ph = getPHData();
+      const out = [];
+      for (const proj of (ph.projects || [])) {
+        for (const t of (proj.tasks || [])) {
+          if (t.assigneeId === memberId) {
+            out.push({ ...t, projectName: proj.name, projectId: proj.id });
+          }
+        }
+      }
+      return out;
+    }
+
+    function getOpenTasksFor(memberId) {
+      return getTasksFor(memberId).filter(t => !t.done && t.status !== 'done');
+    }
+
+    function calcLoad(member) {
+      const open = getOpenTasksFor(member.id).length;
+      const cap = member.capacity || 100;
+      return Math.min(100, Math.round(open / Math.max(1, cap / 10) * 100));
+    }
+
+    function loadCls(pct) {
+      return pct >= 90 ? 'high' : pct >= 65 ? 'mid' : 'low';
+    }
+
+    function loadColor(pct) {
+      return pct >= 90 ? 'var(--accent-nope)' : pct >= 65 ? 'var(--accent-super)' : 'var(--accent-like)';
+    }
+
+    function esc(s) {
+      return typeof HubUtils !== 'undefined' && HubUtils.esc
+        ? HubUtils.esc(s)
+        : String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Hierarchy ────────────────────────────────────────────────────────────────
+
+    function buildTree(members, parentId, depth) {
+      if (parentId === undefined) parentId = null;
+      if (depth === undefined) depth = 0;
+      return members
+        .filter(m => (m.reportsTo || null) === (parentId || null))
+        .map(m => ({ ...m, depth, children: buildTree(members, m.id, depth + 1) }));
+    }
+
+    function flattenTree(nodes) {
+      const out = [];
+      for (const n of nodes) { out.push(n); out.push(...flattenTree(n.children)); }
+      return out;
+    }
+
+    function orderedMembers(members) {
+      const flat = flattenTree(buildTree(members));
+      const inTree = new Set(flat.map(m => m.id));
+      const dangling = members.filter(m => !inTree.has(m.id)).map(m => ({ ...m, depth: 0, children: [] }));
+      return [...flat, ...dangling];
+    }
+
+    function depthColor(d) {
+      const colors = ['var(--border-purple)', 'var(--border-blue)', 'var(--accent)', 'var(--text2)'];
+      return colors[Math.min(d, 3)];
+    }
+
+    // ── Tab switching ─────────────────────────────────────────────────────────────
+
+    function switchTab(tab) {
+      _tab = tab;
+      document.querySelectorAll('.ph-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.ph-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+      renderTab(tab);
+    }
+
+    function renderAll() { renderTab(_tab); }
+
+    function renderTab(tab) {
+      if (tab === 'org') renderOrgTree();
+      else if (tab === 'matrix') renderLoadMatrix();
+      else if (tab === 'overlap') { populateOverlapSelects(); renderOverlap(); }
+      else if (tab === 'me') renderMeView();
+    }
+
+    // ── Org Tree ─────────────────────────────────────────────────────────────────
+
+    function renderOrgTree() {
+      const members = getMembers();
+      const el = document.getElementById('org-content');
+
+      if (!members.length) {
+        el.innerHTML = `<div class="ph-empty">
+          <div class="ph-empty-icon">👥</div>
+          <div class="ph-empty-title">No members yet</div>
+          <div class="ph-empty-desc">Add members manually or import them from Project Hub to build the org tree.</div>
+        </div>`;
+        return;
+      }
+
+      el.innerHTML = orderedMembers(members).map(m => renderOrgCard(m)).join('');
+    }
+
+    function renderOrgCard(m) {
+      const load = calcLoad(m);
+      const open = getOpenTasksFor(m.id).length;
+      const depth = m.depth || 0;
+      const indent = depth * 26;
+      const skillsHtml = (m.skills || []).map(s => `<span class="skill-pill">${esc(s)}</span>`).join('');
+
+      return `<div class="org-card" style="margin-left:${indent}px;--_depth-clr:${depthColor(depth)}">
+        <div class="org-card-top">
+          ${m.isMe ? `<span class="me-badge">ME</span>` : ''}
+          <span class="org-name">${esc(m.name)}</span>
+          ${m.confidence === 'estimated' ? `<span class="est-badge">~estimated</span>` : ''}
+          <div class="org-actions">
+            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px"
+              onclick="openMemberModal('${m.id}')">edit</button>
+            <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px;color:var(--accent-nope)"
+              onclick="deleteMember('${m.id}')">✕</button>
+          </div>
+        </div>
+        <div class="org-role">${esc(m.role || '')}${m.department ? `<span class="org-dept"> · ${esc(m.department)}</span>` : ''}</div>
+        <div class="load-row">
+          <div class="load-track"><div class="load-fill ${loadCls(load)}" style="width:${load}%"></div></div>
+          <span class="load-pct">${load}%</span>
+          <span class="load-tasks">${open} open task${open !== 1 ? 's' : ''}</span>
+        </div>
+        ${skillsHtml ? `<div class="skills-row">${skillsHtml}</div>` : ''}
+        ${m.availability ? `<div class="avail-note">⏱ ${esc(m.availability)}</div>` : ''}
+      </div>`;
+    }
+
+    // ── Load Matrix ──────────────────────────────────────────────────────────────
+
+    function renderLoadMatrix() {
+      const members = getMembers();
+      const el = document.getElementById('matrix-content');
+
+      if (!members.length) {
+        el.innerHTML = `<div class="ph-empty">
+          <div class="ph-empty-icon">📊</div>
+          <div class="ph-empty-title">No members yet</div>
+          <div class="ph-empty-desc">Add members to see the load matrix across projects.</div>
+        </div>`;
+        return;
+      }
+
+      const ph = getPHData();
+      const projects = (ph.projects || []).slice(0, 8);
+      const sorted = orderedMembers(members);
+
+      const headerCells = `<th>Member</th>` +
+        projects.map(p => `<th class="num" title="${esc(p.name)}">${esc(p.name.length > 12 ? p.name.slice(0, 11) + '…' : p.name)}</th>`).join('') +
+        `<th class="num">Total</th><th>Load</th>`;
+
+      const rows = sorted.map(m => {
+        const indent = (m.depth || 0) * 14;
+        const total = getOpenTasksFor(m.id).length;
+        const load = calcLoad(m);
+        const mark = m.isMe ? `<span class="me-badge" style="margin-right:4px">ME</span>` : '';
+        const est = m.confidence === 'estimated' ? ` <span class="est-badge">~</span>` : '';
+
+        const projCells = projects.map(p => {
+          const n = (p.tasks || []).filter(t => t.assigneeId === m.id && !t.done && t.status !== 'done').length;
+          return `<td class="m-cell ${n > 0 ? 'has' : ''}">${n || '—'}</td>`;
+        }).join('');
+
+        return `<tr>
+          <td class="m-name-cell" style="padding-left:${12 + indent}px">${mark}${esc(m.name)}${est}</td>
+          ${projCells}
+          <td class="m-total">${total}</td>
+          <td class="m-load-cell">
+            <div class="m-load-bar">
+              <div class="m-load-mini">
+                <div class="m-load-mini-fill" style="width:${load}%;background:${loadColor(load)}"></div>
+              </div>
+              <span class="m-load-pct">${load}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      el.innerHTML = `<div class="matrix-wrap">
+        <table class="matrix-table">
+          <thead><tr>${headerCells}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    // ── Overlap ──────────────────────────────────────────────────────────────────
+
+    function populateOverlapSelects() {
+      const members = getMembers();
+      const opts = members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+      ['overlap-a', 'overlap-b'].forEach(id => {
+        const sel = document.getElementById(id);
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">— Select member —</option>${opts}`;
+        if (prev && members.find(m => m.id === prev)) sel.value = prev;
+      });
+    }
+
+    function renderOverlap() {
+      const aId = document.getElementById('overlap-a').value;
+      const bId = document.getElementById('overlap-b').value;
+      const grid = document.getElementById('overlap-grid');
+
+      if (!aId || !bId) {
+        grid.innerHTML = `<div style="grid-column:1/-1" class="ov-empty">Select two members above to compare their workloads</div>`;
+        return;
+      }
+      if (aId === bId) {
+        grid.innerHTML = `<div style="grid-column:1/-1" class="ov-empty">Select two different members</div>`;
+        return;
+      }
+
+      const members = getMembers();
+      const mA = members.find(m => m.id === aId);
+      const mB = members.find(m => m.id === bId);
+      if (!mA || !mB) return;
+
+      const ph = getPHData();
+      const projects = ph.projects || [];
+      const mapA = {}, mapB = {};
+
+      for (const proj of projects) {
+        const aTasks = (proj.tasks || []).filter(t => t.assigneeId === aId && !t.done && t.status !== 'done');
+        const bTasks = (proj.tasks || []).filter(t => t.assigneeId === bId && !t.done && t.status !== 'done');
+        if (aTasks.length) mapA[proj.id] = { name: proj.name, tasks: aTasks };
+        if (bTasks.length) mapB[proj.id] = { name: proj.name, tasks: bTasks };
+      }
+
+      const allIds = new Set([...Object.keys(mapA), ...Object.keys(mapB)]);
+      const shared = [...allIds].filter(id => mapA[id] && mapB[id]);
+      const onlyA = [...allIds].filter(id => mapA[id] && !mapB[id]);
+      const onlyB = [...allIds].filter(id => !mapA[id] && mapB[id]);
+
+      function colHtml(map, ids, taskBorderColor) {
+        if (!ids.length) return `<div class="ov-empty">No unique projects</div>`;
+        return ids.map(id => {
+          const { name, tasks } = map[id];
+          return `<div>
+            <div class="ov-proj-name">${esc(name)}</div>
+            ${tasks.map(t => `<div class="ov-task" style="border-left-color:${taskBorderColor}">${esc(t.title)}</div>`).join('')}
+          </div>`;
+        }).join('');
+      }
+
+      const centerHtml = shared.length
+        ? shared.map(id => `<div class="ov-shared-group">
+            <div class="ov-shared-proj">${esc(mapA[id].name)}</div>
+            ${mapA[id].tasks.map(t => `<div class="ov-a-task"><span class="ov-a-label">A</span>${esc(t.title)}</div>`).join('')}
+            ${mapB[id].tasks.map(t => `<div class="ov-b-task"><span class="ov-b-label">B</span>${esc(t.title)}</div>`).join('')}
+          </div>`).join('')
+        : `<div class="ov-empty">No shared projects</div>`;
+
+      grid.innerHTML = `
+        <div class="ov-col">
+          <div class="ov-col-label" style="color:var(--border-blue)">Only ${esc(mA.name)}</div>
+          ${colHtml(mapA, onlyA, 'var(--border-blue)')}
+        </div>
+        <div class="ov-center">
+          <div class="ov-col-label" style="color:var(--accent)">Shared projects</div>
+          ${centerHtml}
+        </div>
+        <div class="ov-col">
+          <div class="ov-col-label" style="color:var(--border-purple)">Only ${esc(mB.name)}</div>
+          ${colHtml(mapB, onlyB, 'var(--border-purple)')}
+        </div>`;
+    }
+
+    // ── Me View ──────────────────────────────────────────────────────────────────
+
+    function renderMeView() {
+      const members = getMembers();
+      const el = document.getElementById('me-content');
+      const me = members.find(m => m.isMe);
+
+      if (!me) {
+        el.innerHTML = `<div class="ph-empty">
+          <div class="ph-empty-icon">🧑</div>
+          <div class="ph-empty-title">No "Me" member set</div>
+          <div class="ph-empty-desc">Edit a member and check "This is me" to enable the Me View centered on your perspective.</div>
+          <button class="btn btn-primary" onclick="openMemberModal(null)" style="margin-top:6px">+ Add Myself</button>
+        </div>`;
+        return;
+      }
+
+      const manager = me.reportsTo ? members.find(m => m.id === me.reportsTo) : null;
+      const peers = me.reportsTo ? members.filter(m => m.id !== me.id && m.reportsTo === me.reportsTo) : [];
+      const myLoad = calcLoad(me);
+      const myOpen = getOpenTasksFor(me.id);
+
+      const managerHtml = manager ? `
+        <div class="me-section-label">Manager</div>
+        <div class="me-mgr-card">
+          <div class="me-card-name">${esc(manager.name)}</div>
+          <div class="me-card-role">${esc(manager.role || '')}${manager.department ? ` · ${esc(manager.department)}` : ''}</div>
+        </div>` : '';
+
+      const peersHtml = peers.length ? `
+        <div class="me-section-label">Teammates</div>
+        ${peers.map(p => {
+          const pLoad = calcLoad(p);
+          const pOpen = getOpenTasksFor(p.id).length;
+          return `<div class="me-peer-card" style="border-left-color:${loadColor(pLoad)}">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:1px">
+              <span class="me-card-name" style="font-size:12px">${esc(p.name)}</span>
+              ${p.confidence === 'estimated' ? '<span class="est-badge">~</span>' : ''}
+            </div>
+            <div class="me-card-role">${esc(p.role || '')}</div>
+            <div class="load-row" style="margin-top:5px">
+              <div class="load-track"><div class="load-fill ${loadCls(pLoad)}" style="width:${pLoad}%"></div></div>
+              <span class="load-pct">${pLoad}%</span>
+              <span class="load-tasks">${pOpen} tasks</span>
+            </div>
+          </div>`;
+        }).join('')}` : '';
+
+      const tasksHtml = myOpen.length
+        ? myOpen.map(t => {
+            const st = t.status === 'in-progress' ? 'prog' : 'open';
+            const stLabel = t.status === 'in-progress' ? 'In Progress' : 'Open';
+            const prioHtml = t.priority ? `<span class="me-task-prio ${t.priority}">${t.priority.toUpperCase()}</span>` : '';
+            const dueHtml = t.due ? `<span class="me-task-due">Due ${esc(t.due)}</span>` : '';
+            return `<div class="me-task">
+              <div class="me-task-title">${esc(t.title)}</div>
+              <div class="me-task-meta">
+                <span class="me-task-proj">${esc(t.projectName || '')}</span>
+                <span class="me-task-status ${st}">${stLabel}</span>
+                ${prioHtml}${dueHtml}
+              </div>
+            </div>`;
+          }).join('')
+        : `<div style="text-align:center;padding:30px 0;color:var(--text3);font-size:12px">No open tasks — you're all clear!</div>`;
+
+      el.innerHTML = `<div class="me-layout">
+        <div class="me-left">
+          <div class="me-section-label">You</div>
+          <div class="me-main-card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+              <span class="me-badge">ME</span>
+              <span class="me-card-name">${esc(me.name)}</span>
+              ${me.confidence === 'estimated' ? '<span class="est-badge">~</span>' : ''}
+            </div>
+            <div class="me-card-role">${esc(me.role || '')}${me.department ? ` · ${esc(me.department)}` : ''}</div>
+            <div class="load-row" style="margin-top:8px">
+              <div class="load-track"><div class="load-fill ${loadCls(myLoad)}" style="width:${myLoad}%"></div></div>
+              <span class="load-pct">${myLoad}%</span>
+              <span class="load-tasks">${myOpen.length} open tasks</span>
+            </div>
+            ${me.availability ? `<div class="avail-note">⏱ ${esc(me.availability)}</div>` : ''}
+          </div>
+          ${managerHtml}
+          ${peersHtml}
+        </div>
+        <div class="me-right">
+          <div class="me-section-label">My Open Tasks (${myOpen.length})</div>
+          <div class="task-list">${tasksHtml}</div>
+        </div>
+      </div>`;
+    }
+
+    // ── Member modal ─────────────────────────────────────────────────────────────
+
+    function openMemberModal(id) {
+      const members = getMembers();
+      const m = id ? members.find(x => x.id === id) : null;
+
+      document.getElementById('modal-title').textContent = m ? 'Edit Member' : 'Add Member';
+      document.getElementById('m-id').value = m ? m.id : '';
+      document.getElementById('m-name').value = m ? m.name : '';
+      document.getElementById('m-role').value = m ? (m.role || '') : '';
+      document.getElementById('m-dept').value = m ? (m.department || '') : '';
+      document.getElementById('m-skills').value = m ? (m.skills || []).join(', ') : '';
+      document.getElementById('m-avail').value = m ? (m.availability || '') : '';
+      document.getElementById('m-isme').checked = m ? !!m.isMe : false;
+      document.getElementById('m-confidence').value = m ? (m.confidence || 'confirmed') : 'confirmed';
+
+      const cap = m ? (m.capacity || 100) : 100;
+      document.getElementById('m-capacity').value = cap;
+      document.getElementById('m-cap-disp').textContent = cap + '%';
+
+      const rSel = document.getElementById('m-reports');
+      const others = members.filter(x => x.id !== (m ? m.id : null));
+      rSel.innerHTML = `<option value="">— None (top level) —</option>` +
+        others.map(x => `<option value="${x.id}"${m && m.reportsTo === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
+
+      document.getElementById('member-modal').classList.add('open');
+      requestAnimationFrame(() => document.getElementById('m-name').focus());
+    }
+
+    function closeMemberModal() {
+      document.getElementById('member-modal').classList.remove('open');
+    }
+
+    function saveMember() {
+      const name = document.getElementById('m-name').value.trim();
+      if (!name) { showToast('Name is required'); return; }
+
+      const id = document.getElementById('m-id').value || ('ph-' + Date.now());
+      const isMe = document.getElementById('m-isme').checked;
+      const data = getData();
+
+      const member = {
+        id,
+        name,
+        role: document.getElementById('m-role').value.trim(),
+        department: document.getElementById('m-dept').value.trim(),
+        reportsTo: document.getElementById('m-reports').value || null,
+        capacity: parseInt(document.getElementById('m-capacity').value) || 100,
+        skills: document.getElementById('m-skills').value.split(',').map(s => s.trim()).filter(Boolean),
+        availability: document.getElementById('m-avail').value.trim(),
+        isMe,
+        confidence: document.getElementById('m-confidence').value || 'confirmed',
+      };
+
+      if (isMe) data.members.forEach(m => { if (m.id !== id) m.isMe = false; });
+
+      const idx = data.members.findIndex(m => m.id === id);
+      if (idx >= 0) data.members[idx] = member;
+      else data.members.push(member);
+
+      saveData(data);
+      closeMemberModal();
+      showToast(idx >= 0 ? 'Member updated' : 'Member added');
+      renderAll();
+    }
+
+    function deleteMember(id) {
+      if (!confirm('Remove this member from People Hub?')) return;
+      const data = getData();
+      // Clear dangling reportsTo refs
+      data.members.forEach(m => { if (m.reportsTo === id) m.reportsTo = null; });
+      data.members = data.members.filter(m => m.id !== id);
+      saveData(data);
+      renderAll();
+      showToast('Member removed');
+    }
+
+    // ── Import from Project Hub ───────────────────────────────────────────────────
+
+    function openImportModal() {
+      const phMembers = getPHData().members || [];
+      const preview = document.getElementById('import-preview');
+      if (!phMembers.length) {
+        preview.innerHTML = `<span style="color:var(--text3)">No members found in Project Hub. Add members there first.</span>`;
+      } else {
+        preview.innerHTML = `Found <strong>${phMembers.length}</strong> member${phMembers.length !== 1 ? 's' : ''} in Project Hub:<br><br>` +
+          phMembers.map(m => `&nbsp;· ${esc(m.name)}${m.role ? ` <span style="color:var(--text3)">(${esc(m.role)})</span>` : ''}`).join('<br>');
+      }
+      document.getElementById('import-modal').classList.add('open');
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.remove('open');
+    }
+
+    function confirmImport() {
+      const phMembers = getPHData().members || [];
+      if (!phMembers.length) { showToast('No members in Project Hub'); closeImportModal(); return; }
+
+      const data = getData();
+      let added = 0, updated = 0;
+      for (const phm of phMembers) {
+        const existing = data.members.find(m => m.id === phm.id);
+        if (existing) {
+          existing.name = phm.name || existing.name;
+          existing.role = phm.role || existing.role;
+          existing.department = phm.department || existing.department;
+          if (!existing.reportsTo && phm.managerId) existing.reportsTo = phm.managerId;
+          updated++;
+        } else {
+          data.members.push({
+            id: phm.id,
+            name: phm.name,
+            role: phm.role || '',
+            department: phm.department || '',
+            reportsTo: phm.managerId || null,
+            capacity: 100,
+            skills: [],
+            availability: '',
+            isMe: false,
+            confidence: 'confirmed',
+          });
+          added++;
+        }
+      }
+      saveData(data);
+      closeImportModal();
+      showToast(`Imported: ${added} added, ${updated} updated`);
+      renderAll();
+    }
+
+    // ── Keyboard & subscriptions ──────────────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeMemberModal(); closeImportModal(); }
+    });
+
+    HubStorage.subscribe(STORAGE_KEY, renderAll);
+    HubStorage.subscribe('project-hub-v1', renderAll);
+
+    // ── Init ─────────────────────────────────────────────────────────────────────
+    HubData.onChange(renderAll);
+    HubData.init('people-hub');
+    renderOrgTree();
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      HubBootstrap.start('people-hub');
+    });
+  </script>
+</body>
+</html>
