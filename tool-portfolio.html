@@ -572,6 +572,10 @@
             if (key === 'name' || key === 'icon' || key === 'url' || key === 'note') {
                 t[key] = value;
                 if (key === 'name') document.getElementById('topbar-title').textContent = value;
+                if (key === 'url' || key === 'icon') {
+                    const prev = document.getElementById('tp-icon-preview');
+                    if (prev) prev.innerHTML = _iconPreviewHtml(t);
+                }
                 debouncedSave();
                 return;
             }
@@ -774,7 +778,7 @@
                     const statusDot = t.status ? `<span style="width:7px;height:7px;border-radius:50%;background:${statusColors[t.status]||'var(--text3)'};flex-shrink:0;display:inline-block" title="Stage: ${t.status}"></span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
-          <div class="tool-icon">${escapeHtml(t.icon || '🛠')}</div>
+          <div class="tool-icon">${toolIconHtml(t)}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
           ${statusDot}${ringHtml}
         `;
@@ -901,7 +905,7 @@
                 return `<div class="compare-col">
                     ${pickerHtml}
                     <div class="compare-col-header">
-                        <div class="compare-col-icon">${escapeHtml(t.icon||'🛠')}</div>
+                        <div class="compare-col-icon">${toolIconHtml(t, 22)}</div>
                         <div class="compare-col-name">${escapeHtml(t.name)}</div>
                     </div>
                     ${rows}
@@ -948,12 +952,13 @@
           </div>
           <div class="field">
             <div class="field-label">Icon</div>
+            <div id="tp-icon-preview">${_iconPreviewHtml(t)}</div>
             <input class="input"
               value="${escapeAttr(t.icon)}"
-              placeholder="e.g. 🏗️ 🤖 🧰"
+              placeholder="🛠 emoji fallback"
               oninput="updateField('icon', this.value)"
             />
-            <div class="field-hint">Emoji works best for now</div>
+            <div class="field-hint">${t.url ? 'Shown when favicon cannot load' : 'Emoji — add URL to auto-fetch favicon'}</div>
           </div>
         </div>
       </div>
@@ -1168,6 +1173,34 @@
         })(HubLinks.resolveItems);
 
         // ── Helpers ───────────────────────────────
+
+        function toolIconHtml(t, sz) {
+            sz = sz || 20;
+            if (t.url) {
+                try {
+                    const domain = new URL(t.url).hostname;
+                    if (domain) {
+                        const fb = escapeHtml(t.icon || '🛠');
+                        return `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" width="${sz}" height="${sz}" style="object-fit:contain;border-radius:3px;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display=''" alt=""><span style="display:none">${fb}</span>`;
+                    }
+                } catch {}
+            }
+            return escapeHtml(t.icon || '🛠');
+        }
+
+        function _iconPreviewHtml(t) {
+            if (!t.url) return '';
+            try {
+                const domain = new URL(t.url).hostname;
+                if (!domain) return '';
+                return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);margin-bottom:6px">
+                    <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:7px;font-size:14px;flex-shrink:0">${toolIconHtml(t, 18)}</div>
+                    <span style="font-size:11px;color:var(--text2);font-family:var(--font-mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(domain)}</span>
+                    <span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.5px">auto</span>
+                </div>`;
+            } catch { return ''; }
+        }
+
         function escapeHtml(s) {
             return String(s ?? '')
                 .replace(/&/g, '&amp;')
