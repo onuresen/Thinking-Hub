@@ -12,6 +12,7 @@
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <style>
     body {
@@ -247,6 +248,34 @@
     .edge-note-input:focus { outline: 1px solid var(--accent); }
     .edge-panel-actions { display: flex; gap: 6px; }
 
+    /* ── Node info panel ─────────────────────────────────────── */
+    #node-panel { right: 20px; bottom: 20px; }
+    .np-tool-tag { display:inline-block; background:var(--surface2); border-radius:4px; padding:2px 7px; font-size:10.5px; color:var(--text3); font-family:var(--font-mono); margin-bottom:3px; }
+    .np-meta-row { font-size:11.5px; color:var(--text2); line-height:1.75; }
+    .np-meta-key { color:var(--text3); }
+
+    /* ── Link modal: picker upgrades ───────────────────────── */
+    .gh-modal { max-height: 90vh; overflow-y: auto; }
+    .gh-select[size] { height:auto; min-height:110px; max-height:170px; overflow-y:auto; margin-bottom:0; }
+    .gh-seg-toggle { display:flex; border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden; margin-bottom:5px; }
+    .gh-seg-btn { flex:1; padding:4px 0; background:var(--surface2); border:none; color:var(--text3); font-family:var(--font-body); font-size:11px; font-weight:600; cursor:pointer; transition:all 0.1s; }
+    .gh-seg-btn:hover { color:var(--text); }
+    .gh-seg-btn.active { background:var(--accent-dim); color:var(--accent); }
+    .gh-search-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+    .gh-search-input { flex:1; padding:5px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); font-family:var(--font-body); font-size:12px; }
+    .gh-search-input:focus { outline:1px solid var(--accent); }
+    .gh-item-count { font-size:10px; color:var(--text3); font-family:var(--font-mono); white-space:nowrap; }
+
+    /* ── Right-click context menu ───────────────────────────── */
+    #graph-ctx-menu { position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:4px 0; min-width:172px; z-index:600; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
+    .ctx-item { display:block; width:100%; padding:7px 14px; background:none; border:none; color:var(--text2); font-family:var(--font-body); font-size:12.5px; text-align:left; cursor:pointer; transition:background 0.1s, color 0.1s; }
+    .ctx-item:hover { background:var(--accent-dim); color:var(--accent); }
+    .ctx-sep { height:1px; background:var(--border); margin:3px 0; }
+
+    /* ── Drag-to-connect banner ─────────────────────────────── */
+    #drag-link-banner { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:400; display:none; align-items:center; gap:10px; padding:10px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:0 6px 20px rgba(0,0,0,0.40); font-size:12px; white-space:nowrap; }
+    #drag-link-banner.visible { display:flex; }
+
     /* ── Empty state ────────────────────────────────────────── */
     .empty-state {
       position: absolute;
@@ -339,6 +368,25 @@
     </div>
   </div>
 
+  <!-- Node info panel -->
+  <div class="edge-panel" id="node-panel">
+    <div id="np-tool-tag" class="np-tool-tag"></div>
+    <div id="np-label" style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4;margin-top:2px"></div>
+    <div id="np-meta" class="np-meta-row"></div>
+    <div class="edge-panel-actions">
+      <button class="gh-btn gh-btn-primary" style="flex:1" id="np-open-btn">Open</button>
+      <button class="gh-btn" id="np-link-btn">+ Link</button>
+      <button class="gh-btn" onclick="closeNodePanel()">✕</button>
+    </div>
+  </div>
+
+  <!-- Drag-to-connect banner -->
+  <div id="drag-link-banner">
+    <span id="dlb-text" style="color:var(--text2)"></span>
+    <button class="gh-btn gh-btn-primary" id="dlb-yes">Link</button>
+    <button class="gh-btn" id="dlb-no">✕</button>
+  </div>
+
   <!-- New Link modal -->
   <div class="gh-overlay" id="link-overlay" onclick="if(event.target===this)closeLinkModal()">
     <div class="gh-modal">
@@ -347,13 +395,29 @@
         <div>
           <div class="gh-side-label">Item A</div>
           <select class="gh-select" id="nl-tool-a" onchange="populateItems('a')"></select>
-          <select class="gh-select" id="nl-item-a"></select>
+          <div class="gh-seg-toggle" id="nl-seg-a" style="display:none">
+            <button class="gh-seg-btn active" onclick="setPickerMode('a','tasks')">Tasks</button>
+            <button class="gh-seg-btn" onclick="setPickerMode('a','projects')">Projects</button>
+          </div>
+          <div class="gh-search-row">
+            <input type="text" class="gh-search-input" id="nl-search-a" placeholder="Filter…" oninput="filterItems('a')">
+            <span class="gh-item-count" id="nl-count-a"></span>
+          </div>
+          <select class="gh-select" id="nl-item-a" size="6"></select>
         </div>
         <div class="gh-arrow">↔</div>
         <div>
           <div class="gh-side-label">Item B</div>
           <select class="gh-select" id="nl-tool-b" onchange="populateItems('b')"></select>
-          <select class="gh-select" id="nl-item-b"></select>
+          <div class="gh-seg-toggle" id="nl-seg-b" style="display:none">
+            <button class="gh-seg-btn active" onclick="setPickerMode('b','tasks')">Tasks</button>
+            <button class="gh-seg-btn" onclick="setPickerMode('b','projects')">Projects</button>
+          </div>
+          <div class="gh-search-row">
+            <input type="text" class="gh-search-input" id="nl-search-b" placeholder="Filter…" oninput="filterItems('b')">
+            <span class="gh-item-count" id="nl-count-b"></span>
+          </div>
+          <select class="gh-select" id="nl-item-b" size="6"></select>
         </div>
       </div>
       <div class="gh-modal-footer">
@@ -463,16 +527,7 @@
         chip.dataset.tool = tool;
         chip.style.setProperty('--chip-color', colors.border);
         chip.textContent = TOOL_LABELS[tool] || tool;
-        chip.onclick = () => {
-          if (hiddenTools.has(tool)) {
-            hiddenTools.delete(tool);
-            chip.classList.add('active');
-          } else {
-            hiddenTools.add(tool);
-            chip.classList.remove('active');
-          }
-          applyLeaves();
-        };
+        chip.onclick = () => toggleToolVisibility(tool);
         bar.appendChild(chip);
       });
     }
@@ -724,6 +779,24 @@
         if (!network || !network.getSelectedEdges().length) closeEdgePanel();
       });
 
+      network.on('selectNode', params => {
+        if (params.nodes.length) showNodePanel(params.nodes[0]);
+      });
+
+      network.on('deselectNode', () => closeNodePanel());
+
+      network.on('oncontext', params => {
+        params.event.preventDefault();
+        const nodeId = network.getNodeAt(params.pointer.DOM);
+        showContextMenu(params.event.clientX, params.event.clientY, nodeId ? nodesMap.get(nodeId) : null);
+      });
+
+      network.on('dragEnd', params => {
+        if (!params.nodes.length) return;
+        const target = getNearbyNode(params.nodes[0], params.pointer.DOM);
+        if (target) setTimeout(() => showDragLinkPrompt(params.nodes[0], target), 80);
+      });
+
       network.on('stabilized', updateStats);
       setTimeout(() => {
         if (!network) return;
@@ -808,8 +881,8 @@
     }
 
     function showEdgePanel(edgeId) {
-      const raw = HubStorage.get('hub-links-v1');
-      const links = raw ? JSON.parse(raw) : [];
+      closeNodePanel();
+      const links = HubStorage.get('hub-links-v1') || [];
       const link = links.find(l => l.id === edgeId);
       if (!link) return;
       _currentEdgeId = edgeId;
@@ -831,7 +904,9 @@
       buildGraph();
     }
 
-    function openNewLinkModal() {
+    const _pickerMode = { a: 'tasks', b: 'tasks' };
+
+    function openNewLinkModal(preselect) {
       const overlay = document.getElementById('link-overlay');
       ['a', 'b'].forEach(side => {
         const toolSel = document.getElementById(`nl-tool-${side}`);
@@ -839,8 +914,19 @@
           `<option value="${t}">${TOOL_LABELS[t]}</option>`
         ).join('');
         if (side === 'b') toolSel.selectedIndex = 1;
+        document.getElementById(`nl-search-${side}`).value = '';
+        _pickerMode[side] = 'tasks';
         populateItems(side);
       });
+      if (preselect) {
+        const s = preselect.side || 'a';
+        const toolSel = document.getElementById(`nl-tool-${s}`);
+        toolSel.value = preselect.tool;
+        populateItems(s);
+        setTimeout(() => {
+          document.getElementById(`nl-item-${s}`).value = preselect.itemId;
+        }, 0);
+      }
       overlay.classList.add('open');
     }
 
@@ -848,17 +934,80 @@
       document.getElementById('link-overlay').classList.remove('open');
     }
 
+    function setPickerMode(side, mode) {
+      _pickerMode[side] = mode;
+      const seg = document.getElementById(`nl-seg-${side}`);
+      seg.querySelectorAll('.gh-seg-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === mode);
+      });
+      document.getElementById(`nl-search-${side}`).value = '';
+      populateItems(side);
+    }
+
     function populateItems(side) {
       const tool = document.getElementById(`nl-tool-${side}`).value;
       const itemSel = document.getElementById(`nl-item-${side}`);
+      const seg = document.getElementById(`nl-seg-${side}`);
+
+      // Show Projects/Tasks toggle only for project-hub
+      seg.style.display = tool === 'project-hub' ? '' : 'none';
+
       try {
-        const items = HubLinks.resolveItems(tool);
-        itemSel.innerHTML = items.length
-          ? items.map(it => `<option value="${it.id}" data-label="${(it.label || '').replace(/"/g,'&quot;')}">${(it.label || '(untitled)').slice(0,50)}</option>`).join('')
-          : '<option value="">— no items found —</option>';
+        if (tool === 'project-hub' && _pickerMode[side] === 'projects') {
+          const data = HubStorage.get('project-hub-v1') || {};
+          const projects = data.projects || [];
+          itemSel.innerHTML = projects.length
+            ? projects.map(p => `<option value="${p.id}" data-label="${(p.name || '').replace(/"/g,'&quot;')}">${(p.name || '(untitled)').slice(0, 50)}</option>`).join('')
+            : '<option value="">— no projects —</option>';
+        } else if (tool === 'project-hub') {
+          // Tasks grouped by project
+          const data = HubStorage.get('project-hub-v1') || {};
+          const groups = [];
+          for (const p of (data.projects || [])) {
+            const tasks = (p.tasks || []).filter(t => t.title);
+            if (tasks.length) groups.push({ proj: p.name, tasks });
+          }
+          if (!groups.length) {
+            itemSel.innerHTML = '<option value="">— no tasks found —</option>';
+          } else {
+            itemSel.innerHTML = groups.map(g =>
+              `<optgroup label="${(g.proj || 'Project').replace(/"/g,'&quot;')}">${
+                g.tasks.map(t => `<option value="${t.id}" data-label="${(t.title || '').replace(/"/g,'&quot;')}">${(t.title || '(untitled)').slice(0, 50)}</option>`).join('')
+              }</optgroup>`
+            ).join('');
+          }
+        } else {
+          const items = HubLinks.resolveItems(tool);
+          itemSel.innerHTML = items.length
+            ? items.map(it => `<option value="${it.id}" data-label="${(it.label || '').replace(/"/g,'&quot;')}">${(it.label || '(untitled)').slice(0, 50)}</option>`).join('')
+            : '<option value="">— no items found —</option>';
+        }
       } catch {
         itemSel.innerHTML = '<option value="">— unavailable —</option>';
       }
+      filterItems(side);
+    }
+
+    function filterItems(side) {
+      const q = (document.getElementById(`nl-search-${side}`).value || '').toLowerCase().trim();
+      const itemSel = document.getElementById(`nl-item-${side}`);
+      let total = 0, visible = 0;
+      // Walk options, hiding non-matches; hide empty optgroups
+      const opts = itemSel.querySelectorAll('option');
+      opts.forEach(opt => {
+        if (!opt.value) return; // keep placeholder
+        total++;
+        const match = !q || opt.text.toLowerCase().includes(q);
+        opt.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      itemSel.querySelectorAll('optgroup').forEach(grp => {
+        const anyVisible = Array.from(grp.querySelectorAll('option')).some(o => o.style.display !== 'none');
+        grp.style.display = anyVisible ? '' : 'none';
+      });
+      const countEl = document.getElementById(`nl-count-${side}`);
+      if (total > 0) countEl.textContent = q ? `${visible}/${total}` : `${total}`;
+      else countEl.textContent = '';
     }
 
     function confirmNewLink() {
@@ -877,6 +1026,197 @@
       closeLinkModal();
     }
 
+    // ── Node info panel ───────────────────────────────────────
+    let _currentNodeId = null;
+
+    function fetchNodeMeta(tool, itemId) {
+      try {
+        if (tool === 'project-hub') {
+          const data = HubStorage.get('project-hub-v1') || {};
+          for (const p of (data.projects || [])) {
+            const t = (p.tasks || []).find(t => t.id === itemId);
+            if (t) return [
+              { k: 'Project', v: p.name || '—' },
+              { k: 'Status',  v: t.status || '—' },
+              { k: 'Priority',v: t.priority || '—' },
+            ];
+          }
+        }
+        if (tool === 'decision-hub') {
+          const data = HubStorage.get('decision-hub-v1') || [];
+          const d = data.find(d => d.id === itemId);
+          if (d) return [
+            { k: 'Type',       v: d.type || '—' },
+            { k: 'Confidence', v: d.confidence != null ? d.confidence + '%' : '—' },
+            { k: 'Status',     v: d.status || '—' },
+          ];
+        }
+        if (tool === 'goals-hub') {
+          const data = HubStorage.get('goals-hub-v1') || {};
+          for (const q of (data.quarters || [])) {
+            const o = (q.objectives || []).find(o => o.id === itemId);
+            if (o) return [{ k: 'Quarter', v: q.label || '—' }];
+          }
+        }
+        if (tool === 'risk-hub') {
+          const data = HubStorage.get('risk-hub-v1') || {};
+          const r = (data.risks || []).find(r => r.id === itemId);
+          if (r) return [
+            { k: 'Category', v: r.category || '—' },
+            { k: 'Status',   v: r.status || '—' },
+          ];
+        }
+        if (tool === 'tool-portfolio') {
+          const data = HubStorage.get('tool-portfolio-v1') || [];
+          const t = data.find(t => t.id === itemId);
+          if (t) return [
+            { k: 'Ring',     v: t.ring || '—' },
+            { k: 'Status',   v: t.status || '—' },
+            { k: 'Category', v: t.category || '—' },
+          ];
+        }
+      } catch {}
+      return [];
+    }
+
+    function showNodePanel(nodeId) {
+      const node = nodesMap.get(nodeId);
+      if (!node) return;
+      _currentNodeId = nodeId;
+      closeEdgePanel();
+
+      document.getElementById('np-tool-tag').textContent = TOOL_LABELS[node.tool] || node.tool;
+      document.getElementById('np-label').textContent = node.label;
+
+      const meta = fetchNodeMeta(node.tool, node.itemId);
+      document.getElementById('np-meta').innerHTML = meta
+        .map(m => `<span class="np-meta-key">${m.k}:</span> ${m.v}`)
+        .join('<br>');
+
+      const openBtn = document.getElementById('np-open-btn');
+      openBtn.textContent = `Open in ${TOOL_LABELS[node.tool] || node.tool}`;
+      openBtn.onclick = () => HubLinks.navigateTo(node.tool, node.itemId);
+
+      document.getElementById('np-link-btn').onclick = () => {
+        closeNodePanel();
+        openNewLinkModal({ side: 'a', tool: node.tool, itemId: node.itemId });
+      };
+
+      document.getElementById('node-panel').classList.add('visible');
+    }
+
+    function closeNodePanel() {
+      document.getElementById('node-panel').classList.remove('visible');
+      _currentNodeId = null;
+    }
+
+    // ── Right-click context menu ──────────────────────────────
+    function dismissContextMenu() {
+      const m = document.getElementById('graph-ctx-menu');
+      m.style.display = 'none';
+      m.innerHTML = '';
+      document.removeEventListener('keydown', _ctxKeyHandler);
+    }
+
+    function _ctxKeyHandler(e) {
+      if (e.key === 'Escape') dismissContextMenu();
+    }
+
+    function toggleToolVisibility(tool) {
+      if (hiddenTools.has(tool)) {
+        hiddenTools.delete(tool);
+      } else {
+        hiddenTools.add(tool);
+      }
+      // Sync filter chip
+      const chip = document.querySelector(`.filter-chip[data-tool="${tool}"]`);
+      if (chip) chip.classList.toggle('active', !hiddenTools.has(tool));
+      applyLeaves();
+    }
+
+    function showContextMenu(clientX, clientY, node) {
+      dismissContextMenu();
+      const m = document.getElementById('graph-ctx-menu');
+      const items = [];
+
+      if (node) {
+        const toolName = TOOL_LABELS[node.tool] || node.tool;
+        items.push({ label: `Open in ${toolName}`, action: () => HubLinks.navigateTo(node.tool, node.itemId) });
+        items.push({ label: 'Add link from here…', action: () => openNewLinkModal({ side: 'a', tool: node.tool, itemId: node.itemId }) });
+        items.push({ sep: true });
+        items.push({ label: `Hide ${toolName} nodes`, action: () => toggleToolVisibility(node.tool) });
+      } else {
+        items.push({ label: 'Fit to screen', action: fitGraph });
+        items.push({ label: '+ New link', action: () => openNewLinkModal() });
+      }
+
+      m.innerHTML = items.map(it =>
+        it.sep
+          ? '<div class="ctx-sep"></div>'
+          : `<button class="ctx-item">${it.label}</button>`
+      ).join('');
+
+      m.querySelectorAll('.ctx-item').forEach((btn, i) => {
+        const actionItem = items.filter(it => !it.sep)[i];
+        btn.onclick = () => { dismissContextMenu(); actionItem.action(); };
+      });
+
+      // Clamp to viewport
+      const W = window.innerWidth, H = window.innerHeight;
+      const x = clientX + 172 > W ? W - 176 : clientX + 2;
+      const y = clientY + 140 > H ? H - 144 : clientY + 2;
+      m.style.left = x + 'px';
+      m.style.top  = y + 'px';
+      m.style.display = 'block';
+
+      document.addEventListener('mousedown', dismissContextMenu, { once: true });
+      document.addEventListener('keydown', _ctxKeyHandler);
+    }
+
+    // ── Drag-to-connect ───────────────────────────────────────
+    let _dlbTimer = null;
+
+    function getNearbyNode(draggedId, domPos) {
+      const offsets = [-22, 0, 22];
+      for (const dx of offsets) {
+        for (const dy of offsets) {
+          if (dx === 0 && dy === 0) continue;
+          const id = network.getNodeAt({ x: domPos.x + dx, y: domPos.y + dy });
+          if (id && id !== draggedId) return id;
+        }
+      }
+      return null;
+    }
+
+    function _hideDragBanner() {
+      clearTimeout(_dlbTimer);
+      const b = document.getElementById('drag-link-banner');
+      b.classList.remove('visible');
+    }
+
+    function showDragLinkPrompt(idA, idB) {
+      const nA = nodesMap.get(idA), nB = nodesMap.get(idB);
+      if (!nA || !nB) return;
+      _hideDragBanner();
+      const banner = document.getElementById('drag-link-banner');
+      document.getElementById('dlb-text').textContent =
+        `Link "${nA.label.slice(0,22)}" ↔ "${nB.label.slice(0,22)}"?`;
+      document.getElementById('dlb-yes').onclick = () => { _hideDragBanner(); _confirmDragLink(idA, idB); };
+      document.getElementById('dlb-no').onclick  = _hideDragBanner;
+      banner.classList.add('visible');
+      _dlbTimer = setTimeout(_hideDragBanner, 6000);
+    }
+
+    function _confirmDragLink(idA, idB) {
+      const nA = nodesMap.get(idA), nB = nodesMap.get(idB);
+      if (!nA || !nB) return;
+      HubLinks.addLink(
+        { tool: nA.tool, itemId: nA.itemId, label: nA.label },
+        { tool: nB.tool, itemId: nB.itemId, label: nB.label }
+      );
+      showToast('Link created');
+    }
+
     buildGraph();
     ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1']
       .forEach(k => HubStorage.subscribe(k, buildGraph));
@@ -890,6 +1230,8 @@
       }
     });
   </script>
+  <div id="graph-ctx-menu" style="display:none"></div>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('graph-hub');

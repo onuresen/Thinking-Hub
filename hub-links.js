@@ -34,7 +34,8 @@ window.HubLinks = (() => {
     'learning-hub': 'Learning Log',
     'retro-hub': 'Retrospective',
     'stakeholder-hub': 'Stakeholders',
-    'scrum-hub': 'Scrum Board'
+    'scrum-hub': 'Scrum Board',
+    'tool-portfolio': 'Tool Portfolio',
   };
 
   let _currentTool = null;
@@ -219,6 +220,17 @@ window.HubLinks = (() => {
           id: it.id,
           label: it.title || '(untitled story)',
           subtitle: it.priority || 'backlog'
+        }));
+      }
+
+      if (toolId === 'tool-portfolio') {
+        const data = HubStorage.get('tool-portfolio-v1');
+        if (!Array.isArray(data)) return [];
+        const normCat = s => (s || '').trim() || 'OTHER';
+        return data.map(t => ({
+          id: t.id,
+          label: t.name || '(untitled)',
+          subtitle: normCat(t.category)
         }));
       }
     } catch { }
