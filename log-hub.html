@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -313,6 +314,8 @@
       </div>
       <div class="save-bar">
         <div class="save-status" id="save-status"></div>
+        <button class="btn btn-ghost" onclick="sendLogToDecision()" style="font-size:11px" title="Create a decision from this entry">→ Decision</button>
+        <button class="btn btn-ghost" onclick="sendLogToTask()" style="font-size:11px" title="Create a task from this entry">→ Task</button>
         <button class="btn btn-primary" onclick="saveEntry()">Save entry</button>
         <button class="btn btn-ghost" onclick="deleteEntry()" id="delete-btn" style="display:none">Delete</button>
       </div>
@@ -556,6 +559,39 @@
     document.getElementById('save-status').textContent = 'Saved ✓';
     document.getElementById('save-status').className = 'save-status saved';
     document.getElementById('delete-btn').style.display = '';
+  }
+
+  function sendLogToDecision() {
+    const e = data.entries[activeDate];
+    if (!e || (!e.text && !e.learning)) { showToast('Write something first'); return; }
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({
+      id, title: 'Log ' + activeDate,
+      summary: (e.text || '').slice(0, 300),
+      reasoning: e.learning || '',
+      status: 'open', type: 'tactical', cynefin: '', confidence: 3,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      projectId: '', tags: [], options: '', outcome: ''
+    });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision created from log entry');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  function sendLogToTask() {
+    const e = data.entries[activeDate];
+    if (!e || !e.text) { showToast('Write something first'); return; }
+    const phData = HubStorage.get('project-hub-v1');
+    const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
+    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    const title = e.text.slice(0, 80).replace(/\n/g, ' ');
+    const taskId = 'tsk-' + Date.now().toString(36);
+    const proj = projects[0];
+    if (!Array.isArray(proj.tasks)) proj.tasks = [];
+    proj.tasks.push({ taskId, title, status: 'open', priority: 'med', assignees: [], createdAt: new Date().toISOString() });
+    HubStorage.set('project-hub-v1', phData);
+    showToast('Task added to ' + proj.name);
   }
 
   function autosave() {
