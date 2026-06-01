@@ -7,7 +7,8 @@
     <title>Tool Portfolio Hub</title>
     <script src="hub-storage.js"></script>
     <script src="hub-utils.js"></script>
-  <script src="hub-links.js"></script>
+    <script src="hub-links.js"></script>
+    <script src="hub-toast.js"></script>
     <script src="hub-data.js"></script>
     <script src="hub-bootstrap.js"></script>
     <link rel="stylesheet"
@@ -415,7 +416,7 @@
     <div class="sidebar-backdrop" id="tp-backdrop" onclick="closeSidebar()"></div>
     <div class="sidebar">
         <div class="sidebar-title">Tool Portfolio</div>
-        <button class="btn primary" onclick="createTool()">＋ Add Tool</button>
+        <button class="btn btn-primary" onclick="createTool()">＋ Add Tool</button>
         <div class="sidebar-search-wrap">
             <input class="sidebar-search" id="sidebar-search" type="text" placeholder="Filter tools…" oninput="onSearchInput()" />
             <button class="sidebar-search-clear" id="search-clear" onclick="clearSearch()">✕</button>
