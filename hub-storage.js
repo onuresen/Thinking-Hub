@@ -23,6 +23,16 @@
  *   // Connect to Supabase (from hub.html cloud panel):
  *   await HubStorage.useSupabase('https://xxx.supabase.co', 'anon-key', 'ws-id');
  */
+
+// Apply persisted theme immediately — runs before first paint so tools never
+// flash dark when the user has chosen light mode.
+(function () {
+  try {
+    var t = localStorage.getItem('th-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  } catch {}
+})();
+
 window.HubStorage = (() => {
 
   // ── State ─────────────────────────────────────────────────────────────────

@@ -2599,7 +2599,16 @@
       searchInput.className = 'input ov-filter-search';
       searchInput.placeholder = 'Search projects…';
       searchInput.value = of.search;
-      searchInput.oninput = e => { state.overviewFilter.search = e.target.value; renderContent(); };
+      searchInput.oninput = e => {
+        state.overviewFilter.search = e.target.value;
+        const cursorPos = e.target.selectionStart;
+        clearTimeout(state._ovSearchTimer);
+        state._ovSearchTimer = setTimeout(() => {
+          renderContent();
+          const el = document.querySelector('.ov-filter-search');
+          if (el) { el.focus(); try { el.setSelectionRange(cursorPos, cursorPos); } catch {} }
+        }, 300);
+      };
       filterBar.appendChild(searchInput);
 
       // Member chips
