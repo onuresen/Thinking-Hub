@@ -5,23 +5,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thinking Hub — 20+ Tools. One Browser Tab.</title>
-  <meta name="description" content="A personal productivity suite — project tracker, decision log, goal planner, risk register, and 15+ more tools. No install, no server. Just open and work.">
+  <meta name="description"
+    content="A personal productivity suite — project tracker, decision log, goal planner, risk register, and 15+ more tools. No install, no server. Just open and work.">
 
   <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230d1117'/><text y='.9em' font-size='62' x='50%25' text-anchor='middle' dominant-baseline='hanging' dy='8'>⬡</text></svg>">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
   <!-- Open Graph -->
-  <meta property="og:type"        content="website">
-  <meta property="og:url"         content="https://onuresen.github.io/Thinking-Hub/">
-  <meta property="og:title"       content="Thinking Hub — 20+ Tools. One Browser Tab.">
-  <meta property="og:description" content="Project tracker, decision log, goal planner, risk register, and 15+ more tools in a single HTML file. No install, no server, no framework.">
-  <meta property="og:image"       content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://onuresen.github.io/Thinking-Hub/">
+  <meta property="og:title" content="Thinking Hub — 20+ Tools. One Browser Tab.">
+  <meta property="og:description"
+    content="Project tracker, decision log, goal planner, risk register, and 15+ more tools in a single HTML file. No install, no server, no framework.">
+  <meta property="og:image" content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
 
   <!-- Twitter / X -->
-  <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="Thinking Hub — 20+ Tools. One Browser Tab.">
-  <meta name="twitter:description" content="A personal productivity suite in a single HTML file. No install. No server. Just open and work.">
-  <meta name="twitter:image"       content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Thinking Hub — 20+ Tools. One Browser Tab.">
+  <meta name="twitter:description"
+    content="A personal productivity suite in a single HTML file. No install. No server. Just open and work.">
+  <meta name="twitter:image" content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
 
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -108,6 +111,7 @@
       padding: 6px 10px 8px;
       border-bottom: 1px solid var(--border);
     }
+
     .profile-chip {
       font-size: 9px;
       font-family: var(--font-mono);
@@ -121,14 +125,30 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .profile-chip:hover { color: var(--text); border-color: var(--border); }
-    .profile-chip.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-glow); }
+
+    .profile-chip:hover {
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .profile-chip.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent-glow);
+    }
 
     .nav-group {
       margin-bottom: 6px;
     }
-    .nav-group.collapsed .nav-item { display: none; }
-    .nav-group-arrow { margin-right: 4px; }
+
+    .nav-group.collapsed .nav-item {
+      display: none;
+    }
+
+    .nav-group-arrow {
+      margin-right: 4px;
+    }
+
     .nav-group-label {
       font-family: var(--font-mono);
       font-size: 9px;
@@ -138,8 +158,15 @@
       color: var(--text3);
       padding: 10px 8px 5px;
     }
-    .nav-group-label.collapsible { cursor: pointer; user-select: none; }
-    .nav-group-label.collapsible:hover { color: var(--text2); }
+
+    .nav-group-label.collapsible {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .nav-group-label.collapsible:hover {
+      color: var(--text2);
+    }
 
     .nav-item {
       display: flex;
@@ -206,7 +233,12 @@
       overflow: hidden;
       flex-shrink: 0;
     }
-    .proj-ctx-bar { height: 3px; width: 100%; }
+
+    .proj-ctx-bar {
+      height: 3px;
+      width: 100%;
+    }
+
     .proj-ctx-name {
       font-size: 11.5px;
       font-weight: 600;
@@ -216,12 +248,14 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .proj-ctx-stats {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       padding: 0 10px 8px;
     }
+
     .proj-ctx-stat {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -230,7 +264,11 @@
       border-radius: var(--r-sm);
       padding: 2px 6px;
     }
-    .proj-ctx-stat.highlight { color: var(--accent); background: var(--accent-dim); }
+
+    .proj-ctx-stat.highlight {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
 
     /* ── Cloud connection panel ─────────────────────────────────────── */
     .cloud-status-row {
@@ -704,7 +742,10 @@
       justify-content: space-between;
       letter-spacing: 0.3px;
     }
-    .stat-stale { color: var(--accent-like); }
+
+    .stat-stale {
+      color: var(--accent-like);
+    }
 
     /* ── Dashboard view tabs ──────────────────────── */
     .dash-tabs {
@@ -713,22 +754,53 @@
       margin-bottom: 24px;
       border-bottom: 1px solid var(--border);
     }
+
     .dash-tab {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      padding: 6px 18px; margin-bottom: -1px;
-      font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
-      color: var(--text3); cursor: pointer; transition: color 0.12s, border-color 0.12s;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 6px 18px;
+      margin-bottom: -1px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      cursor: pointer;
+      transition: color 0.12s, border-color 0.12s;
     }
-    .dash-tab:hover { color: var(--text); }
-    .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .dash-tab:hover {
+      color: var(--text);
+    }
+
+    .dash-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
 
     /* ── Today view ───────────────────────────────── */
-    .today-card-urgent { border-color: rgba(239,68,68,0.3) !important; }
-    .today-all-clear {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 64px 0; gap: 8px; color: var(--text3); font-size: 13px; text-align: center;
+    .today-card-urgent {
+      border-color: rgba(239, 68, 68, 0.3) !important;
     }
-    .today-all-clear-icon { font-size: 38px; opacity: 0.35; margin-bottom: 6px; }
+
+    .today-all-clear {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 0;
+      gap: 8px;
+      color: var(--text3);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .today-all-clear-icon {
+      font-size: 38px;
+      opacity: 0.35;
+      margin-bottom: 6px;
+    }
 
     /* ── iframe ─────────────────────────────────────── */
     #app-frame {
@@ -742,13 +814,24 @@
 
     /* ── Loading progress bar (4D) ─────────────────── */
     @keyframes progress-run {
-      0%   { transform: translateX(-100%); }
-      60%  { transform: translateX(20%); }
-      100% { transform: translateX(110%); }
+      0% {
+        transform: translateX(-100%);
+      }
+
+      60% {
+        transform: translateX(20%);
+      }
+
+      100% {
+        transform: translateX(110%);
+      }
     }
+
     #load-bar {
       position: absolute;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       height: 2px;
       overflow: hidden;
       pointer-events: none;
@@ -756,7 +839,11 @@
       opacity: 0;
       transition: opacity 0.15s;
     }
-    #load-bar.active { opacity: 1; }
+
+    #load-bar.active {
+      opacity: 1;
+    }
+
     #load-bar::after {
       content: '';
       display: block;
@@ -879,6 +966,7 @@
       border-bottom: 1px solid var(--border);
       margin-bottom: 20px;
     }
+
     .settings-tab {
       padding: 8px 14px;
       font-size: 12px;
@@ -892,10 +980,23 @@
       cursor: pointer;
       transition: color 0.15s, border-color 0.15s;
     }
-    .settings-tab:hover { color: var(--text); }
-    .settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .settings-pane { display: none; }
-    .settings-pane.active { display: block; }
+
+    .settings-tab:hover {
+      color: var(--text);
+    }
+
+    .settings-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .settings-pane {
+      display: none;
+    }
+
+    .settings-pane.active {
+      display: block;
+    }
 
     /* ── Settings field groups ──────────────────── */
     .sfield-group {
@@ -903,7 +1004,13 @@
       padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
-    .sfield-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .sfield-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
     .sfield-group-title {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -915,6 +1022,7 @@
       align-items: center;
       gap: 6px;
     }
+
     .sfield-group-title .badge {
       font-family: var(--font-body);
       font-size: 10px;
@@ -925,13 +1033,16 @@
       padding: 1px 6px;
       border-radius: 20px;
     }
+
     .sfield-row {
       display: flex;
       gap: 6px;
       align-items: center;
       margin-bottom: 8px;
     }
-    .sfield-row input, .sfield-row select {
+
+    .sfield-row input,
+    .sfield-row select {
       flex: 1;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -942,15 +1053,19 @@
       font-family: var(--font-body);
       outline: none;
     }
-    .sfield-row input:focus, .sfield-row select:focus {
+
+    .sfield-row input:focus,
+    .sfield-row select:focus {
       border-color: var(--accent);
     }
+
     .sfield-hint {
       font-size: 11px;
       color: var(--text3);
       margin-top: 4px;
       line-height: 1.5;
     }
+
     .sfield-status {
       font-size: 11px;
       margin-top: 6px;
@@ -958,9 +1073,24 @@
       border-radius: var(--r-sm);
       display: none;
     }
-    .sfield-status.ok { display: block; background: rgba(100,200,100,.12); color: #6db86d; }
-    .sfield-status.err { display: block; background: rgba(220,80,80,.12); color: var(--accent-nope); }
-    .sfield-status.info { display: block; background: var(--accent-dim); color: var(--accent); }
+
+    .sfield-status.ok {
+      display: block;
+      background: rgba(100, 200, 100, .12);
+      color: #6db86d;
+    }
+
+    .sfield-status.err {
+      display: block;
+      background: rgba(220, 80, 80, .12);
+      color: var(--accent-nope);
+    }
+
+    .sfield-status.info {
+      display: block;
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
 
     /* ── AI Bottom Drawer ───────────────────────── */
     /* ── AI Floating Chat Panel ─────────────────── */
@@ -972,7 +1102,8 @@
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      pointer-events: none; /* children handle events */
+      pointer-events: none;
+      /* children handle events */
     }
 
     /* Collapsed tab button */
@@ -992,12 +1123,29 @@
       font-weight: 600;
       color: var(--text2);
       transition: background 0.15s, color 0.15s;
-      box-shadow: 0 -2px 12px rgba(0,0,0,.18);
+      box-shadow: 0 -2px 12px rgba(0, 0, 0, .18);
     }
-    #ai-tab:hover { background: var(--surface2); color: var(--text); }
-    #ai-tab .ai-tab-icon { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
-    #ai-tab .ai-tab-hint { color: var(--text3); font-weight: 400; font-size: 11px; }
-    #ai-drawer.open #ai-tab { display: none; }
+
+    #ai-tab:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    #ai-tab .ai-tab-icon {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    #ai-tab .ai-tab-hint {
+      color: var(--text3);
+      font-weight: 400;
+      font-size: 11px;
+    }
+
+    #ai-drawer.open #ai-tab {
+      display: none;
+    }
 
     /* Floating panel */
     #ai-panel {
@@ -1012,10 +1160,13 @@
       border: 1px solid var(--border);
       border-bottom: none;
       border-radius: var(--r) var(--r) 0 0;
-      box-shadow: 0 -4px 24px rgba(0,0,0,.28);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, .28);
       overflow: hidden;
     }
-    #ai-drawer.open #ai-panel { display: flex; }
+
+    #ai-drawer.open #ai-panel {
+      display: flex;
+    }
 
     /* Drag-resize handle */
     #ai-resize-handle {
@@ -1027,6 +1178,7 @@
       justify-content: center;
       flex-shrink: 0;
     }
+
     #ai-resize-handle::after {
       content: '';
       display: block;
@@ -1036,7 +1188,10 @@
       background: var(--border2);
       transition: background 0.15s;
     }
-    #ai-resize-handle:hover::after { background: var(--text3); }
+
+    #ai-resize-handle:hover::after {
+      background: var(--text3);
+    }
 
     /* Panel header */
     #ai-panel-header {
@@ -1047,13 +1202,20 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-    #ai-panel-header .ai-tab-icon { color: var(--accent); font-family: var(--font-mono); font-size: 13px; }
+
+    #ai-panel-header .ai-tab-icon {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
     #ai-panel-title {
       flex: 1;
       font-size: 12px;
       font-weight: 600;
       color: var(--text2);
     }
+
     #ai-panel-close {
       background: none;
       border: none;
@@ -1064,7 +1226,10 @@
       line-height: 1;
       transition: color 0.15s;
     }
-    #ai-panel-close:hover { color: var(--text); }
+
+    #ai-panel-close:hover {
+      color: var(--text);
+    }
 
     /* Result / conversation area */
     #ai-result-area {
@@ -1076,7 +1241,10 @@
       color: var(--text2);
       line-height: 1.6;
     }
-    #ai-result-area.visible { display: block; }
+
+    #ai-result-area.visible {
+      display: block;
+    }
 
     /* Sample prompts */
     #ai-prompts {
@@ -1087,7 +1255,11 @@
       justify-content: center;
       gap: 6px;
     }
-    #ai-prompts.hidden { display: none; }
+
+    #ai-prompts.hidden {
+      display: none;
+    }
+
     .ai-prompt-label {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -1096,6 +1268,7 @@
       color: var(--text3);
       margin-bottom: 4px;
     }
+
     .ai-prompt-chip {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -1108,7 +1281,11 @@
       font-family: var(--font-body);
       transition: border-color 0.15s, color 0.15s;
     }
-    .ai-prompt-chip:hover { border-color: var(--accent); color: var(--text); }
+
+    .ai-prompt-chip:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
 
     /* Input row */
     #ai-input-row {
@@ -1119,6 +1296,7 @@
       border-top: 1px solid var(--border);
       flex-shrink: 0;
     }
+
     #ai-input {
       flex: 1;
       background: var(--surface2);
@@ -1134,8 +1312,15 @@
       max-height: 100px;
       transition: border-color 0.15s;
     }
-    #ai-input:focus { border-color: var(--accent); }
-    #ai-input::placeholder { color: var(--text3); }
+
+    #ai-input:focus {
+      border-color: var(--accent);
+    }
+
+    #ai-input::placeholder {
+      color: var(--text3);
+    }
+
     #ai-send-btn {
       background: var(--accent);
       color: #111;
@@ -1150,8 +1335,15 @@
       transition: opacity 0.15s;
       align-self: flex-end;
     }
-    #ai-send-btn:hover { opacity: 0.88; }
-    #ai-send-btn:disabled { opacity: 0.45; cursor: default; }
+
+    #ai-send-btn:hover {
+      opacity: 0.88;
+    }
+
+    #ai-send-btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
 
     #ai-no-key-hint {
       font-size: 11px;
@@ -1168,6 +1360,7 @@
       font-size: 12px;
       margin-bottom: 6px;
     }
+
     .ai-capture-type {
       font-size: 10px;
       font-family: var(--font-mono);
@@ -1176,18 +1369,21 @@
       color: var(--accent);
       margin-bottom: 4px;
     }
+
     .ai-capture-title {
       font-size: 13px;
       font-weight: 600;
       color: var(--text);
       margin-bottom: 6px;
     }
+
     .ai-capture-meta {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       margin-bottom: 8px;
     }
+
     .ai-capture-chip {
       font-size: 10px;
       background: var(--surface);
@@ -1196,15 +1392,18 @@
       padding: 2px 7px;
       color: var(--text2);
     }
+
     .ai-capture-actions {
       display: flex;
       gap: 6px;
       margin-top: 8px;
     }
+
     .ai-capture-actions .btn {
       font-size: 11px;
       padding: 4px 10px;
     }
+
     .ai-clarify {
       background: var(--accent-dim);
       border-radius: var(--r-sm);
@@ -1215,8 +1414,13 @@
     }
 
     @media (max-width: 700px) {
-      #ai-drawer { right: 8px; }
-      #ai-panel { width: calc(100vw - 16px); }
+      #ai-drawer {
+        right: 8px;
+      }
+
+      #ai-panel {
+        width: calc(100vw - 16px);
+      }
     }
 
     /* ── Export Scope Selector ───────────────────── */
@@ -1256,7 +1460,7 @@
       cursor: pointer;
     }
 
-    .export-scope-option input:checked + .export-scope-card {
+    .export-scope-option input:checked+.export-scope-card {
       border-color: var(--accent);
       background: var(--accent-dim);
     }
@@ -1265,7 +1469,7 @@
       border-color: var(--border2);
     }
 
-    .export-scope-option input:checked + .export-scope-card:hover {
+    .export-scope-option input:checked+.export-scope-card:hover {
       border-color: var(--accent);
     }
 
@@ -1290,7 +1494,10 @@
       background: rgba(0, 0, 0, 0.55);
       z-index: 199;
     }
-    .sidebar-backdrop.open { display: block; }
+
+    .sidebar-backdrop.open {
+      display: block;
+    }
 
     /* ── Hamburger button (hidden on desktop) ───────────────────── */
     .mob-menu-btn {
@@ -1306,7 +1513,11 @@
       flex-shrink: 0;
       transition: color 0.1s, background 0.1s;
     }
-    .mob-menu-btn:hover { color: var(--text); background: var(--surface2); }
+
+    .mob-menu-btn:hover {
+      color: var(--text);
+      background: var(--surface2);
+    }
 
     /* ════════════════════════════════════════════════════════════
        Mobile layout — ≤ 640px
@@ -1321,12 +1532,15 @@
         bottom: 0;
         z-index: 200;
         transform: translateX(-100%);
-        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        transition: transform 0.22s cubic-bezier(.4, 0, .2, 1);
         width: 240px;
         min-width: 240px;
         box-shadow: 6px 0 32px rgba(0, 0, 0, 0.45);
       }
-      .sidebar.open { transform: translateX(0); }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
 
       /* Nav items: bigger touch targets */
       .nav-item {
@@ -1334,21 +1548,41 @@
         font-size: 14px;
         gap: 11px;
       }
-      .nav-icon { font-size: 15px; width: 18px; }
+
+      .nav-icon {
+        font-size: 15px;
+        width: 18px;
+      }
 
       /* Profile chips: slightly larger */
-      .profile-chip { font-size: 10.5px; padding: 5px 10px; }
+      .profile-chip {
+        font-size: 10.5px;
+        padding: 5px 10px;
+      }
 
       /* Main area fills full viewport width */
-      .main-area { width: 100%; }
+      .main-area {
+        width: 100%;
+      }
 
       /* Session bar: hide SESSION label, show hamburger */
-      .mob-menu-btn { display: flex; align-items: center; }
-      .session-label { display: none; }
-      #session-name { max-width: 140px; }
+      .mob-menu-btn {
+        display: flex;
+        align-items: center;
+      }
+
+      .session-label {
+        display: none;
+      }
+
+      #session-name {
+        max-width: 140px;
+      }
 
       /* Hide tour button on mobile (secondary feature) */
-      .mob-tour-hide { display: none !important; }
+      .mob-tour-hide {
+        display: none !important;
+      }
 
       /* Breadcrumb: show only tool name, truncated */
       #breadcrumb {
@@ -1360,18 +1594,43 @@
       }
 
       /* Home dashboard: tighter padding */
-      #home-dashboard { padding: 20px 14px 36px; }
-      .home-greeting { font-size: 20px; }
-      .home-sub { margin-bottom: 18px; }
+      #home-dashboard {
+        padding: 20px 14px 36px;
+      }
+
+      .home-greeting {
+        font-size: 20px;
+      }
+
+      .home-sub {
+        margin-bottom: 18px;
+      }
 
       /* App grid: 2 columns on mobile */
       .app-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
       }
-      .app-card { padding: 12px 10px; gap: 4px; }
-      .app-card-desc { font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-      .app-card-icon { width: 28px; height: 28px; font-size: 13px; }
+
+      .app-card {
+        padding: 12px 10px;
+        gap: 4px;
+      }
+
+      .app-card-desc {
+        font-size: 11px;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .app-card-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 13px;
+      }
 
       /* Status grid: 1 column */
       .status-grid {
@@ -1381,8 +1640,16 @@
       }
 
       /* Recent strip: horizontal scroll instead of wrap */
-      .recent-strip { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; }
-      .recent-strip::-webkit-scrollbar { display: none; }
+      .recent-strip {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        margin-bottom: 20px;
+      }
+
+      .recent-strip::-webkit-scrollbar {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -1432,7 +1699,8 @@
 
     <!-- Session bar -->
     <div class="session-bar">
-      <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobileSidebar()" aria-label="Open navigation">☰</button>
+      <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobileSidebar()"
+        aria-label="Open navigation">☰</button>
       <span class="session-label" id="session-label-el">Session</span>
       <input id="session-name" type="text" placeholder="Name this session…" autocomplete="off" spellcheck="false">
       <div class="session-spacer"></div>
@@ -1465,7 +1733,7 @@
         <div class="home-sub" style="margin-bottom:16px">What are we working on?</div>
 
         <div class="dash-tabs">
-          <button class="dash-tab" id="dash-tab-today"    onclick="switchDashView('today')">Today</button>
+          <button class="dash-tab" id="dash-tab-today" onclick="switchDashView('today')">Today</button>
           <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
         </div>
 
@@ -1496,12 +1764,14 @@
     <div class="data-modal" style="width:460px;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div class="data-modal-title" id="data-modal-title" style="margin-bottom:0">Settings</div>
-        <button onclick="closeDataModal()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+        <button onclick="closeDataModal()"
+          style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
       </div>
 
       <!-- Tabs -->
       <div class="settings-tabs">
-        <button class="settings-tab active" id="stab-integrations" onclick="switchSettingsTab('integrations')">Integrations</button>
+        <button class="settings-tab active" id="stab-integrations"
+          onclick="switchSettingsTab('integrations')">Integrations</button>
         <button class="settings-tab" id="stab-data" onclick="switchSettingsTab('data')">Data &amp; Backup</button>
       </div>
 
@@ -1511,41 +1781,51 @@
         <!-- AI Assistant -->
         <div class="sfield-group">
           <div class="sfield-group-title">✦ AI Assistant <span class="badge">Claude Haiku</span></div>
-          <div class="sfield-hint" style="margin-bottom:8px">Your key is stored locally only — never sent anywhere except Anthropic's API.</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Your key is stored locally only — never sent anywhere
+            except Anthropic's API.</div>
           <div class="sfield-row">
             <input type="password" id="ai-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
               oninput="onAiKeyInput(this.value)">
-            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="toggleAiKeyVisible()">Show</button>
-            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" id="ai-key-test-btn" onclick="testAiKey()">Test</button>
+            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap"
+              onclick="toggleAiKeyVisible()">Show</button>
+            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" id="ai-key-test-btn"
+              onclick="testAiKey()">Test</button>
           </div>
           <div class="sfield-status" id="ai-key-status"></div>
-          <div class="sfield-hint">Powers the AI Assistant drawer (bottom of screen). Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
+          <div class="sfield-hint">Powers the AI Assistant drawer (bottom of screen). Get a key at <a
+              href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
+          </div>
         </div>
 
         <!-- Supabase -->
         <div class="sfield-group">
           <div class="sfield-group-title">☁ Supabase Cloud Sync</div>
-          <div class="sfield-hint" style="margin-bottom:8px">Optional — enables real-time sync across devices. Leave blank to stay local-only.</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Optional — enables real-time sync across devices. Leave
+            blank to stay local-only.</div>
           <div style="margin-bottom:6px">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Project URL</div>
-            <input type="text" id="sb-url-input" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false"
+            <input type="text" id="sb-url-input" placeholder="https://xxxx.supabase.co" autocomplete="off"
+              spellcheck="false"
               style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
           </div>
           <div style="margin-bottom:8px">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Anon Key</div>
             <div class="sfield-row" style="margin-bottom:0">
               <input type="password" id="sb-key-input" placeholder="eyJ…" autocomplete="off" spellcheck="false">
-              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" onclick="toggleSbKeyVisible()">Show</button>
+              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap"
+                onclick="toggleSbKeyVisible()">Show</button>
             </div>
           </div>
           <div style="margin-bottom:8px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Workspace ID <span style="color:var(--text3);font-weight:400">(leave blank to create new)</span></div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Workspace ID <span
+                style="color:var(--text3);font-weight:400">(leave blank to create new)</span></div>
             <input type="text" id="sb-ws-input" placeholder="optional — shared workspace ID"
               style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn btn-primary" style="font-size:12px" onclick="connectSupabase()">Connect</button>
-            <button class="btn btn-ghost" style="font-size:12px" id="sb-disconnect-btn" onclick="disconnectSupabase()" style="display:none">Disconnect</button>
+            <button class="btn btn-ghost" style="font-size:12px" id="sb-disconnect-btn" onclick="disconnectSupabase()"
+              style="display:none">Disconnect</button>
           </div>
           <div class="sfield-status" id="sb-status"></div>
         </div>
@@ -1555,16 +1835,20 @@
           <div class="sfield-group-title">⟡ Obsidian</div>
           <div style="margin-bottom:8px">
             <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Vault Name</div>
-            <input type="text" id="obsidian-vault-name" placeholder="e.g. My Vault" oninput="saveVaultSetting(this.value)"
+            <input type="text" id="obsidian-vault-name" placeholder="e.g. My Vault"
+              oninput="saveVaultSetting(this.value)"
               style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
             <div class="sfield-hint">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
           </div>
           <div id="obsidian-vault-picker" style="display:none">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <button class="btn btn-ghost" onclick="pickObsidianVault()" style="font-size:12px">📁 Pick Vault Folder</button>
-              <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()" style="font-size:12px;display:none">↻ Re-index</button>
+              <button class="btn btn-ghost" onclick="pickObsidianVault()" style="font-size:12px">📁 Pick Vault
+                Folder</button>
+              <button class="btn btn-ghost" id="obsidian-reindex-btn" onclick="reindexObsidianVault()"
+                style="font-size:12px;display:none">↻ Re-index</button>
             </div>
-            <div id="obsidian-index-status" class="sfield-hint" style="margin-top:6px">Pick your vault folder to enable note autocomplete</div>
+            <div id="obsidian-index-status" class="sfield-hint" style="margin-top:6px">Pick your vault folder to enable
+              note autocomplete</div>
           </div>
         </div>
 
@@ -1576,18 +1860,26 @@
         <div class="data-size" id="data-size-str" style="margin-bottom:16px">0 KB in local storage</div>
 
         <!-- MCP Sync -->
-        <div id="mcp-sync-panel" style="display:none;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+        <div id="mcp-sync-panel"
+          style="display:none;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
           <div class="sfield-group-title">⬡ Local MCP Sync</div>
-          <div class="sfield-hint" style="margin-bottom:8px">Writes a <code style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so the local MCP server can read your data without cloud.</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Writes a <code
+              style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so
+            the local MCP server can read your data without cloud.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
             <button class="btn btn-ghost" onclick="pickMcpFolder()" style="font-size:12px">📁 Pick Sync Folder</button>
-            <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)" style="font-size:12px;display:none">↑ Sync Now</button>
-            <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()" style="font-size:12px;display:none">↓ Load from file</button>
+            <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)"
+              style="font-size:12px;display:none">↑ Sync Now</button>
+            <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()"
+              style="font-size:12px;display:none">↓ Load from file</button>
           </div>
           <div id="mcp-sync-status" class="sfield-hint">No folder selected — pick a folder to enable</div>
-          <div id="mcp-path-hint" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
-            <div id="mcp-path-value" style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
+          <div id="mcp-path-hint"
+            style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as
+              <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
+            <div id="mcp-path-value"
+              style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
           </div>
         </div>
 
@@ -1635,38 +1927,38 @@
 
     const APPS = [
       // ── TODAY ──────────────────────────────────────────────────────────
-      { id: 'project-hub',     label: 'Project Hub',      group: 'TODAY',     wg: 'TODAY',      icon: '◈',   file: 'project-hub.html',     desc: 'Track milestones, tasks and workstreams across a project' },
-      { id: 'frameworks-hub',   label: 'Frameworks',       group: 'TODAY',     wg: 'TODAY',      icon: '▾',   file: 'frameworks-hub.html',  desc: 'Visual methodology tools — Blocked Depth iceberg, V-Model, and more' },
-      { id: 'schedule',        label: 'Schedule',          group: 'TODAY',     wg: 'TODAY',      icon: '▦',   file: 'schedule.html',        desc: 'Timeline and calendar views for tasks, milestones and events' },
-      { id: 'log-hub',         label: 'Daily Log',         group: 'TODAY',     wg: 'TODAY',      icon: '◷',   file: 'log-hub.html',         desc: 'Private daily journal with mood tracking and streak calendar' },
+      { id: 'project-hub', label: 'Project Hub', group: 'TODAY', wg: 'TODAY', icon: '◈', file: 'project-hub.html', desc: 'Track milestones, tasks and workstreams across a project' },
+      { id: 'blocked-depth', label: 'Blocked Depth', group: 'TODAY', wg: 'TODAY', icon: '▾', file: 'blocked-depth.html', desc: 'Visualise blocked task cascade — every task, milestone, and person frozen downstream' },
+      { id: 'schedule', label: 'Schedule', group: 'TODAY', wg: 'TODAY', icon: '▦', file: 'schedule.html', desc: 'Timeline and calendar views for tasks, milestones and events' },
+      { id: 'log-hub', label: 'Daily Log', group: 'TODAY', wg: 'TODAY', icon: '◷', file: 'log-hub.html', desc: 'Private daily journal with mood tracking and streak calendar' },
       // ── THIS WEEK ───────────────────────────────────────────────────────
-      { id: 'review-hub',      label: 'Weekly Review',     group: 'WEEK',      wg: 'THIS WEEK',  icon: '↺',   file: 'review-hub.html',      desc: 'Structured weekly ritual — done, capture, next week big rocks' },
-      { id: 'goals-hub',       label: 'Goals Hub',         group: 'WEEK',      wg: 'THIS WEEK',  icon: '◎',   file: 'goals-hub.html',       desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
-      { id: 'meetings-hub',    label: 'Meeting Notes',     group: 'WEEK',      wg: 'THIS WEEK',  icon: '▣',   file: 'meetings-hub.html',    desc: 'Structured meeting notes with action items that flow into Project Hub' },
-      { id: 'scrum-hub',       label: 'Scrum Board',       group: 'WEEK',      wg: 'THIS WEEK',  icon: '⚡',   file: 'scrum-hub.html',       desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
+      { id: 'review-hub', label: 'Weekly Review', group: 'WEEK', wg: 'THIS WEEK', icon: '↺', file: 'review-hub.html', desc: 'Structured weekly ritual — done, capture, next week big rocks' },
+      { id: 'goals-hub', label: 'Goals Hub', group: 'WEEK', wg: 'THIS WEEK', icon: '◎', file: 'goals-hub.html', desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
+      { id: 'meetings-hub', label: 'Meeting Notes', group: 'WEEK', wg: 'THIS WEEK', icon: '▣', file: 'meetings-hub.html', desc: 'Structured meeting notes with action items that flow into Project Hub' },
+      { id: 'scrum-hub', label: 'Scrum Board', group: 'WEEK', wg: 'THIS WEEK', icon: '⚡', file: 'scrum-hub.html', desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
       // ── SITUATION ───────────────────────────────────────────────────────
-      { id: 'risk-hub',        label: 'Risk Register',     group: 'SITUATION', wg: 'SITUATION',  icon: '⚠',   file: 'risk-hub.html',        desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
-      { id: 'stakeholder-hub', label: 'Stakeholder Map',   group: 'SITUATION', wg: 'SITUATION',  icon: '◇',   file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
-      { id: 'decision-hub',    label: 'Decision Hub',      group: 'SITUATION', wg: 'SITUATION',  icon: '⊕',   file: 'decision-hub.html',    desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
-      { id: 'kmqt-board',      label: 'KMQT Board',        group: 'SITUATION', wg: 'SITUATION',  icon: '⊞',   file: 'kmqt-board.html',      desc: 'Known / Messy / Questions / Thinking structured board' },
+      { id: 'risk-hub', label: 'Risk Register', group: 'SITUATION', wg: 'SITUATION', icon: '⚠', file: 'risk-hub.html', desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
+      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'SITUATION', wg: 'SITUATION', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
+      { id: 'decision-hub', label: 'Decision Hub', group: 'SITUATION', wg: 'SITUATION', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
+      { id: 'kmqt-board', label: 'KMQT Board', group: 'SITUATION', wg: 'SITUATION', icon: '⊞', file: 'kmqt-board.html', desc: 'Known / Messy / Questions / Thinking structured board' },
       // ── BOOKSHELF ───────────────────────────────────────────────────────
-      { id: 'learning-hub',    label: 'Learning Log',      group: 'SHELF',     wg: 'BOOKSHELF',  icon: '◑',   file: 'learning-hub.html',    desc: 'Track books, articles, and courses with highlights and key insights' },
-      { id: 'idea-swiper',     label: 'Idea Swiper',       group: 'SHELF',     wg: 'BOOKSHELF',  icon: '⟳',   file: 'idea-swiper.html',     desc: 'Rapid triage — keep, park, or discard ideas' },
-      { id: 'graph-hub',       label: 'Dependency Graph',  group: 'SHELF',     wg: 'BOOKSHELF',  icon: '🕸️',  file: 'graph-hub.html',       desc: 'Visual map of your tasks, decisions, and ideas' },
-      { id: 'canvas-hub',      label: 'Spatial Canvas',    group: 'SHELF',     wg: 'BOOKSHELF',  icon: '✏️',  file: 'canvas-hub.html',      desc: 'Unstructured spatial notes for limitless ideation' },
-      { id: 'retro-hub',       label: 'Retro Board',       group: 'SHELF',     wg: 'BOOKSHELF',  icon: '⟲',   file: 'retro-hub.html',       desc: 'Async retrospectives with emoji reactions and markdown export' },
-      { id: 'tool-portfolio',  label: 'Tool Portfolio',    group: 'SHELF',     wg: 'BOOKSHELF',  icon: '🧰',  file: 'tool-portfolio.html',  desc: 'Curated map of tools, platforms, and vendors' },
+      { id: 'learning-hub', label: 'Learning Log', group: 'SHELF', wg: 'BOOKSHELF', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
+      { id: 'idea-swiper', label: 'Idea Swiper', group: 'SHELF', wg: 'BOOKSHELF', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
+      { id: 'graph-hub', label: 'Dependency Graph', group: 'SHELF', wg: 'BOOKSHELF', icon: '🕸️', file: 'graph-hub.html', desc: 'Visual map of your tasks, decisions, and ideas' },
+      { id: 'canvas-hub', label: 'Spatial Canvas', group: 'SHELF', wg: 'BOOKSHELF', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
+      { id: 'retro-hub', label: 'Retro Board', group: 'SHELF', wg: 'BOOKSHELF', icon: '⟲', file: 'retro-hub.html', desc: 'Async retrospectives with emoji reactions and markdown export' },
+      { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'SHELF', wg: 'BOOKSHELF', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
       // ── SYSTEM ──────────────────────────────────────────────────────────
-      { id: 'focus-hub',       label: 'Focus Timer',       group: 'SYSTEM',    wg: 'SYSTEM',     icon: '◉',   file: 'focus-hub.html',       desc: 'Pomodoro-style focus sessions linked to your tasks' },
-      { id: 'achievements-hub',label: 'Achievements',      group: 'SYSTEM',    wg: 'SYSTEM',     icon: '🏅',  file: 'achievements-hub.html',desc: 'Your productivity profile — badges, streaks & activity heatmap' },
-      { id: 'help-hub',        label: 'Help & Guide',      group: 'SYSTEM',    wg: 'SYSTEM',     icon: 'ℹ',   file: 'help-hub.html',        desc: 'Tool guide, framework reference, and suggested workflows' },
+      { id: 'focus-hub', label: 'Focus Timer', group: 'SYSTEM', wg: 'SYSTEM', icon: '◉', file: 'focus-hub.html', desc: 'Pomodoro-style focus sessions linked to your tasks' },
+      { id: 'achievements-hub', label: 'Achievements', group: 'SYSTEM', wg: 'SYSTEM', icon: '🏅', file: 'achievements-hub.html', desc: 'Your productivity profile — badges, streaks & activity heatmap' },
+      { id: 'help-hub', label: 'Help & Guide', group: 'SYSTEM', wg: 'SYSTEM', icon: 'ℹ', file: 'help-hub.html', desc: 'Tool guide, framework reference, and suggested workflows' },
     ];
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx:  { label: 'DX / Strategy', icon: '◈', tools: ['project-hub','frameworks-hub','goals-hub','decision-hub','kmqt-board','stakeholder-hub','risk-hub','meetings-hub','review-hub','learning-hub','focus-hub','log-hub','schedule'] },
-      bim: { label: 'BIM Mgmt',      icon: '⬡', tools: ['project-hub','schedule','meetings-hub','risk-hub','stakeholder-hub','review-hub','decision-hub','goals-hub','focus-hub','log-hub'] },
-      dev: { label: 'IT / Dev',      icon: '⌥', tools: ['project-hub','frameworks-hub','scrum-hub','graph-hub','decision-hub','kmqt-board','risk-hub','review-hub','focus-hub','log-hub','meetings-hub','retro-hub','goals-hub'] },
+      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'blocked-depth', 'goals-hub', 'decision-hub', 'kmqt-board', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'review-hub', 'learning-hub', 'focus-hub', 'log-hub', 'schedule'] },
+      bim: { label: 'BIM Mgmt', icon: '⬡', tools: ['project-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'review-hub', 'decision-hub', 'goals-hub', 'focus-hub', 'log-hub'] },
+      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'blocked-depth', 'scrum-hub', 'graph-hub', 'decision-hub', 'kmqt-board', 'risk-hub', 'review-hub', 'focus-hub', 'log-hub', 'meetings-hub', 'retro-hub', 'goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
@@ -1837,7 +2129,7 @@
           data.log.push({ appId, ts: new Date().toISOString() });
           if (data.log.length > 10000) data.log = data.log.slice(1000);
           HubStorage.set('hub-activity-v1', data);
-        } catch (e) {}
+        } catch (e) { }
       })(id);
 
       // Load iframe
@@ -1858,8 +2150,8 @@
         // content (e.g. vis-network in graph-hub) can re-render with correct colors.
         const theme = document.documentElement.getAttribute('data-theme');
         if (theme) {
-          try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch(e) {}
-          try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch(e) {}
+          try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch (e) { }
+          try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch (e) { }
         }
       };
 
@@ -1998,9 +2290,9 @@
       const days = Math.floor((Date.now() - date) / 86400000);
       const text = days === 0 ? 'updated today'
         : days === 1 ? 'updated yesterday'
-        : days < 7 ? `updated ${days}d ago`
-        : days < 30 ? `updated ${Math.floor(days / 7)}w ago`
-        : `updated ${Math.floor(days / 30)}mo ago`;
+          : days < 7 ? `updated ${days}d ago`
+            : days < 30 ? `updated ${Math.floor(days / 7)}w ago`
+              : `updated ${Math.floor(days / 30)}mo ago`;
       return { text, isStale: days > 13 };
     }
 
@@ -2154,19 +2446,19 @@
           if (objs.length) {
             const pct = objs.length
               ? Math.round(objs.reduce((s, o) => {
-                  const krs = o.keyResults || [];
-                  const op = krs.length ? Math.round(krs.reduce((ks, kr) => {
-                    if (kr.type === 'checkbox') return ks + (kr.done ? 100 : 0);
-                    return ks + Math.min(100, Math.round(((parseFloat(kr.current)||0) / (parseFloat(kr.target)||1)) * 100));
-                  }, 0) / krs.length) : 0;
-                  return s + op;
-                }, 0) / objs.length)
+                const krs = o.keyResults || [];
+                const op = krs.length ? Math.round(krs.reduce((ks, kr) => {
+                  if (kr.type === 'checkbox') return ks + (kr.done ? 100 : 0);
+                  return ks + Math.min(100, Math.round(((parseFloat(kr.current) || 0) / (parseFloat(kr.target) || 1)) * 100));
+                }, 0) / krs.length) : 0;
+                return s + op;
+              }, 0) / objs.length)
               : 0;
             const shown = objs.slice(0, 3);
             const rows = shown.map(o => `<div class="stat-item" data-tool="goals-hub" data-item-id="${_esc(o.id || '')}">
               <div class="stat-item-dot" style="background:${o.color || 'var(--accent)'}"></div>
               <div class="stat-item-text">${_esc(o.title || 'Objective')}</div>
-              <div class="stat-item-meta">${(o.keyResults||[]).length} KR</div>
+              <div class="stat-item-meta">${(o.keyResults || []).length} KR</div>
             </div>`).join('');
             const ghAge = relativeAge(latestTimestamp(objs.flatMap(o => [o, ...(o.keyResults || [])])));
             widgets.push({
@@ -2183,7 +2475,7 @@
       // ── Risk Register (risk-hub-v1) ────────────────────────────────────────
       try {
         const rh = JSON.parse(localStorage.getItem('risk-hub-v1') || '{}');
-        const open = (rh.risks || []).filter(r => !['mitigated','closed','resolved'].includes(r.status));
+        const open = (rh.risks || []).filter(r => !['mitigated', 'closed', 'resolved'].includes(r.status));
         if (open.length) {
           const bandColor = s => s <= 4 ? 'var(--accent-like)' : s <= 9 ? 'var(--accent-super)' : 'var(--accent-nope)';
           const shown = open.slice(0, 3);
@@ -2328,24 +2620,24 @@
           (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color }))
         );
         const dueToday = allTasks.filter(t => !t.done && t.due === todayStr);
-        const overdue  = allTasks.filter(t => !t.done && t.due && t.due < todayStr)
-                                 .sort((a, b) => a.due.localeCompare(b.due));
+        const overdue = allTasks.filter(t => !t.done && t.due && t.due < todayStr)
+          .sort((a, b) => a.due.localeCompare(b.due));
         if (dueToday.length || true) sections.push({ type: 'due-today', items: dueToday });
-        if (overdue.length)          sections.push({ type: 'overdue',   items: overdue });
-      } catch {}
+        if (overdue.length) sections.push({ type: 'overdue', items: overdue });
+      } catch { }
 
       try {
         const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
         const todayMeetings = (mh.meetings || []).filter(m => (m.date || '').slice(0, 10) === todayStr);
         if (todayMeetings.length) sections.push({ type: 'meetings', items: todayMeetings });
-      } catch {}
+      } catch { }
 
       try {
         const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
         const entries = Array.isArray(dl) ? dl : (dl.entries || []);
         const open = entries.filter(e => !e.status || e.status === 'considering' || e.status === 'revisiting');
         if (open.length) sections.push({ type: 'decisions', items: open });
-      } catch {}
+      } catch { }
 
       const hasContent = sections.some(s => s.items.length > 0);
       if (!hasContent) {
@@ -2374,8 +2666,8 @@
           } else {
             rows = items.slice(0, 5).map(t => {
               const prio = t.priority === 'high' ? '↑' : t.priority === 'low' ? '↓' : '–';
-              return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id||'')}">
-                <div class="stat-item-dot" style="background:${t._pColor||'var(--text3)'}"></div>
+              return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id || '')}">
+                <div class="stat-item-dot" style="background:${t._pColor || 'var(--text3)'}"></div>
                 <div class="stat-item-text">${_esc(t.title)}</div>
                 <div class="stat-item-meta">${prio} ${_esc(t._pName)}</div>
               </div>`;
@@ -2385,7 +2677,7 @@
           icon = '⚠'; title = 'Overdue'; urgent = true;
           rows = items.slice(0, 5).map(t => {
             const days = Math.floor((new Date(todayStr) - new Date(t.due)) / 86400000);
-            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id||'')}">
+            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id || '')}">
               <div class="stat-item-dot" style="background:var(--accent-nope)"></div>
               <div class="stat-item-text">${_esc(t.title)}</div>
               <div class="stat-item-meta">${days}d · ${_esc(t._pName)}</div>
@@ -2393,23 +2685,23 @@
           }).join('');
         } else if (type === 'meetings') {
           icon = '▣'; title = "Today's Meetings";
-          rows = items.slice(0, 5).map(m => `<div class="stat-item" data-tool="meetings-hub" data-item-id="${_esc(m.id||'')}">
+          rows = items.slice(0, 5).map(m => `<div class="stat-item" data-tool="meetings-hub" data-item-id="${_esc(m.id || '')}">
             <div class="stat-item-dot" style="background:var(--border-blue)"></div>
-            <div class="stat-item-text">${_esc(m.title||'Meeting')}</div>
-            <div class="stat-item-meta">${_esc(m.time||'')}</div>
+            <div class="stat-item-text">${_esc(m.title || 'Meeting')}</div>
+            <div class="stat-item-meta">${_esc(m.time || '')}</div>
           </div>`).join('');
         } else if (type === 'decisions') {
           icon = '◎'; title = 'Pending Decisions';
-          rows = items.slice(0, 5).map(e => `<div class="stat-item" data-tool="decision-hub" data-item-id="${_esc(e.id||'')}">
-            <span class="stat-badge ${_esc(e.type||'note')}">${_esc(e.type||'note')}</span>
-            <div class="stat-item-text">${_esc(e.title||'(untitled)')}</div>
+          rows = items.slice(0, 5).map(e => `<div class="stat-item" data-tool="decision-hub" data-item-id="${_esc(e.id || '')}">
+            <span class="stat-badge ${_esc(e.type || 'note')}">${_esc(e.type || 'note')}</span>
+            <div class="stat-item-text">${_esc(e.title || '(untitled)')}</div>
           </div>`).join('');
         }
 
         const count = type === 'due-today'
           ? `${items.length} task${items.length !== 1 ? 's' : ''}`
           : `${items.length}`;
-        const more  = items.length > 5 ? `+${items.length - 5} more` : '';
+        const more = items.length > 5 ? `+${items.length - 5} more` : '';
         const toolId = type === 'decisions' ? 'decision-hub' : type === 'meetings' ? 'meetings-hub' : 'project-hub';
         const card = _buildTodayCard(icon, title, count, rows, more, toolId, urgent);
         grid.appendChild(card);
@@ -2452,7 +2744,7 @@
       const tab = document.getElementById('dash-tab-' + v);
       if (tab) tab.classList.add('active');
 
-      const todayView     = document.getElementById('today-view');
+      const todayView = document.getElementById('today-view');
       const statusSection = document.getElementById('status-section');
 
       if (v === 'today') {
@@ -2579,7 +2871,7 @@
       const wsInput = prompt('Workspace ID (leave blank to keep current):', saved.workspaceId || '');
       if (wsInput === null) return;
       // Clear old credentials so they get replaced on connect
-      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch {}
+      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch { }
       _doConnect(url.trim(), key.trim(), wsInput.trim() || saved.workspaceId || null);
     }
 
@@ -2739,9 +3031,9 @@
     // Writes thinking-hub-data.json into a user-chosen folder so the local
     // MCP server (thinking-hub-local-mcp) can read hub data without Supabase.
 
-    let _mcpDirHandle      = null;   // FileSystemDirectoryHandle — lives for this session only
-    let _mcpLastSync       = null;   // ISO timestamp of last successful write
-    let _mcpFolderName     = '';     // Display name of chosen folder
+    let _mcpDirHandle = null;   // FileSystemDirectoryHandle — lives for this session only
+    let _mcpLastSync = null;   // ISO timestamp of last successful write
+    let _mcpFolderName = '';     // Display name of chosen folder
     let _mcpLoadingFromFile = false; // True while loadFromMcpFile() is running — suppresses auto-sync
 
     const MCP_SYNC_KEYS = [
@@ -2774,7 +3066,7 @@
           try { payload[key] = JSON.parse(localStorage.getItem(key)); } catch { /* skip */ }
         }
         const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json', { create: true });
-        const writable   = await fileHandle.createWritable();
+        const writable = await fileHandle.createWritable();
         await writable.write(JSON.stringify(payload, null, 2));
         await writable.close();
         _mcpLastSync = payload.syncedAt;
@@ -2787,18 +3079,18 @@
 
     function updateMcpSyncUI() {
       const statusEl = document.getElementById('mcp-sync-status');
-      const syncBtn  = document.getElementById('mcp-sync-now-btn');
-      const hintEl   = document.getElementById('mcp-path-hint');
-      const pathEl   = document.getElementById('mcp-path-value');
+      const syncBtn = document.getElementById('mcp-sync-now-btn');
+      const hintEl = document.getElementById('mcp-path-hint');
+      const pathEl = document.getElementById('mcp-path-value');
       if (!statusEl) return;
-      const loadBtn  = document.getElementById('mcp-load-btn');
+      const loadBtn = document.getElementById('mcp-load-btn');
       if (_mcpDirHandle && _mcpLastSync) {
         const mins = Math.round((Date.now() - new Date(_mcpLastSync)) / 60000);
         statusEl.textContent = `📂 ${_mcpFolderName} · synced ${mins < 1 ? 'just now' : mins + 'm ago'} · auto-syncing`;
         if (syncBtn) syncBtn.style.display = '';
         if (loadBtn) loadBtn.style.display = '';
-        if (hintEl)  hintEl.style.display  = '';
-        if (pathEl)  pathEl.textContent    = _mcpFolderName + '\\thinking-hub-data.json';
+        if (hintEl) hintEl.style.display = '';
+        if (pathEl) pathEl.textContent = _mcpFolderName + '\\thinking-hub-data.json';
       } else if (_mcpDirHandle) {
         statusEl.textContent = `📂 ${_mcpFolderName} · ready — use ↑ Sync Now or ↓ Load from file`;
         if (syncBtn) syncBtn.style.display = '';
@@ -2807,7 +3099,7 @@
         statusEl.textContent = 'No folder selected — pick a folder to enable';
         if (syncBtn) syncBtn.style.display = 'none';
         if (loadBtn) loadBtn.style.display = 'none';
-        if (hintEl)  hintEl.style.display  = 'none';
+        if (hintEl) hintEl.style.display = 'none';
       }
     }
 
@@ -2815,8 +3107,8 @@
       if (!_mcpDirHandle) { showToast('Pick a sync folder first', 'error'); return; }
       try {
         const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json');
-        const file       = await fileHandle.getFile();
-        const parsed     = JSON.parse(await file.text());
+        const file = await fileHandle.getFile();
+        const parsed = JSON.parse(await file.text());
 
         // Pause auto-sync so we don't overwrite the file with stale browser data
         // while the loop is only halfway through loading.
@@ -2827,7 +3119,7 @@
           if (key === 'syncedAt' || value === null || typeof value !== 'object') continue;
           // Write directly to localStorage — bypass HubStorage.set() to avoid
           // triggering subscribers (and the auto-sync) on every single key.
-          try { localStorage.setItem(key, JSON.stringify(value)); count++; } catch {}
+          try { localStorage.setItem(key, JSON.stringify(value)); count++; } catch { }
         }
 
         _mcpLoadingFromFile = false;
@@ -2939,7 +3231,7 @@
         if (creds.url) document.getElementById('sb-url-input').value = creds.url;
         if (creds.key) document.getElementById('sb-key-input').value = creds.key;
         if (creds.workspaceId) document.getElementById('sb-ws-input').value = creds.workspaceId;
-      } catch {}
+      } catch { }
     }
 
     function toggleSbKeyVisible() {
@@ -2958,7 +3250,7 @@
     function connectSupabase() {
       const url = (document.getElementById('sb-url-input')?.value || '').trim();
       const key = (document.getElementById('sb-key-input')?.value || '').trim();
-      const ws  = (document.getElementById('sb-ws-input')?.value || '').trim();
+      const ws = (document.getElementById('sb-ws-input')?.value || '').trim();
       if (!url || !key) { _setSbStatus('URL and Anon Key are required', 'err'); return; }
       _setSbStatus('Connecting…', 'info');
       HubStorage.useSupabase(url, key, ws || null)
@@ -2970,7 +3262,7 @@
           // Persist credentials
           try {
             localStorage.setItem('hub-cloud-credentials-v1', JSON.stringify({ url, key, workspaceId: status.workspaceId || ws }));
-          } catch {}
+          } catch { }
         })
         .catch(err => {
           _setSbStatus('Connection failed: ' + (err.message || err), 'err');
@@ -2978,7 +3270,7 @@
     }
 
     function disconnectSupabase() {
-      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch {}
+      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch { }
       location.reload();
     }
 
@@ -3031,52 +3323,52 @@
 
     // Storage key → human-readable section name in the exported JSON
     const EXPORT_KEY_LABELS = {
-      'project-hub-v1':       'projects',
-      'goals-hub-v1':         'goals',
-      'decision-hub-v1':      'decisions',
-      'review-hub-v1':        'weekly_reviews',
-      'risk-hub-v1':          'risks',
-      'meetings-hub-v1':      'meetings',
-      'assumptions-hub-v1':   'assumptions',
-      'kmqt_current_v2':      'kmqt_board',
-      'schedule-v1':          'schedule',
-      'learning-hub-v1':      'learning_log',
-      'matrix-hub-v1':        'priority_matrix',
-      'stakeholder-hub-v1':   'stakeholders',
-      'retro-hub-v1':         'retrospectives',
-      'scrum-hub-v1':         'scrum_board',
-      'focus-hub-v1':         'focus_sessions',
-      'log-hub-v1':           'daily_log',
-      'canvas-v1':            'canvas',
+      'project-hub-v1': 'projects',
+      'goals-hub-v1': 'goals',
+      'decision-hub-v1': 'decisions',
+      'review-hub-v1': 'weekly_reviews',
+      'risk-hub-v1': 'risks',
+      'meetings-hub-v1': 'meetings',
+      'assumptions-hub-v1': 'assumptions',
+      'kmqt_current_v2': 'kmqt_board',
+      'schedule-v1': 'schedule',
+      'learning-hub-v1': 'learning_log',
+      'matrix-hub-v1': 'priority_matrix',
+      'stakeholder-hub-v1': 'stakeholders',
+      'retro-hub-v1': 'retrospectives',
+      'scrum-hub-v1': 'scrum_board',
+      'focus-hub-v1': 'focus_sessions',
+      'log-hub-v1': 'daily_log',
+      'canvas-v1': 'canvas',
       'ideaswipe_history_v6': 'idea_swiper',
-      'hub-links-v1':         'cross_tool_links',
-      'hub-activity-v1':      'activity_log',
-      'hub-settings-v1':      'settings',
-      'tool-portfolio-v1':    'tool_portfolio',
+      'hub-links-v1': 'cross_tool_links',
+      'hub-activity-v1': 'activity_log',
+      'hub-settings-v1': 'settings',
+      'tool-portfolio-v1': 'tool_portfolio',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
     const APP_FILE_STORAGE_KEYS = {
-      'project-hub.html':      ['project-hub-v1'],
-      'schedule.html':          ['schedule-v1'],
-      'idea-swiper.html':       ['ideaswipe_history_v6'],
-      'kmqt-board.html':       ['kmqt_current_v2'],
-      'decision-hub.html':     ['decision-hub-v1'],
-      'canvas-hub.html':       ['canvas-v1'],
-      'scrum-hub.html':        ['scrum-hub-v1'],
-      'focus-hub.html':        ['focus-hub-v1'],
-      'log-hub.html':          ['log-hub-v1'],
-      'review-hub.html':       ['review-hub-v1'],
-      'retro-hub.html':        ['retro-hub-v1'],
-      'assumptions-hub.html':  ['assumptions-hub-v1'],
-      'goals-hub.html':        ['goals-hub-v1'],
-      'matrix-hub.html':       ['matrix-hub-v1'],
-      'learning-hub.html':     ['learning-hub-v1'],
-      'meetings-hub.html':     ['meetings-hub-v1'],
-      'stakeholder-hub.html':  ['stakeholder-hub-v1'],
-      'risk-hub.html':         ['risk-hub-v1'],
+      'project-hub.html': ['project-hub-v1'],
+      'schedule.html': ['schedule-v1'],
+      'idea-swiper.html': ['ideaswipe_history_v6'],
+      'kmqt-board.html': ['kmqt_current_v2'],
+      'decision-hub.html': ['decision-hub-v1'],
+      'canvas-hub.html': ['canvas-v1'],
+      'scrum-hub.html': ['scrum-hub-v1'],
+      'focus-hub.html': ['focus-hub-v1'],
+      'log-hub.html': ['log-hub-v1'],
+      'review-hub.html': ['review-hub-v1'],
+      'retro-hub.html': ['retro-hub-v1'],
+      'assumptions-hub.html': ['assumptions-hub-v1'],
+      'goals-hub.html': ['goals-hub-v1'],
+      'matrix-hub.html': ['matrix-hub-v1'],
+      'learning-hub.html': ['learning-hub-v1'],
+      'meetings-hub.html': ['meetings-hub-v1'],
+      'stakeholder-hub.html': ['stakeholder-hub-v1'],
+      'risk-hub.html': ['risk-hub-v1'],
       'achievements-hub.html': ['hub-activity-v1'],
-      'tool-portfolio.html':   ['tool-portfolio-v1'],
+      'tool-portfolio.html': ['tool-portfolio-v1'],
     };
 
     // Storage keys included in each scope
@@ -3132,13 +3424,13 @@
         s.open_tasks = open;
         s.total_tasks = total;
       }
-      if (data.goals)          s.goals_quarters = (data.goals.quarters || []).length;
-      if (data.decisions)      s.decisions      = Array.isArray(data.decisions) ? data.decisions.length : null;
-      if (data.risks)          s.risks          = (data.risks.risks || []).length;
-      if (data.meetings)       s.meetings       = (data.meetings.meetings || []).length;
+      if (data.goals) s.goals_quarters = (data.goals.quarters || []).length;
+      if (data.decisions) s.decisions = Array.isArray(data.decisions) ? data.decisions.length : null;
+      if (data.risks) s.risks = (data.risks.risks || []).length;
+      if (data.meetings) s.meetings = (data.meetings.meetings || []).length;
       if (data.weekly_reviews) s.weekly_reviews = Object.keys(data.weekly_reviews).length;
-      if (data.assumptions)    s.assumptions    = (data.assumptions.assumptions || []).length;
-      if (data.learning_log)   s.learning_items = (data.learning_log.items || []).length;
+      if (data.assumptions) s.assumptions = (data.assumptions.assumptions || []).length;
+      if (data.learning_log) s.learning_items = (data.learning_log.items || []).length;
       return s;
     }
 
@@ -3265,13 +3557,13 @@
     }
 
     function _updateAiDrawerHint() {
-      const hintEl  = document.getElementById('ai-drawer-hint');
+      const hintEl = document.getElementById('ai-drawer-hint');
       const noKeyEl = document.getElementById('ai-no-key-hint');
       const sendBtn = document.getElementById('ai-send-btn');
       const configured = typeof HubAI !== 'undefined' && HubAI.isConfigured();
-      if (hintEl)   hintEl.textContent = configured ? '· ask anything' : '· key not set';
-      if (noKeyEl)  noKeyEl.style.display = configured ? 'none' : '';
-      if (sendBtn)  sendBtn.disabled = !configured;
+      if (hintEl) hintEl.textContent = configured ? '· ask anything' : '· key not set';
+      if (noKeyEl) noKeyEl.style.display = configured ? 'none' : '';
+      if (sendBtn) sendBtn.disabled = !configured;
     }
 
     function aiPromptClick(btn) {
@@ -3292,7 +3584,7 @@
     // ── Drag-to-resize ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       const handle = document.getElementById('ai-resize-handle');
-      const panel  = document.getElementById('ai-panel');
+      const panel = document.getElementById('ai-panel');
       if (!handle || !panel) return;
       let startY = 0, startH = 0;
       handle.addEventListener('mousedown', e => {
@@ -3439,7 +3731,7 @@
         } else if (a.type === 'create_goal') {
           desc = `"${HubUtils.esc(a.title)}"${a.quarterName ? ' in ' + HubUtils.esc(a.quarterName) : ''}`;
         } else if (a.type === 'add_kmqt_item') {
-          const colNames = { K:'Known', M:'MoyaMoya', Q:'Question', T:'Try' };
+          const colNames = { K: 'Known', M: 'MoyaMoya', Q: 'Question', T: 'Try' };
           desc = `[${colNames[a.column] || a.column}] ${HubUtils.esc(a.text)}`;
         } else if (a.type === 'add_backlog_item') {
           desc = `"${HubUtils.esc(a.title)}" (${a.priority || 'should'})`;
@@ -3515,10 +3807,12 @@
             );
           } else {
             const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
-            links.push({ id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+            links.push({
+              id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
               a: { tool: action.aTool, itemId: action.aId, label: action.aLabel || action.aId },
               b: { tool: action.bTool, itemId: action.bId, label: action.bLabel || action.bId },
-              createdAt: new Date().toISOString() });
+              createdAt: new Date().toISOString()
+            });
             localStorage.setItem('hub-links-v1', JSON.stringify(links));
           }
           return true;
@@ -3535,7 +3829,7 @@
         }
 
         // ── Task mutations ─────────────────────────────────────────
-        if (['update_task_status','update_task_priority','update_task_due','assign_task'].includes(action.type)) {
+        if (['update_task_status', 'update_task_priority', 'update_task_due', 'assign_task'].includes(action.type)) {
           const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
           const proj = (raw.projects || []).find(p => p.id === action.projectId);
           if (!proj) return false;
@@ -3577,9 +3871,11 @@
           const proj = (raw.projects || []).find(p => p.id === action.projectId);
           if (!proj) return false;
           proj.tasks = proj.tasks || [];
-          proj.tasks.push({ id: 'task-' + Date.now(), title: action.title, status: 'open',
+          proj.tasks.push({
+            id: 'task-' + Date.now(), title: action.title, status: 'open',
             priority: action.priority || 'medium', due: action.dueDate || null,
-            assigned: action.assignee || null, taskCreated: new Date().toISOString() });
+            assigned: action.assignee || null, taskCreated: new Date().toISOString()
+          });
           localStorage.setItem('project-hub-v1', JSON.stringify(raw));
           return true;
         }
@@ -3589,27 +3885,33 @@
           const proj = (raw.projects || []).find(p => p.id === action.projectId);
           if (!proj) return false;
           proj.milestones = proj.milestones || [];
-          proj.milestones.push({ id: 'ms-' + Date.now(), name: action.name,
+          proj.milestones.push({
+            id: 'ms-' + Date.now(), name: action.name,
             date: action.date || null, description: action.description || '',
-            done: false, createdAt: new Date().toISOString() });
+            done: false, createdAt: new Date().toISOString()
+          });
           localStorage.setItem('project-hub-v1', JSON.stringify(raw));
           return true;
         }
 
         if (action.type === 'create_risk') {
           const risks = JSON.parse(localStorage.getItem('risk-hub-v1') || '[]');
-          risks.push({ id: 'risk-' + Date.now(), title: action.title,
+          risks.push({
+            id: 'risk-' + Date.now(), title: action.title,
             description: action.description || '', probability: 'medium', impact: 'medium',
-            status: 'open', projectId: action.projectId || null, created: new Date().toISOString() });
+            status: 'open', projectId: action.projectId || null, created: new Date().toISOString()
+          });
           localStorage.setItem('risk-hub-v1', JSON.stringify(risks));
           return true;
         }
 
         if (action.type === 'create_decision') {
           const decisions = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
-          decisions.push({ id: 'dh-' + Date.now(), title: action.title,
+          decisions.push({
+            id: 'dh-' + Date.now(), title: action.title,
             summary: action.summary || '', status: 'open', confidence: 'medium',
-            projectId: action.projectId || null, createdAt: new Date().toISOString() });
+            projectId: action.projectId || null, createdAt: new Date().toISOString()
+          });
           localStorage.setItem('decision-hub-v1', JSON.stringify(decisions));
           return true;
         }
@@ -3624,25 +3926,29 @@
           // Create a quarter if none exists
           if (!quarter) {
             const now = new Date();
-            quarter = { id: 'q-' + Date.now(), name: `Q${Math.ceil((now.getMonth()+1)/3)} ${now.getFullYear()}`, objectives: [] };
+            quarter = { id: 'q-' + Date.now(), name: `Q${Math.ceil((now.getMonth() + 1) / 3)} ${now.getFullYear()}`, objectives: [] };
             raw.quarters.push(quarter);
           }
           quarter.objectives = quarter.objectives || [];
-          quarter.objectives.push({ id: 'obj-' + Date.now(), title: action.title,
+          quarter.objectives.push({
+            id: 'obj-' + Date.now(), title: action.title,
             description: action.description || '', projectId: action.projectId || null,
-            keyResults: [], createdAt: new Date().toISOString() });
+            keyResults: [], createdAt: new Date().toISOString()
+          });
           localStorage.setItem('goals-hub-v1', JSON.stringify(raw));
           return true;
         }
 
         if (action.type === 'add_kmqt_item') {
           const raw = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
-          raw.columns = raw.columns || { K:[], M:[], Q:[], T:[] };
+          raw.columns = raw.columns || { K: [], M: [], Q: [], T: [] };
           const col = action.column;
-          if (!['K','M','Q','T'].includes(col)) return false;
+          if (!['K', 'M', 'Q', 'T'].includes(col)) return false;
           raw.columns[col] = raw.columns[col] || [];
-          raw.columns[col].push({ id: 'kmqt-' + Date.now(), text: action.text,
-            tags: [], createdAt: new Date().toISOString() });
+          raw.columns[col].push({
+            id: 'kmqt-' + Date.now(), text: action.text,
+            tags: [], createdAt: new Date().toISOString()
+          });
           localStorage.setItem('kmqt_current_v2', JSON.stringify(raw));
           return true;
         }
@@ -3650,11 +3956,13 @@
         if (action.type === 'add_backlog_item') {
           const raw = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{"backlogs":[],"sprints":[],"dod":[],"settings":{}}');
           raw.backlogs = raw.backlogs || [];
-          raw.backlogs.push({ id: 'story-' + Date.now(), title: action.title,
+          raw.backlogs.push({
+            id: 'story-' + Date.now(), title: action.title,
             description: action.description || '', type: action.itemType || 'story',
             priority: action.priority || 'should', points: action.points || 0,
             projectId: action.projectId || null, status: 'backlog', sprintId: null,
-            sprintStatus: 'todo', createdAt: new Date().toISOString() });
+            sprintStatus: 'todo', createdAt: new Date().toISOString()
+          });
           localStorage.setItem('scrum-hub-v1', JSON.stringify(raw));
           return true;
         }
@@ -3663,11 +3971,13 @@
           const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{"items":[]}');
           raw.items = raw.items || [];
           const start = action.start || new Date().toISOString().split('T')[0];
-          raw.items.push({ id: 'sch-' + Date.now(), title: action.title,
+          raw.items.push({
+            id: 'sch-' + Date.now(), title: action.title,
             type: action.eventType || 'event', start, end: action.end || start,
             projectId: action.projectId || null, notes: action.notes || '',
             done: false, sourceTool: null, sourceId: null,
-            createdAt: new Date().toISOString() });
+            createdAt: new Date().toISOString()
+          });
           localStorage.setItem('schedule-v1', JSON.stringify(raw));
           return true;
         }
@@ -3677,13 +3987,13 @@
     }
 
     function _renderAiCaptureResult(r, originalText) {
-      const typeIcons = { task:'📋', risk:'⚠', decision:'⊕', meeting:'▣', idea:'💡', note:'📝' };
+      const typeIcons = { task: '📋', risk: '⚠', decision: '⊕', meeting: '▣', idea: '💡', note: '📝' };
       const icon = typeIcons[r.type] || '📋';
       const chips = [];
-      if (r.dueDate)     chips.push(`📅 ${r.dueDate}`);
-      if (r.assignee)    chips.push(`👤 ${HubUtils.esc(r.assignee)}`);
+      if (r.dueDate) chips.push(`📅 ${r.dueDate}`);
+      if (r.assignee) chips.push(`👤 ${HubUtils.esc(r.assignee)}`);
       if (r.projectName) chips.push(`◈ ${HubUtils.esc(r.projectName)}`);
-      if (r.priority)    chips.push(r.priority === 'high' ? '🔴 High' : r.priority === 'low' ? '🟢 Low' : '🟡 Med');
+      if (r.priority) chips.push(r.priority === 'high' ? '🔴 High' : r.priority === 'low' ? '🟢 Low' : '🟡 Med');
 
       let html = '';
       if (r.clarificationNeeded) {
@@ -3867,10 +4177,10 @@
 
       const frame = document.getElementById('app-frame');
       if (frame && frame.contentDocument) {
-        try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch(e) {}
+        try { frame.contentDocument.documentElement.setAttribute('data-theme', theme); } catch (e) { }
       }
       if (frame && frame.contentWindow) {
-        try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch(e) {}
+        try { frame.contentWindow.postMessage({ type: 'hub-theme', theme }, window.location.origin || '*'); } catch (e) { }
       }
     }
 
@@ -3898,20 +4208,27 @@
   </script>
 
   <!-- Welcome Modal (first-run only) -->
-  <div id="welcome-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem">
-    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)">
+  <div id="welcome-overlay"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem">
+    <div
+      style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)">
       <div style="font-size:2.8rem;margin-bottom:.5rem">🧠</div>
-      <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;margin:0 0 .5rem;color:var(--text)">Welcome to Thinking Hub</h2>
-      <p style="color:var(--text2);font-size:.9rem;margin:0 0 1.5rem;line-height:1.5">Your connected workspace for projects, goals, and decisions.<br>How would you like to get started?</p>
+      <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;margin:0 0 .5rem;color:var(--text)">
+        Welcome to Thinking Hub</h2>
+      <p style="color:var(--text2);font-size:.9rem;margin:0 0 1.5rem;line-height:1.5">Your connected workspace for
+        projects, goals, and decisions.<br>How would you like to get started?</p>
       <div style="display:flex;gap:.75rem;margin-bottom:1rem">
-        <button class="btn btn-primary" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeSeedAndStart()">
+        <button class="btn btn-primary" style="flex:1;padding:.65rem 1rem;font-size:.875rem"
+          onclick="welcomeSeedAndStart()">
           ✦ Explore with sample data
         </button>
-        <button class="btn btn-ghost" style="flex:1;padding:.65rem 1rem;font-size:.875rem" onclick="welcomeStartFresh()">
+        <button class="btn btn-ghost" style="flex:1;padding:.65rem 1rem;font-size:.875rem"
+          onclick="welcomeStartFresh()">
           Start fresh
         </button>
       </div>
-      <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data &amp; Backup</p>
+      <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data
+        &amp; Backup</p>
     </div>
   </div>
   <!-- AI Floating Chat Panel -->
@@ -3946,7 +4263,8 @@
       </div>
 
       <div id="ai-no-key-hint" style="display:none">
-        Add your Anthropic API key in <a href="#" onclick="openDataModal('integrations');return false;" style="color:var(--accent)">Settings → Integrations</a> to enable AI.
+        Add your Anthropic API key in <a href="#" onclick="openDataModal('integrations');return false;"
+          style="color:var(--accent)">Settings → Integrations</a> to enable AI.
       </div>
 
       <div id="ai-input-row">
