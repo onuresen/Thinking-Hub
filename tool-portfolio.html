@@ -71,31 +71,12 @@
         .sidebar-search-clear.visible { display: block; }
         .sidebar-search-clear:hover { color: var(--text); }
 
-        /* ── Ring filter chips ──────────────────────── */
-        .ring-filter-row {
-            display: flex; gap: 4px; flex-wrap: wrap;
-        }
-        .ring-chip {
-            flex: 1; min-width: 0;
-            padding: 4px 6px; border-radius: var(--r-sm);
-            border: 1px solid var(--border);
-            background: var(--surface2); color: var(--text3);
-            font-size: 10px; font-weight: 700; font-family: var(--font-mono);
-            text-transform: uppercase; letter-spacing: 0.4px;
-            cursor: pointer; text-align: center;
-            transition: all 0.13s; white-space: nowrap;
-        }
-        .ring-chip:hover { color: var(--text); border-color: var(--text2); }
-        .ring-chip.active-adopt  { background: var(--accent-dim);       color: var(--accent);       border-color: var(--accent); }
-        .ring-chip.active-trial  { background: rgba(56,189,248,0.12);   color: #38bdf8;             border-color: #38bdf8; }
-        .ring-chip.active-assess { background: rgba(245,158,11,0.12);   color: var(--accent-super); border-color: var(--accent-super); }
-        .ring-chip.active-hold   { background: rgba(239,68,68,0.10);    color: var(--accent-nope);  border-color: var(--accent-nope); }
-
         /* ── Stats bar ──────────────────────────────── */
         .stats-bar {
-            display: flex; gap: 6px; flex-wrap: wrap;
+            display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
             padding: 10px 16px 0;
         }
+        .stats-divider { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
         .stat-pill {
             display: flex; align-items: center; gap: 5px;
             padding: 4px 10px; border-radius: 999px;
@@ -105,8 +86,10 @@
             cursor: pointer; transition: all 0.13s;
         }
         .stat-pill:hover { border-color: var(--text2); }
+        .stat-pill.sp-dimmed { opacity: 0.38; }
         .stat-pill .sp-count { font-weight: 700; }
         .stat-pill .sp-label { color: var(--text3); font-size: 10px; }
+        /* Radar ring pills */
         .stat-pill.sp-adopt  { border-color: var(--accent);       background: var(--accent-dim); }
         .stat-pill.sp-adopt .sp-count  { color: var(--accent); }
         .stat-pill.sp-trial  { border-color: #38bdf8;             background: rgba(56,189,248,0.08); }
@@ -115,8 +98,12 @@
         .stat-pill.sp-assess .sp-count { color: var(--accent-super); }
         .stat-pill.sp-hold   { border-color: var(--accent-nope);  background: rgba(239,68,68,0.07); }
         .stat-pill.sp-hold .sp-count   { color: var(--accent-nope); }
-        .stat-pill.sp-total  { }
         .stat-pill.sp-total .sp-count  { color: var(--text); }
+        /* Status stage pills */
+        .stat-pill.sp-piloting { border-color: #38bdf8;             background: rgba(56,189,248,0.08); }
+        .stat-pill.sp-piloting .sp-count  { color: #38bdf8; }
+        .stat-pill.sp-using    { border-color: var(--accent);       background: var(--accent-dim); }
+        .stat-pill.sp-using .sp-count    { color: var(--accent); }
 
         /* Category grouping */
         .tool-list {
@@ -421,12 +408,6 @@
             <input class="sidebar-search" id="sidebar-search" type="text" placeholder="Filter tools…" oninput="onSearchInput()" />
             <button class="sidebar-search-clear" id="search-clear" onclick="clearSearch()">✕</button>
         </div>
-        <div class="ring-filter-row" id="ring-filter-row">
-            <button class="ring-chip" id="chip-adopt"  onclick="toggleRingFilter('adopt')" >Adopt</button>
-            <button class="ring-chip" id="chip-trial"  onclick="toggleRingFilter('trial')" >Trial</button>
-            <button class="ring-chip" id="chip-assess" onclick="toggleRingFilter('assess')">Assess</button>
-            <button class="ring-chip" id="chip-hold"   onclick="toggleRingFilter('hold')"  >Hold</button>
-        </div>
         <div class="tool-list" id="tool-list"></div>
     </div>
 
@@ -645,8 +626,9 @@
             normalizeOrdersInCategory(normCat(t.category));
         }
 
-        let _searchQuery = '';
-        let _ringFilter  = null; // null = show all, or 'adopt'|'trial'|'assess'|'hold'
+        let _searchQuery  = '';
+        let _ringFilter   = null; // null = show all, or 'adopt'|'trial'|'assess'|'hold'
+        let _statusFilter = null; // null = show all, or 'exploring'|'piloting'|'using'|'retired'
 
         function onSearchInput() {
             _searchQuery = (document.getElementById('sidebar-search').value || '').toLowerCase().trim();
@@ -663,30 +645,53 @@
 
         function toggleRingFilter(ring) {
             _ringFilter = (!ring || _ringFilter === ring) ? null : ring;
-            // Update chip active states
-            ['adopt','trial','assess','hold'].forEach(r => {
-                const chip = document.getElementById('chip-' + r);
-                if (!chip) return;
-                chip.className = 'ring-chip' + (_ringFilter === r ? ' active-' + r : '');
-            });
+            renderStatsBar();
+            renderList();
+        }
+
+        function toggleStatusFilter(status) {
+            _statusFilter = (!status || _statusFilter === status) ? null : status;
+            renderStatsBar();
             renderList();
         }
 
         function renderStatsBar() {
             const bar = document.getElementById('stats-bar');
             if (!bar) return;
-            const counts = { adopt: 0, trial: 0, assess: 0, hold: 0 };
-            tools.forEach(t => { if (counts[t.ring] !== undefined) counts[t.ring]++; });
+
+            const ringCounts = { adopt: 0, trial: 0, assess: 0, hold: 0 };
+            const statusCounts = { exploring: 0, piloting: 0, using: 0, retired: 0 };
+            tools.forEach(t => {
+                if (ringCounts[t.ring] !== undefined) ringCounts[t.ring]++;
+                if (statusCounts[t.status] !== undefined) statusCounts[t.status]++;
+            });
+
             const total = tools.length;
-            const labels = { adopt: 'Adopt', trial: 'Trial', assess: 'Assess', hold: 'Hold' };
+            const ringLabels   = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
+            const statusLabels = { exploring:'Exploring', piloting:'Piloting', using:'Using', retired:'Retired' };
+
+            const anyFilter = _ringFilter || _statusFilter;
+            const dim = (active) => active ? '' : (anyFilter ? ' sp-dimmed' : '');
+
             bar.innerHTML = [
-                `<div class="stat-pill sp-total" title="All tools" onclick="toggleRingFilter(null)">
+                `<div class="stat-pill sp-total${anyFilter ? ' sp-dimmed' : ''}" title="Clear filters" onclick="toggleRingFilter(null);toggleStatusFilter(null)">
                     <span class="sp-count">${total}</span><span class="sp-label">total</span>
                 </div>`,
+                `<div class="stats-divider"></div>`,
                 ...['adopt','trial','assess','hold'].map(r =>
-                    counts[r] > 0 ? `<div class="stat-pill sp-${r}" title="Filter: ${labels[r]}" onclick="toggleRingFilter('${r}')">
-                        <span class="sp-count">${counts[r]}</span><span class="sp-label">${labels[r]}</span>
-                    </div>` : ''
+                    ringCounts[r] > 0
+                        ? `<div class="stat-pill sp-${r}${dim(_ringFilter === r)}" title="Radar: ${ringLabels[r]}" onclick="toggleRingFilter('${r}')">
+                               <span class="sp-count">${ringCounts[r]}</span><span class="sp-label">${ringLabels[r]}</span>
+                           </div>`
+                        : ''
+                ),
+                `<div class="stats-divider"></div>`,
+                ...['exploring','piloting','using','retired'].map(s =>
+                    statusCounts[s] > 0
+                        ? `<div class="stat-pill sp-${s}${dim(_statusFilter === s)}" title="Stage: ${statusLabels[s]}" onclick="toggleStatusFilter('${s}')">
+                               <span class="sp-count">${statusCounts[s]}</span><span class="sp-label">${statusLabels[s]}</span>
+                           </div>`
+                        : ''
                 )
             ].join('');
         }
@@ -695,21 +700,22 @@
             const listEl = document.getElementById('tool-list');
             listEl.innerHTML = '';
 
-            // Filter by ring chip, then by search query
-            let filtered = _ringFilter
-                ? tools.filter(t => t.ring === _ringFilter)
-                : tools;
-            if (_searchQuery) {
-                filtered = filtered.filter(t =>
-                    (t.name || '').toLowerCase().includes(_searchQuery) ||
-                    (t.category || '').toLowerCase().includes(_searchQuery) ||
-                    (t.description || '').toLowerCase().includes(_searchQuery));
-            }
+            // Apply filters: ring, status, search
+            let filtered = tools;
+            if (_ringFilter)   filtered = filtered.filter(t => t.ring === _ringFilter);
+            if (_statusFilter) filtered = filtered.filter(t => t.status === _statusFilter);
+            if (_searchQuery)  filtered = filtered.filter(t =>
+                (t.name || '').toLowerCase().includes(_searchQuery) ||
+                (t.category || '').toLowerCase().includes(_searchQuery) ||
+                (t.description || '').toLowerCase().includes(_searchQuery));
 
             if (!filtered.length) {
-                const hint = _ringFilter ? ` in <strong>${_ringFilter}</strong>` : '';
-                const q = _searchQuery ? ` matching "${escapeHtml(_searchQuery)}"` : '';
-                listEl.innerHTML = `<div class="empty" style="margin-top:12px;font-style:italic">No tools${hint}${q}.</div>`;
+                const parts = [
+                    _ringFilter   ? `radar: <strong>${_ringFilter}</strong>`   : '',
+                    _statusFilter ? `stage: <strong>${_statusFilter}</strong>` : '',
+                    _searchQuery  ? `"${escapeHtml(_searchQuery)}"` : '',
+                ].filter(Boolean).join(', ');
+                listEl.innerHTML = `<div class="empty" style="margin-top:12px;font-style:italic">No tools${parts ? ' · ' + parts : ''}.</div>`;
                 return;
             }
 
@@ -772,15 +778,13 @@
                     row.dataset.cat = cat;
                     row.draggable = true;
 
-                    const ringLabel = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
-                    const ringHtml = t.ring ? `<span class="ring-badge ring-${t.ring}">${ringLabel[t.ring]||t.ring}</span>` : '';
                     const statusColors = { exploring:'var(--text3)', piloting:'#38bdf8', using:'var(--accent)', retired:'var(--border)' };
                     const statusDot = t.status ? `<span style="width:7px;height:7px;border-radius:50%;background:${statusColors[t.status]||'var(--text3)'};flex-shrink:0;display:inline-block" title="Stage: ${t.status}"></span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
           <div class="tool-icon">${toolIconHtml(t)}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
-          ${statusDot}${ringHtml}
+          ${statusDot}
         `;
 
                     // Click = open (but ignore click immediately after drag)
