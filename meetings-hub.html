@@ -376,6 +376,7 @@
         <div class="detail-actions-row">
           <span class="save-indicator" id="save-indicator"></span>
           <div style="flex:1"></div>
+          <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create a decision draft from this meeting">→ Decision</button>
           <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">📦 Archive</button>
           <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete meeting</button>
         </div>
@@ -486,6 +487,23 @@
     HubStorage.set('project-hub-v1', ph);
     a.taskCreated = true; a.taskId = taskId;
     save(); renderDetail(); renderList();
+  }
+
+  function sendMeetingAsDecision() {
+    const m = activeMeeting();
+    if (!m) return;
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({
+      id, title: 'From meeting: ' + (m.title || 'Untitled'),
+      summary: [m.agenda, m.notes].filter(Boolean).join('\n\n'),
+      status: 'open', type: 'tactical', cynefin: '', confidence: 3,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: ''
+    });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision draft created');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
   }
 
   function openActionModal() {

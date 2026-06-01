@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -181,6 +182,8 @@
   <div class="logo-mark">WR</div>
   <div class="logo-text">Weekly Review</div>
   <div class="topbar-spacer"></div>
+  <button class="btn btn-ghost" onclick="sendReviewToDecision()" style="font-size:11px;padding:5px 10px" title="Create a decision from this week's blockers">→ Decision</button>
+  <button class="btn btn-ghost" onclick="sendReviewToKmqt()" style="font-size:11px;padding:5px 10px" title="Send free notes as KMQT questions">→ KMQT Q</button>
   <div class="week-nav">
     <button class="week-btn" id="prev-btn" onclick="shiftWeek(-1)">‹</button>
     <div class="week-label" id="week-label">…</div>
@@ -536,6 +539,45 @@
     renderDoneCol();
     renderRocks();
     renderOpenTasks();
+  }
+
+  // ── Push flows ────────────────────────────────────────────────────────────
+
+  function sendReviewToDecision() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    const block = (wd.block || '').trim();
+    if (!block) { showToast('Add blockers first, then push to Decision Hub'); return; }
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({
+      id, title: 'Review blockers: ' + weekRange(monday),
+      summary: block, reasoning: (wd.learn || ''),
+      status: 'open', type: 'tactical', cynefin: '', confidence: 3,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      projectId: '', tags: [], options: '', outcome: ''
+    });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision created from blockers');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  function sendReviewToKmqt() {
+    const monday = getMondayOfWeek(weekOffset);
+    const key = weekKey(monday);
+    const wd = getWeekData(key);
+    const notes = (wd.notes || '').trim();
+    if (!notes) { showToast('Add free notes first, then push to KMQT'); return; }
+    const lines = notes.split('\n').map(l => l.trim()).filter(Boolean);
+    const kmqt = HubStorage.get('kmqt_current_v2') || { v: 2, labels: {K:'Known',M:'Messy',Q:'Questions',T:'Thinking'}, columns: {K:[],M:[],Q:[],T:[]}, links: [] };
+    if (!kmqt.columns) kmqt.columns = {K:[],M:[],Q:[],T:[]};
+    if (!kmqt.columns.Q) kmqt.columns.Q = [];
+    lines.forEach(text => {
+      kmqt.columns.Q.push({ id: 'k-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), text, tags: [], createdAt: new Date().toISOString() });
+    });
+    HubStorage.set('kmqt_current_v2', kmqt);
+    showToast(lines.length + ' question' + (lines.length !== 1 ? 's' : '') + ' sent to KMQT');
   }
 
   // ── Escape util ───────────────────────────────────────────────────────────

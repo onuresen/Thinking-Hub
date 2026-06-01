@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -325,6 +326,7 @@
       <button class="btn btn-primary" onclick="saveDetail()">Save</button>
       <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
       <div class="spacer"></div>
+      <button class="btn btn-ghost" id="dp-mit-task-btn" onclick="sendRiskAsMitigationTask()" style="font-size:11px" title="Create a mitigation task in Project Hub">→ Task</button>
       <button class="btn btn-ghost" id="dp-archive-btn" onclick="archiveRisk()">📦 Archive</button>
       <button class="btn btn-danger" onclick="deleteRisk()">Delete</button>
     </div>
@@ -529,6 +531,8 @@
     document.getElementById('dp-review-date').value = r.reviewDate || '';
     const archBtn = document.getElementById('dp-archive-btn');
     if (archBtn) archBtn.textContent = r.archived ? '↩ Restore' : '📦 Archive';
+    const mitBtn = document.getElementById('dp-mit-task-btn');
+    if (mitBtn) { mitBtn.textContent = r.mitigationTaskId ? '✓ Task' : '→ Task'; mitBtn.disabled = !!r.mitigationTaskId; }
 
     // Populate member datalist
     const members = (() => { try { return HubData.getMembers(); } catch { return []; } })();
@@ -604,6 +608,27 @@
       btn.classList.toggle('active', showArchived);
     }
     renderAll();
+  }
+
+  function sendRiskAsMitigationTask() {
+    const r = data.risks.find(x => x.id === activeId);
+    if (!r) return;
+    const phData = HubStorage.get('project-hub-v1');
+    const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
+    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    const priorityMap = { low: 'low', medium: 'med', high: 'high', critical: 'high' };
+    const priority = priorityMap[band(score(r))] || 'med';
+    const taskId = 'tsk-' + Date.now().toString(36);
+    let proj = r.projectId ? projects.find(p => p.id === r.projectId) : null;
+    if (!proj) proj = projects[0];
+    if (!Array.isArray(proj.tasks)) proj.tasks = [];
+    proj.tasks.push({ taskId, title: 'Mitigate: ' + (r.title || 'risk'), description: r.mitigation || '', status: 'open', priority, assignees: [], createdAt: new Date().toISOString() });
+    HubStorage.set('project-hub-v1', phData);
+    r.mitigationTaskId = taskId;
+    save();
+    const mitBtn = document.getElementById('dp-mit-task-btn');
+    if (mitBtn) { mitBtn.textContent = '✓ Task'; mitBtn.disabled = true; }
+    showToast('Mitigation task created in ' + proj.name);
   }
 
   function deleteRisk() {
