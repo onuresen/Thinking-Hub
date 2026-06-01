@@ -222,6 +222,16 @@
     }
 
     /* sidebar team section */
+    .sidebar-me-card {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; margin: 0 0 6px;
+      background: var(--surface2); border-radius: var(--r-sm);
+    }
+    .sidebar-me-info { flex: 1; min-width: 0; }
+    .sidebar-me-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-me-role { font-size: 10px; color: var(--text3); }
+    .sidebar-team-footer { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 0; }
+    .sidebar-team-count { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
     .sidebar-team {
       border-top: 1px solid var(--border);
       padding: 14px 10px 10px;
@@ -1806,7 +1816,6 @@
     <div class="sidebar-team">
       <div class="sidebar-team-header">
         <span class="sidebar-team-label">Team</span>
-        <button class="sidebar-team-view-toggle" id="team-view-toggle" onclick="toggleTeamView()" title="Toggle org chart view">⬡</button>
         <div class="sidebar-team-add" onclick="openMemberModal()" title="Add member">+</div>
       </div>
       <div id="sidebar-users"></div>
@@ -2342,71 +2351,45 @@
     // ─── SIDEBAR USERS ───────────────────────────────────────────────────────────
     function renderSidebarUsers() {
       const container = document.getElementById('sidebar-users');
-      container.innerHTML = '';
+      const members = state.members;
+
+      // Find "me" — first from session, then from people-hub-v1
       let selfId = '';
       try { selfId = JSON.parse(localStorage.getItem('hub-session-v1') || '{}').selfMemberId || ''; } catch {}
-
-      if (_teamViewMode === 'org') {
-        container.appendChild(buildOrgTree(selfId));
-        return;
+      if (!selfId) {
+        try {
+          const peopleData = JSON.parse(localStorage.getItem('people-hub-v1') || '{}');
+          const meInPeople = (peopleData.members || []).find(m => m.isMe);
+          if (meInPeople) selfId = meInPeople.id;
+        } catch {}
       }
 
-      state.members.forEach(m => {
-        const { bg, fg } = avatarColors(m.color);
-        const selected = state.overviewFilter.members.includes(m.id);
-        const isSelf = m.id === selfId;
-        const div = document.createElement('div');
-        div.className = 'user-pill' + (selected ? ' selected' : '');
-        div.style.position = 'relative';
-        div.draggable = true;
-        div.innerHTML = `
-      <div class="drag-handle" title="Drag to reorder">⠿</div>
-      <div class="avatar" style="background:${bg};color:${fg};cursor:pointer" onclick="toggleOverviewMember('${m.id}')">${initials(m.name)}</div>
-      <div class="user-pill-info" style="cursor:pointer;flex:1" onclick="toggleOverviewMember('${m.id}')">
-        <div class="user-pill-name">${HubUtils.esc(m.name)}${isSelf ? '<span class="org-me-badge">me</span>' : ''}</div>
-        <div class="user-pill-role">${HubUtils.esc(m.role)}</div>
-      </div>
-      ${selected ? `<div class="filter-active-dot" style="background:${bg}"></div>` : ''}
-      <div class="user-pill-actions" style="display:flex;gap:2px;opacity:0;transition:opacity 0.15s">
-        <button class="task-action-btn edit" title="Edit member" onclick="openEditMember('${m.id}')">✎</button>
-        <button class="task-action-btn del" title="Delete member" onclick="deleteMember('${m.id}')">✕</button>
-      </div>
-    `;
-        div.querySelector('.drag-handle').addEventListener('mousedown', () => { _dragViaHandle = true; });
-        div.addEventListener('dragstart', e => {
-          if (!_dragViaHandle) { e.preventDefault(); return; }
-          _dragSrcId = m.id;
-          e.dataTransfer.effectAllowed = 'move';
-          setTimeout(() => div.classList.add('dragging'), 0);
-        });
-        div.addEventListener('dragend', () => {
-          _dragViaHandle = false;
-          div.classList.remove('dragging');
-          container.querySelectorAll('.user-pill').forEach(p => p.classList.remove('drag-over'));
-        });
-        div.addEventListener('dragover', e => {
-          if (!_dragSrcId || _dragSrcId === m.id) return;
-          e.preventDefault();
-          container.querySelectorAll('.user-pill').forEach(p => p.classList.remove('drag-over'));
-          div.classList.add('drag-over');
-        });
-        div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
-        div.addEventListener('drop', e => {
-          e.preventDefault();
-          if (!_dragSrcId || _dragSrcId === m.id) return;
-          const srcIdx = state.members.findIndex(x => x.id === _dragSrcId);
-          const dstIdx = state.members.findIndex(x => x.id === m.id);
-          if (srcIdx === -1 || dstIdx === -1) return;
-          const [moved] = state.members.splice(srcIdx, 1);
-          state.members.splice(dstIdx, 0, moved);
-          _dragSrcId = null;
-          saveState();
-          renderSidebarUsers();
-        });
-        div.addEventListener('mouseenter', () => div.querySelector('.user-pill-actions').style.opacity = '1');
-        div.addEventListener('mouseleave', () => div.querySelector('.user-pill-actions').style.opacity = '0');
-        container.appendChild(div);
-      });
+      const me = selfId ? members.find(m => m.id === selfId) : null;
+      const count = members.length;
+      let html = '';
+
+      if (me) {
+        const { bg, fg } = avatarColors(me.color);
+        html += `<div class="sidebar-me-card">
+          <div class="avatar" style="background:${bg};color:${fg};width:30px;height:30px;font-size:10px;flex-shrink:0">${initials(me.name)}</div>
+          <div class="sidebar-me-info">
+            <div class="sidebar-me-name">${HubUtils.esc(me.name)} <span class="org-me-badge">me</span></div>
+            <div class="sidebar-me-role">${HubUtils.esc(me.role || '')}</div>
+          </div>
+        </div>`;
+      } else if (count === 0) {
+        html += `<div style="padding:6px 8px 8px;font-size:11px;color:var(--text3)">No members yet</div>`;
+      } else {
+        html += `<div style="padding:6px 8px 8px;font-size:11px;color:var(--text3)">Set "me" in People Hub</div>`;
+      }
+
+      html += `<div class="sidebar-team-footer">
+        <span class="sidebar-team-count">${count} member${count !== 1 ? 's' : ''}</span>
+        <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px"
+          onclick="parent.postMessage({type:'hub-navigate',tool:'people-hub'},'*')">Team →</button>
+      </div>`;
+
+      container.innerHTML = html;
     }
 
     function buildOrgTree(selfId) {
