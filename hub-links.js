@@ -184,10 +184,11 @@ window.HubLinks = (() => {
       if (toolId === 'learning-hub') {
         const data = HubStorage.get('learning-hub-v1');
         if (!data) return [];
+        const TI = { book: '📖', article: '📄', course: '🎓', video: '▶' };
         return (data.items || []).map(it => ({
           id: it.id,
           label: it.title || '(untitled)',
-          subtitle: it.type || 'learning'
+          subtitle: (TI[it.type] || '◈') + ' ' + (it.type || 'learning')
         }));
       }
 
