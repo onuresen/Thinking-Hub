@@ -528,3 +528,62 @@ body {
   padding: 2px 7px;
   white-space: nowrap;
 }
+
+/* =========================================================================
+   APP-WIDE SIGNATURE — left accent-bar reveal on hover
+   Applied to the primary clickable list-item card of each list-style tool,
+   matching the home dashboard's .stat-card treatment. Spatial/board tools
+   (canvas, graph, 2x2 grids, kanban columns) keep their own idiom by design.
+   Cascade-safe: tool <style> loads after theme.css, so any tool that already
+   styles its row's ::before/position wins and this rule silently no-ops.
+   ========================================================================= */
+.task-item,
+.risk-row,
+.meeting-row,
+.list-item,
+.obj-card,
+.bl-item,
+.session-row,
+.assumption-card,
+.asm-card,
+.lh-entry-item {
+  position: relative;
+}
+
+.task-item::after,
+.risk-row::after,
+.meeting-row::after,
+.list-item::after,
+.obj-card::after,
+.bl-item::after,
+.session-row::after,
+.assumption-card::after,
+.asm-card::after,
+.lh-entry-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.task-item:hover::after,
+.risk-row:hover::after,
+.meeting-row:hover::after,
+.list-item:hover::after,
+.obj-card:hover::after,
+.bl-item:hover::after,
+.session-row:hover::after,
+.assumption-card:hover::after,
+.asm-card:hover::after,
+.lh-entry-item:hover::after {
+  opacity: 1;
+  transform: translateX(0);
+}
