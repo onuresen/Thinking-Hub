@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meeting Notes</title>
+  <title>Meeting Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -34,23 +34,35 @@
     /* ── Body layout ── */
     .body-wrap { flex: 1; display: flex; overflow: hidden; }
 
-    /* ── Left: meeting list ── */
+    /* ── Left panel ── */
     .meeting-list-panel {
-      width: 260px; min-width: 260px; border-right: 1px solid var(--border);
+      width: 270px; min-width: 270px; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
     }
-    .list-search { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .search-input {
-      width: 100%; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--r-sm); padding: 6px 10px; color: var(--text);
-      font-family: var(--font-body); font-size: 12.5px; outline: none;
-    }
-    .search-input:focus { border-color: var(--accent); }
+
+    /* Schedule strip */
+    .schedule-strip { padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .strip-label { font-size: 9px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+    .strip-events { display: flex; flex-direction: column; gap: 3px; }
+    .sched-chip { display: flex; align-items: center; gap: 7px; padding: 4px 7px; border-radius: var(--r-sm); background: var(--surface2); cursor: pointer; transition: background 0.1s; }
+    .sched-chip:hover { background: var(--surface3); }
+    .sched-date { font-family: var(--font-mono); color: var(--accent); font-size: 10px; flex-shrink: 0; }
+    .sched-title { font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* List header row */
+    .list-header-row { display: flex; align-items: center; gap: 6px; padding: 8px 10px 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .list-search-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 10px; color: var(--text); font-family: var(--font-body); font-size: 12px; outline: none; }
+    .list-search-input:focus { border-color: var(--accent); }
+    .templates-btn { font-size: 11px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all 0.12s; flex-shrink: 0; }
+    .templates-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .templates-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* Meeting list */
+    .meeting-list-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
     .meeting-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--text3) transparent; }
     .meeting-list::-webkit-scrollbar { width: 5px; }
     .meeting-list::-webkit-scrollbar-track { background: transparent; }
     .meeting-list::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 3px; }
-    .meeting-list::-webkit-scrollbar-thumb:hover { background: var(--text2); }
     .meeting-row {
       padding: 10px 14px; border-bottom: 1px solid var(--border);
       cursor: pointer; transition: background 0.1s;
@@ -58,12 +70,25 @@
     .meeting-row:hover { background: var(--surface2); }
     .meeting-row.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 11px; }
     .mr-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mr-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; display: flex; gap: 8px; }
-    .mr-action-count {
-      font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700;
-      background: var(--accent-dim); color: var(--accent); font-family: var(--font-mono);
-    }
-    .list-new-btn { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .mr-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .mr-action-count { font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700; background: var(--accent-dim); color: var(--accent); font-family: var(--font-mono); }
+    .mr-link-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--surface2); color: var(--text3); font-family: var(--font-mono); }
+    .proj-badge { font-size: 10px; color: var(--text3); }
+
+    /* Templates panel */
+    .templates-panel { display: none; flex: 1; flex-direction: column; overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+    .templates-panel.open { display: flex; }
+    .tpl-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .tpl-info { flex: 1; min-width: 0; }
+    .tpl-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tpl-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; }
+    .tpl-use-btn { font-size: 11px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; white-space: nowrap; flex-shrink: 0; }
+    .tpl-use-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tpl-del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px; padding: 0 2px; transition: color 0.12s; flex-shrink: 0; }
+    .tpl-del-btn:hover { color: var(--accent-nope); }
+
+    /* List footer */
+    .list-footer { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; display: flex; gap: 6px; }
 
     /* ── Right: meeting detail ── */
     .detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -82,6 +107,16 @@
       font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text);
     }
     .detail-title-input::placeholder { color: var(--text3); }
+
+    /* Desired outcome */
+    .outcome-input {
+      width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--border);
+      outline: none; color: var(--text2); font-family: var(--font-body); font-size: 12.5px;
+      padding: 5px 0; margin-top: 5px;
+    }
+    .outcome-input:focus { border-bottom-color: var(--accent); }
+    .outcome-input::placeholder { color: var(--text3); }
+
     .detail-meta-row {
       display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap;
     }
@@ -93,17 +128,57 @@
     }
     .meta-input:focus { border-color: var(--accent); }
     .meta-date { font-family: var(--font-mono); }
+
+    /* Type select */
+    .type-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 12px; padding: 3px 8px;
+      outline: none; cursor: pointer;
+    }
+    .type-select:focus { border-color: var(--accent); }
+
     .project-select {
       background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
       color: var(--text); font-family: var(--font-body); font-size: 12px; padding: 3px 8px;
       outline: none; cursor: pointer;
     }
     .project-select:focus { border-color: var(--accent); }
-    .detail-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+
+    /* Attendees section */
+    .attendees-section { margin-top: 8px; }
+    .att-section-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+    .attendees-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .att-pill {
+      display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px 3px 9px;
+      border-radius: 999px; border: 1px solid var(--border); background: var(--surface2); font-size: 11.5px;
+    }
+    .att-pill[data-role="decision-maker"] { border-color: var(--accent); background: var(--accent-dim); }
+    .att-pill[data-role="lead"] { border-color: var(--border-purple); }
+    .att-pill[data-role="informed"] { background: var(--surface3); }
+    .att-name { color: var(--text); font-weight: 500; }
+    .att-role-sel { background: none; border: none; color: var(--text3); font-size: 10px; cursor: pointer; outline: none; font-family: var(--font-mono); padding: 0; }
+    .att-remove { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 11px; padding: 0 0 0 2px; line-height: 1; transition: color 0.12s; }
+    .att-remove:hover { color: var(--accent-nope); }
+    .add-att-btn { font-size: 11px; padding: 3px 8px; border: 1px dashed var(--border); border-radius: 999px; background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; }
+    .add-att-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .add-att-row { display: none; align-items: center; gap: 5px; padding: 3px 8px; background: var(--surface2); border-radius: var(--r-sm); border: 1px solid var(--border); }
+    .add-att-row.visible { display: flex; }
+    .add-att-name { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font-body); font-size: 12px; min-width: 70px; }
+    .add-att-role { background: none; border: none; color: var(--text2); font-size: 11px; cursor: pointer; outline: none; font-family: var(--font-body); }
+    .add-att-confirm { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 0 2px; transition: color 0.12s; }
+
+    .detail-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
     .save-indicator { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
 
+    /* Sync + link buttons */
+    .sync-sched-btn { font-size: 11px; padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; }
+    .sync-sched-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sync-sched-btn.synced { border-color: var(--accent-like); color: var(--accent-like); cursor: default; }
+    .link-hub-btn { font-size: 11px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; }
+    .link-hub-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     /* ── Notes area ── */
-    .notes-area { flex: 1; display: flex; overflow: hidden; }
+    .notes-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
     .notes-col, .agenda-col {
       flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
     }
@@ -120,10 +195,35 @@
     }
     .col-textarea::placeholder { color: var(--text3); }
 
+    /* ── Decisions section ── */
+    .decisions-section { border-top: 1px solid var(--border); flex-shrink: 0; }
+    .decisions-hdr {
+      padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+      cursor: pointer; transition: background 0.1s; user-select: none; flex-shrink: 0;
+    }
+    .decisions-hdr:hover { background: var(--surface2); }
+    .dec-toggle-icon { font-size: 9px; color: var(--text3); transition: transform 0.15s; flex-shrink: 0; display: inline-block; }
+    .dec-toggle-icon.open { transform: rotate(90deg); }
+    .dec-hdr-title { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; flex: 1; }
+    .decisions-body { padding: 4px 12px 8px; display: flex; flex-direction: column; gap: 5px; max-height: 180px; overflow-y: auto; }
+    .decisions-body::-webkit-scrollbar { width: 4px; }
+    .decisions-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .dec-row { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); }
+    .dec-text { flex: 1; font-size: 12.5px; color: var(--text); background: none; border: none; outline: none; font-family: var(--font-body); min-width: 0; }
+    .dec-owner-sel { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text2); font-size: 11px; padding: 2px 6px; outline: none; font-family: var(--font-body); max-width: 90px; }
+    .dec-status-chip { font-size: 10px; padding: 2px 7px; border-radius: 999px; cursor: pointer; font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0; transition: all 0.12s; }
+    .dec-status-chip[data-status="open"] { background: rgba(245,158,11,0.15); color: var(--accent-super); }
+    .dec-status-chip[data-status="decided"] { background: rgba(74,222,128,0.15); color: var(--accent-like); }
+    .dec-status-chip[data-status="deferred"] { background: var(--surface2); color: var(--text3); }
+    .dec-send-btn { font-size: 10px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--text3); cursor: pointer; white-space: nowrap; transition: all 0.12s; flex-shrink: 0; }
+    .dec-send-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .dec-del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0 2px; transition: color 0.12s; flex-shrink: 0; }
+    .dec-del-btn:hover { color: var(--accent-nope); }
+
     /* ── Action items ── */
     .actions-panel {
       border-top: 1px solid var(--border); flex-shrink: 0;
-      max-height: 220px; display: flex; flex-direction: column; overflow: hidden;
+      max-height: 200px; display: flex; flex-direction: column; overflow: hidden;
     }
     .actions-header {
       padding: 8px 16px; border-bottom: 1px solid var(--border);
@@ -167,7 +267,7 @@
     .action-item.mh-drag-src { opacity: 0.35; }
     .mh-drop-line { height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 2px 0; }
 
-    /* ── Project picker modal ── */
+    /* ── Modals ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
       display: flex; align-items: center; justify-content: center;
@@ -176,14 +276,16 @@
     .modal-overlay.open { opacity: 1; pointer-events: all; }
     .modal {
       background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
-      width: 380px; max-width: 94vw; display: flex; flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      width: 400px; max-width: 94vw; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4); max-height: 90vh; overflow: hidden;
     }
-    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .modal-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; }
     .modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
     .modal-close:hover { color: var(--text); }
-    .modal-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     .field-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
     .field-input {
       width: 100%; background: var(--surface2); border: 1px solid var(--border);
@@ -191,10 +293,11 @@
       font-family: var(--font-body); font-size: 13px; outline: none; transition: border-color 0.15s;
     }
     .field-input:focus { border-color: var(--accent); }
-    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-    .modal-footer .spacer { flex: 1; }
+    .field-row { display: flex; gap: 10px; }
+    .field-row > div { flex: 1; }
+    .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
 
-    /* ── Mobile drawer ──────────────────────────────────────────── */
+    /* ── Mobile drawer ── */
     .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
     .sidebar-backdrop.open { display: block; }
     .mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; transition: background 0.1s; }
@@ -203,11 +306,10 @@
     @media (max-width: 640px) {
       .meeting-list-panel {
         position: fixed; left: 0; top: 0; bottom: 0; height: 100%;
-        z-index: 100;
-        transform: translateX(-100%);
+        z-index: 100; transform: translateX(-100%);
         transition: transform 0.22s cubic-bezier(.4,0,.2,1);
         box-shadow: 6px 0 32px rgba(0,0,0,0.45);
-        width: 260px; min-width: 260px;
+        width: 270px; min-width: 270px;
       }
       .meeting-list-panel.open { transform: translateX(0); }
       .mob-nav-btn { display: flex; align-items: center; }
@@ -221,20 +323,25 @@
 <div class="topbar">
   <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open meeting list">☰</button>
   <div class="logo-mark">▦</div>
-  <div class="logo-text">Meeting Notes</div>
+  <div class="logo-text">Meeting Hub</div>
   <div class="topbar-spacer"></div>
   <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+ New meeting</button>
 </div>
 
 <div class="body-wrap">
 
-  <!-- Left panel: list -->
-  <div class="meeting-list-panel">
-    <div class="list-search">
-      <input class="search-input" id="list-search" placeholder="Search meetings…" oninput="renderList()">
+  <!-- Left panel -->
+  <div class="meeting-list-panel" id="meeting-list-panel">
+    <div class="schedule-strip" id="schedule-strip" style="display:none"></div>
+    <div class="list-header-row">
+      <input class="list-search-input" id="list-search" placeholder="Search meetings…" oninput="renderList()">
+      <button class="templates-btn" id="templates-btn" onclick="toggleTemplates()">Templates</button>
     </div>
-    <div class="meeting-list" id="meeting-list"></div>
-    <div class="list-new-btn" style="display:flex;gap:6px">
+    <div class="meeting-list-wrap" id="meeting-list-wrap">
+      <div class="meeting-list" id="meeting-list"></div>
+    </div>
+    <div class="templates-panel" id="templates-panel"></div>
+    <div class="list-footer">
       <button class="btn btn-ghost" onclick="newMeeting()" style="flex:1;font-size:12px">+ New meeting</button>
       <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived meetings">📦</button>
     </div>
@@ -270,54 +377,556 @@
   </div>
 </div>
 
+<!-- New template modal -->
+<div class="modal-overlay" id="tpl-modal-overlay">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <div class="modal-title">New Meeting Template</div>
+      <button class="modal-close" onclick="closeTplModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Template name</div>
+        <input class="field-input" id="tpl-name" placeholder="e.g. Weekly Standup">
+      </div>
+      <div class="field-row">
+        <div>
+          <div class="field-label">Meeting type</div>
+          <select class="field-input" id="tpl-type" onchange="onTplTypeChange()"></select>
+        </div>
+        <div>
+          <div class="field-label">Recurrence</div>
+          <select class="field-input" id="tpl-recurrence" onchange="onTplRecurrenceChange()">
+            <option value="daily">Daily</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+      <div id="tpl-dow-row">
+        <div class="field-label">Day of week</div>
+        <select class="field-input" id="tpl-dow">
+          <option value="0">Sunday</option>
+          <option value="1" selected>Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5">Friday</option>
+          <option value="6">Saturday</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div>
+          <div class="field-label">Duration (minutes)</div>
+          <input class="field-input" id="tpl-duration" type="number" min="5" max="480" value="60">
+        </div>
+        <div>
+          <div class="field-label">Default attendees</div>
+          <input class="field-input" id="tpl-attendees" placeholder="Alice, Bob (comma-sep)">
+        </div>
+      </div>
+      <div>
+        <div class="field-label">Agenda template</div>
+        <textarea class="field-input" id="tpl-agenda" style="height:80px;resize:vertical" placeholder="Agenda items…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveTpl()">Save Template</button>
+      <button class="btn btn-ghost" onclick="closeTplModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const STORAGE_KEY = 'meetings-hub-v1';
-  let data = { meetings: [] };
+
+  const MEETING_TYPES = {
+    standup:  { label: 'Standup',   icon: '⚡', dur: 15,  agenda: 'Yesterday\nToday\nBlockers' },
+    weekly:   { label: 'Weekly',    icon: '📅', dur: 60,  agenda: 'Review last week\nPriorities this week\nRisks & blockers' },
+    '1on1':   { label: '1-on-1',    icon: '👥', dur: 30,  agenda: 'How are you?\nProgress on goals\nFeedback needed\nCareer' },
+    planning: { label: 'Planning',  icon: '🗺', dur: 90,  agenda: 'Goals & scope\nCapacity\nTask breakdown\nRisks' },
+    kickoff:  { label: 'Kickoff',   icon: '🚀', dur: 120, agenda: 'Overview & goals\nRoles\nTimeline & milestones\nNext steps' },
+    decision: { label: 'Decision',  icon: '⊕', dur: 45,  agenda: 'Problem statement\nOptions\nDecision criteria\nRecommendation' },
+    retro:    { label: 'Retro',     icon: '⟲', dur: 60,  agenda: 'What went well?\nWhat to improve?\nActions' },
+    review:   { label: 'Review',    icon: '↺', dur: 30,  agenda: 'Progress against goals\nAccomplishments\nUpcoming' },
+    custom:   { label: 'Meeting',   icon: '▣', dur: 60,  agenda: '' },
+  };
+
+  const ROLE_LABELS = {
+    'decision-maker': 'DM',
+    'lead':           'Lead',
+    'contributor':    'Contrib',
+    'informed':       'Info',
+  };
+  const STATUS_LABEL = { open: 'Open', decided: 'Decided', deferred: 'Deferred' };
+  const STATUS_NEXT  = { open: 'decided', decided: 'deferred', deferred: 'open' };
+
+  let data = { meetings: [], templates: [] };
   let activeId = null;
   let saveTimer = null;
   let showArchived = false;
+  let showTemplates = false;
+  let decisionsOpen = false;
 
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  // ── Migration shim ────────────────────────────────────────────────────────────
+
+  function normalizeMeeting(m) {
+    if (!m.attendeesList) {
+      m.attendeesList = (m.attendees || '').split(',').map(n => n.trim()).filter(Boolean)
+        .map(name => ({ name, role: 'contributor' }));
+    }
+    if (!m.decisions)      m.decisions = [];
+    if (!m.type)           m.type = 'custom';
+    if (m.desiredOutcome === undefined) m.desiredOutcome = '';
+    if (m.scheduleEventId === undefined) m.scheduleEventId = null;
+    return m;
+  }
+
+  // ── Storage ───────────────────────────────────────────────────────────────────
 
   function load() {
-    data = HubStorage.get(STORAGE_KEY) || { meetings: [] };
-    if (!data.meetings) data.meetings = [];
+    data = HubStorage.get(STORAGE_KEY) || { meetings: [], templates: [] };
+    if (!data.meetings)  data.meetings  = [];
+    if (!data.templates) data.templates = [];
+    data.meetings.forEach(m => normalizeMeeting(m));
   }
+
   function save() { HubStorage.set(STORAGE_KEY, data); }
 
   function activeMeeting() { return data.meetings.find(m => m.id === activeId) || null; }
 
-  // ── List ─────────────────────────────────────────────────────────────────────
+  // ── Schedule strip ────────────────────────────────────────────────────────────
+
+  function getUpcomingSchedule() {
+    const sd = HubStorage.get('schedule-v1');
+    const today = new Date().toISOString().slice(0, 10);
+    const cutoff = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    return (sd?.items || [])
+      .filter(e => e.type === 'event' && e.start >= today && e.start <= cutoff && !e.done)
+      .sort((a, b) => a.start.localeCompare(b.start))
+      .slice(0, 5);
+  }
+
+  function renderScheduleStrip() {
+    const strip = document.getElementById('schedule-strip');
+    if (!strip) return;
+    const events = getUpcomingSchedule();
+    if (!events.length) { strip.style.display = 'none'; return; }
+    strip.style.display = 'block';
+    strip.innerHTML = `<div class="strip-label">Upcoming from Schedule</div>
+      <div class="strip-events">${events.map(e => {
+        const d = e.start ? new Date(e.start + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        return `<div class="sched-chip" onclick="navigateToScheduleEvent('${esc(e.id)}')">
+          <span class="sched-date">${d}</span>
+          <span class="sched-title">${esc(e.title || 'Event')}</span>
+        </div>`;
+      }).join('')}</div>`;
+  }
+
+  function navigateToScheduleEvent(id) {
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('schedule', id);
+  }
+
+  // ── List ──────────────────────────────────────────────────────────────────────
 
   function renderList() {
-    const q = (document.getElementById('list-search').value || '').toLowerCase();
+    const q = (document.getElementById('list-search')?.value || '').toLowerCase();
     const list = document.getElementById('meeting-list');
+    if (!list) return;
     let items = data.meetings.filter(m => showArchived ? m.archived : !m.archived)
-      .sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
-    if (q) items = items.filter(m => (m.title||'').toLowerCase().includes(q) || (m.attendees||'').toLowerCase().includes(q));
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+    if (q) items = items.filter(m =>
+      (m.title || '').toLowerCase().includes(q) ||
+      (m.attendees || '').toLowerCase().includes(q)
+    );
     const archivedCount = data.meetings.filter(m => m.archived).length;
-    const archToggle = document.getElementById('show-archived-btn');
-    if (archToggle) archToggle.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
+    const archBtn = document.getElementById('show-archived-btn');
+    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 (${archivedCount})`;
+
     if (!items.length) {
-      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results for your search.' : 'Log your first meeting to get started.'}</div></div>`;
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results.' : 'Create your first meeting above.'}</div></div>`;
       return;
     }
+
     list.innerHTML = items.map(m => {
-      const openActions = (m.actionItems||[]).filter(a => !a.done && !a.taskCreated).length;
-      const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" data-id="${m.id}" onclick="openMeeting('${m.id}')">
-        <div class="mr-title">${_esc(m.title || 'Untitled meeting')}</div>
+      const typeInfo = MEETING_TYPES[m.type] || MEETING_TYPES.custom;
+      const openActions = (m.actionItems || []).filter(a => !a.done && !a.taskCreated).length;
+      const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('meetings-hub', m.id).length : 0;
+      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
+        <div class="mr-title">${typeInfo.icon} ${esc(m.title || 'Untitled meeting')}</div>
         <div class="mr-meta">
           <span>${dateLabel}</span>
-          ${m.projectName ? `<span class="proj-badge">📁 ${_esc(m.projectName)}</span>` : ''}
-          ${openActions ? `<span class="mr-action-count">${openActions} action${openActions!==1?'s':''}</span>` : ''}
+          ${m.projectName ? `<span class="proj-badge">📁 ${esc(m.projectName)}</span>` : ''}
+          ${openActions ? `<span class="mr-action-count">${openActions} action${openActions !== 1 ? 's' : ''}</span>` : ''}
+          ${linkCount ? `<span class="mr-link-badge">🔗 ${linkCount}</span>` : ''}
         </div>
       </div>`;
     }).join('');
   }
 
-  // ── Mobile sidebar ──────────────────────────────────────────────────────────
+  // ── Templates panel ───────────────────────────────────────────────────────────
+
+  function toggleTemplates() {
+    showTemplates = !showTemplates;
+    const listWrap = document.getElementById('meeting-list-wrap');
+    const tplPanel = document.getElementById('templates-panel');
+    const btn = document.getElementById('templates-btn');
+    listWrap.style.display = showTemplates ? 'none' : 'flex';
+    tplPanel.className = showTemplates ? 'templates-panel open' : 'templates-panel';
+    btn.classList.toggle('active', showTemplates);
+    if (showTemplates) renderTemplates();
+  }
+
+  function renderTemplates() {
+    const panel = document.getElementById('templates-panel');
+    if (!panel) return;
+    const templates = data.templates || [];
+    const REC_LABEL = { daily: 'Daily', weekly: 'Weekly', biweekly: 'Biweekly', monthly: 'Monthly' };
+    const rows = templates.map(t => {
+      const typeInfo = MEETING_TYPES[t.type] || MEETING_TYPES.custom;
+      return `<div class="tpl-row">
+        <div class="tpl-info">
+          <div class="tpl-name">${typeInfo.icon} ${esc(t.name)}</div>
+          <div class="tpl-meta">${typeInfo.label} · ${REC_LABEL[t.recurrence] || 'Custom'} · ${t.durationMins || 60}min</div>
+        </div>
+        <button class="tpl-use-btn" onclick="createFromTemplate('${t.id}')">Use</button>
+        <button class="tpl-del-btn" onclick="deleteTemplate('${t.id}')" title="Delete template">✕</button>
+      </div>`;
+    }).join('');
+
+    panel.innerHTML = (templates.length
+      ? rows
+      : `<div class="empty-state"><span class="e-icon">📋</span><div class="e-title">No templates yet</div><div class="e-sub">Save recurring meeting patterns to reuse them.</div></div>`
+    ) + `<div style="padding:10px 12px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="openTplModal()" style="width:100%;font-size:12px">+ New Template</button>
+    </div>`;
+  }
+
+  function openTplModal() {
+    // Populate type select
+    const sel = document.getElementById('tpl-type');
+    sel.innerHTML = Object.entries(MEETING_TYPES).map(([k, v]) =>
+      `<option value="${k}">${v.icon} ${v.label}</option>`
+    ).join('');
+    document.getElementById('tpl-name').value = '';
+    document.getElementById('tpl-recurrence').value = 'weekly';
+    document.getElementById('tpl-dow').value = '1';
+    document.getElementById('tpl-duration').value = '60';
+    document.getElementById('tpl-attendees').value = '';
+    document.getElementById('tpl-agenda').value = '';
+    document.getElementById('tpl-dow-row').style.display = 'block';
+    document.getElementById('tpl-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('tpl-name').focus(), 50);
+  }
+
+  function closeTplModal() { document.getElementById('tpl-modal-overlay').classList.remove('open'); }
+
+  function onTplTypeChange() {
+    const type = document.getElementById('tpl-type').value;
+    const agendaEl = document.getElementById('tpl-agenda');
+    const durEl = document.getElementById('tpl-duration');
+    const typeInfo = MEETING_TYPES[type];
+    if (typeInfo) {
+      if (!agendaEl.value.trim()) agendaEl.value = typeInfo.agenda;
+      durEl.value = typeInfo.dur;
+    }
+  }
+
+  function onTplRecurrenceChange() {
+    const rec = document.getElementById('tpl-recurrence').value;
+    document.getElementById('tpl-dow-row').style.display =
+      (rec === 'weekly' || rec === 'biweekly') ? 'block' : 'none';
+  }
+
+  function saveTpl() {
+    const name = document.getElementById('tpl-name').value.trim();
+    if (!name) { showToast('Template needs a name', 'warn'); return; }
+    const tpl = {
+      id: uid(),
+      name,
+      type: document.getElementById('tpl-type').value,
+      recurrence: document.getElementById('tpl-recurrence').value,
+      dayOfWeek: parseInt(document.getElementById('tpl-dow').value, 10),
+      durationMins: parseInt(document.getElementById('tpl-duration').value, 10) || 60,
+      attendeesTemplate: document.getElementById('tpl-attendees').value,
+      agendaTemplate: document.getElementById('tpl-agenda').value,
+    };
+    data.templates.push(tpl);
+    save();
+    closeTplModal();
+    renderTemplates();
+    showToast('Template saved');
+  }
+
+  function deleteTemplate(id) {
+    if (!confirm('Delete this template?')) return;
+    data.templates = data.templates.filter(t => t.id !== id);
+    save();
+    renderTemplates();
+  }
+
+  function nextOccurrence(tpl) {
+    const today = new Date();
+    if (tpl.recurrence === 'daily') {
+      const d = new Date(today); d.setDate(d.getDate() + 1);
+      return d.toISOString().slice(0, 10);
+    }
+    if (tpl.recurrence === 'weekly' || tpl.recurrence === 'biweekly') {
+      const dow = tpl.dayOfWeek ?? 1;
+      const d = new Date(today);
+      let diff = (dow - d.getDay() + 7) % 7;
+      if (diff === 0) diff = tpl.recurrence === 'biweekly' ? 14 : 7;
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().slice(0, 10);
+    }
+    return new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().slice(0, 10);
+  }
+
+  function createFromTemplate(id) {
+    flushCurrentDetail();
+    const tpl = (data.templates || []).find(t => t.id === id);
+    if (!tpl) return;
+    const date = nextOccurrence(tpl);
+    const attendeesList = (tpl.attendeesTemplate || '').split(',')
+      .map(s => s.trim()).filter(Boolean)
+      .map(name => ({ name, role: 'contributor' }));
+    const m = normalizeMeeting({
+      id: uid(), title: tpl.name, date, type: tpl.type || 'custom',
+      desiredOutcome: '', attendeesList,
+      attendees: attendeesList.map(a => a.name).join(', '),
+      projectId: null, projectName: null,
+      agenda: tpl.agendaTemplate || '', notes: '',
+      actionItems: [], decisions: [], scheduleEventId: null,
+      createdAt: new Date().toISOString(),
+    });
+    data.meetings.unshift(m);
+    save();
+    activeId = m.id;
+    // Hide templates, show list
+    showTemplates = false;
+    document.getElementById('meeting-list-wrap').style.display = 'flex';
+    document.getElementById('templates-panel').className = 'templates-panel';
+    document.getElementById('templates-btn').classList.remove('active');
+    renderList();
+    renderDetail();
+    showToast('Meeting created from template');
+    setTimeout(() => { const t = document.getElementById('dt-title'); if (t) { t.focus(); t.select(); } }, 80);
+  }
+
+  // ── Attendee helpers ──────────────────────────────────────────────────────────
+
+  function buildAttendeeWrapInner(m) {
+    const pills = (m.attendeesList || []).map(a => `
+      <div class="att-pill" data-role="${esc(a.role)}">
+        <span class="att-name">${esc(a.name)}</span>
+        <select class="att-role-sel" onchange="changeAttendeeRole('${esc(a.name)}',this.value)">
+          ${Object.entries(ROLE_LABELS).map(([k, v]) =>
+            `<option value="${k}"${a.role === k ? ' selected' : ''}>${v}</option>`
+          ).join('')}
+        </select>
+        <button class="att-remove" onclick="removeAttendee('${esc(a.name)}')" title="Remove">✕</button>
+      </div>`).join('');
+    return `${pills}
+      <button class="add-att-btn" onclick="showAddAttendee()">+ Add</button>
+      <div class="add-att-row" id="add-att-row">
+        <input class="add-att-name" id="add-att-name" placeholder="Name"
+          onkeydown="if(event.key==='Enter')addAttendee();if(event.key==='Escape')hideAddAttendee()">
+        <select class="add-att-role" id="add-att-role">
+          <option value="contributor">Contributor</option>
+          <option value="lead">Lead</option>
+          <option value="decision-maker">DM</option>
+          <option value="informed">Informed</option>
+        </select>
+        <button class="add-att-confirm" onclick="addAttendee()" style="color:var(--accent)">✓</button>
+        <button class="add-att-confirm" onclick="hideAddAttendee()" style="color:var(--text3)">✕</button>
+      </div>`;
+  }
+
+  function refreshAttendeesWrap() {
+    const m = activeMeeting(); if (!m) return;
+    const wrap = document.getElementById('attendees-wrap');
+    if (wrap) wrap.innerHTML = buildAttendeeWrapInner(m);
+  }
+
+  function showAddAttendee() {
+    const row = document.getElementById('add-att-row');
+    if (row) { row.classList.add('visible'); setTimeout(() => document.getElementById('add-att-name')?.focus(), 30); }
+  }
+
+  function hideAddAttendee() {
+    const row = document.getElementById('add-att-row');
+    if (row) row.classList.remove('visible');
+  }
+
+  function addAttendee() {
+    const nameEl = document.getElementById('add-att-name');
+    const roleEl = document.getElementById('add-att-role');
+    const name = (nameEl?.value || '').trim(); if (!name) return;
+    const m = activeMeeting(); if (!m) return;
+    if ((m.attendeesList || []).find(a => a.name.toLowerCase() === name.toLowerCase())) {
+      showToast('Already added', 'warn'); return;
+    }
+    m.attendeesList.push({ name, role: roleEl?.value || 'contributor' });
+    m.attendees = m.attendeesList.map(a => a.name).join(', ');
+    save();
+    refreshAttendeesWrap();
+    hideAddAttendee();
+    // Refresh decision owner selects
+    refreshDecisionsBody();
+  }
+
+  function removeAttendee(name) {
+    const m = activeMeeting(); if (!m) return;
+    m.attendeesList = (m.attendeesList || []).filter(a => a.name !== name);
+    m.attendees = m.attendeesList.map(a => a.name).join(', ');
+    save();
+    refreshAttendeesWrap();
+    refreshDecisionsBody();
+  }
+
+  function changeAttendeeRole(name, role) {
+    const m = activeMeeting(); if (!m) return;
+    const att = (m.attendeesList || []).find(a => a.name === name);
+    if (att) att.role = role;
+    save();
+    refreshAttendeesWrap();
+  }
+
+  // ── Decision helpers ──────────────────────────────────────────────────────────
+
+  function buildDecisionsBody(m) {
+    const decisions = m.decisions || [];
+    const attendeeNames = (m.attendeesList || []).map(a => a.name);
+    if (!decisions.length) {
+      return '<div style="font-size:12px;color:var(--text3);padding:4px 6px">No decisions logged yet.</div>';
+    }
+    return decisions.map(d => {
+      const ownerOpts = `<option value="">Owner…</option>` +
+        attendeeNames.map(n => `<option value="${esc(n)}"${d.owner === n ? ' selected' : ''}>${esc(n)}</option>`).join('');
+      return `<div class="dec-row">
+        <input class="dec-text" value="${esc(d.text)}" placeholder="Decision…"
+          oninput="updateDecision('${d.id}','text',this.value)">
+        <select class="dec-owner-sel" onchange="updateDecision('${d.id}','owner',this.value)">${ownerOpts}</select>
+        <span class="dec-status-chip" data-status="${d.status || 'open'}"
+          onclick="cycleDecisionStatus('${d.id}')">${STATUS_LABEL[d.status || 'open']}</span>
+        <button class="dec-send-btn" onclick="sendDecisionToHub('${d.id}')" title="Send to Decision Hub">→ Hub</button>
+        <button class="dec-del-btn" onclick="deleteDecision('${d.id}')">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  function refreshDecisionsBody() {
+    const m = activeMeeting(); if (!m) return;
+    const body = document.getElementById('decisions-body');
+    if (body) body.innerHTML = buildDecisionsBody(m);
+    const title = document.getElementById('dec-hdr-title');
+    if (title) title.textContent = `Decisions Made (${(m.decisions || []).length})`;
+  }
+
+  function toggleDecisions() {
+    decisionsOpen = !decisionsOpen;
+    const body = document.getElementById('decisions-body');
+    const icon = document.getElementById('dec-toggle-icon');
+    if (body) body.style.display = decisionsOpen ? 'flex' : 'none';
+    if (icon) icon.classList.toggle('open', decisionsOpen);
+  }
+
+  function logDecision() {
+    const m = activeMeeting(); if (!m) return;
+    if (!m.decisions) m.decisions = [];
+    m.decisions.push({ id: uid(), text: '', owner: '', status: 'open' });
+    save();
+    if (!decisionsOpen) toggleDecisions();
+    refreshDecisionsBody();
+    // Focus last decision text input
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.dec-text');
+      if (rows.length) rows[rows.length - 1].focus();
+    }, 30);
+  }
+
+  function updateDecision(decId, field, value) {
+    const m = activeMeeting(); if (!m) return;
+    const d = (m.decisions || []).find(x => x.id === decId);
+    if (d) { d[field] = value; save(); }
+  }
+
+  function cycleDecisionStatus(decId) {
+    const m = activeMeeting(); if (!m) return;
+    const d = (m.decisions || []).find(x => x.id === decId);
+    if (!d) return;
+    d.status = STATUS_NEXT[d.status || 'open'] || 'open';
+    save();
+    refreshDecisionsBody();
+  }
+
+  function sendDecisionToHub(decId) {
+    const m = activeMeeting(); if (!m) return;
+    const d = (m.decisions || []).find(x => x.id === decId);
+    if (!d) return;
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({
+      id, title: d.text || 'Decision from ' + (m.title || 'meeting'),
+      summary: `From meeting: ${m.title || ''}${m.desiredOutcome ? '\nOutcome: ' + m.desiredOutcome : ''}`,
+      status: d.status === 'decided' ? 'decided' : 'open', type: 'tactical', cynefin: '',
+      confidence: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: '',
+    });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision sent to Decision Hub');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  function deleteDecision(decId) {
+    const m = activeMeeting(); if (!m) return;
+    m.decisions = (m.decisions || []).filter(x => x.id !== decId);
+    save();
+    refreshDecisionsBody();
+  }
+
+  // ── Schedule sync ─────────────────────────────────────────────────────────────
+
+  function syncToSchedule() {
+    const m = activeMeeting(); if (!m) return;
+    flushCurrentDetail();
+    const sd = HubStorage.get('schedule-v1') || { items: [] };
+    if (!sd.items) sd.items = [];
+    const eventId = m.scheduleEventId || ('sev-' + uid());
+    const existing = sd.items.findIndex(e => e.id === eventId);
+    const evObj = {
+      id: eventId, type: 'event', source: 'meeting',
+      title: m.title || 'Meeting',
+      start: m.date || new Date().toISOString().slice(0, 10),
+      end: m.date || new Date().toISOString().slice(0, 10),
+      notes: m.desiredOutcome || '',
+      projectId: m.projectId || null, color: '#6366f1', done: false,
+    };
+    if (existing >= 0) { Object.assign(sd.items[existing], evObj); }
+    else { sd.items.push(evObj); }
+    HubStorage.set('schedule-v1', sd);
+    m.scheduleEventId = eventId;
+    save();
+    const btn = document.getElementById('sync-sched-btn');
+    if (btn) { btn.className = 'sync-sched-btn synced'; btn.disabled = true; btn.textContent = '✓ Schedule'; }
+    showToast('Synced to Schedule');
+    renderScheduleStrip();
+  }
+
+  // ── Hub links ─────────────────────────────────────────────────────────────────
+
+  function openLinksModal() {
+    const m = activeMeeting(); if (!m) return;
+    if (typeof HubLinks !== 'undefined') HubLinks.openModal('meetings-hub', m.id, m.title || 'Untitled meeting');
+  }
+
+  // ── Mobile sidebar ────────────────────────────────────────────────────────────
+
   function toggleSidebar() {
     const s = document.querySelector('.meeting-list-panel');
     const b = document.getElementById('mh-backdrop');
@@ -328,7 +937,7 @@
     document.getElementById('mh-backdrop').classList.remove('open');
   }
 
-  // ── Detail ───────────────────────────────────────────────────────────────────
+  // ── Detail ────────────────────────────────────────────────────────────────────
 
   function openMeeting(id) {
     closeSidebar();
@@ -336,142 +945,171 @@
     activeId = id;
     renderList();
     renderDetail();
-    const m = data.meetings.find(x => x.id === id);
-    const btn = document.getElementById('archive-meeting-btn');
-    if (btn && m) btn.textContent = m.archived ? '↩ Restore' : '📦 Archive';
   }
 
   function renderDetail() {
     const m = activeMeeting();
     const empty = document.getElementById('detail-empty');
     const content = document.getElementById('detail-content');
-
     if (!m) { empty.style.display = 'flex'; content.style.display = 'none'; return; }
     empty.style.display = 'none';
     content.style.display = 'flex';
 
-    // Build project options
     const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
     const projOpts = `<option value="">— No project —</option>` +
-      projects.map(p => `<option value="${_esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
+      projects.map(p => `<option value="${esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 
-    const actionsHtml = (m.actionItems || []).map(a => `<div class="action-item" draggable="true" data-drag-id="${a.id}" id="ai-${a.id}">
-      <div class="action-check${a.done?' done':''}" onclick="toggleAction('${a.id}')"></div>
-      <div class="action-text${a.done?' done':''}">${_esc(a.text)}</div>
-      ${!a.taskCreated
-        ? `<button class="action-send-btn" onclick="sendActionToProjectHub('${a.id}')" title="Create task in Project Hub">→ Project Hub</button>`
-        : `<span class="action-send-btn sent">✓ Task created</span>`}
-      <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
-    </div>`).join('');
+    const typeOpts = Object.entries(MEETING_TYPES).map(([k, v]) =>
+      `<option value="${k}"${m.type === k ? ' selected' : ''}>${v.icon} ${v.label}</option>`
+    ).join('');
+
+    const actionsHtml = (m.actionItems || []).map(a => `
+      <div class="action-item" draggable="true" data-drag-id="${a.id}" id="ai-${a.id}">
+        <div class="action-check${a.done ? ' done' : ''}" onclick="toggleAction('${a.id}')"></div>
+        <div class="action-text${a.done ? ' done' : ''}">${esc(a.text)}</div>
+        ${!a.taskCreated
+          ? `<button class="action-send-btn" onclick="sendActionToProjectHub('${a.id}')" title="Create task in Project Hub">→ Project Hub</button>`
+          : `<span class="action-send-btn sent">✓ Task created</span>`}
+        <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
+      </div>`).join('');
 
     content.innerHTML = `
       <div class="detail-header">
-        <input class="detail-title-input" id="dt-title" placeholder="Meeting title…" value="${_esc(m.title||'')}" oninput="scheduleSave()">
+        <input class="detail-title-input" id="dt-title" placeholder="Meeting title…"
+          value="${esc(m.title || '')}" oninput="scheduleSave()">
+
         <div class="detail-meta-row">
+          <select class="type-select" id="dt-type" onchange="changeType(this)">${typeOpts}</select>
           <span class="meta-label">Date</span>
-          <input class="meta-input meta-date" id="dt-date" type="date" value="${_esc(m.date||'')}" onchange="scheduleSave()">
-          <span class="meta-label">Attendees</span>
-          <input class="meta-input" id="dt-attendees" placeholder="Names, comma-separated" value="${_esc(m.attendees||'')}" style="width:200px" oninput="scheduleSave()">
+          <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
           <span class="meta-label">Project</span>
           <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select>
         </div>
+
+        <input class="outcome-input" id="dt-outcome"
+          placeholder="What should this meeting produce?"
+          value="${esc(m.desiredOutcome || '')}" oninput="scheduleSave()">
+
+        <div class="attendees-section">
+          <div class="att-section-label">Attendees</div>
+          <div class="attendees-wrap" id="attendees-wrap">${buildAttendeeWrapInner(m)}</div>
+        </div>
+
         <div class="detail-actions-row">
           <span class="save-indicator" id="save-indicator"></span>
           <div style="flex:1"></div>
-          <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create a decision draft from this meeting">→ Decision</button>
-          <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">📦 Archive</button>
-          <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete meeting</button>
+          <button class="sync-sched-btn${m.scheduleEventId ? ' synced' : ''}" id="sync-sched-btn"
+            onclick="${m.scheduleEventId ? '' : 'syncToSchedule()'}" ${m.scheduleEventId ? 'disabled' : ''}
+            title="${m.scheduleEventId ? 'Already synced' : 'Sync to Schedule'}">
+            ${m.scheduleEventId ? '✓ Schedule' : '→ Schedule'}
+          </button>
+          <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
+          <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
+          <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
+          <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete</button>
         </div>
       </div>
 
       <div class="notes-area">
         <div class="agenda-col">
           <div class="col-header">Agenda</div>
-          <textarea class="col-textarea" id="dt-agenda" placeholder="Meeting agenda, topics to cover…" oninput="scheduleSave()">${_esc(m.agenda||'')}</textarea>
+          <textarea class="col-textarea" id="dt-agenda"
+            placeholder="Meeting agenda, topics to cover…" oninput="scheduleSave()">${esc(m.agenda || '')}</textarea>
         </div>
         <div class="notes-col">
           <div class="col-header">Notes</div>
-          <textarea class="col-textarea" id="dt-notes" placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${_esc(m.notes||'')}</textarea>
+          <textarea class="col-textarea" id="dt-notes"
+            placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${esc(m.notes || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="decisions-section" id="decisions-section">
+        <div class="decisions-hdr" onclick="toggleDecisions()">
+          <span class="dec-toggle-icon${decisionsOpen ? ' open' : ''}" id="dec-toggle-icon">▶</span>
+          <span class="dec-hdr-title" id="dec-hdr-title">Decisions Made (${(m.decisions || []).length})</span>
+          <button class="add-action-btn" onclick="event.stopPropagation();logDecision()" style="margin-left:auto">+ Log decision</button>
+        </div>
+        <div class="decisions-body" id="decisions-body"
+          style="display:${decisionsOpen ? 'flex' : 'none'};flex-direction:column;gap:5px">
+          ${buildDecisionsBody(m)}
         </div>
       </div>
 
       <div class="actions-panel">
         <div class="actions-header">
-          <div class="actions-title">Action Items (${(m.actionItems||[]).length})</div>
+          <div class="actions-title">Action Items (${(m.actionItems || []).length})</div>
           <button class="add-action-btn" onclick="openActionModal()">+ Add action</button>
         </div>
-        <div class="actions-list">${actionsHtml || '<div style="font-size:12px;color:var(--text3);padding:6px 4px">No action items yet.</div>'}</div>
+        <div class="actions-list" id="actions-list">
+          ${actionsHtml || '<div style="font-size:12px;color:var(--text3);padding:6px 4px">No action items yet.</div>'}
+        </div>
       </div>`;
-    initMHActionDrag(content.querySelector('.actions-list'), m.id);
+
+    initMHActionDrag(content.querySelector('#actions-list'), m.id);
   }
+
+  // ── Drag-drop for action items ────────────────────────────────────────────────
 
   function initMHActionDrag(listEl, meetingId) {
     if (!listEl) return;
     let _id = null, _line = null;
-    function line() {
+    function getLine() {
       if (!_line) { _line = document.createElement('div'); _line.className = 'mh-drop-line'; }
       return _line;
     }
     function clearLine() { if (_line && _line.parentNode) _line.remove(); }
 
     listEl.addEventListener('dragstart', e => {
-      const item = e.target.closest('[data-drag-id]');
-      if (!item) return;
+      const item = e.target.closest('[data-drag-id]'); if (!item) return;
       _id = item.dataset.dragId;
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', _id);
       setTimeout(() => item.classList.add('mh-drag-src'), 0);
     });
-
     listEl.addEventListener('dragend', () => {
       listEl.querySelectorAll('.mh-drag-src').forEach(el => el.classList.remove('mh-drag-src'));
       clearLine(); _id = null;
     });
-
     listEl.addEventListener('dragover', e => {
       if (!_id) return;
       const item = e.target.closest('[data-drag-id]');
       if (!item || item.dataset.dragId === _id) return;
       e.preventDefault();
       const rect = item.getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) item.before(line()); else item.after(line());
+      if (e.clientY < rect.top + rect.height / 2) item.before(getLine()); else item.after(getLine());
     });
-
     listEl.addEventListener('dragleave', e => { if (!listEl.contains(e.relatedTarget)) clearLine(); });
-
     listEl.addEventListener('drop', e => {
       e.preventDefault();
-      const item = e.target.closest('[data-drag-id]');
-      clearLine();
+      const item = e.target.closest('[data-drag-id]'); clearLine();
       if (!item || !_id) return;
       const toId = item.dataset.dragId; if (toId === _id) return;
       const rect = item.getBoundingClientRect();
       const before = e.clientY < rect.top + rect.height / 2;
-      const m = data.meetings.find(x => x.id === meetingId); if (!m) return;
-      const arr = m.actionItems;
+      const mtg = data.meetings.find(x => x.id === meetingId); if (!mtg) return;
+      const arr = mtg.actionItems;
       const fromIdx = arr.findIndex(a => a.id === _id); if (fromIdx === -1) return;
       const [moved] = arr.splice(fromIdx, 1);
       const toIdx = arr.findIndex(a => a.id === toId);
       arr.splice(before ? toIdx : toIdx + 1, 0, moved);
       _id = null;
-      save(); renderDetail(meetingId);
+      save(); renderDetail();
     });
   }
 
+  // ── Flush + scheduleSave ──────────────────────────────────────────────────────
+
   function flushCurrentDetail() {
     if (!activeId) return;
-    const m = activeMeeting();
-    if (!m) return;
-    const titleEl = document.getElementById('dt-title');
-    const dateEl = document.getElementById('dt-date');
-    const attendeesEl = document.getElementById('dt-attendees');
-    const agendaEl = document.getElementById('dt-agenda');
-    const notesEl = document.getElementById('dt-notes');
-    if (titleEl) m.title = titleEl.value;
-    if (dateEl) m.date = dateEl.value;
-    if (attendeesEl) m.attendees = attendeesEl.value;
-    if (agendaEl) m.agenda = agendaEl.value;
-    if (notesEl) m.notes = notesEl.value;
+    const m = activeMeeting(); if (!m) return;
+    const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+    if (v('dt-title')   !== null) m.title          = v('dt-title');
+    if (v('dt-date')    !== null) m.date            = v('dt-date');
+    if (v('dt-type')    !== null) m.type            = v('dt-type');
+    if (v('dt-outcome') !== null) m.desiredOutcome  = v('dt-outcome');
+    if (v('dt-agenda')  !== null) m.agenda          = v('dt-agenda');
+    if (v('dt-notes')   !== null) m.notes           = v('dt-notes');
+    m.attendees = (m.attendeesList || []).map(a => a.name).join(', ');
     save();
   }
 
@@ -481,73 +1119,71 @@
     if (ind) ind.textContent = 'saving…';
     saveTimer = setTimeout(() => {
       flushCurrentDetail();
-      const ind = document.getElementById('save-indicator');
-      if (ind) { ind.textContent = 'saved'; setTimeout(() => { if (ind) ind.textContent = ''; }, 1500); }
+      const ind2 = document.getElementById('save-indicator');
+      if (ind2) { ind2.textContent = 'saved'; setTimeout(() => { if (ind2) ind2.textContent = ''; }, 1500); }
       renderList();
     }, 600);
   }
 
+  // ── Field handlers ────────────────────────────────────────────────────────────
+
   function changeProject(sel) {
     const m = activeMeeting(); if (!m) return;
     m.projectId = sel.value || null;
-    const opt = sel.options[sel.selectedIndex];
-    m.projectName = sel.value ? opt.text : null;
+    m.projectName = sel.value ? sel.options[sel.selectedIndex].text : null;
     save(); renderList();
   }
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
+  function changeType(sel) {
+    const m = activeMeeting(); if (!m) return;
+    m.type = sel.value;
+    const agendaEl = document.getElementById('dt-agenda');
+    if (agendaEl && !agendaEl.value.trim()) {
+      agendaEl.value = MEETING_TYPES[m.type]?.agenda || '';
+      m.agenda = agendaEl.value;
+    }
+    scheduleSave();
+  }
+
+  // ── Action items ──────────────────────────────────────────────────────────────
 
   function toggleAction(id) {
     const m = activeMeeting(); if (!m) return;
-    const a = (m.actionItems||[]).find(x => x.id === id);
+    const a = (m.actionItems || []).find(x => x.id === id);
     if (a) { a.done = !a.done; save(); renderDetail(); }
   }
 
   function deleteAction(id) {
     const m = activeMeeting(); if (!m) return;
-    m.actionItems = (m.actionItems||[]).filter(a => a.id !== id);
+    m.actionItems = (m.actionItems || []).filter(a => a.id !== id);
     save(); renderDetail(); renderList();
   }
 
   function sendActionToProjectHub(actionId) {
     const m = activeMeeting(); if (!m) return;
-    const a = (m.actionItems||[]).find(x => x.id === actionId);
-    if (!a) return;
-
+    const a = (m.actionItems || []).find(x => x.id === actionId); if (!a) return;
     const ph = HubStorage.get('project-hub-v1');
-    if (!ph || !Array.isArray(ph.projects) || ph.projects.length === 0) {
-      showToast('Open Project Hub first to create a project', 'warn');
-      return;
+    if (!ph || !Array.isArray(ph.projects) || !ph.projects.length) {
+      showToast('Open Project Hub first to create a project', 'warn'); return;
     }
-
     const taskId = uid();
     const task = {
-      id: taskId, title: a.text, done: false, status: 'open',
-      priority: 'med', notes: `From meeting: ${m.title||''}`, createdAt: new Date().toISOString()
+      id: taskId, title: a.text, done: false, status: 'open', priority: 'med',
+      notes: `From meeting: ${m.title || ''}`, createdAt: new Date().toISOString(),
     };
-
     let added = false;
-    if (m.projectId && ph.projects.length) {
+    if (m.projectId) {
       const proj = ph.projects.find(p => p.id === m.projectId);
       if (proj) { if (!proj.tasks) proj.tasks = []; proj.tasks.push(task); added = true; }
     }
-    if (!added && ph.projects.length) {
-      if (!ph.projects[0].tasks) ph.projects[0].tasks = [];
-      ph.projects[0].tasks.push(task);
-      added = true;
-    }
-    if (!added) {
-      ph.projects.push({ id: uid(), name: 'From Meetings', color: '#b8f033', tasks: [task], createdAt: new Date().toISOString() });
-    }
-
+    if (!added) { if (!ph.projects[0].tasks) ph.projects[0].tasks = []; ph.projects[0].tasks.push(task); }
     HubStorage.set('project-hub-v1', ph);
     a.taskCreated = true; a.taskId = taskId;
     save(); renderDetail(); renderList();
   }
 
   function sendMeetingAsDecision() {
-    const m = activeMeeting();
-    if (!m) return;
+    const m = activeMeeting(); if (!m) return;
     const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
     const id = 'dh-' + Date.now().toString(36);
     arr.push({
@@ -555,7 +1191,7 @@
       summary: [m.agenda, m.notes].filter(Boolean).join('\n\n'),
       status: 'open', type: 'tactical', cynefin: '', confidence: 3,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: ''
+      projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: '',
     });
     HubStorage.set('decision-hub-v1', arr);
     showToast('Decision draft created');
@@ -569,23 +1205,24 @@
   }
   function closeActionModal() { document.getElementById('action-modal-overlay').classList.remove('open'); }
   function saveAction() {
-    const text = document.getElementById('action-input').value.trim();
-    if (!text) return;
+    const text = document.getElementById('action-input').value.trim(); if (!text) return;
     const m = activeMeeting(); if (!m) return;
     if (!m.actionItems) m.actionItems = [];
     m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, createdAt: new Date().toISOString() });
     save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 
-  // ── New / Delete meeting ──────────────────────────────────────────────────────
+  // ── New / archive / delete meeting ───────────────────────────────────────────
 
   function newMeeting() {
     flushCurrentDetail();
-    const m = {
-      id: uid(), title: '', date: new Date().toISOString().split('T')[0],
-      attendees: '', projectId: null, projectName: null,
-      agenda: '', notes: '', actionItems: [], createdAt: new Date().toISOString()
-    };
+    const m = normalizeMeeting({
+      id: uid(), title: '', date: new Date().toISOString().slice(0, 10),
+      type: 'custom', desiredOutcome: '', attendees: '', attendeesList: [],
+      projectId: null, projectName: null, agenda: '', notes: '',
+      actionItems: [], decisions: [], scheduleEventId: null,
+      createdAt: new Date().toISOString(),
+    });
     data.meetings.unshift(m);
     save(); activeId = m.id; renderList(); renderDetail();
     setTimeout(() => { const t = document.getElementById('dt-title'); if (t) t.focus(); }, 80);
@@ -593,8 +1230,7 @@
 
   function archiveMeeting() {
     if (!activeId) return;
-    const m = data.meetings.find(x => x.id === activeId);
-    if (!m) return;
+    const m = data.meetings.find(x => x.id === activeId); if (!m) return;
     m.archived = !m.archived;
     save(); activeId = null; renderList();
     document.getElementById('detail-empty').style.display = 'flex';
@@ -618,19 +1254,16 @@
     save(); renderList(); renderDetail();
   }
 
-  // ── Boot ─────────────────────────────────────────────────────────────────────
+  // ── Boot ──────────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', () => {
     load();
     if (data.meetings.length) activeId = data.meetings[0].id;
+    renderScheduleStrip();
     renderList();
     renderDetail();
-    // Register onChange BEFORE HubBootstrap so HubData.init()'s immediate
-    // _notifyListeners() call (the "populate dropdowns on load" hook) fires
-    // with a live listener — catches any cloud/cross-tab update that arrived
-    // before init() ran and ensures the project select always reflects the
-    // latest project-hub-v1 data.
     HubData.onChange(() => renderDetail());
+    HubStorage.subscribe('schedule-v1', renderScheduleStrip);
     HubBootstrap.start('meetings-hub');
   });
 
@@ -639,6 +1272,9 @@
   });
   document.getElementById('action-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveAction();
+  });
+  document.getElementById('tpl-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('tpl-modal-overlay')) closeTplModal();
   });
 </script>
 </body>

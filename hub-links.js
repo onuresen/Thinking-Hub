@@ -151,10 +151,11 @@ window.HubLinks = (() => {
       if (toolId === 'meetings-hub') {
         const data = HubStorage.get('meetings-hub-v1');
         if (!data) return [];
+        const MT = { standup:'⚡', weekly:'📅', '1on1':'👥', planning:'🗺', kickoff:'🚀', decision:'⊕', retro:'⟲', review:'↺', custom:'▣' };
         return (data.meetings || []).map(m => ({
           id: m.id,
           label: m.title || '(untitled meeting)',
-          subtitle: m.date || 'meeting'
+          subtitle: (MT[m.type] || '▣') + ' ' + (m.date || 'meeting')
         }));
       }
 
