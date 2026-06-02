@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal Hub</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* ── Journal Hub Shell ── */
+    .jh-topbar {
+      height: 54px; display: flex; align-items: center; gap: 14px;
+      padding: 0 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--surface);
+    }
+    .jh-logo { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex-shrink: 0; }
+    .jh-tab-bar { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
+    .jh-tab {
+      padding: 5px 14px; border-radius: 5px; border: none; background: transparent;
+      color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.12s;
+    }
+    .jh-tab:hover { color: var(--text); }
+    .jh-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+
+    .jh-panel { flex: 1; display: flex; overflow: hidden; height: 100%; }
+    .jh-body { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Log Hub (lh-) ─────────────────────────────────────────── */
+    .lh-sidebar {
+      width: 280px; min-width: 280px; height: 100%;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+    }
+    .lh-sidebar-logo {
+      height: 52px; display: flex; align-items: center; gap: 9px;
+      padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .lh-logo-mark {
+      width: 24px; height: 24px; border-radius: 6px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #111; font-family: var(--font-display);
+    }
+    .lh-logo-label { font-family: var(--font-display); font-size: 12.5px; font-weight: 800; }
+    .lh-sidebar-inner { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .lh-new-entry-btn {
+      width: 100%; padding: 8px; border-radius: var(--r-sm); border: 1px dashed var(--border);
+      background: transparent; color: var(--text3); font-size: 12px; cursor: pointer;
+      transition: all 0.12s; display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-family: var(--font-body);
+    }
+    .lh-new-entry-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .lh-entry-list-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); flex-shrink: 0; }
+    .lh-entry-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; }
+    .lh-entry-item { padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; transition: background 0.12s; border: 1px solid transparent; display: flex; align-items: center; gap: 8px; }
+    .lh-entry-item:hover { background: var(--surface2); }
+    .lh-entry-item.active { background: var(--accent-dim); border-color: var(--accent-glow); }
+    .lh-entry-mood-dot { font-size: 14px; flex-shrink: 0; }
+    .lh-entry-item-right { flex: 1; min-width: 0; }
+    .lh-entry-item-date { font-size: 11px; font-family: var(--font-mono); color: var(--text3); }
+    .lh-entry-item-preview { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .lh-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .lh-streak-bar { height: 52px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; padding: 0 24px; flex-shrink: 0; }
+    .lh-mob-nav-btn { display: none; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 6px 8px; border-radius: var(--r-sm); flex-shrink: 0; line-height: 1; }
+    .lh-mob-nav-btn:hover { background: var(--surface2); }
+    .lh-streak-stat { display: flex; align-items: center; gap: 7px; }
+    .lh-streak-num { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .lh-streak-label { font-size: 12px; color: var(--text3); }
+    .lh-streak-divider { width: 1px; height: 24px; background: var(--border); }
+
+    .lh-content { flex: 1; display: flex; overflow: hidden; }
+    .lh-heatmap-panel { width: 310px; min-width: 310px; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 18px; overflow-y: auto; gap: 16px; flex-shrink: 0; }
+    .lh-heatmap-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+    .lh-heatmap-grid { display: flex; flex-direction: column; gap: 3px; }
+    .lh-heatmap-row { display: flex; align-items: center; gap: 3px; }
+    .lh-heatmap-day-label { font-size: 9px; color: var(--text3); font-family: var(--font-mono); width: 14px; text-align: right; flex-shrink: 0; }
+    .lh-heatmap-cell { width: 13px; height: 13px; border-radius: 2px; background: var(--surface2); cursor: pointer; transition: transform 0.1s; position: relative; flex-shrink: 0; }
+    .lh-heatmap-cell:hover { transform: scale(1.3); }
+    .lh-heatmap-cell.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .lh-heatmap-cell[data-mood="1"] { background: #6366f1; opacity: 0.3; }
+    .lh-heatmap-cell[data-mood="2"] { background: #6366f1; opacity: 0.5; }
+    .lh-heatmap-cell[data-mood="3"] { background: var(--accent); opacity: 0.55; }
+    .lh-heatmap-cell[data-mood="4"] { background: var(--accent); opacity: 0.8; }
+    .lh-heatmap-cell[data-mood="5"] { background: var(--accent); }
+    [data-theme="light"] .lh-heatmap-cell[data-mood="1"] { background: #818cf8; }
+    [data-theme="light"] .lh-heatmap-cell[data-mood="2"] { background: #6366f1; }
+    [data-theme="light"] .lh-heatmap-cell[data-mood="3"] { background: var(--accent); opacity: 0.6; }
+    [data-theme="light"] .lh-heatmap-cell[data-mood="4"] { background: var(--accent); opacity: 0.85; }
+    [data-theme="light"] .lh-heatmap-cell[data-mood="5"] { background: var(--accent); }
+    .lh-heatmap-legend { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .lh-heatmap-legend span { font-size: 10px; color: var(--text3); }
+    .lh-legend-cell { width: 11px; height: 11px; border-radius: 2px; }
+    .lh-heatmap-tooltip { position: fixed; pointer-events: none; z-index: 900; background: var(--surface3, var(--surface)); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 9px; font-size: 11px; color: var(--text2); font-family: var(--font-mono); white-space: nowrap; display: none; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+
+    .lh-editor-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .lh-editor-header { padding: 18px 24px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: flex-start; gap: 16px; }
+    .lh-editor-date { font-family: var(--font-display); font-size: 20px; font-weight: 800; flex: 1; }
+    .lh-editor-date-sub { font-size: 12px; color: var(--text3); font-family: var(--font-body); margin-top: 2px; }
+    .lh-mood-picker { display: flex; gap: 6px; flex-shrink: 0; }
+    .lh-mood-btn { width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent; background: var(--surface2); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    .lh-mood-btn:hover { background: var(--surface3, var(--surface2)); transform: scale(1.1); }
+    .lh-mood-btn.active { border-color: var(--accent); background: var(--accent-dim); }
+    .lh-editor-body { flex: 1; padding: 18px 24px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+    .lh-editor-prompt { font-size: 12px; color: var(--text3); font-style: italic; }
+    .lh-log-textarea { flex: 1; background: transparent; border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; color: var(--text); font-family: var(--font-mono); font-size: 13px; line-height: 1.7; resize: none; outline: none; transition: border-color 0.15s; }
+    .lh-log-textarea:focus { border-color: var(--accent); }
+    .lh-log-textarea::placeholder { color: var(--text3); }
+    .lh-bullet-focus-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .lh-bf-label { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); }
+    .lh-bf-chip { border: 1px solid var(--border); border-radius: 20px; background: transparent; color: var(--text2); font-size: 11.5px; padding: 3px 10px; cursor: pointer; transition: all 0.12s; font-family: var(--font-body); }
+    .lh-bf-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .lh-bf-chip.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+    .lh-learning-section { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .lh-learning-label { font-size: 11.5px; font-weight: 700; color: var(--text2); }
+    .lh-learning-hint { font-weight: 400; color: var(--text3); font-size: 10.5px; }
+    .lh-learning-textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 12.5px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.15s; }
+    .lh-learning-textarea:focus { border-color: var(--accent); }
+    .lh-learning-textarea::placeholder { color: var(--text3); }
+    .lh-save-bar { padding: 12px 24px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .lh-save-status { font-size: 11px; color: var(--text3); flex: 1; }
+    .lh-save-status.saved { color: var(--accent-like); }
+    .lh-sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
+    .lh-sidebar-backdrop.open { display: block; }
+
+    @media (max-width: 640px) {
+      .lh-sidebar { position: fixed; left: 0; top: 0; bottom: 0; height: 100%; z-index: 100; transform: translateX(-100%); transition: transform 0.22s cubic-bezier(.4,0,.2,1); box-shadow: 6px 0 32px rgba(0,0,0,0.45); width: 240px; min-width: 240px; }
+      .lh-sidebar.open { transform: translateX(0); }
+      .lh-mob-nav-btn { display: flex; align-items: center; }
+      .lh-heatmap-panel { display: none; }
+    }
+
+    /* ── Review Hub (rh-) ──────────────────────────────────────── */
+    #panel-weekly { flex-direction: column; }
+    .rh-topbar { height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+    .rh-topbar-spacer { flex: 1; }
+    .rh-week-nav { display: flex; align-items: center; gap: 8px; }
+    .rh-week-label { font-family: var(--font-mono); font-size: 12px; color: var(--text2); min-width: 130px; text-align: center; }
+    .rh-week-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    .rh-week-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .rh-week-btn:disabled { opacity: 0.3; cursor: default; }
+    .rh-save-chip { font-size: 11px; color: var(--accent-like); opacity: 0; transition: opacity 0.3s; }
+    .rh-save-chip.show { opacity: 1; }
+
+    .rh-columns { flex: 1; display: flex; overflow: hidden; }
+    .rh-col { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; }
+    .rh-col:last-child { border-right: none; }
+    .rh-col-header { padding: 14px 18px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .rh-col-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+    .rh-col-title.done-color { color: var(--accent-like); }
+    .rh-col-title.capture-color { color: var(--accent); }
+    .rh-col-title.next-color { color: #a78bfa; }
+    .rh-col-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .rh-col-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .rh-col-body::-webkit-scrollbar { width: 4px; }
+    .rh-col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Day chips in Done column */
+    .rh-day-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+    .rh-day-chip { font-size: 10px; font-family: var(--font-mono); padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--text3); cursor: pointer; transition: all 0.12s; background: transparent; }
+    .rh-day-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .rh-day-chip.has-entry { border-color: var(--accent-glow); color: var(--accent); background: var(--accent-dim); }
+
+    .rh-task-pull { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; display: flex; align-items: flex-start; gap: 8px; background: var(--surface); cursor: pointer; transition: all 0.12s; }
+    .rh-task-pull:hover { border-color: var(--accent-like); background: var(--surface2); }
+    .rh-task-pull.pinned { border-color: var(--accent-like); background: var(--surface2); }
+    .rh-task-pull-check { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent-like); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--accent-like); }
+    .rh-task-pull.pinned .rh-task-pull-check { background: var(--accent-like); color: #111; }
+    .rh-task-pull-info { flex: 1; min-width: 0; }
+    .rh-task-pull-title { font-size: 13px; color: var(--text); line-height: 1.3; }
+    .rh-task-pull-meta { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: var(--font-mono); }
+    .rh-done-empty { font-size: 12px; color: var(--text3); padding: 8px 4px; }
+    .rh-refresh-done { font-size: 11px; color: var(--text3); cursor: pointer; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border); background: transparent; font-family: var(--font-body); transition: all 0.12s; align-self: flex-start; }
+    .rh-refresh-done:hover { border-color: var(--accent); color: var(--accent); }
+
+    .rh-capture-section { display: flex; flex-direction: column; gap: 6px; }
+    .rh-capture-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .rh-capture-textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 13px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.15s; min-height: 80px; }
+    .rh-capture-textarea:focus { border-color: var(--accent); }
+    .rh-capture-textarea::placeholder { color: var(--text3); font-style: italic; }
+
+    .rh-big-rocks-header { font-size: 11px; color: var(--text3); padding: 4px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+    .rh-big-rocks-count { font-family: var(--font-mono); }
+    .rh-rock-slot { border: 2px dashed var(--border); border-radius: var(--r-sm); padding: 10px 12px; min-height: 52px; display: flex; align-items: center; gap: 10px; transition: all 0.15s; position: relative; margin-bottom: 6px; }
+    .rh-rock-slot.has-rock { border-style: solid; border-color: rgba(167,139,250,0.25); background: rgba(167,139,250,0.05); }
+    .rh-rock-slot.drag-over { border-color: #a78bfa; background: rgba(167,139,250,0.1); }
+    .rh-rock-num { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--border); flex-shrink: 0; line-height: 1; transition: color 0.15s; }
+    .rh-rock-slot.has-rock .rh-rock-num { color: #a78bfa; }
+    .rh-rock-content { flex: 1; min-width: 0; }
+    .rh-rock-title { font-size: 13px; color: var(--text); line-height: 1.3; }
+    .rh-rock-remove { font-size: 14px; color: var(--text3); cursor: pointer; opacity: 0; transition: opacity 0.12s; background: none; border: none; padding: 2px 4px; }
+    .rh-rock-slot:hover .rh-rock-remove { opacity: 1; }
+    .rh-rock-slot.empty-slot { cursor: pointer; }
+    .rh-rock-slot.empty-slot:hover { border-color: rgba(167,139,250,0.5); }
+    .rh-rock-empty-hint { font-size: 12px; color: var(--text3); font-style: italic; }
+
+    .rh-open-tasks-section { margin-top: 4px; }
+    .rh-open-tasks-title { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .rh-open-task-chip { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; transition: all 0.12s; margin-bottom: 5px; }
+    .rh-open-task-chip:hover { border-color: rgba(167,139,250,0.5); background: var(--surface2); }
+    .rh-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; flex-shrink: 0; }
+    .rh-chip-title { font-size: 12px; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rh-chip-project { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    .rh-chip-add { font-size: 11px; color: #a78bfa; flex-shrink: 0; }
+
+    .rh-activity-section { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px; }
+    .rh-activity-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 6px; }
+    .rh-activity-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .rh-activity-chip { font-size: 11px; color: var(--text2); background: var(--surface3, var(--surface2)); border-radius: var(--r-sm); padding: 3px 8px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<!-- Journal Hub topbar -->
+<header class="jh-topbar">
+  <div class="jh-logo">Journal<span style="color:var(--accent)">Hub</span></div>
+  <div class="jh-tab-bar">
+    <button class="jh-tab active" data-tab="daily" onclick="switchJhTab('daily')">📓 Daily Log</button>
+    <button class="jh-tab" data-tab="weekly" onclick="switchJhTab('weekly')">↺ Weekly Review</button>
+  </div>
+</header>
+
+<div class="jh-body">
+
+  <!-- ═══ DAILY LOG PANEL ═══ -->
+  <div id="panel-daily" class="jh-panel">
+    <div class="lh-sidebar" id="lh-sidebar">
+      <div class="lh-sidebar-logo">
+        <div class="lh-logo-mark">DL</div>
+        <div class="lh-logo-label">Daily Log</div>
+      </div>
+      <div class="lh-sidebar-inner">
+        <button class="lh-new-entry-btn" onclick="lhOpenToday()">+ Today's entry</button>
+        <div class="lh-entry-list-title">Recent entries</div>
+        <div class="lh-entry-list" id="lh-entry-list"></div>
+      </div>
+    </div>
+
+    <div class="lh-main">
+      <!-- Streak bar -->
+      <div class="lh-streak-bar">
+        <button class="lh-mob-nav-btn" onclick="lhToggleSidebar()" aria-label="Open log entries">☰</button>
+        <div class="lh-streak-stat">
+          <div class="lh-streak-num" id="lh-streak-count">0</div>
+          <div class="lh-streak-label">day streak 🔥</div>
+        </div>
+        <div class="lh-streak-divider"></div>
+        <div class="lh-streak-stat">
+          <div class="lh-streak-num" id="lh-total-count">0</div>
+          <div class="lh-streak-label">total entries</div>
+        </div>
+        <div class="lh-streak-divider"></div>
+        <div class="lh-streak-stat">
+          <div class="lh-streak-num" id="lh-avg-mood">—</div>
+          <div class="lh-streak-label">avg mood</div>
+        </div>
+      </div>
+
+      <div class="lh-content">
+        <!-- Heatmap panel -->
+        <div class="lh-heatmap-panel">
+          <div class="lh-heatmap-title">Mood calendar · last 16 weeks</div>
+          <div id="lh-heatmap-wrap"></div>
+          <div class="lh-heatmap-legend">
+            <span>Less</span>
+            <div class="lh-legend-cell" style="background:var(--surface2)"></div>
+            <div class="lh-legend-cell" style="background:#6366f1;opacity:.3"></div>
+            <div class="lh-legend-cell" style="background:var(--accent);opacity:.55"></div>
+            <div class="lh-legend-cell" style="background:var(--accent);opacity:.8"></div>
+            <div class="lh-legend-cell" style="background:var(--accent)"></div>
+            <span>More</span>
+          </div>
+        </div>
+
+        <!-- Editor panel -->
+        <div class="lh-editor-panel">
+          <div class="lh-editor-header">
+            <div>
+              <div class="lh-editor-date" id="lh-editor-date">Today</div>
+              <div class="lh-editor-date-sub" id="lh-editor-date-sub"></div>
+            </div>
+            <div class="lh-mood-picker">
+              <button class="lh-mood-btn" data-mood="1" title="Rough" onclick="lhSetMood(1)">😴</button>
+              <button class="lh-mood-btn" data-mood="2" title="Okay" onclick="lhSetMood(2)">😐</button>
+              <button class="lh-mood-btn" data-mood="3" title="Good" onclick="lhSetMood(3)">🙂</button>
+              <button class="lh-mood-btn" data-mood="4" title="Great" onclick="lhSetMood(4)">😊</button>
+              <button class="lh-mood-btn" data-mood="5" title="Amazing" onclick="lhSetMood(5)">🔥</button>
+            </div>
+          </div>
+          <div class="lh-editor-body">
+            <div class="lh-editor-prompt" id="lh-editor-prompt">What happened today? What did you learn? What are you grateful for?</div>
+            <div class="lh-bullet-focus-row">
+              <span class="lh-bf-label">Today's mode:</span>
+              <button class="lh-bf-chip" data-bf="notes" onclick="lhSetBulletFocus('notes')">📓 Journal</button>
+              <button class="lh-bf-chip" data-bf="tasks" onclick="lhSetBulletFocus('tasks')">✅ Tasks</button>
+              <button class="lh-bf-chip" data-bf="events" onclick="lhSetBulletFocus('events')">📅 Events</button>
+            </div>
+            <textarea class="lh-log-textarea" id="lh-log-textarea" placeholder="Start writing…" oninput="lhOnEdit()"></textarea>
+            <div class="lh-learning-section">
+              <div class="lh-learning-label">🔬 What did I learn today? <span class="lh-learning-hint">(Feynman: explain it simply)</span></div>
+              <textarea class="lh-learning-textarea" id="lh-learning-textarea" rows="3"
+                placeholder="Explain the core insight as if teaching someone new. Avoid jargon — use a concrete analogy."
+                oninput="lhOnLearningEdit()"></textarea>
+            </div>
+          </div>
+          <div class="lh-save-bar">
+            <div class="lh-save-status" id="lh-save-status"></div>
+            <button class="btn btn-ghost" onclick="lhSendToDecision()" style="font-size:11px" title="Create a decision from this entry">→ Decision</button>
+            <button class="btn btn-ghost" onclick="lhSendToTask()" style="font-size:11px" title="Create a task from this entry">→ Task</button>
+            <button class="btn btn-primary" onclick="lhSaveEntry()">Save entry</button>
+            <button class="btn btn-ghost" onclick="lhDeleteEntry()" id="lh-delete-btn" style="display:none">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ WEEKLY REVIEW PANEL ═══ -->
+  <div id="panel-weekly" class="jh-panel" style="display:none">
+    <!-- Weekly topbar (week nav + push buttons) -->
+    <div class="rh-topbar">
+      <div class="rh-week-nav">
+        <button class="rh-week-btn" id="rh-prev-btn" onclick="rhShiftWeek(-1)">‹</button>
+        <div class="rh-week-label" id="rh-week-label">…</div>
+        <button class="rh-week-btn" id="rh-next-btn" onclick="rhShiftWeek(1)">›</button>
+      </div>
+      <div class="rh-topbar-spacer"></div>
+      <button class="btn btn-ghost" onclick="rhSendToDecision()" style="font-size:11px;padding:5px 10px" title="Create a decision from this week's blockers">→ Decision</button>
+      <button class="btn btn-ghost" onclick="rhSendToReflection()" style="font-size:11px;padding:5px 10px" title="Send free notes to Reflection Board as Questions">→ Reflection Q</button>
+      <div class="rh-save-chip" id="rh-save-chip">Saved ✓</div>
+    </div>
+
+    <!-- Three columns -->
+    <div class="rh-columns">
+      <!-- Done this week -->
+      <div class="rh-col">
+        <div class="rh-col-header">
+          <div class="rh-col-title done-color">✓ Done this week</div>
+          <div class="rh-col-sub">Tasks completed · day chips open Daily Log</div>
+        </div>
+        <div class="rh-col-body" id="rh-done-col">
+          <div class="rh-done-empty">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Capture -->
+      <div class="rh-col">
+        <div class="rh-col-header">
+          <div class="rh-col-title capture-color">◎ Capture</div>
+          <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
+        </div>
+        <div class="rh-col-body">
+          <div class="rh-capture-section">
+            <div class="rh-capture-label">Wins 🏆</div>
+            <textarea class="rh-capture-textarea" id="rh-cap-wins" rows="4" placeholder="What went well this week?" oninput="rhAutosave()"></textarea>
+          </div>
+          <div class="rh-capture-section">
+            <div class="rh-capture-label">Learnings 💡</div>
+            <textarea class="rh-capture-textarea" id="rh-cap-learn" rows="4" placeholder="What did you learn or discover?" oninput="rhAutosave()"></textarea>
+          </div>
+          <div class="rh-capture-section">
+            <div class="rh-capture-label">Blockers 🚧</div>
+            <textarea class="rh-capture-textarea" id="rh-cap-block" rows="3" placeholder="What slowed you down?" oninput="rhAutosave()"></textarea>
+          </div>
+          <div class="rh-capture-section">
+            <div class="rh-capture-label">Free notes</div>
+            <textarea class="rh-capture-textarea" id="rh-cap-notes" rows="4" placeholder="Anything else on your mind…" oninput="rhAutosave()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next week -->
+      <div class="rh-col">
+        <div class="rh-col-header">
+          <div class="rh-col-title next-color">→ Next week</div>
+          <div class="rh-col-sub">Big rocks · drag tasks to pin</div>
+        </div>
+        <div class="rh-col-body">
+          <div class="rh-big-rocks-header">
+            <span>Top 3 big rocks</span>
+            <span class="rh-big-rocks-count" id="rh-rocks-count">0 / 3</span>
+          </div>
+          <div id="rh-rocks-slots"></div>
+          <div class="rh-open-tasks-section">
+            <div class="rh-open-tasks-title">Open tasks — click to add as big rock</div>
+            <div id="rh-open-tasks-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltip + mobile backdrop -->
+<div class="lh-heatmap-tooltip" id="lh-hm-tooltip"></div>
+<div class="lh-sidebar-backdrop" id="lh-backdrop" onclick="lhCloseSidebar()"></div>
+
+<script>
+  /* ═══════════════════════════════════════════════
+     Journal Hub — tab controller
+  ════════════════════════════════════════════════ */
+
+  let jhActiveTab = 'daily';
+  let lhInited = false;
+  let rhInited = false;
+
+  function switchJhTab(tab) {
+    jhActiveTab = tab;
+    document.getElementById('panel-daily').style.display = tab === 'daily' ? 'flex' : 'none';
+    document.getElementById('panel-weekly').style.display = tab === 'weekly' ? 'flex' : 'none';
+    document.querySelectorAll('.jh-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+    if (tab === 'daily' && !lhInited) { lhLoad(); lhRenderAll(); lhOpenDate(lhTodayStr()); lhInited = true; }
+    if (tab === 'weekly' && !rhInited) { rhLoadAll(); rhRender(); rhInited = true; }
+    // Refresh weekly day chips when switching back (they read from lhData)
+    if (tab === 'weekly' && rhInited) { rhRenderDoneCol(); }
+  }
+
+  /* ═══════════════════════════════════════════════
+     LOG HUB MODULE
+  ════════════════════════════════════════════════ */
+
+  const LH_STORAGE_KEY = 'log-hub-v1';
+  const LH_MOODS = ['', '😴', '😐', '🙂', '😊', '🔥'];
+  const LH_MOOD_LABELS = ['', 'Rough', 'Okay', 'Good', 'Great', 'Amazing'];
+
+  let lhData = { entries: {} };
+  let lhActiveDate = null;
+  let lhSaveTimer = null;
+
+  function lhTodayStr() { return new Date().toISOString().slice(0, 10); }
+
+  function lhLoad() {
+    const raw = HubStorage.get(LH_STORAGE_KEY);
+    lhData = raw || { entries: {} };
+    if (!lhData.entries) lhData.entries = {};
+  }
+
+  function lhSave() { HubStorage.set(LH_STORAGE_KEY, lhData); }
+
+  function lhGetEntry(date) { return lhData.entries[date] || { mood: 0, text: '' }; }
+
+  function lhBuildHeatmap() {
+    const wrap = document.getElementById('lh-heatmap-wrap');
+    if (!wrap) return;
+    const today = new Date();
+    const WEEKS = 16;
+    const startDay = new Date(today);
+    startDay.setDate(startDay.getDate() - WEEKS * 7 + 1);
+    const dow = startDay.getDay();
+    startDay.setDate(startDay.getDate() - ((dow + 6) % 7));
+
+    const days = [];
+    for (let i = 0; i < WEEKS * 7; i++) {
+      const d = new Date(startDay);
+      d.setDate(d.getDate() + i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+
+    const todayISO = today.toISOString().slice(0, 10);
+    const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
+    let html = '<div class="lh-heatmap-grid">';
+    for (let row = 0; row < 7; row++) {
+      html += `<div class="lh-heatmap-row"><div class="lh-heatmap-day-label">${DAY_LABELS[row]}</div>`;
+      for (let col = 0; col < WEEKS; col++) {
+        const dateStr = days[col * 7 + row];
+        const e = lhData.entries[dateStr];
+        const mood = e ? (e.mood || 0) : 0;
+        const isToday = dateStr === todayISO;
+        const future = dateStr > todayISO;
+        const moodAttr = mood ? ` data-mood="${mood}"` : '';
+        const todayCls = isToday ? ' today' : '';
+        const opStyle = future ? ' style="opacity:0.25"' : '';
+        html += `<div class="lh-heatmap-cell${todayCls}"${moodAttr}${opStyle} data-date="${dateStr}" onclick="lhOpenDate('${dateStr}')" onmouseenter="lhShowTooltip(event,'${dateStr}')" onmouseleave="lhHideTooltip()"></div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+  }
+
+  function lhShowTooltip(e, dateStr) {
+    const tip = document.getElementById('lh-hm-tooltip');
+    const entry = lhData.entries[dateStr];
+    const mood = entry ? (entry.mood || 0) : 0;
+    const moodLabel = mood ? ` · ${LH_MOODS[mood]} ${LH_MOOD_LABELS[mood]}` : '';
+    const text = entry && entry.text ? ` · "${entry.text.slice(0, 30)}${entry.text.length > 30 ? '…' : ''}"` : '';
+    tip.textContent = dateStr + moodLabel + text;
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 12) + 'px';
+    tip.style.top = (e.clientY - 28) + 'px';
+  }
+  function lhHideTooltip() { document.getElementById('lh-hm-tooltip').style.display = 'none'; }
+
+  function lhRenderEntryList() {
+    const el = document.getElementById('lh-entry-list');
+    if (!el) return;
+    const dates = Object.keys(lhData.entries).sort((a, b) => b.localeCompare(a));
+    if (!dates.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 4px">No entries yet</div>';
+      return;
+    }
+    el.innerHTML = dates.slice(0, 60).map(d => {
+      const e = lhData.entries[d];
+      const mood = e.mood ? LH_MOODS[e.mood] : '·';
+      const preview = (e.text || '').slice(0, 40);
+      const active = d === lhActiveDate ? ' active' : '';
+      return `<div class="lh-entry-item${active}" onclick="lhOpenDate('${d}')">
+        <div class="lh-entry-mood-dot">${mood}</div>
+        <div class="lh-entry-item-right">
+          <div class="lh-entry-item-date">${d}</div>
+          <div class="lh-entry-item-preview">${preview || 'No text'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function lhToggleSidebar() {
+    const s = document.getElementById('lh-sidebar');
+    const b = document.getElementById('lh-backdrop');
+    b.classList.toggle('open', s.classList.toggle('open'));
+  }
+  function lhCloseSidebar() {
+    document.getElementById('lh-sidebar').classList.remove('open');
+    document.getElementById('lh-backdrop').classList.remove('open');
+  }
+
+  function lhOpenDate(dateStr) {
+    lhCloseSidebar();
+    lhActiveDate = dateStr;
+    const e = lhGetEntry(dateStr);
+    const todayISO = lhTodayStr();
+    const dateObj = new Date(dateStr + 'T12:00:00');
+    const dateLabel = dateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    const edDate = document.getElementById('lh-editor-date');
+    const edDateSub = document.getElementById('lh-editor-date-sub');
+    if (edDate) edDate.textContent = dateStr === todayISO ? 'Today' : dateLabel;
+    if (edDateSub) edDateSub.textContent = dateStr === todayISO ? dateLabel : '';
+
+    const ta = document.getElementById('lh-log-textarea');
+    if (ta) ta.value = e.text || '';
+
+    const bf = e.bulletFocus || '';
+    document.querySelectorAll('.lh-bf-chip').forEach(c => c.classList.toggle('active', c.dataset.bf === bf && !!bf));
+    const placeholders = {
+      notes: 'Start writing freely — thoughts, reflections, gratitude…',
+      tasks: '• Task I did\n• Task I started\n○ Task I want to do tomorrow',
+      events: '○ 09:00 Standup\n○ 11:30 Design review\n• 15:00 1:1 with manager'
+    };
+    if (ta) ta.placeholder = (bf && placeholders[bf]) || 'Start writing…';
+
+    const learningTA = document.getElementById('lh-learning-textarea');
+    if (learningTA) learningTA.value = e.learning || '';
+
+    document.querySelectorAll('.lh-mood-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.mood) === e.mood);
+    });
+
+    const ss = document.getElementById('lh-save-status');
+    if (ss) { ss.textContent = ''; ss.className = 'lh-save-status'; }
+
+    const db = document.getElementById('lh-delete-btn');
+    if (db) db.style.display = !!lhData.entries[dateStr] ? '' : 'none';
+
+    if (ta) ta.focus();
+    lhRenderEntryList();
+  }
+
+  function lhOpenToday() { lhOpenDate(lhTodayStr()); }
+
+  function lhSetMood(n) {
+    document.querySelectorAll('.lh-mood-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.mood) === n);
+    });
+    if (!lhData.entries[lhActiveDate]) lhData.entries[lhActiveDate] = { mood: 0, text: '' };
+    lhData.entries[lhActiveDate].mood = n;
+    lhSave();
+    lhBuildHeatmap();
+  }
+
+  function lhSetBulletFocus(type) {
+    const current = (lhData.entries[lhActiveDate] || {}).bulletFocus;
+    const newFocus = current === type ? '' : type;
+    if (!lhData.entries[lhActiveDate]) lhData.entries[lhActiveDate] = {};
+    lhData.entries[lhActiveDate].bulletFocus = newFocus;
+    document.querySelectorAll('.lh-bf-chip').forEach(c => c.classList.toggle('active', c.dataset.bf === newFocus));
+    const placeholders = {
+      notes: 'Start writing freely — thoughts, reflections, gratitude…',
+      tasks: '• Task I did\n• Task I started\n○ Task I want to do tomorrow',
+      events: '○ 09:00 Standup\n○ 11:30 Design review\n• 15:00 1:1 with manager'
+    };
+    const ta = document.getElementById('lh-log-textarea');
+    if (ta) ta.placeholder = placeholders[newFocus] || 'Start writing…';
+    lhSave();
+  }
+
+  function lhOnLearningEdit() {
+    clearTimeout(lhSaveTimer);
+    lhSaveTimer = setTimeout(lhSaveEntry, 2000);
+  }
+
+  function lhOnEdit() {
+    const ss = document.getElementById('lh-save-status');
+    if (ss) { ss.textContent = 'Unsaved changes…'; ss.className = 'lh-save-status'; }
+    clearTimeout(lhSaveTimer);
+    lhSaveTimer = setTimeout(lhSaveEntry, 2000);
+  }
+
+  function lhSaveEntry() {
+    clearTimeout(lhSaveTimer);
+    const ta = document.getElementById('lh-log-textarea');
+    const text = ta ? ta.value.trim() : '';
+    const learningTA = document.getElementById('lh-learning-textarea');
+    const learning = learningTA ? (learningTA.value || '').trim() : '';
+    const activeMoodBtn = document.querySelector('.lh-mood-btn.active');
+    const activeMood = parseInt(activeMoodBtn?.dataset.mood || '0');
+    if (!text && !activeMood && !learning) return;
+
+    if (!lhData.entries[lhActiveDate]) lhData.entries[lhActiveDate] = {};
+    lhData.entries[lhActiveDate].mood = activeMood;
+    lhData.entries[lhActiveDate].text = text;
+    lhData.entries[lhActiveDate].learning = learning;
+    lhData.entries[lhActiveDate].updatedAt = new Date().toISOString();
+    lhSave();
+    lhRenderAll();
+
+    const ss = document.getElementById('lh-save-status');
+    if (ss) { ss.textContent = 'Saved ✓'; ss.className = 'lh-save-status saved'; }
+    const db = document.getElementById('lh-delete-btn');
+    if (db) db.style.display = '';
+  }
+
+  function lhSendToDecision() {
+    const e = lhData.entries[lhActiveDate];
+    if (!e || (!e.text && !e.learning)) { showToast('Write something first'); return; }
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({ id, title: 'Log ' + lhActiveDate, summary: (e.text || '').slice(0, 300), reasoning: e.learning || '', status: 'open', type: 'tactical', cynefin: '', confidence: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), projectId: '', tags: [], options: '', outcome: '' });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision created from log entry');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  function lhSendToTask() {
+    const e = lhData.entries[lhActiveDate];
+    if (!e || !e.text) { showToast('Write something first'); return; }
+    const phData = HubStorage.get('project-hub-v1');
+    const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
+    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    const title = e.text.slice(0, 80).replace(/\n/g, ' ');
+    const taskId = 'tsk-' + Date.now().toString(36);
+    const proj = projects[0];
+    if (!Array.isArray(proj.tasks)) proj.tasks = [];
+    proj.tasks.push({ taskId, title, status: 'open', priority: 'med', assignees: [], createdAt: new Date().toISOString() });
+    HubStorage.set('project-hub-v1', phData);
+    showToast('Task added to ' + proj.name);
+  }
+
+  function lhDeleteEntry() {
+    if (!lhData.entries[lhActiveDate]) return;
+    if (!confirm('Delete this entry?')) return;
+    delete lhData.entries[lhActiveDate];
+    lhSave();
+    lhRenderAll();
+    lhOpenDate(lhActiveDate);
+  }
+
+  function lhComputeStats() {
+    const dates = Object.keys(lhData.entries).filter(d => lhData.entries[d].text || lhData.entries[d].mood).sort();
+    const total = dates.length;
+    let streak = 0;
+    const today = new Date();
+    let check = new Date(today);
+    while (true) {
+      const ds = check.toISOString().slice(0, 10);
+      if (lhData.entries[ds] && (lhData.entries[ds].text || lhData.entries[ds].mood)) {
+        streak++;
+        check.setDate(check.getDate() - 1);
+      } else {
+        if (streak === 0) {
+          check.setDate(check.getDate() - 1);
+          const ds2 = check.toISOString().slice(0, 10);
+          if (lhData.entries[ds2] && (lhData.entries[ds2].text || lhData.entries[ds2].mood)) {
+            streak++;
+            check.setDate(check.getDate() - 1);
+            continue;
+          }
+        }
+        break;
+      }
+    }
+    const moods = dates.map(d => lhData.entries[d].mood).filter(Boolean);
+    const avgMood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length) : 0;
+    const sc = document.getElementById('lh-streak-count'); if (sc) sc.textContent = streak;
+    const tc = document.getElementById('lh-total-count'); if (tc) tc.textContent = total;
+    const am = document.getElementById('lh-avg-mood'); if (am) am.textContent = avgMood ? LH_MOODS[Math.round(avgMood)] : '—';
+  }
+
+  function lhRenderAll() {
+    lhBuildHeatmap();
+    lhRenderEntryList();
+    lhComputeStats();
+  }
+
+  /* ═══════════════════════════════════════════════
+     REVIEW HUB MODULE
+  ════════════════════════════════════════════════ */
+
+  const RH_STORAGE_KEY = 'review-hub-v1';
+  let rhWeekOffset = 0;
+  let rhReviewData = {};
+  let rhSaveTimer = null;
+  let rhDragTask = null;
+
+  function rhGetMonday(offset) {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff + offset * 7);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function rhWeekKey(monday) {
+    const jan4 = new Date(monday.getFullYear(), 0, 4);
+    const week = Math.ceil(((monday - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+    return `${monday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+  }
+
+  function rhWeekRange(monday) {
+    const sun = new Date(monday);
+    sun.setDate(sun.getDate() + 6);
+    const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `${fmt(monday)} – ${fmt(sun)}`;
+  }
+
+  function rhIsoDate(d) { return d.toISOString().slice(0, 10); }
+
+  function rhLoadAll() {
+    rhReviewData = HubStorage.get(RH_STORAGE_KEY) || {};
+  }
+
+  function rhGetWeekData(key) {
+    if (!rhReviewData[key]) rhReviewData[key] = { wins: '', learn: '', block: '', notes: '', rocks: [] };
+    return rhReviewData[key];
+  }
+
+  function rhSaveAll() {
+    HubStorage.set(RH_STORAGE_KEY, rhReviewData);
+    const chip = document.getElementById('rh-save-chip');
+    if (!chip) return;
+    chip.classList.add('show');
+    clearTimeout(chip._t);
+    chip._t = setTimeout(() => chip.classList.remove('show'), 1800);
+  }
+
+  function rhAutosave() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const wins = document.getElementById('rh-cap-wins');
+    const learn = document.getElementById('rh-cap-learn');
+    const block = document.getElementById('rh-cap-block');
+    const notes = document.getElementById('rh-cap-notes');
+    if (wins) wd.wins = wins.value;
+    if (learn) wd.learn = learn.value;
+    if (block) wd.block = block.value;
+    if (notes) wd.notes = notes.value;
+    clearTimeout(rhSaveTimer);
+    rhSaveTimer = setTimeout(rhSaveAll, 1200);
+  }
+
+  function rhBuildActivityHTML(monStr, sunStr) {
+    const chips = [];
+    try {
+      const dh = HubStorage.get('decision-hub-v1') || [];
+      const count = (Array.isArray(dh) ? dh : []).filter(d => {
+        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      }).length;
+      if (count) chips.push(`◎ ${count} decision${count > 1 ? 's' : ''}`);
+    } catch {}
+    try {
+      const mh = HubStorage.get('meetings-hub-v1') || {};
+      const count = ((mh.meetings) || []).filter(m => m.date >= monStr && m.date <= sunStr).length;
+      if (count) chips.push(`▣ ${count} meeting${count > 1 ? 's' : ''}`);
+    } catch {}
+    try {
+      const fh = HubStorage.get('focus-hub-v1') || {};
+      const sessions = (fh.sessions || []).filter(s => {
+        const at = (s.endedAt || s.startedAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      });
+      const totalMin = sessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
+      if (totalMin > 0) {
+        const h = Math.floor(totalMin / 60), m = totalMin % 60;
+        chips.push(`⏱ ${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} focus`);
+      }
+    } catch {}
+    try {
+      const lh = HubStorage.get('learning-hub-v1') || {};
+      const count = ((lh.items) || []).filter(it => {
+        const at = (it.updatedAt || it.createdAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      }).length;
+      if (count) chips.push(`◑ ${count} learning item${count > 1 ? 's' : ''}`);
+    } catch {}
+    if (!chips.length) return '';
+    return `<div class="rh-activity-section">
+      <div class="rh-activity-title">More this week</div>
+      <div class="rh-activity-chips">${chips.map(c => `<span class="rh-activity-chip">${c}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  function rhRenderDoneCol() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const monStr = rhIsoDate(monday);
+    const sunStr = rhIsoDate(sunday);
+
+    // Day chips linking back to Daily Log
+    const dayChips = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      const ds = rhIsoDate(d);
+      const dayName = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const hasEntry = lhInited && lhData.entries[ds] && (lhData.entries[ds].text || lhData.entries[ds].mood);
+      dayChips.push(`<button class="rh-day-chip${hasEntry ? ' has-entry' : ''}" onclick="switchJhTab('daily');lhOpenDate('${ds}')" title="Open ${ds} in Daily Log">${dayName}</button>`);
+    }
+    const dayChipRow = `<div class="rh-day-chips">${dayChips.join('')}</div>`;
+
+    const col = document.getElementById('rh-done-col');
+    if (!col) return;
+    const activityHTML = rhBuildActivityHTML(monStr, sunStr);
+    const allTasks = HubData.getAllTasks ? HubData.getAllTasks() : [];
+    const projects = HubData.getProjects ? HubData.getProjects() : [];
+    const projectMap = {};
+    projects.forEach(p => projectMap[p.id] = p.name);
+
+    const done = allTasks.filter(t => {
+      if (!t.done && t.status !== 'done') return false;
+      const completedAt = t.completedAt || t.updatedAt || '';
+      return completedAt >= monStr && completedAt <= sunStr + 'T23:59:59';
+    });
+
+    if (!done.length) {
+      col.innerHTML = dayChipRow + `<div class="rh-done-empty">No completed tasks found for this week.</div>
+        <button class="rh-refresh-done" onclick="rhRenderDoneCol()">↻ Refresh</button>
+        ${activityHTML}`;
+      return;
+    }
+
+    col.innerHTML = dayChipRow + done.map(t => {
+      const proj = t.projectId ? (projectMap[t.projectId] || '') : '';
+      return `<div class="rh-task-pull" onclick="rhHighlightTask('${t.id}')">
+        <div class="rh-task-pull-check">✓</div>
+        <div class="rh-task-pull-info">
+          <div class="rh-task-pull-title">${_rhEsc(t.title || t.text || 'Task')}</div>
+          ${proj ? `<div class="rh-task-pull-meta">${_rhEsc(proj)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('') + `<button class="rh-refresh-done" onclick="rhRenderDoneCol()">↻ Refresh</button>${activityHTML}`;
+  }
+
+  function rhHighlightTask(taskId) {
+    if (typeof HubLinks !== 'undefined' && HubLinks.navigateTo) HubLinks.navigateTo('project-hub', taskId);
+  }
+
+  function rhRenderRocks() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const rocks = wd.rocks || [];
+    const slots = document.getElementById('rh-rocks-slots');
+    if (!slots) return;
+    slots.innerHTML = [0, 1, 2].map(i => {
+      const rock = rocks[i];
+      if (rock) {
+        return `<div class="rh-rock-slot has-rock" ondragover="event.preventDefault()" ondrop="rhDropOnSlot(event,${i})">
+          <div class="rh-rock-num">${i + 1}</div>
+          <div class="rh-rock-content"><div class="rh-rock-title">${_rhEsc(rock.title)}</div></div>
+          <button class="rh-rock-remove" onclick="rhRemoveRock(${i})">✕</button>
+        </div>`;
+      }
+      return `<div class="rh-rock-slot empty-slot" ondragover="rhOnDragOver(event)" ondragleave="rhOnDragLeave(event)" ondrop="rhDropOnSlot(event,${i})">
+        <div class="rh-rock-num">${i + 1}</div>
+        <div class="rh-rock-empty-hint">Drop a task here or click below</div>
+      </div>`;
+    }).join('');
+    const rc = document.getElementById('rh-rocks-count');
+    if (rc) rc.textContent = `${rocks.filter(Boolean).length} / 3`;
+  }
+
+  function rhRemoveRock(i) {
+    if (!confirm('Remove this big rock?')) return;
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    wd.rocks = wd.rocks || [];
+    wd.rocks.splice(i, 1);
+    rhSaveAll();
+    rhRenderRocks();
+  }
+
+  function rhAddRock(task) {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    wd.rocks = wd.rocks || [];
+    if (wd.rocks.length >= 3) return;
+    if (wd.rocks.some(r => r && r.id === task.id)) return;
+    wd.rocks.push({ id: task.id, title: task.title || task.text || 'Task' });
+    rhSaveAll();
+    rhRenderRocks();
+    rhRenderOpenTasks();
+  }
+
+  function rhOnDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function rhOnDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+  function rhDropOnSlot(e, i) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (!rhDragTask) return;
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    wd.rocks = wd.rocks || [];
+    wd.rocks[i] = { id: rhDragTask.id, title: rhDragTask.title || rhDragTask.text || 'Task' };
+    rhSaveAll();
+    rhRenderRocks();
+    rhRenderOpenTasks();
+    rhDragTask = null;
+  }
+
+  function rhRenderOpenTasks() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const rockIds = new Set((wd.rocks || []).filter(Boolean).map(r => r.id));
+    const allTasks = HubData.getAllTasks ? HubData.getAllTasks() : [];
+    const projects = HubData.getProjects ? HubData.getProjects() : [];
+    const projectMap = {};
+    projects.forEach(p => projectMap[p.id] = p.name);
+    const open = allTasks.filter(t => !t.done && t.status !== 'done' && !rockIds.has(t.id));
+    const el = document.getElementById('rh-open-tasks-list');
+    if (!el) return;
+    if (!open.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3)">No open tasks</div>';
+      return;
+    }
+    el.innerHTML = open.slice(0, 30).map(t => {
+      const proj = t.projectId ? (projectMap[t.projectId] || '') : '';
+      const titleJSON = JSON.stringify(t.title || t.text || 'Task');
+      return `<div class="rh-open-task-chip" draggable="true"
+        ondragstart="rhDragTask={id:'${t.id}',title:${titleJSON}}"
+        onclick="rhAddRock({id:'${t.id}',title:${titleJSON}})">
+        <div class="rh-chip-dot"></div>
+        <div class="rh-chip-title">${_rhEsc(t.title || t.text || 'Task')}</div>
+        ${proj ? `<div class="rh-chip-project">${_rhEsc(proj)}</div>` : ''}
+        <div class="rh-chip-add">+ rock</div>
+      </div>`;
+    }).join('');
+  }
+
+  function rhShiftWeek(delta) {
+    rhWeekOffset += delta;
+    const nb = document.getElementById('rh-next-btn');
+    if (nb) nb.disabled = rhWeekOffset >= 0;
+    rhRender();
+  }
+
+  function rhRender() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const wl = document.getElementById('rh-week-label');
+    if (wl) wl.textContent = rhWeekRange(monday);
+    const nb = document.getElementById('rh-next-btn');
+    if (nb) nb.disabled = rhWeekOffset >= 0;
+    const cw = document.getElementById('rh-cap-wins'); if (cw) cw.value = wd.wins || '';
+    const cl = document.getElementById('rh-cap-learn'); if (cl) cl.value = wd.learn || '';
+    const cb = document.getElementById('rh-cap-block'); if (cb) cb.value = wd.block || '';
+    const cn = document.getElementById('rh-cap-notes'); if (cn) cn.value = wd.notes || '';
+    rhRenderDoneCol();
+    rhRenderRocks();
+    rhRenderOpenTasks();
+  }
+
+  function rhSendToDecision() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const block = (wd.block || '').trim();
+    if (!block) { showToast('Add blockers first, then push to Decision Hub'); return; }
+    const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+    const id = 'dh-' + Date.now().toString(36);
+    arr.push({ id, title: 'Review blockers: ' + rhWeekRange(monday), summary: block, reasoning: (wd.learn || ''), status: 'open', type: 'tactical', cynefin: '', confidence: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), projectId: '', tags: [], options: '', outcome: '' });
+    HubStorage.set('decision-hub-v1', arr);
+    showToast('Decision created from blockers');
+    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  function rhSendToReflection() {
+    const monday = rhGetMonday(rhWeekOffset);
+    const key = rhWeekKey(monday);
+    const wd = rhGetWeekData(key);
+    const notes = (wd.notes || '').trim();
+    if (!notes) { showToast('Add free notes first, then push to Reflection Board'); return; }
+    const lines = notes.split('\n').map(l => l.trim()).filter(Boolean);
+    const rbData = HubStorage.get('reflection-hub-v1') || { boards: [], activeId: null };
+    const activeBoard = (rbData.boards || []).find(b => b.id === rbData.activeId && !b.archived) || (rbData.boards || []).find(b => !b.archived);
+    if (!activeBoard) { showToast('No Reflection Board yet — create one first'); return; }
+    if (!activeBoard.columns) activeBoard.columns = {};
+    if (!activeBoard.columns.question) activeBoard.columns.question = [];
+    lines.forEach(text => {
+      activeBoard.columns.question.unshift({
+        id: 'ri-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+        text, tags: [], createdAt: new Date().toISOString(),
+        reactions: { '👍': 0, '🔥': 0, '🤔': 0 },
+        assignee: null, dueDate: null, done: null, taskId: null, decisionId: null
+      });
+    });
+    HubStorage.set('reflection-hub-v1', rbData);
+    showToast(lines.length + ' question' + (lines.length !== 1 ? 's' : '') + ' sent to Reflection Board');
+  }
+
+  function _rhEsc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ═══════════════════════════════════════════════
+     Boot
+  ════════════════════════════════════════════════ */
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Init daily tab on load
+    switchJhTab('daily');
+    HubData.onChange && HubData.onChange(() => { if (rhInited) rhRenderDoneCol(); });
+    HubBootstrap.start('journal-hub');
+  });
+</script>
+</body>
+</html>

@@ -33,11 +33,12 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | `scrum-hub.html` | Scrum Board — product backlog (MoSCoW), sprint planning, kanban, velocity chart, DoD |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
-| `log-hub.html` | Private daily captain's log with mood heatmap |
+| `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
 | `reflection-hub.html` | Reflection Board — Signal / Friction / Question / Action board; replaces KMQT + Retro; cross-column SVG links, snapshots, reactions, drag-drop, inline editing |
 | `assumptions-hub.html` | ⚠ Retired from sidebar — data lives on in `assumptions-hub-v1`, accessed via Decision Hub → Assumptions tab |
-| `review-hub.html` | Structured weekly review ritual |
+| `review-hub.html` | ⚠ Retired from sidebar — data lives on in `review-hub-v1`, accessed via Journal Hub → Weekly tab |
+| `journal-hub.html` | Journal Hub — Daily Log + Weekly Review under one tab bar; day chips link weekly → daily; data stays in `log-hub-v1` + `review-hub-v1` |
 | `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
 | `meetings-hub.html` | Meeting notes with action-item extraction |
 | `goals-hub.html` | OKR / quarterly goals hub |
