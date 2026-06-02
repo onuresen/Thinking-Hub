@@ -164,6 +164,8 @@
       font-size: 13px; padding: 0 2px; transition: color 0.12s;
     }
     .action-del-btn:hover { color: var(--accent-nope); }
+    .action-item.mh-drag-src { opacity: 0.35; }
+    .mh-drop-line { height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 2px 0; }
 
     /* ── Project picker modal ── */
     .modal-overlay {
@@ -353,7 +355,7 @@
     const projOpts = `<option value="">— No project —</option>` +
       projects.map(p => `<option value="${_esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
 
-    const actionsHtml = (m.actionItems || []).map(a => `<div class="action-item" id="ai-${a.id}">
+    const actionsHtml = (m.actionItems || []).map(a => `<div class="action-item" draggable="true" data-drag-id="${a.id}" id="ai-${a.id}">
       <div class="action-check${a.done?' done':''}" onclick="toggleAction('${a.id}')"></div>
       <div class="action-text${a.done?' done':''}">${_esc(a.text)}</div>
       ${!a.taskCreated
@@ -400,6 +402,60 @@
         </div>
         <div class="actions-list">${actionsHtml || '<div style="font-size:12px;color:var(--text3);padding:6px 4px">No action items yet.</div>'}</div>
       </div>`;
+    initMHActionDrag(content.querySelector('.actions-list'), m.id);
+  }
+
+  function initMHActionDrag(listEl, meetingId) {
+    if (!listEl) return;
+    let _id = null, _line = null;
+    function line() {
+      if (!_line) { _line = document.createElement('div'); _line.className = 'mh-drop-line'; }
+      return _line;
+    }
+    function clearLine() { if (_line && _line.parentNode) _line.remove(); }
+
+    listEl.addEventListener('dragstart', e => {
+      const item = e.target.closest('[data-drag-id]');
+      if (!item) return;
+      _id = item.dataset.dragId;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', _id);
+      setTimeout(() => item.classList.add('mh-drag-src'), 0);
+    });
+
+    listEl.addEventListener('dragend', () => {
+      listEl.querySelectorAll('.mh-drag-src').forEach(el => el.classList.remove('mh-drag-src'));
+      clearLine(); _id = null;
+    });
+
+    listEl.addEventListener('dragover', e => {
+      if (!_id) return;
+      const item = e.target.closest('[data-drag-id]');
+      if (!item || item.dataset.dragId === _id) return;
+      e.preventDefault();
+      const rect = item.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) item.before(line()); else item.after(line());
+    });
+
+    listEl.addEventListener('dragleave', e => { if (!listEl.contains(e.relatedTarget)) clearLine(); });
+
+    listEl.addEventListener('drop', e => {
+      e.preventDefault();
+      const item = e.target.closest('[data-drag-id]');
+      clearLine();
+      if (!item || !_id) return;
+      const toId = item.dataset.dragId; if (toId === _id) return;
+      const rect = item.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      const m = data.meetings.find(x => x.id === meetingId); if (!m) return;
+      const arr = m.actionItems;
+      const fromIdx = arr.findIndex(a => a.id === _id); if (fromIdx === -1) return;
+      const [moved] = arr.splice(fromIdx, 1);
+      const toIdx = arr.findIndex(a => a.id === toId);
+      arr.splice(before ? toIdx : toIdx + 1, 0, moved);
+      _id = null;
+      save(); renderDetail(meetingId);
+    });
   }
 
   function flushCurrentDetail() {

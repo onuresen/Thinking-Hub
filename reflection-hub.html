@@ -160,6 +160,7 @@
     .rb-item.connect-src { outline: 2px solid #a78bfa; outline-offset: 1px; }
     .rb-item.connect-target:hover { outline: 2px solid var(--accent-like); outline-offset: 1px; }
     .rb-item.dragging { opacity: 0.35; }
+    .rb-drop-line { height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 2px 0; }
     .rb-item.editing { border-color: var(--accent); }
     .rb-item.action-done .item-text-content { text-decoration: line-through; opacity: 0.5; }
     @keyframes card-enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -597,17 +598,23 @@
     renderLinks(board);
   }
 
-  function moveItem(itemId, toCol) {
+  function moveItem(itemId, toCol, targetId = null, before = true) {
     const data = getData();
     const board = getActiveBoard(data);
     if (!board) return;
     const fromCol = getColOfItem(board, itemId);
-    if (!fromCol || fromCol === toCol) return;
+    if (!fromCol) return;
+    if (fromCol === toCol && !targetId) return;
     const idx = board.columns[fromCol].findIndex(i => i.id === itemId);
     if (idx < 0) return;
     const [item] = board.columns[fromCol].splice(idx, 1);
     if (toCol === 'action' && item.done === null) { item.done = false; item.assignee = item.assignee || ''; item.dueDate = item.dueDate || ''; }
-    board.columns[toCol].unshift(item);
+    if (targetId) {
+      const toIdx = board.columns[toCol].findIndex(i => i.id === targetId);
+      board.columns[toCol].splice(toIdx >= 0 ? (before ? toIdx : toIdx + 1) : 0, 0, item);
+    } else {
+      board.columns[toCol].unshift(item);
+    }
     saveData(data);
     renderAll();
   }
@@ -993,15 +1000,36 @@
   /* ══ L — Drag and drop ════════════════════════════════ */
 
   let _dragItemId = null;
+  let _rbDropTargetId = null, _rbDropTargetCol = null, _rbDropBefore = false, _rbDropLine = null;
+
+  function rbClearLine() { if (_rbDropLine && _rbDropLine.parentNode) _rbDropLine.remove(); }
 
   function setupDragDrop() {
     const boardEl = document.getElementById('rb-board');
 
     boardEl.addEventListener('dragover', e => {
+      if (!_dragItemId) return;
+      // Item-level target: show insertion line
+      const itemTarget = e.target.closest('.rb-item[data-id]');
+      if (itemTarget && itemTarget.dataset.id !== _dragItemId) {
+        e.preventDefault();
+        _rbDropTargetId = itemTarget.dataset.id;
+        _rbDropTargetCol = itemTarget.dataset.col;
+        _rbDropBefore = e.clientY < itemTarget.getBoundingClientRect().top + itemTarget.getBoundingClientRect().height / 2;
+        if (!_rbDropLine) { _rbDropLine = document.createElement('div'); _rbDropLine.className = 'rb-drop-line'; }
+        if (_rbDropBefore) itemTarget.before(_rbDropLine); else itemTarget.after(_rbDropLine);
+        const zone = itemTarget.closest('.col-items[data-col]');
+        if (zone) {
+          document.querySelectorAll('.col-items.drop-active').forEach(el => { if (el !== zone) el.classList.remove('drop-active'); });
+          zone.classList.add('drop-active');
+        }
+        return;
+      }
+      // Column-zone level: clear item target, highlight column
       const zone = e.target.closest('.col-items[data-col]');
       if (!zone) return;
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      _rbDropTargetId = null; rbClearLine();
       document.querySelectorAll('.col-items.drop-active').forEach(el => { if (el !== zone) el.classList.remove('drop-active'); });
       zone.classList.add('drop-active');
     });
@@ -1011,13 +1039,21 @@
       if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('drop-active');
     });
 
+    boardEl.addEventListener('dragend', () => { rbClearLine(); _rbDropTargetId = null; });
+
     boardEl.addEventListener('drop', e => {
       e.preventDefault();
       document.querySelectorAll('.col-items.drop-active').forEach(el => el.classList.remove('drop-active'));
-      const zone = e.target.closest('.col-items[data-col]');
-      if (!zone || !_dragItemId) return;
-      const toCol = zone.dataset.col;
-      moveItem(_dragItemId, toCol);
+      rbClearLine();
+      if (!_dragItemId) return;
+      if (_rbDropTargetId) {
+        moveItem(_dragItemId, _rbDropTargetCol, _rbDropTargetId, _rbDropBefore);
+        _rbDropTargetId = null;
+      } else {
+        const zone = e.target.closest('.col-items[data-col]');
+        if (!zone) return;
+        moveItem(_dragItemId, zone.dataset.col);
+      }
       _dragItemId = null;
     });
   }
