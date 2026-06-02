@@ -40,7 +40,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `review-hub.html` | ⚠ Retired from sidebar — data lives on in `review-hub-v1`, accessed via Journal Hub → Weekly tab |
 | `journal-hub.html` | Journal Hub — Daily Log + Weekly Review under one tab bar; day chips link weekly → daily; data stays in `log-hub-v1` + `review-hub-v1` |
 | `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
-| `meetings-hub.html` | Meeting notes with action-item extraction |
+| `meetings-hub.html` | Meeting Hub — structured meetings with type templates, RACI-lite attendee roles, decision register, schedule sync, recurring templates, and dependency graph links |
 | `goals-hub.html` | OKR / quarterly goals hub |
 | `learning-hub.html` | Reading & learning log |
 | `stakeholder-hub.html` | Visual power/interest stakeholder grid |
