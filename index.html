@@ -1877,7 +1877,8 @@
           <div id="mcp-path-hint"
             style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as
-              <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:</div>
+              <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:
+            </div>
             <div id="mcp-path-value"
               style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
           </div>
@@ -1926,27 +1927,28 @@
     // ── App registry ──────────────────────────────────────────────────────────────
 
     const APPS = [
-      // ── TODAY ──────────────────────────────────────────────────────────
-      { id: 'project-hub', label: 'Project Hub', group: 'TODAY', wg: 'TODAY', icon: '◈', file: 'project-hub.html', desc: 'Track milestones, tasks and workstreams across a project' },
-      { id: 'frameworks-hub', label: 'Frameworks', group: 'TODAY', wg: 'TODAY', icon: '▾', file: 'frameworks-hub.html', desc: 'Visual methodology tools — Blocked Depth iceberg, V-Model, and more' },
-      { id: 'schedule', label: 'Schedule', group: 'TODAY', wg: 'TODAY', icon: '▦', file: 'schedule.html', desc: 'Timeline and calendar views for tasks, milestones and events' },
-      { id: 'journal-hub', label: 'Journal Hub', group: 'TODAY', wg: 'TODAY', icon: '◷', file: 'journal-hub.html', desc: 'Daily log + weekly review in one place — mood, streaks, big rocks' },
-      // ── THIS WEEK ───────────────────────────────────────────────────────
-      { id: 'goals-hub', label: 'Goals Hub', group: 'WEEK', wg: 'THIS WEEK', icon: '◎', file: 'goals-hub.html', desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
-      { id: 'meetings-hub', label: 'Meeting Hub', group: 'WEEK', wg: 'THIS WEEK', icon: '▣', file: 'meetings-hub.html', desc: 'Structured meetings — agenda, decisions, action items, recurring templates, and schedule sync' },
-      { id: 'scrum-hub', label: 'Scrum Board', group: 'WEEK', wg: 'THIS WEEK', icon: '⚡', file: 'scrum-hub.html', desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
-      // ── SITUATION ───────────────────────────────────────────────────────
-      { id: 'risk-hub', label: 'Risk Register', group: 'SITUATION', wg: 'SITUATION', icon: '⚠', file: 'risk-hub.html', desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
-      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'SITUATION', wg: 'SITUATION', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
-      { id: 'people-hub', label: 'People Hub', group: 'SITUATION', wg: 'SITUATION', icon: '◉', file: 'people-hub.html', desc: 'Org tree, load balancing, and workload overlap across your team' },
-      { id: 'decision-hub', label: 'Decision Hub', group: 'SITUATION', wg: 'SITUATION', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
-      { id: 'reflection-hub', label: 'Reflection Board', group: 'SITUATION', wg: 'SITUATION', icon: '⟲', file: 'reflection-hub.html', desc: 'Signal · Friction · Question · Action — unified reflection board for thinking and retrospectives' },
-      // ── BOOKSHELF ───────────────────────────────────────────────────────
-      { id: 'learning-hub', label: 'Learning Log', group: 'SHELF', wg: 'BOOKSHELF', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
-      { id: 'idea-swiper', label: 'Idea Swiper', group: 'SHELF', wg: 'BOOKSHELF', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
-      { id: 'graph-hub', label: 'Dependency Graph', group: 'SHELF', wg: 'BOOKSHELF', icon: '🕸️', file: 'graph-hub.html', desc: 'Visual map of your tasks, decisions, and ideas' },
-      { id: 'canvas-hub', label: 'Spatial Canvas', group: 'SHELF', wg: 'BOOKSHELF', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
-      { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'SHELF', wg: 'BOOKSHELF', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
+      // ── CORE ──────────────────────────────────────────────────────────
+      { id: 'project-hub', label: 'Project Hub', group: 'CORE', wg: 'CORE', icon: '◈', file: 'project-hub.html', desc: 'Track milestones, tasks and workstreams across a project' },
+      { id: 'schedule', label: 'Schedule', group: 'CORE', wg: 'CORE', icon: '▦', file: 'schedule.html', desc: 'Timeline and calendar views for tasks, milestones and events' },
+      { id: 'meetings-hub', label: 'Meeting Hub', group: 'CORE', wg: 'CORE', icon: '▣', file: 'meetings-hub.html', desc: 'Structured meetings — agenda, decisions, action items, recurring templates, and schedule sync' },
+      { id: 'journal-hub', label: 'Journal Hub', group: 'CORE', wg: 'CORE', icon: '◷', file: 'journal-hub.html', desc: 'Daily log + weekly review in one place — mood, streaks, big rocks' },
+      // ── NETWORK ───────────────────────────────────────────────────────
+      { id: 'graph-hub', label: 'Dependency Graph', group: 'NETWORK', wg: 'NETWORK', icon: '🕸️', file: 'graph-hub.html', desc: 'Visual map of your tasks, decisions, and ideas' },
+      { id: 'people-hub', label: 'People Hub', group: 'NETWORK', wg: 'NETWORK', icon: '◉', file: 'people-hub.html', desc: 'Org tree, load balancing, and workload overlap across your team' },
+      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'NETWORK', wg: 'NETWORK', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
+      { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'NETWORK', wg: 'NETWORK', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
+      // ── EXPLORE ───────────────────────────────────────────────────────
+      { id: 'learning-hub', label: 'Learning Log', group: 'EXPLORE', wg: 'EXPLORE', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
+      { id: 'idea-swiper', label: 'Idea Swiper', group: 'EXPLORE', wg: 'EXPLORE', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
+      { id: 'canvas-hub', label: 'Spatial Canvas', group: 'EXPLORE', wg: 'EXPLORE', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
+      // ── STRATEGY ───────────────────────────────────────────────────────
+      { id: 'decision-hub', label: 'Decision Hub', group: 'STRATEGY', wg: 'STRATEGY', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
+      { id: 'goals-hub', label: 'Goals Hub', group: 'STRATEGY', wg: 'STRATEGY', icon: '◎', file: 'goals-hub.html', desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
+      { id: 'risk-hub', label: 'Risk Register', group: 'STRATEGY', wg: 'STRATEGY', icon: '⚠', file: 'risk-hub.html', desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
+      // ── OPTIONAL ───────────────────────────────────────────────────────
+      { id: 'reflection-hub', label: 'Reflection Board', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '⟲', file: 'reflection-hub.html', desc: 'Signal · Friction · Question · Action — unified reflection board for thinking and retrospectives' },
+      { id: 'frameworks-hub', label: 'Frameworks', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '▾', file: 'frameworks-hub.html', desc: 'Visual methodology tools — Blocked Depth iceberg, V-Model, and more' },
+      { id: 'scrum-hub', label: 'Scrum Board', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '⚡', file: 'scrum-hub.html', desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
       // ── SYSTEM ──────────────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Focus Timer', group: 'SYSTEM', wg: 'SYSTEM', icon: '◉', file: 'focus-hub.html', desc: 'Pomodoro-style focus sessions linked to your tasks' },
       { id: 'achievements-hub', label: 'Achievements', group: 'SYSTEM', wg: 'SYSTEM', icon: '🏅', file: 'achievements-hub.html', desc: 'Your productivity profile — badges, streaks & activity heatmap' },
@@ -1955,9 +1957,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
-      bim: { label: 'BIM Mgmt', icon: '⬡', tools: ['project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub', 'focus-hub'] },
-      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'scrum-hub', 'graph-hub', 'decision-hub', 'reflection-hub', 'risk-hub', 'journal-hub', 'focus-hub', 'meetings-hub', 'goals-hub'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
+      bim: { label: 'Project', icon: '⬡', tools: ['project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
+      dev: { label: 'Core', icon: '⌥', tools: ['project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
