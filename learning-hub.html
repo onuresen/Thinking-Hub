@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -223,6 +224,30 @@
     .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
     .modal-footer .spacer { flex: 1; }
 
+    /* ── Progress ── */
+    .li-progress-bar { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+    .li-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+    .progress-row { display: flex; align-items: center; gap: 8px; }
+    .progress-num-input {
+      width: 54px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-mono); font-size: 12px; padding: 3px 7px; outline: none; text-align: right;
+    }
+    .progress-num-input:focus { border-color: var(--accent); }
+    .progress-pct { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .progress-track { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+    .progress-fill-det { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.2s; }
+
+    /* ── Drag ── */
+    .lh-drag-handle { color: var(--text3); font-size: 11px; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; user-select: none; cursor: grab; padding: 2px 1px; align-self: center; }
+    .list-item:hover .lh-drag-handle { opacity: 1; }
+    .list-item.lh-drag-src { opacity: 0.35 !important; }
+    .lh-drop-line { height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 0; }
+
+    /* ── Link badge ── */
+    .li-link-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--surface2); color: var(--text3); font-family: var(--font-mono); }
+    .link-hub-btn { font-size: 11px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; }
+    .link-hub-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     /* ── Mobile drawer ──────────────────────────────────────────── */
     .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
     .sidebar-backdrop.open { display: block; }
@@ -262,9 +287,9 @@
       <input class="search-input" id="search-input" placeholder="Search…" oninput="renderList()">
       <div class="filter-row" id="status-filters">
         <button class="f-chip active" data-status="all" onclick="setStatusFilter('all')">All</button>
-        <button class="f-chip" data-status="to-read" onclick="setStatusFilter('to-read')">To Read</button>
-        <button class="f-chip" data-status="reading" onclick="setStatusFilter('reading')">Reading</button>
-        <button class="f-chip" data-status="done" onclick="setStatusFilter('done')">Done</button>
+        <button class="f-chip" data-status="to-read" onclick="setStatusFilter('to-read')">To Start</button>
+        <button class="f-chip" data-status="reading" onclick="setStatusFilter('reading')">In Progress</button>
+        <button class="f-chip" data-status="done" onclick="setStatusFilter('done')">Completed</button>
       </div>
       <div class="filter-row" id="type-filters">
         <button class="f-chip active" data-type="all" onclick="setTypeFilter('all')">All types</button>
@@ -320,10 +345,14 @@
       <div>
         <div class="field-label">Status</div>
         <select class="field-select" id="am-status">
-          <option value="to-read">To Read</option>
-          <option value="reading">Reading</option>
-          <option value="done">Done</option>
+          <option value="to-read">To Start</option>
+          <option value="reading">In Progress</option>
+          <option value="done">Completed</option>
         </select>
+      </div>
+      <div>
+        <div class="field-label">Platform / Publisher <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+        <input class="field-input" id="am-platform" placeholder="e.g. Coursera, O'Reilly, YouTube…" />
       </div>
       <div>
         <div class="field-label">URL (optional)</div>
@@ -342,6 +371,15 @@
 
 <script>
   const STORAGE_KEY = 'learning-hub-v1';
+
+  const STATUS_CONFIG = {
+    'to-read': { label: 'To Start',    dot: 'to-read' },
+    'reading': { label: 'In Progress', dot: 'reading' },
+    'done':    { label: 'Completed',   dot: 'done'    },
+  };
+
+  const TYPE_ICON = { book: '📖', article: '📄', course: '🎓', video: '▶' };
+
   let data = { items: [] };
   let activeId = null;
   let editingId = null;
@@ -355,6 +393,11 @@
   function load() {
     data = HubStorage.get(STORAGE_KEY) || { items: [] };
     if (!data.items) data.items = [];
+    // Normalize missing fields
+    data.items.forEach(it => {
+      if (it.progress === undefined) it.progress = it.status === 'done' ? 100 : 0;
+      if (!it.platform) it.platform = '';
+    });
   }
   function save() { HubStorage.set(STORAGE_KEY, data); }
 
@@ -372,19 +415,17 @@
   }
 
   function filteredItems() {
-    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const q = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
     const archivedCount = (data.items||[]).filter(it => it.archived).length;
     const archBtn = document.getElementById('show-archived-btn');
-    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
+    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 (${archivedCount})`;
+    // Preserve user-defined array order; no automatic status sort
     return data.items.filter(it => {
       if (showArchived ? !it.archived : it.archived) return false;
       if (statusFilter !== 'all' && it.status !== statusFilter) return false;
       if (typeFilter !== 'all' && it.type !== typeFilter) return false;
       if (q && !it.title.toLowerCase().includes(q) && !(it.author||'').toLowerCase().includes(q) && !(it.tags||[]).join(' ').toLowerCase().includes(q)) return false;
       return true;
-    }).sort((a,b) => {
-      const order = { reading: 0, 'to-read': 1, done: 2 };
-      return (order[a.status]??1) - (order[b.status]??1) || (b.createdAt||'').localeCompare(a.createdAt||'');
     });
   }
 
@@ -398,14 +439,24 @@
       list.innerHTML = `<div class="empty-state"><span class="e-icon">◑</span><div class="e-title">${allEmpty ? 'Nothing logged yet' : 'No items found'}</div><div class="e-sub">${allEmpty ? 'Add a book, article, or course to start.' : 'Try adjusting your filters.'}</div></div>`;
       return;
     }
-    list.innerHTML = items.map(it => `<div class="list-item${it.id === activeId ? ' active' : ''}" data-id="${it.id}" onclick="openDetail('${it.id}')">
-      <div class="li-type-badge ${it.type}">${it.type}</div>
-      <div class="li-body">
-        <div class="li-title">${_esc(it.title)}</div>
-        ${it.author ? `<div class="li-author">${_esc(it.author)}</div>` : ''}
-      </div>
-      <div class="li-status-dot ${it.status}" title="${it.status}"></div>
-    </div>`).join('');
+    list.innerHTML = items.map(it => {
+      const pct = it.progress || 0;
+      const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('learning-hub', it.id).length : 0;
+      return `<div class="list-item${it.id === activeId ? ' active' : ''}" draggable="true" data-drag-id="${it.id}" onclick="openDetail('${it.id}')">
+        <span class="lh-drag-handle">⠿</span>
+        <div class="li-type-badge ${it.type}">${it.type}</div>
+        <div class="li-body">
+          <div class="li-title">${_esc(it.title)}</div>
+          ${it.author ? `<div class="li-author">${_esc(it.author)}</div>` : ''}
+          ${pct > 0 ? `<div class="li-progress-bar"><div class="li-progress-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+          <div class="li-status-dot ${it.status}" title="${STATUS_CONFIG[it.status]?.label || it.status}"></div>
+          ${linkCount ? `<span class="li-link-badge">🔗${linkCount}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    initLHDrag(list);
   }
 
   // ── Detail ───────────────────────────────────────────────────────────────────
@@ -448,19 +499,31 @@
       </div>
     </div>`).join('');
 
+    const pct = item.progress || 0;
     content.innerHTML = `
       <div class="detail-header">
         <div class="detail-title-wrap">
           <div class="detail-title">${_esc(item.title)}</div>
-          ${item.author ? `<div class="detail-author">${_esc(item.author)}</div>` : ''}
+          ${item.author ? `<div class="detail-author">${_esc(item.author)}${item.platform ? ` · <span style="color:var(--text3)">${_esc(item.platform)}</span>` : ''}</div>` : (item.platform ? `<div class="detail-author" style="color:var(--text3)">${_esc(item.platform)}</div>` : '')}
           <div class="detail-meta-row">
-            <span class="type-pill ${item.type}">${item.type}</span>
+            <span class="type-pill ${item.type}">${TYPE_ICON[item.type] || ''} ${item.type}</span>
             <select class="status-select" onchange="updateStatus(this.value)">
-              <option value="to-read"${item.status==='to-read'?' selected':''}>To Read</option>
-              <option value="reading"${item.status==='reading'?' selected':''}>Reading</option>
-              <option value="done"${item.status==='done'?' selected':''}>Done</option>
+              ${Object.entries(STATUS_CONFIG).map(([v,c]) =>
+                `<option value="${v}"${item.status===v?' selected':''}>${c.label}</option>`
+              ).join('')}
             </select>
             ${item.url ? `<a class="url-link" href="${_esc(item.url)}" target="_blank" rel="noopener">↗ Open</a>` : ''}
+          </div>
+          <div class="detail-meta-row" style="margin-top:5px">
+            <div class="progress-row" style="width:100%">
+              <span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);white-space:nowrap">Progress</span>
+              <input class="progress-num-input" id="progress-input" type="number" min="0" max="100" value="${pct}"
+                onchange="updateProgress(this.value)" title="Progress %">
+              <span class="progress-pct">%</span>
+              <div class="progress-track" onclick="progressTrackClick(event, this)">
+                <div class="progress-fill-det" id="progress-fill-det" style="width:${pct}%"></div>
+              </div>
+            </div>
           </div>
           <div class="detail-meta-row" style="margin-top:6px">
             <div class="tag-wrap">
@@ -470,6 +533,7 @@
           </div>
         </div>
         <div class="detail-actions">
+          <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
           <button class="btn btn-ghost" onclick="openAddModal('${item.id}')" style="font-size:12px;padding:5px 10px">Edit</button>
         </div>
       </div>
@@ -496,11 +560,43 @@
   }
 
   function updateStatus(val) {
-    const item = data.items.find(it => it.id === activeId);
-    if (!item) return;
+    const item = data.items.find(it => it.id === activeId); if (!item) return;
     item.status = val;
-    if (val === 'done') item.completedAt = new Date().toISOString();
+    if (val === 'done') { item.completedAt = new Date().toISOString(); item.progress = 100; }
+    else if (val === 'to-read') { item.progress = 0; }
     save(); renderList();
+    // Sync progress UI without full re-render
+    const inp = document.getElementById('progress-input');
+    const fill = document.getElementById('progress-fill-det');
+    if (inp) inp.value = item.progress;
+    if (fill) fill.style.width = item.progress + '%';
+  }
+
+  function updateProgress(val) {
+    const item = data.items.find(it => it.id === activeId); if (!item) return;
+    const pct = Math.max(0, Math.min(100, parseInt(val) || 0));
+    item.progress = pct;
+    if (pct === 100 && item.status !== 'done') { item.status = 'done'; item.completedAt = new Date().toISOString(); }
+    else if (pct > 0 && pct < 100 && item.status === 'to-read') { item.status = 'reading'; }
+    else if (pct === 0 && item.status === 'reading') { item.status = 'to-read'; }
+    save(); renderList();
+    const fill = document.getElementById('progress-fill-det');
+    if (fill) fill.style.width = pct + '%';
+    const sel = document.querySelector('.status-select');
+    if (sel) sel.value = item.status;
+    const inp = document.getElementById('progress-input');
+    if (inp) inp.value = pct;
+  }
+
+  function progressTrackClick(e, track) {
+    const rect = track.getBoundingClientRect();
+    const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    updateProgress(pct);
+  }
+
+  function openLinksModal() {
+    const item = data.items.find(it => it.id === activeId); if (!item) return;
+    if (typeof HubLinks !== 'undefined') HubLinks.openModal('learning-hub', item.id, item.title || 'Untitled');
   }
 
   function saveNotes() {
@@ -587,6 +683,7 @@
     document.getElementById('am-author').value = item ? (item.author||'') : '';
     document.getElementById('am-type').value = item ? item.type : 'book';
     document.getElementById('am-status').value = item ? item.status : 'to-read';
+    document.getElementById('am-platform').value = item ? (item.platform||'') : '';
     document.getElementById('am-url').value = item ? (item.url||'') : '';
     document.getElementById('am-delete-btn').style.display = item ? '' : 'none';
     const archBtn = document.getElementById('am-archive-btn');
@@ -603,26 +700,34 @@
   function saveItem() {
     const title = document.getElementById('am-title').value.trim();
     if (!title) { document.getElementById('am-title').focus(); return; }
+    const status = document.getElementById('am-status').value;
     if (editingId) {
       const item = data.items.find(it => it.id === editingId);
       if (item) {
-        item.title = title;
-        item.author = document.getElementById('am-author').value.trim();
-        item.type = document.getElementById('am-type').value;
-        item.status = document.getElementById('am-status').value;
-        item.url = document.getElementById('am-url').value.trim();
+        item.title    = title;
+        item.author   = document.getElementById('am-author').value.trim();
+        item.type     = document.getElementById('am-type').value;
+        item.platform = document.getElementById('am-platform').value.trim();
+        item.url      = document.getElementById('am-url').value.trim();
+        if (item.status !== status) {
+          item.status = status;
+          if (status === 'done') { item.completedAt = new Date().toISOString(); item.progress = 100; }
+          else if (status === 'to-read') { item.progress = 0; }
+        }
       }
     } else {
       const newItem = {
         id: uid(), title,
-        author: document.getElementById('am-author').value.trim(),
-        type: document.getElementById('am-type').value,
-        status: document.getElementById('am-status').value,
-        url: document.getElementById('am-url').value.trim(),
-        tags: [], highlights: [], notes: '',
-        createdAt: new Date().toISOString()
+        author:   document.getElementById('am-author').value.trim(),
+        type:     document.getElementById('am-type').value,
+        status,
+        platform: document.getElementById('am-platform').value.trim(),
+        url:      document.getElementById('am-url').value.trim(),
+        progress: status === 'done' ? 100 : 0,
+        tags: [], highlights: [], notes: '', keyInsight: '',
+        createdAt: new Date().toISOString(),
       };
-      data.items.push(newItem);
+      data.items.unshift(newItem);
       activeId = newItem.id;
     }
     save(); closeAddModal(); renderList(); renderDetail();
@@ -653,12 +758,67 @@
     save(); closeAddModal(); renderList(); renderDetail();
   }
 
+  // ── Drag-to-reorder ───────────────────────────────────────────────────────────
+
+  function initLHDrag(listEl) {
+    if (!listEl) return;
+    let _id = null, _line = null;
+    function getLine() {
+      if (!_line) { _line = document.createElement('div'); _line.className = 'lh-drop-line'; }
+      return _line;
+    }
+    function clearLine() { if (_line && _line.parentNode) _line.remove(); }
+
+    listEl.addEventListener('dragstart', e => {
+      const item = e.target.closest('[data-drag-id]'); if (!item) return;
+      _id = item.dataset.dragId;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', _id);
+      setTimeout(() => item.classList.add('lh-drag-src'), 0);
+    });
+    listEl.addEventListener('dragend', () => {
+      listEl.querySelectorAll('.lh-drag-src').forEach(el => el.classList.remove('lh-drag-src'));
+      clearLine(); _id = null;
+    });
+    listEl.addEventListener('dragover', e => {
+      if (!_id) return;
+      const item = e.target.closest('[data-drag-id]');
+      if (!item || item.dataset.dragId === _id) return;
+      e.preventDefault();
+      const rect = item.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) item.before(getLine()); else item.after(getLine());
+    });
+    listEl.addEventListener('dragleave', e => { if (!listEl.contains(e.relatedTarget)) clearLine(); });
+    listEl.addEventListener('drop', e => {
+      e.preventDefault();
+      const item = e.target.closest('[data-drag-id]'); clearLine();
+      if (!item || !_id) return;
+      const toId = item.dataset.dragId; if (toId === _id) return;
+      const rect = item.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      // Reorder within full data.items array (not filtered view, to preserve relative order)
+      const fromIdx = data.items.findIndex(x => x.id === _id); if (fromIdx === -1) return;
+      const [moved] = data.items.splice(fromIdx, 1);
+      const toIdx = data.items.findIndex(x => x.id === toId);
+      data.items.splice(before ? toIdx : toIdx + 1, 0, moved);
+      _id = null;
+      save(); renderList();
+    });
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', () => {
     load();
     renderList();
     renderDetail();
+    // Navigate here from Cmd+K or Graph Hub
+    window.addEventListener('message', e => {
+      if (e.data?.type === 'hub-highlight' && e.data.id) {
+        const it = data.items.find(x => x.id === e.data.id);
+        if (it) { activeId = it.id; renderList(); renderDetail(); }
+      }
+    });
     HubBootstrap.start('learning-hub');
   });
 
