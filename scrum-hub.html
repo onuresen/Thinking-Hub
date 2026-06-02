@@ -144,6 +144,10 @@
     }
     .kc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
     .kc-card.dragging { opacity: 0.35; cursor: grabbing; }
+    .bl-item.sh-drag-src { opacity: 0.35; }
+    .sh-drop-line, .kc-drop-line {
+      height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 2px 0;
+    }
     .kc-type-row { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
     .kc-title { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 6px; }
 
@@ -461,6 +465,59 @@ function renderBacklog(c) {
   });
 
   c.innerHTML = html;
+  initSHBlDrag(c);
+}
+
+function initSHBlDrag(containerEl) {
+  let _id = null, _group = null, _line = null;
+  function line() {
+    if (!_line) { _line = document.createElement('div'); _line.className = 'sh-drop-line'; }
+    return _line;
+  }
+  function clearLine() { if (_line && _line.parentNode) _line.remove(); }
+
+  containerEl.addEventListener('dragstart', e => {
+    const item = e.target.closest('[data-drag-id]');
+    if (!item) return;
+    _id = item.dataset.dragId; _group = item.dataset.dragGroup;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', _id);
+    setTimeout(() => item.classList.add('sh-drag-src'), 0);
+  });
+
+  containerEl.addEventListener('dragend', () => {
+    containerEl.querySelectorAll('.sh-drag-src').forEach(el => el.classList.remove('sh-drag-src'));
+    clearLine(); _id = null; _group = null;
+  });
+
+  containerEl.addEventListener('dragover', e => {
+    if (!_id) return;
+    const item = e.target.closest('[data-drag-id]');
+    if (!item || item.dataset.dragId === _id || item.dataset.dragGroup !== _group) return;
+    e.preventDefault();
+    const rect = item.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) item.before(line()); else item.after(line());
+  });
+
+  containerEl.addEventListener('dragleave', e => { if (!containerEl.contains(e.relatedTarget)) clearLine(); });
+
+  containerEl.addEventListener('drop', e => {
+    e.preventDefault();
+    const item = e.target.closest('[data-drag-id]');
+    clearLine();
+    if (!item || !_id) return;
+    const toId = item.dataset.dragId;
+    if (toId === _id || item.dataset.dragGroup !== _group) return;
+    const rect = item.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    const arr = state.backlogs;
+    const fromIdx = arr.findIndex(x => x.id === _id); if (fromIdx === -1) return;
+    const [moved] = arr.splice(fromIdx, 1);
+    const toIdx = arr.findIndex(x => x.id === toId);
+    arr.splice(before ? toIdx : toIdx + 1, 0, moved);
+    _id = null; _group = null;
+    saveState(); render();
+  });
 }
 
 function blItemHTML(item) {
@@ -468,7 +525,7 @@ function blItemHTML(item) {
   const canMove = item.status !== 'done';
   const projName = (!state.settings.linkedProjectId && item.projectId) ? _blProjectMap[item.projectId] : null;
   return `
-    <div class="bl-item" data-id="${item.id}" onclick="openStoryModal('${item.id}')">
+    <div class="bl-item" draggable="true" data-drag-id="${item.id}" data-drag-group="${item.status}" data-id="${item.id}" onclick="openStoryModal('${item.id}')">
       <div class="bi-icon">${TYPE_ICON[item.type] || '📖'}</div>
       <div class="bi-main">
         <div class="bi-title">${HubUtils.esc(item.title)}</div>
@@ -525,8 +582,8 @@ function renderSprintBoard(c) {
     const overWip = wip > 0 && colItems.length > wip;
     kanban += `
       <div class="kanban-col" data-col="${col.key}"
-        ondragover="event.preventDefault();this.classList.add('drop-target')"
-        ondragleave="this.classList.remove('drop-target')"
+        ondragover="onColDragOver(event,this)"
+        ondragleave="onColDragLeave(event,this)"
         ondrop="onDrop('${sprint.id}','${col.key}',event)">
         <div class="kc-header">
           ${col.label}
@@ -534,9 +591,10 @@ function renderSprintBoard(c) {
           <input class="wip-limit-input" type="number" min="0" max="99" value="${wip||''}" placeholder="∞" title="WIP limit (0 = no limit)" onchange="setWipLimit('${col.key}',+this.value)" onclick="event.stopPropagation()" />
         </div>
         ${colItems.map(item => `
-          <div class="kc-card" draggable="true"
-            ondragstart="_dragStoryId='${item.id}';this.classList.add('dragging')"
-            ondragend="this.classList.remove('dragging');document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drop-target'))">
+          <div class="kc-card" draggable="true" data-kc-id="${item.id}" data-kc-col="${col.key}"
+            ondragstart="_dragStoryId='${item.id}';_kcDropTargetId=null;this.classList.add('dragging')"
+            ondragend="this.classList.remove('dragging');document.querySelectorAll('.kanban-col').forEach(c=>c.classList.remove('drop-target'));kcClearLine()"
+            ondragover="onCardDragOver(event,this)">
             <div class="kc-type-row">${TYPE_ICON[item.type] || '📖'} ${item.type}</div>
             <div class="kc-title">${HubUtils.esc(item.title)}</div>
             <div class="bi-pills">${moscowPill(item.priority)}${ptsPill(item.points)}</div>
@@ -584,16 +642,52 @@ function renderSprintBoard(c) {
     ${kanban}`;
 }
 
+let _kcDropTargetId = null, _kcDropBefore = false, _kcDropLine = null;
+
+function kcClearLine() { if (_kcDropLine && _kcDropLine.parentNode) _kcDropLine.remove(); }
+
+function onColDragOver(e, col) {
+  e.preventDefault();
+  col.classList.add('drop-target');
+  // Hovering over empty column space — clear card-level target
+  if (!e.target.closest('[data-kc-id]')) { _kcDropTargetId = null; kcClearLine(); }
+}
+
+function onColDragLeave(e, col) {
+  if (!col.contains(e.relatedTarget)) { col.classList.remove('drop-target'); kcClearLine(); _kcDropTargetId = null; }
+}
+
+function onCardDragOver(e, card) {
+  e.stopPropagation();
+  e.preventDefault();
+  card.closest('.kanban-col').classList.add('drop-target');
+  const cardId = card.dataset.kcId;
+  if (!cardId || cardId === _dragStoryId) return;
+  _kcDropTargetId = cardId;
+  _kcDropBefore = e.clientY < card.getBoundingClientRect().top + card.getBoundingClientRect().height / 2;
+  if (!_kcDropLine) { _kcDropLine = document.createElement('div'); _kcDropLine.className = 'kc-drop-line'; }
+  if (_kcDropBefore) card.before(_kcDropLine); else card.after(_kcDropLine);
+}
+
 function onDrop(sprintId, col, event) {
   event.preventDefault();
   document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drop-target'));
+  kcClearLine();
   if (!_dragStoryId) return;
   const item = state.backlogs.find(i => i.id === _dragStoryId);
   if (!item) return;
   item.sprintId     = sprintId;
   item.sprintStatus = col;
   item.status       = col === 'done' ? 'done' : 'in-sprint';
-  _dragStoryId = null;
+  // Within-column or cross-column positional drop
+  if (_kcDropTargetId && _kcDropTargetId !== _dragStoryId) {
+    const fromIdx = state.backlogs.findIndex(i => i.id === _dragStoryId);
+    const [moved] = state.backlogs.splice(fromIdx, 1);
+    const toIdx = state.backlogs.findIndex(i => i.id === _kcDropTargetId);
+    if (toIdx !== -1) state.backlogs.splice(_kcDropBefore ? toIdx : toIdx + 1, 0, moved);
+    else state.backlogs.push(moved);
+  }
+  _dragStoryId = null; _kcDropTargetId = null;
   saveState(); render();
 }
 

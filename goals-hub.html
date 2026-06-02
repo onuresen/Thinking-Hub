@@ -67,6 +67,10 @@
       overflow: hidden; transition: border-color 0.15s;
     }
     .obj-card:hover { border-color: var(--accent-glow); }
+    .obj-card.gh-drop-before { box-shadow: inset 3px 0 0 var(--accent) !important; }
+    .obj-card.gh-drop-after  { box-shadow: inset -3px 0 0 var(--accent) !important; }
+    .obj-card.gh-drag-src, .kr-row.gh-drag-src { opacity: 0.35 !important; }
+    .gh-drop-line { height: 2px; background: var(--accent); border-radius: 2px; pointer-events: none; margin: 1px 0; }
     .obj-card-header {
       padding: 14px 16px 10px; display: flex; align-items: flex-start; gap: 10px;
       border-bottom: 1px solid var(--border);
@@ -488,6 +492,91 @@
     }
 
     main.innerHTML = `<div class="objectives-grid">${cardsHtml}${addCard}</div>${archivedHtml}`;
+    initGHDrag(main.querySelector('.objectives-grid'));
+  }
+
+  function initGHDrag(gridEl) {
+    if (!gridEl) return;
+    let _type = null, _id = null, _objId = null, _line = null;
+    function line() {
+      if (!_line) { _line = document.createElement('div'); _line.className = 'gh-drop-line'; }
+      return _line;
+    }
+    function clearAll() {
+      gridEl.querySelectorAll('.gh-drop-before,.gh-drop-after').forEach(el => el.classList.remove('gh-drop-before','gh-drop-after'));
+      if (_line && _line.parentNode) _line.remove();
+    }
+
+    gridEl.addEventListener('dragstart', e => {
+      const kr = e.target.closest('[data-drag-type="kr"]');
+      if (kr) {
+        _type = 'kr'; _id = kr.dataset.dragId; _objId = kr.dataset.objId;
+        setTimeout(() => kr.classList.add('gh-drag-src'), 0);
+      } else {
+        const obj = e.target.closest('[data-drag-type="obj"]');
+        if (!obj) return;
+        _type = 'obj'; _id = obj.dataset.dragId;
+        setTimeout(() => obj.classList.add('gh-drag-src'), 0);
+      }
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', _id);
+    });
+
+    gridEl.addEventListener('dragend', () => {
+      gridEl.querySelectorAll('.gh-drag-src').forEach(el => el.classList.remove('gh-drag-src'));
+      clearAll(); _type = null; _id = null; _objId = null;
+    });
+
+    gridEl.addEventListener('dragover', e => {
+      if (!_id) return;
+      if (_type === 'obj') {
+        const target = e.target.closest('[data-drag-type="obj"]');
+        if (!target || target.dataset.dragId === _id) return;
+        e.preventDefault(); clearAll();
+        const rect = target.getBoundingClientRect();
+        target.classList.add(e.clientX < rect.left + rect.width / 2 ? 'gh-drop-before' : 'gh-drop-after');
+      } else if (_type === 'kr') {
+        const target = e.target.closest('[data-drag-type="kr"]');
+        if (!target || target.dataset.dragId === _id || target.dataset.objId !== _objId) return;
+        e.preventDefault();
+        const rect = target.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) target.before(line()); else target.after(line());
+      }
+    });
+
+    gridEl.addEventListener('dragleave', e => { if (!gridEl.contains(e.relatedTarget)) clearAll(); });
+
+    gridEl.addEventListener('drop', e => {
+      e.preventDefault();
+      const qtr = getQuarter(activeQId); if (!qtr) { clearAll(); return; }
+      clearAll();
+      if (_type === 'obj') {
+        const target = e.target.closest('[data-drag-type="obj"]');
+        if (!target || !_id) return;
+        const toId = target.dataset.dragId; if (toId === _id) return;
+        const rect = target.getBoundingClientRect();
+        const before = e.clientX < rect.left + rect.width / 2;
+        const arr = qtr.objectives;
+        const fromIdx = arr.findIndex(o => o.id === _id); if (fromIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        const toIdx = arr.findIndex(o => o.id === toId);
+        arr.splice(before ? toIdx : toIdx + 1, 0, moved);
+      } else if (_type === 'kr') {
+        const target = e.target.closest('[data-drag-type="kr"]');
+        if (!target || !_id || target.dataset.objId !== _objId) return;
+        const toId = target.dataset.dragId; if (toId === _id) return;
+        const rect = target.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        const obj = qtr.objectives.find(o => o.id === _objId); if (!obj) return;
+        const arr = obj.keyResults;
+        const fromIdx = arr.findIndex(k => k.id === _id); if (fromIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        const toIdx = arr.findIndex(k => k.id === toId);
+        arr.splice(before ? toIdx : toIdx + 1, 0, moved);
+      }
+      _type = null; _id = null; _objId = null;
+      save(); renderMain();
+    });
   }
 
   function renderObjCard(obj) {
@@ -522,7 +611,7 @@
       const taskBtnHtml = kr.taskId
         ? `<span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);flex-shrink:0" title="Task exists in Project Hub">✓</span>`
         : `<button class="kr-task-btn" onclick="sendKrAsTask('${obj.id}','${kr.id}')" title="Create task in Project Hub">→</button>`;
-      return `<div class="kr-row">
+      return `<div class="kr-row" draggable="true" data-drag-type="kr" data-drag-id="${kr.id}" data-obj-id="${obj.id}">
         <div class="kr-check${isDone?' done':''}" onclick="toggleKR('${obj.id}','${kr.id}')" title="Toggle done"></div>
         <div class="kr-title${isDone?' done':''}">${_esc(kr.title||'Key Result')}</div>
         ${progressEl}
@@ -532,7 +621,7 @@
       </div>`;
     }).join('');
 
-    return `<div class="obj-card" data-id="${obj.id}">
+    return `<div class="obj-card" draggable="true" data-drag-type="obj" data-drag-id="${obj.id}" data-id="${obj.id}">
       <div class="obj-card-header">
         <div class="obj-color-bar" style="background:${color}"></div>
         <div class="obj-card-title-wrap">
