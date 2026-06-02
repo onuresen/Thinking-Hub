@@ -33,6 +33,7 @@ window.HubLinks = (() => {
     'risk-hub': 'Risk Register',
     'learning-hub': 'Learning Log',
     'retro-hub': 'Retrospective',
+    'reflection-hub': 'Reflection Board',
     'stakeholder-hub': 'Stakeholders',
     'scrum-hub': 'Scrum Board',
     'tool-portfolio': 'Tool Portfolio',
@@ -221,6 +222,22 @@ window.HubLinks = (() => {
           label: it.title || '(untitled story)',
           subtitle: it.priority || 'backlog'
         }));
+      }
+
+      if (toolId === 'reflection-hub') {
+        const data = HubStorage.get('reflection-hub-v1');
+        if (!data) return [];
+        const COL_LABELS = { signal: 'Signal', friction: 'Friction', question: 'Question', action: 'Action' };
+        const boards = data.boards || [];
+        const activeBoard = boards.find(b => b.id === data.activeId && !b.archived) || boards.find(b => !b.archived);
+        if (!activeBoard) return [];
+        const items = [];
+        for (const col of ['signal', 'friction', 'question', 'action']) {
+          for (const it of (activeBoard.columns?.[col] || [])) {
+            items.push({ id: it.id, label: (it.text || '').slice(0, 60), subtitle: COL_LABELS[col] });
+          }
+        }
+        return items;
       }
 
       if (toolId === 'tool-portfolio') {

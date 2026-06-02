@@ -1941,13 +1941,12 @@
       { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'SITUATION', wg: 'SITUATION', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
       { id: 'people-hub', label: 'People Hub', group: 'SITUATION', wg: 'SITUATION', icon: '◉', file: 'people-hub.html', desc: 'Org tree, load balancing, and workload overlap across your team' },
       { id: 'decision-hub', label: 'Decision Hub', group: 'SITUATION', wg: 'SITUATION', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
-      { id: 'kmqt-board', label: 'KMQT Board', group: 'SITUATION', wg: 'SITUATION', icon: '⊞', file: 'kmqt-board.html', desc: 'Known / Messy / Questions / Thinking structured board' },
+      { id: 'reflection-hub', label: 'Reflection Board', group: 'SITUATION', wg: 'SITUATION', icon: '⟲', file: 'reflection-hub.html', desc: 'Signal · Friction · Question · Action — unified reflection board for thinking and retrospectives' },
       // ── BOOKSHELF ───────────────────────────────────────────────────────
       { id: 'learning-hub', label: 'Learning Log', group: 'SHELF', wg: 'BOOKSHELF', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
       { id: 'idea-swiper', label: 'Idea Swiper', group: 'SHELF', wg: 'BOOKSHELF', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
       { id: 'graph-hub', label: 'Dependency Graph', group: 'SHELF', wg: 'BOOKSHELF', icon: '🕸️', file: 'graph-hub.html', desc: 'Visual map of your tasks, decisions, and ideas' },
       { id: 'canvas-hub', label: 'Spatial Canvas', group: 'SHELF', wg: 'BOOKSHELF', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
-      { id: 'retro-hub', label: 'Retro Board', group: 'SHELF', wg: 'BOOKSHELF', icon: '⟲', file: 'retro-hub.html', desc: 'Async retrospectives with emoji reactions and markdown export' },
       { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'SHELF', wg: 'BOOKSHELF', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
       // ── SYSTEM ──────────────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Focus Timer', group: 'SYSTEM', wg: 'SYSTEM', icon: '◉', file: 'focus-hub.html', desc: 'Pomodoro-style focus sessions linked to your tasks' },
@@ -1957,9 +1956,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'kmqt-board', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'review-hub', 'learning-hub', 'focus-hub', 'log-hub', 'schedule'] },
+      dx: { label: 'DX / Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'review-hub', 'learning-hub', 'focus-hub', 'log-hub', 'schedule'] },
       bim: { label: 'BIM Mgmt', icon: '⬡', tools: ['project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'review-hub', 'decision-hub', 'goals-hub', 'focus-hub', 'log-hub'] },
-      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'scrum-hub', 'graph-hub', 'decision-hub', 'kmqt-board', 'risk-hub', 'review-hub', 'focus-hub', 'log-hub', 'meetings-hub', 'retro-hub', 'goals-hub'] },
+      dev: { label: 'IT / Dev', icon: '⌥', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'scrum-hub', 'graph-hub', 'decision-hub', 'reflection-hub', 'risk-hub', 'review-hub', 'focus-hub', 'log-hub', 'meetings-hub', 'goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
