@@ -1116,6 +1116,30 @@
       border-color: var(--border);
     }
 
+    .ph-drag-handle {
+      color: var(--text3);
+      font-size: 11px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.1s;
+      user-select: none;
+      cursor: grab;
+      padding: 2px 1px;
+      align-self: center;
+    }
+    .task-item:hover .ph-drag-handle,
+    .milestone-item:hover .ph-drag-handle,
+    .goal-item:hover .ph-drag-handle { opacity: 1; }
+    .ph-drag-src { opacity: 0.35 !important; }
+    .ph-drop-line {
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+      pointer-events: none;
+      margin: 2px 0;
+      flex-shrink: 0;
+    }
+
     .task-check {
       width: 15px;
       height: 15px;
@@ -3044,7 +3068,8 @@
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
       return `
-    <div class="task-item" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
+    <div class="task-item" draggable="true" data-drag-id="${task.id}" data-drag-group="${task.done ? 'done' : 'open'}" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
+      <span class="ph-drag-handle">⠿</span>
       <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(event,'${task.id}','${task.projectId || ''}')">${task.done ? '✓' : ''}</div>
       <div class="task-body">
         <div class="task-title ${task.done ? 'done' : ''}">${task.title}</div>
@@ -3071,6 +3096,64 @@
       </div>
     </div>
   `;
+    }
+
+    // ─── LIST DRAG-REORDER ────────────────────────────────────────────────────────
+    function initPHDrag(containerEl, proj, tabName) {
+      let _id = null, _group = null, _line = null;
+      function line() {
+        if (!_line) { _line = document.createElement('div'); _line.className = 'ph-drop-line'; }
+        return _line;
+      }
+      function clearLine() { if (_line && _line.parentNode) _line.remove(); }
+
+      containerEl.addEventListener('dragstart', e => {
+        const item = e.target.closest('[data-drag-id]');
+        if (!item) return;
+        _id = item.dataset.dragId;
+        _group = item.dataset.dragGroup || null;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', _id);
+        setTimeout(() => item.classList.add('ph-drag-src'), 0);
+      });
+
+      containerEl.addEventListener('dragend', () => {
+        containerEl.querySelectorAll('.ph-drag-src').forEach(el => el.classList.remove('ph-drag-src'));
+        clearLine(); _id = null; _group = null;
+      });
+
+      containerEl.addEventListener('dragover', e => {
+        if (!_id) return;
+        const item = e.target.closest('[data-drag-id]');
+        if (!item || item.dataset.dragId === _id) return;
+        if (_group && item.dataset.dragGroup && item.dataset.dragGroup !== _group) return;
+        e.preventDefault();
+        const before = e.clientY < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2;
+        if (before) item.before(line()); else item.after(line());
+      });
+
+      containerEl.addEventListener('dragleave', e => {
+        if (!containerEl.contains(e.relatedTarget)) clearLine();
+      });
+
+      containerEl.addEventListener('drop', e => {
+        e.preventDefault();
+        const item = e.target.closest('[data-drag-id]');
+        clearLine();
+        if (!item || !_id) return;
+        const toId = item.dataset.dragId;
+        if (toId === _id) return;
+        if (_group && item.dataset.dragGroup && item.dataset.dragGroup !== _group) return;
+        const before = e.clientY < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2;
+        const arr = tabName === 'milestones' ? proj.milestones : tabName === 'goals' ? proj.goals : proj.tasks;
+        const fromIdx = arr.findIndex(x => x.id === _id);
+        if (fromIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        const toIdx = arr.findIndex(x => x.id === toId);
+        arr.splice(before ? toIdx : toIdx + 1, 0, moved);
+        _id = null; _group = null;
+        saveState(); renderPanel(proj.id);
+      });
     }
 
     // ─── INLINE EDIT ─────────────────────────────────────────────────────────────
@@ -3345,6 +3428,7 @@
           done.forEach(t => g.insertAdjacentHTML('beforeend', taskHTML({ ...t, projectId: projId })));
           body.appendChild(g);
         }
+        initPHDrag(body, proj, 'tasks');
       }
 
       else if (state.currentTab === 'milestones') {
@@ -3361,8 +3445,10 @@
           const doneCount = msTasks.filter(t => t.done).length;
           const pct = msTasks.length ? Math.round((doneCount / msTasks.length) * 100) : 0;
           const el = document.createElement('div'); el.className = 'milestone-item';
+          el.draggable = true; el.dataset.dragId = ms.id;
           el.innerHTML = `
         <div class="milestone-header" style="display:flex;align-items:center;gap:6px">
+          <span class="ph-drag-handle">⠿</span>
           <div class="milestone-dot" style="background:${ms.color}"></div>
           <div class="milestone-name" style="flex:1">${ms.name}</div>
           <div class="milestone-date">${formatDate(ms.date)}</div>
@@ -3381,6 +3467,7 @@
           el.innerHTML = `<div class="task-group-label" style="margin-bottom:8px">No Milestone</div>${unassigned.map(t => taskHTML({ ...t, projectId: projId })).join('')}`;
           body.appendChild(el);
         }
+        initPHDrag(body, proj, 'milestones');
       }
 
       else if (state.currentTab === 'goals') {
@@ -3394,8 +3481,10 @@
         if (!proj.goals.length) { body.insertAdjacentHTML('beforeend', `<div class="empty-state"><div class="e-icon">◇</div><div class="e-title">No goals yet</div></div>`); }
         proj.goals.forEach(g => {
           const el = document.createElement('div'); el.className = 'goal-item';
+          el.draggable = true; el.dataset.dragId = g.id;
           el.innerHTML = `
         <div class="goal-header" style="display:flex;align-items:center;gap:6px">
+          <span class="ph-drag-handle">⠿</span>
           <div class="goal-name" style="flex:1">${HubUtils.esc(g.name)}</div>
           <span style="font-size:11px;font-family:var(--font-mono);color:var(--accent)">${g.progress}%</span>
           <button class="task-action-btn edit" title="Edit goal" onclick="openEditGoal('${g.id}','${projId}')">✎</button>
@@ -3418,6 +3507,7 @@
           });
           body.appendChild(el);
         });
+        initPHDrag(body, proj, 'goals');
       }
 
       else if (state.currentTab === 'people') {
