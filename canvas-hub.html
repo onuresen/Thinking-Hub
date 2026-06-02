@@ -761,10 +761,11 @@
       const toMM = (cx, cy) => [(cx - minX) * scale, (cy - minY) * scale];
 
       // Edges
-      const _isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       const _css = getComputedStyle(document.documentElement);
       const _accent = _css.getPropertyValue('--accent').trim() || '#b8f033';
       const _accentGlow = _css.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.25)';
+      const _border2 = _css.getPropertyValue('--border2').trim() || 'rgba(255,255,255,0.15)';
+      const _text2 = _css.getPropertyValue('--text2').trim() || 'rgba(255,255,255,0.4)';
       if (db.edges && db.edges.length) {
         ctx.strokeStyle = _accentGlow;
         ctx.lineWidth = 0.8;
@@ -778,23 +779,16 @@
         });
       }
 
-      // Nodes
-      const colorFillDark = {
-        'c-gray': '#2a2a30', 'c-yellow': '#3d3318', 'c-green': '#1a3626',
-        'c-blue': '#1a2e42', 'c-red': '#3a1e1e', 'c-purple': '#2e1e3a'
-      };
-      const colorFillLight = {
-        'c-gray': '#e4e4ea', 'c-yellow': '#fae0a0', 'c-green': '#b8ecd4',
-        'c-blue': '#bed8f5', 'c-red': '#f5c0c0', 'c-purple': '#e0c8f8'
-      };
-      const colorFill = _isDark ? colorFillDark : colorFillLight;
+      // Nodes — fills read the theme-aware --node-* tokens (correct in dark/light/ink)
+      const nodeFill = (cls) => _css.getPropertyValue('--node-' + (cls || 'c-gray').slice(2)).trim()
+        || _css.getPropertyValue('--node-gray').trim() || '#2a2a30';
       db.nodes.forEach(n => {
         const [mx, my] = toMM(n.x, n.y);
         const nw = Math.max(NODE_W * scale, 3);
         const nh = Math.max(NODE_H * scale, 3);
-        ctx.fillStyle = colorFill[n.color || 'c-gray'];
+        ctx.fillStyle = nodeFill(n.color);
         ctx.fillRect(mx, my, nw, nh);
-        ctx.strokeStyle = n.id === selectedNodeId ? _accent : (_isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)');
+        ctx.strokeStyle = n.id === selectedNodeId ? _accent : _border2;
         ctx.lineWidth = n.id === selectedNodeId ? 1.2 : 0.5;
         ctx.strokeRect(mx, my, nw, nh);
       });
@@ -804,7 +798,7 @@
       const vx = -db.panX / db.zoom, vy = -db.panY / db.zoom;
       const vw = vpW / db.zoom, vh = vpH / db.zoom;
       const [mmx, mmy] = toMM(vx, vy);
-      ctx.strokeStyle = _isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
+      ctx.strokeStyle = _text2;
       ctx.lineWidth = 1;
       ctx.strokeRect(mmx, mmy, vw * scale, vh * scale);
     }
