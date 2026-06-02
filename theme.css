@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
 
 /* =========================
    THEME: DARK (default)
@@ -25,6 +25,15 @@
   --accent-dim: rgba(184, 240, 51, 0.1);
   --accent-glow: rgba(184, 240, 51, 0.25);
 
+  /* Secondary identity — warm coral, used sparingly for atmosphere & dual-tone accents */
+  --accent2: #ff8a5c;
+  --accent2-dim: rgba(255, 138, 92, 0.1);
+  --accent2-glow: rgba(255, 138, 92, 0.22);
+
+  /* Background atmosphere (corner gradient mesh) */
+  --atmo-1: rgba(184, 240, 51, 0.06);
+  --atmo-2: rgba(255, 138, 92, 0.05);
+
   /* theme.css — semantic tokens */
   --accent-like: #2ecc7a;
   --accent-super: #f5a623;
@@ -47,6 +56,7 @@
   /* Radius */
   --r: 12px;
   --r-sm: 8px;
+  --r-chip: 5px;
 
   /* Z-index scale */
   --z-base:    1;
@@ -58,7 +68,7 @@
   --z-toast:   9999;
 
   /* Fonts */
-  --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Fraunces', 'Syne', Georgia, 'Times New Roman', serif;
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
@@ -83,6 +93,13 @@
   --accent-dim: rgba(111, 180, 0, 0.12);
   --accent-glow: rgba(111, 180, 0, 0.25);
 
+  --accent2: #e0603a;
+  --accent2-dim: rgba(224, 96, 58, 0.1);
+  --accent2-glow: rgba(224, 96, 58, 0.2);
+
+  --atmo-1: rgba(111, 180, 0, 0.07);
+  --atmo-2: rgba(224, 96, 58, 0.05);
+
   --accent-like: #27a864;
   --accent-super: #d4831a;
   --accent-nope: #d03452;
@@ -100,6 +117,55 @@
   --border-yellow: #b88020;
   --border-purple: #7a40b0;
   --border-red: #c04040;
+}
+
+/* =========================
+   THEME: INK (paper & oxblood)
+   A warm editorial palette — pivots the accent away from lime.
+   ========================= */
+[data-theme="ink"] {
+  --bg: #f1ebde;
+  --surface: #fbf7ee;
+  --surface2: #ece4d3;
+  --surface3: #e0d6c0;
+
+  --border: rgba(60, 44, 24, 0.12);
+  --border2: rgba(60, 44, 24, 0.24);
+
+  --text: #231f18;
+  --text2: #4c4537;
+  --text3: #8a8066;
+
+  /* Accent — deep terracotta / oxblood ink */
+  --accent: #b3402f;
+  --accent-dim: rgba(179, 64, 47, 0.1);
+  --accent-glow: rgba(179, 64, 47, 0.22);
+
+  /* Secondary — ink indigo */
+  --accent2: #2e4a78;
+  --accent2-dim: rgba(46, 74, 120, 0.1);
+  --accent2-glow: rgba(46, 74, 120, 0.2);
+
+  --atmo-1: rgba(179, 64, 47, 0.06);
+  --atmo-2: rgba(46, 74, 120, 0.05);
+
+  --accent-like: #3f7d52;
+  --accent-super: #c07a1e;
+  --accent-nope: #b03a2e;
+
+  --node-gray: #e6ddca;
+  --node-blue: #cdd9ec;
+  --node-green: #cce0c8;
+  --node-yellow: #f3e3b4;
+  --node-purple: #e0cfe6;
+  --node-red: #f0cdc2;
+
+  --border-gray: #9a8f74;
+  --border-blue: #4a6798;
+  --border-green: #4f8a5c;
+  --border-yellow: #b08828;
+  --border-purple: #8a5c9c;
+  --border-red: #b3402f;
 }
 
 /* =========================
@@ -214,6 +280,14 @@
 /* Base resets to apply the theme globally */
 body {
   background-color: var(--bg);
+  /* Atmosphere: two faint corner gradients + a fine grain tile.
+     Gradients stay fixed to the viewport; grain tiles. Decorative only. */
+  background-image:
+    radial-gradient(120% 90% at 0% 0%, var(--atmo-1), transparent 55%),
+    radial-gradient(110% 80% at 100% 0%, var(--atmo-2), transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-attachment: scroll;
+  background-repeat: no-repeat, no-repeat, repeat;
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -226,7 +300,8 @@ h2,
 h3,
 .logo {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
 .logo {
@@ -261,8 +336,8 @@ body {
    SCROLLBAR (shared)
    ========================= */
 ::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -449,7 +524,7 @@ body {
   font-size: 10.5px;
   color: var(--text2);
   background: var(--surface3);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-chip);
   padding: 2px 7px;
   white-space: nowrap;
 }

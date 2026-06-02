@@ -126,13 +126,13 @@
     .btn:hover {
       background: var(--accent-dim);
       color: var(--accent);
-      border-color: rgba(184, 240, 51, 0.4);
+      border-color: var(--accent-glow);
     }
 
     .btn.frozen {
       background: var(--accent-dim);
       color: var(--accent);
-      border-color: rgba(184, 240, 51, 0.4);
+      border-color: var(--accent-glow);
     }
 
     /* ── Legend ─────────────────────────────────────────────── */
@@ -608,6 +608,7 @@
       const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const fontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const autoEdgeColor = isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.25)';
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
 
       const nodes = new Map();
       const edges = [];
@@ -621,7 +622,7 @@
           title: `<b>${TOOL_LABELS[tool] || tool}</b><br>${label || 'Untitled'}`,
           hidden: hiddenTools.has(tool),
           color: { background: c.bg, border: c.border,
-            highlight: { background: c.bg, border: '#b8f033' },
+            highlight: { background: c.bg, border: accentColor },
             hover: { background: c.bg, border: c.border } },
           font: { color: fontColor, size: 12, face: 'DM Sans, sans-serif' },
           shape: 'box', borderWidth: 1,
@@ -634,7 +635,7 @@
         edges.push({
           id: `auto::${fromId}__${toId}`, from: fromId, to: toId,
           _auto: true, title: label,
-          color: { color: autoEdgeColor, highlight: '#b8f033', hover: autoEdgeColor },
+          color: { color: autoEdgeColor, highlight: accentColor, hover: autoEdgeColor },
           width: 1, dashes: [5, 5],
           arrows: { to: { enabled: true, scaleFactor: 0.45 } },
           smooth: { type: 'continuous' }, selectionWidth: 1.5
@@ -742,7 +743,9 @@
       const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.60)';
-      const edgeHover = isDark ? 'rgba(184,240,51,0.45)' : 'rgba(100,160,20,0.65)';
+      const _gcss = getComputedStyle(document.documentElement);
+      const accentColor = _gcss.getPropertyValue('--accent').trim() || '#b8f033';
+      const edgeHover = _gcss.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.45)';
 
       // Seed with auto-generated nodes + dashed edges
       const auto = autoLinksEnabled ? loadAutoNodes(isDark) : { nodes: [], edges: [] };
@@ -766,7 +769,7 @@
             title: `<b>${TOOL_LABELS[side.tool] || side.tool}</b><br>${side.label || 'Untitled'}`,
             hidden: hiddenTools.has(side.tool),
             color: { background: c.bg, border: c.border,
-              highlight: { background: c.bg, border: '#b8f033' },
+              highlight: { background: c.bg, border: accentColor },
               hover: { background: c.bg, border: c.border } },
             font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
             shape: 'box', borderWidth: 1,
@@ -782,7 +785,7 @@
           title: edgeTitle,
           label: et.label || undefined,
           font: et.label ? { size: 9, color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)', face: 'DM Sans, sans-serif', background: 'none' } : undefined,
-          color: { color: et.hue ? et.hue + (isDark ? '99' : 'bb') : edgeColor, highlight: '#b8f033', hover: edgeHover },
+          color: { color: et.hue ? et.hue + (isDark ? '99' : 'bb') : edgeColor, highlight: accentColor, hover: edgeHover },
           arrows: {
             to:   { enabled: et.arrowTo,   scaleFactor: 0.55 },
             from: { enabled: et.arrowFrom, scaleFactor: 0.55 },

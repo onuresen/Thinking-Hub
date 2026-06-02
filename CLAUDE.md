@@ -533,3 +533,34 @@ Iceberg cascade view: surface a blocked task above the waterline, reveal every o
 - Profiles: `dx` and `dev` (not `bim` — less relevant to BIM authoring workflow)
 
 **Files:** `blocked-depth.html` (new), `index.html` (APPS + PROFILES), `CLAUDE.md` (file map)
+
+---
+
+### ~~Priority 41 — Design identity pass (3 groups)~~ ✓ Done `[group: design-identity]`
+Frontend-design review found the app read as "generic dark dashboard + one neon-lime accent + DM Sans everywhere." Three-group pass to give it a distinctive, memorable identity. All Group 1 work is token-level (`theme.css`), so it propagates to all tools automatically.
+
+- **Group 1 — Token foundation (`theme.css`):**
+  - **Typography**: `--font-display` split from `--font-body` and set to **Fraunces** (editorial serif, `opsz` axis, `font-optical-sizing: auto`); `--font-body` stays DM Sans; `.logo` + the sidebar logo mark stay Syne. Display serif lands on headings/greetings/card names/section titles only.
+  - **Secondary identity tokens**: `--accent2` / `--accent2-dim` / `--accent2-glow` added to all themes (dark = warm coral `#ff8a5c`, light = terracotta `#e0603a`).
+  - **Background atmosphere**: `body` now layers two corner gradient meshes (`--atmo-1`, `--atmo-2`) + a tiling inline-SVG `feTurbulence` grain (~3.5%). `background-attachment: scroll` (NOT `fixed` — fixed risks scroll-raster jank inside the 20 iframe tools).
+  - **New 3rd theme `ink`**: paper background + **terracotta/oxblood** pivoted accent + ink-indigo secondary, full node/border palette. Theme toggle now cycles `dark → light → ink` (🌙→🌞→🖋) via a `cycle` array in `applyTheme`'s click handler.
+  - **Micro**: scrollbars 3px→7px; new `--r-chip` (5px) radius tier applied to the shared `.proj-badge` primitive.
+- **Group 2 — Shell motion (`index.html`):**
+  - **Staggered entrance**: `.app-card` uses the existing `card-enter` keyframe with index-based `animationDelay` (`i * 0.035s`) set in `buildHomeDashboard`. Deliberately NOT applied to stat cards (their `buildStatusWidgets` re-runs on every storage subscribe — would flicker).
+  - **Differentiated hover**: app-cards lift + soft shadow; stat-cards get a left accent-bar reveal via `::before` `scaleY` (replacing the old identical accent-dim flood); nav-items keep their flat fill.
+  - **Logo**: solid accent mark, Syne face, `--accent-glow` shadow + inset highlight, a `--accent2` corner dot via `::after`, and a subtle scale/rotate on `.sidebar-logo:hover`.
+- **Group 3 — Layout break (`index.html`):**
+  - **Hero card**: first tool in the active profile (Project Hub in `everything`) gets `.app-card--hero` — `grid-column: span 2`, dual-tone `--accent-dim → --accent2-dim` gradient, 44px icon, 23px serif name (18px on mobile). Breaks the uniform `auto-fill` rhythm. Mobile (2-col grid) renders it full-width.
+
+**Verification note:** preview screenshots were infra-flaky this session (renderer raster hung while the page stayed responsive to `eval`); changes were verified via computed-style inspection + zero console errors. Hero confirmed at 2× sibling width.
+
+**Files:** `theme.css`, `index.html`
+
+**Follow-up — tool consistency propagation (Groups A + B):** Group 1's tokens reach all tools via `theme.css`, but tools that *hardcoded* the old lime (`#b8f033` / `rgba(184,240,51,…)`) broke under `ink`/light. Swept 32 occurrences across 12 files:
+- **Group A (CSS `<style>` blocks → tokens):** `focus-hub`, `decision-hub`, `graph-hub`, `stakeholder-hub`, `matrix-hub`, `tool-portfolio`, `project-hub` (×4), `index.html` (×4), + one inline-style template in `schedule` (CSS vars resolve in inline `style=""`). Mapped to `--accent-dim` / `--accent-glow` / `--accent`.
+- **Group B (JS canvas/SVG — vars don't resolve there):** `canvas-hub` SVG edges now use inline `style.stroke = 'var(--accent-glow)'` (auto theme-reactive, incl. delete-hover → `--accent-nope`); `canvas-hub` minimap `ctx.strokeStyle` + `graph-hub` vis-network highlight/hover colors resolved at render via `getComputedStyle('--accent' / '--accent-glow')`. Verified: accent resolves to terracotta inside the iframe under `ink`.
+- **Deliberately left as-is:** fixed color *palettes* (`goals-hub` `OBJ_COLORS`, `achievements-hub` `COLORS`, `schedule` swatch list) and `project-hub` kanban "Done" semantic color — these are user-selectable/saved color choices, not theme accents.
+
+**Known follow-up (NOT done):** `canvas-hub` minimap classifies the `ink` theme as dark (`_isDark = theme !== 'light'`), so minimap node *fills* (`colorFillDark`) render dark tiles on `ink`'s paper background. Proper fix = read `--node-*` tokens instead of the hardcoded fill maps. Left out to keep this pass scoped.
+
+**Files:** `theme.css`, `index.html`, `focus-hub.html`, `decision-hub.html`, `graph-hub.html`, `stakeholder-hub.html`, `matrix-hub.html`, `tool-portfolio.html`, `project-hub.html`, `schedule.html`, `canvas-hub.html`

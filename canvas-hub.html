@@ -511,7 +511,7 @@
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', x1); line.setAttribute('y1', y1);
         line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-        line.setAttribute('stroke', 'rgba(184,240,51,0.28)');
+        line.style.stroke = 'var(--accent-glow)';
         line.setAttribute('stroke-width', '1.5');
         line.setAttribute('stroke-dasharray', '5 4');
         line.style.pointerEvents = 'none';
@@ -525,8 +525,8 @@
         hit.setAttribute('stroke-width', '12');
         hit.style.pointerEvents = 'stroke';
         hit.style.cursor = 'pointer';
-        hit.addEventListener('mouseenter', () => line.setAttribute('stroke', 'rgba(232,69,90,0.6)'));
-        hit.addEventListener('mouseleave', () => line.setAttribute('stroke', 'rgba(184,240,51,0.28)'));
+        hit.addEventListener('mouseenter', () => line.style.stroke = 'var(--accent-nope)');
+        hit.addEventListener('mouseleave', () => line.style.stroke = 'var(--accent-glow)');
         hit.addEventListener('click', e => {
           e.stopPropagation();
           db.edges = db.edges.filter(ed => ed.id !== edge.id);
@@ -762,8 +762,11 @@
 
       // Edges
       const _isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const _css = getComputedStyle(document.documentElement);
+      const _accent = _css.getPropertyValue('--accent').trim() || '#b8f033';
+      const _accentGlow = _css.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.25)';
       if (db.edges && db.edges.length) {
-        ctx.strokeStyle = _isDark ? 'rgba(184,240,51,0.18)' : 'rgba(0,0,0,0.25)';
+        ctx.strokeStyle = _accentGlow;
         ctx.lineWidth = 0.8;
         db.edges.forEach(edge => {
           const f = db.nodes.find(n => n.id === edge.from);
@@ -791,7 +794,7 @@
         const nh = Math.max(NODE_H * scale, 3);
         ctx.fillStyle = colorFill[n.color || 'c-gray'];
         ctx.fillRect(mx, my, nw, nh);
-        ctx.strokeStyle = n.id === selectedNodeId ? '#b8f033' : (_isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)');
+        ctx.strokeStyle = n.id === selectedNodeId ? _accent : (_isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)');
         ctx.lineWidth = n.id === selectedNodeId ? 1.2 : 0.5;
         ctx.strokeRect(mx, my, nw, nh);
       });

@@ -76,18 +76,38 @@
     }
 
     .sidebar-logo-mark {
+      position: relative;
       width: 26px;
       height: 26px;
-      border-radius: 7px;
+      border-radius: 8px;
       background: var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
+      letter-spacing: -0.5px;
       color: #111;
-      font-family: var(--font-display);
+      font-family: 'Syne', sans-serif;
       flex-shrink: 0;
+      box-shadow: 0 2px 10px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: transform 0.18s ease;
+    }
+
+    .sidebar-logo-mark::after {
+      content: '';
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+      border: 2px solid var(--surface);
+    }
+
+    .sidebar-logo:hover .sidebar-logo-mark {
+      transform: scale(1.06) rotate(-3deg);
     }
 
     .sidebar-logo-text {
@@ -381,7 +401,7 @@
 
     .cloud-copy-btn:hover {
       color: var(--accent);
-      background: rgba(184, 240, 51, 0.08);
+      background: var(--accent-dim);
     }
 
     /* ── Main area ──────────────────────────────────── */
@@ -525,15 +545,18 @@
       border-radius: var(--r);
       padding: 18px 16px;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
+      transition: border-color 0.15s, background 0.15s, transform 0.18s ease, box-shadow 0.18s ease;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      animation: card-enter 0.4s ease both;
     }
 
     .app-card:hover {
-      border-color: rgba(184, 240, 51, 0.35);
+      border-color: var(--accent-glow);
       background: var(--accent-dim);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);
     }
 
     .app-card-top {
@@ -557,8 +580,8 @@
     }
 
     .app-card:hover .app-card-icon {
-      background: rgba(184, 240, 51, 0.12);
-      border-color: rgba(184, 240, 51, 0.3);
+      background: var(--accent-dim);
+      border-color: var(--accent-glow);
     }
 
     .app-card-group {
@@ -583,6 +606,39 @@
       line-height: 1.5;
     }
 
+    /* Hero card — the primary tool, breaks the uniform grid rhythm */
+    .app-card--hero {
+      grid-column: span 2;
+      background: linear-gradient(135deg, var(--accent-dim), var(--accent2-dim));
+      border-color: var(--accent-glow);
+      padding: 24px 22px;
+      gap: 10px;
+      justify-content: space-between;
+      min-height: 150px;
+    }
+
+    .app-card--hero .app-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      font-size: 22px;
+    }
+
+    .app-card--hero .app-card-name {
+      font-size: 23px;
+      line-height: 1.1;
+    }
+
+    .app-card--hero .app-card-desc {
+      font-size: 13.5px;
+      max-width: 90%;
+    }
+
+    .app-card--hero:hover {
+      background: linear-gradient(135deg, var(--accent-dim), var(--accent2-dim));
+      border-color: var(--accent);
+    }
+
     /* ── Status widgets ─────────────────────────────── */
     #status-section {
       margin-bottom: 8px;
@@ -604,11 +660,30 @@
       transition: border-color 0.15s, background 0.15s;
       display: flex;
       flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--accent);
+      transform: scaleY(0);
+      transform-origin: top;
+      transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover::before {
+      transform: scaleY(1);
     }
 
     .stat-card:hover {
-      border-color: rgba(184, 240, 51, 0.35);
-      background: var(--accent-dim);
+      border-color: var(--border2);
+      background: var(--surface2);
     }
 
     .stat-card-header {
@@ -639,8 +714,8 @@
       font-family: var(--font-mono);
       font-size: 10px;
       color: var(--accent);
-      background: rgba(184, 240, 51, 0.1);
-      border: 1px solid rgba(184, 240, 51, 0.2);
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-glow);
       border-radius: 999px;
       padding: 2px 8px;
       white-space: nowrap;
@@ -711,7 +786,7 @@
     }
 
     .stat-badge.decision {
-      background: rgba(184, 240, 51, 0.12);
+      background: var(--accent-dim);
       color: var(--accent);
     }
 
@@ -1617,6 +1692,21 @@
         gap: 4px;
       }
 
+      .app-card--hero {
+        padding: 16px 14px;
+        min-height: 0;
+      }
+
+      .app-card--hero .app-card-name {
+        font-size: 18px;
+      }
+
+      .app-card--hero .app-card-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+      }
+
       .app-card-desc {
         font-size: 11px;
         line-height: 1.4;
@@ -2066,9 +2156,10 @@
       grid.innerHTML = '';
       const profile = PROFILES[_activeProfile] || PROFILES.everything;
       const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
-      visibleApps.forEach(app => {
+      visibleApps.forEach((app, i) => {
         const card = document.createElement('div');
-        card.className = 'app-card';
+        card.className = 'app-card' + (i === 0 ? ' app-card--hero' : '');
+        card.style.animationDelay = (i * 0.035) + 's';
         card.dataset.app = app.id;
         card.innerHTML = `
       <div class="app-card-top">
@@ -4174,7 +4265,8 @@
 
       const btn = document.getElementById('theme-toggle-btn');
       if (btn) {
-        btn.textContent = theme === 'light' ? '🌞' : '🌙';
+        btn.textContent = theme === 'light' ? '🌞' : (theme === 'ink' ? '🖋' : '🌙');
+        btn.title = 'Theme: ' + theme + ' (click to cycle)';
       }
 
       const frame = document.getElementById('app-frame');
@@ -4194,8 +4286,10 @@
 
     // Toggle handler
     document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
+      const cycle = ['dark', 'light', 'ink'];
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      applyTheme(current === 'dark' ? 'light' : 'dark');
+      const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+      applyTheme(next);
     });
   </script>
   <script>

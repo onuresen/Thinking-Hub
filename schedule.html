@@ -1945,7 +1945,7 @@
       // Build gantt background (grid cols + today line) — reused in every gantt cell
       function ganttBg(rowH) {
         const bands = cols.map(c =>
-          `<div class="g-col-band" style="left:${c.x}px;width:${MULTI_COL_W}px${c.isToday ? ';background:rgba(184,240,51,0.06)' : ''}"></div>`
+          `<div class="g-col-band" style="left:${c.x}px;width:${MULTI_COL_W}px${c.isToday ? ';background:var(--accent-dim)' : ''}"></div>`
         ).join('');
         const tl = todayVisible ? `<div class="g-today-line" style="left:${todayX}px;height:${rowH}px"></div>` : '';
         return bands + tl;
