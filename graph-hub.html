@@ -322,7 +322,11 @@
   <div class="header">
     <div class="header-row">
       <div class="header-title">Dependency Graph</div>
-      <div class="header-subtitle" id="stats">0 nodes · 0 links</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <input type="text" id="graph-search" class="gh-search-input" placeholder="Search nodes… (/)" oninput="searchNodes(this.value)" style="width:160px;font-size:11.5px;padding:4px 9px">
+        <button id="graph-search-clear" class="gh-btn" style="display:none;padding:3px 8px;font-size:11px" onclick="clearNodeSearch()">✕</button>
+        <div class="header-subtitle" id="stats">0 nodes · 0 links</div>
+      </div>
     </div>
     <div class="filter-bar" id="filter-bar"></div>
   </div>
@@ -359,11 +363,19 @@
 
   <!-- Edge info panel -->
   <div class="edge-panel" id="edge-panel">
-    <div class="edge-panel-title">Link</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div class="edge-panel-title">Link</div>
+      <select class="gh-select" id="edge-rel-type" style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
+        <option value="relates">↔ Relates</option>
+        <option value="depends-on">→ Depends on</option>
+        <option value="blocks">→ Blocks</option>
+        <option value="leads-to">→ Leads to</option>
+      </select>
+    </div>
     <div class="edge-endpoints" id="edge-endpoints"></div>
     <textarea class="edge-note-input" id="edge-note" placeholder="Add a note to this link…" rows="3"></textarea>
     <div class="edge-panel-actions">
-      <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveEdgeNote()">Save Note</button>
+      <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveEdgeNote()">Save</button>
       <button class="gh-btn gh-btn-danger" onclick="deleteCurrentEdge()">Delete</button>
       <button class="gh-btn" onclick="closeEdgePanel()">✕</button>
     </div>
@@ -421,6 +433,15 @@
           <select class="gh-select" id="nl-item-b" size="6"></select>
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="gh-side-label" style="white-space:nowrap;margin:0">Relationship Type</div>
+        <select class="gh-select" id="nl-rel-type" style="flex:1;margin:0;padding:6px 8px">
+          <option value="relates">↔ Relates to (undirected)</option>
+          <option value="depends-on">→ Depends on</option>
+          <option value="blocks">→ Blocks</option>
+          <option value="leads-to">→ Leads to</option>
+        </select>
+      </div>
       <div class="gh-modal-footer">
         <button class="gh-btn" onclick="closeLinkModal()">Cancel</button>
         <button class="gh-btn gh-btn-primary" onclick="confirmNewLink()">Create Link</button>
@@ -440,6 +461,9 @@
       'goals-hub':    { bg: '#332e14', border: '#a08020' },
       'meetings-hub':   { bg: '#152838', border: '#2868a8' },
       'tool-portfolio': { bg: '#1a2e1a', border: '#3a8040' },
+      'learning-hub':   { bg: '#1a2a40', border: '#2860a8' },
+      'scrum-hub':      { bg: '#1a2e28', border: '#2a6e48' },
+      'stakeholder-hub':{ bg: '#2a1e38', border: '#5c30a0' },
     };
     const TOOL_COLORS_LIGHT = {
       'project-hub':    { bg: '#bed8f5', border: '#4a90c8' },
@@ -452,6 +476,9 @@
       'goals-hub':      { bg: '#faeab0', border: '#a07820' },
       'meetings-hub':   { bg: '#b8d4f0', border: '#3060a8' },
       'tool-portfolio': { bg: '#c8ecc8', border: '#3a9040' },
+      'learning-hub':   { bg: '#c0d8f5', border: '#3060b8' },
+      'scrum-hub':      { bg: '#bce8c8', border: '#2a7040' },
+      'stakeholder-hub':{ bg: '#ddc8f8', border: '#6030b0' },
     };
 
     const TOOL_LABELS = {
@@ -465,6 +492,16 @@
       'goals-hub':      'Goals Hub',
       'meetings-hub':   'Meetings',
       'tool-portfolio': 'Tool Portfolio',
+      'learning-hub':   'Learning Log',
+      'scrum-hub':      'Scrum Board',
+      'stakeholder-hub':'Stakeholder Map',
+    };
+
+    const EDGE_TYPE_CONFIG = {
+      'relates':    { label: '',          arrowTo: false, arrowFrom: false, hue: null },
+      'depends-on': { label: 'depends on', arrowTo: true,  arrowFrom: false, hue: '#5580cc' },
+      'blocks':     { label: 'blocks',     arrowTo: true,  arrowFrom: false, hue: '#cc4444' },
+      'leads-to':   { label: 'leads to',   arrowTo: true,  arrowFrom: false, hue: '#44aa66' },
     };
 
     let network = null;
@@ -519,6 +556,9 @@
       label.textContent = 'Show:';
       bar.appendChild(label);
 
+      const toolCounts = {};
+      nodesMap.forEach(n => { toolCounts[n.tool] = (toolCounts[n.tool] || 0) + 1; });
+
       const _isDarkBar = document.documentElement.getAttribute('data-theme') !== 'light';
       const _tcBar = _isDarkBar ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       tools.forEach(tool => {
@@ -527,7 +567,8 @@
         chip.className = 'filter-chip active';
         chip.dataset.tool = tool;
         chip.style.setProperty('--chip-color', colors.border);
-        chip.textContent = TOOL_LABELS[tool] || tool;
+        const count = toolCounts[tool] || 0;
+        chip.innerHTML = `${HubUtils.esc(TOOL_LABELS[tool] || tool)}<span style="font-size:9px;opacity:0.65;margin-left:4px;font-family:var(--font-mono)">${count}</span>`;
         chip.onclick = () => toggleToolVisibility(tool);
         bar.appendChild(chip);
       });
@@ -661,6 +702,36 @@
         });
       } catch {}
 
+      // Scrum backlog → project
+      try {
+        const sc = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{}');
+        (sc.backlogs || []).forEach(item => {
+          const iId = addNode('scrum-hub', item.id, item.title || 'Story');
+          if (item.projectId && nodes.has(`project-hub::${item.projectId}`))
+            addAutoEdge(iId, `project-hub::${item.projectId}`, 'story → project');
+        });
+      } catch {}
+
+      // Learning items (standalone nodes)
+      try {
+        const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
+        (lh.items || []).forEach(item => {
+          addNode('learning-hub', item.id, item.title || 'Learning');
+        });
+      } catch {}
+
+      // Stakeholders → projects
+      try {
+        const sth = JSON.parse(localStorage.getItem('stakeholder-hub-v1') || '{}');
+        (sth.stakeholders || []).forEach(sh => {
+          const sId = addNode('stakeholder-hub', sh.id, sh.name || 'Stakeholder');
+          (sh.projectIds || []).forEach(projId => {
+            if (nodes.has(`project-hub::${projId}`))
+              addAutoEdge(sId, `project-hub::${projId}`, 'stakeholder → project');
+          });
+        });
+      } catch {}
+
       return { nodes: Array.from(nodes.values()), edges };
     }
 
@@ -702,13 +773,20 @@
             margin: { top: 8, bottom: 8, left: 10, right: 10 }
           });
         });
+        const et = EDGE_TYPE_CONFIG[link.relType] || EDGE_TYPE_CONFIG['relates'];
         const edgeTitle = link.note ? `📝 ${link.note}` : undefined;
         edges.push({
           id: link.id, _linkId: link.id,
           from: nodeId(link.a.tool, link.a.itemId),
           to: nodeId(link.b.tool, link.b.itemId),
           title: edgeTitle,
-          color: { color: edgeColor, highlight: '#b8f033', hover: edgeHover },
+          label: et.label || undefined,
+          font: et.label ? { size: 9, color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)', face: 'DM Sans, sans-serif', background: 'none' } : undefined,
+          color: { color: et.hue ? et.hue + (isDark ? '99' : 'bb') : edgeColor, highlight: '#b8f033', hover: edgeHover },
+          arrows: {
+            to:   { enabled: et.arrowTo,   scaleFactor: 0.55 },
+            from: { enabled: et.arrowFrom, scaleFactor: 0.55 },
+          },
           width: link.note ? 2.5 : 1.5,
           selectionWidth: 2,
           smooth: { type: 'curvedCW', roundness: 0.1 }
@@ -781,10 +859,16 @@
       });
 
       network.on('selectNode', params => {
-        if (params.nodes.length) showNodePanel(params.nodes[0]);
+        if (params.nodes.length) {
+          showNodePanel(params.nodes[0]);
+          applyNeighbourHighlight(params.nodes[0]);
+        }
       });
 
-      network.on('deselectNode', () => closeNodePanel());
+      network.on('deselectNode', () => {
+        clearNeighbourHighlight();
+        closeNodePanel();
+      });
 
       network.on('oncontext', params => {
         params.event.preventDefault();
@@ -869,9 +953,15 @@
     function saveEdgeNote() {
       if (!_currentEdgeId) return;
       const note = document.getElementById('edge-note').value.trim();
+      const relType = document.getElementById('edge-rel-type').value;
       const links = HubStorage.get('hub-links-v1') || [];
       const idx = links.findIndex(l => l.id === _currentEdgeId);
-      if (idx >= 0) { links[idx].note = note; HubStorage.set('hub-links-v1', links); showToast('Note saved'); }
+      if (idx >= 0) {
+        links[idx].note = note;
+        links[idx].relType = relType;
+        HubStorage.set('hub-links-v1', links);
+        showToast('Link saved');
+      }
       closeEdgePanel();
     }
 
@@ -893,6 +983,7 @@
         `<span class="edge-endpoint-tag">${toolLabel(link.a.tool)}</span> ${(link.a.label || '').slice(0, 36)}<br>` +
         `<span class="edge-endpoint-tag">${toolLabel(link.b.tool)}</span> ${(link.b.label || '').slice(0, 36)}`;
       document.getElementById('edge-note').value = link.note || '';
+      document.getElementById('edge-rel-type').value = link.relType || 'relates';
       document.getElementById('edge-panel').classList.add('visible');
     }
 
@@ -909,6 +1000,7 @@
 
     function openNewLinkModal(preselect) {
       const overlay = document.getElementById('link-overlay');
+      document.getElementById('nl-rel-type').value = 'relates';
       ['a', 'b'].forEach(side => {
         const toolSel = document.getElementById(`nl-tool-${side}`);
         toolSel.innerHTML = LINKABLE_TOOLS.map(t =>
@@ -1020,9 +1112,11 @@
       if (toolA === toolB && selA.value === selB.value) { alert('Cannot link an item to itself.'); return; }
       const labelA = selA.options[selA.selectedIndex]?.dataset.label || selA.options[selA.selectedIndex]?.text || '';
       const labelB = selB.options[selB.selectedIndex]?.dataset.label || selB.options[selB.selectedIndex]?.text || '';
+      const relType = document.getElementById('nl-rel-type').value;
       HubLinks.addLink(
         { tool: toolA, itemId: selA.value, label: labelA },
-        { tool: toolB, itemId: selB.value, label: labelB }
+        { tool: toolB, itemId: selB.value, label: labelB },
+        { relType }
       );
       closeLinkModal();
     }
@@ -1074,6 +1168,40 @@
             { k: 'Ring',     v: t.ring || '—' },
             { k: 'Status',   v: t.status || '—' },
             { k: 'Category', v: t.category || '—' },
+          ];
+        }
+        if (tool === 'meetings-hub') {
+          const data = HubStorage.get('meetings-hub-v1') || {};
+          const m = (data.meetings || []).find(m => m.id === itemId);
+          if (m) return [
+            { k: 'Type',   v: m.type || '—' },
+            { k: 'Date',   v: m.date || '—' },
+            { k: 'Status', v: m.status || '—' },
+          ];
+        }
+        if (tool === 'learning-hub') {
+          const data = HubStorage.get('learning-hub-v1') || {};
+          const it = (data.items || []).find(it => it.id === itemId);
+          if (it) return [
+            { k: 'Type',   v: it.type || '—' },
+            { k: 'Status', v: it.status || '—' },
+          ];
+        }
+        if (tool === 'scrum-hub') {
+          const data = HubStorage.get('scrum-hub-v1') || {};
+          const it = (data.backlogs || []).find(it => it.id === itemId);
+          if (it) return [
+            { k: 'Priority', v: it.priority || '—' },
+            { k: 'Status',   v: it.status || '—' },
+            { k: 'Points',   v: it.points != null ? String(it.points) : '—' },
+          ];
+        }
+        if (tool === 'stakeholder-hub') {
+          const data = HubStorage.get('stakeholder-hub-v1') || {};
+          const sh = (data.stakeholders || []).find(sh => sh.id === itemId);
+          if (sh) return [
+            { k: 'Role',       v: sh.role || '—' },
+            { k: 'Engagement', v: sh.engagement || '—' },
           ];
         }
       } catch {}
@@ -1218,8 +1346,80 @@
       showToast('Link created');
     }
 
+    // ── Node search ───────────────────────────────────────────
+    function searchNodes(q) {
+      if (!nodesDS) return;
+      q = (q || '').toLowerCase().trim();
+      if (!q) { clearNodeSearch(); return; }
+      const matches = [];
+      nodesMap.forEach((node, id) => {
+        if (node.label.toLowerCase().includes(q) || (TOOL_LABELS[node.tool] || node.tool).toLowerCase().includes(q))
+          matches.push(id);
+      });
+      const updates = [];
+      nodesMap.forEach((_, id) => updates.push({ id, opacity: matches.includes(id) ? 1 : 0.12 }));
+      nodesDS.update(updates);
+      if (matches.length && network) {
+        network.selectNodes(matches);
+        network.fit({ nodes: matches, animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
+      }
+      document.getElementById('graph-search-clear').style.display = '';
+    }
+
+    function clearNodeSearch() {
+      const inp = document.getElementById('graph-search');
+      if (inp) inp.value = '';
+      document.getElementById('graph-search-clear').style.display = 'none';
+      if (!nodesDS) return;
+      const updates = [];
+      nodesMap.forEach((_, id) => updates.push({ id, opacity: 1 }));
+      nodesDS.update(updates);
+      if (network) network.unselectAll();
+    }
+
+    // ── Neighbour highlight ───────────────────────────────────
+    function applyNeighbourHighlight(nodeId) {
+      if (!nodesDS || !edgesDS) return;
+      const neighbors = new Set([nodeId]);
+      edgesDS.forEach(e => {
+        if (e.from === nodeId) neighbors.add(e.to);
+        if (e.to === nodeId)   neighbors.add(e.from);
+      });
+      const updates = [];
+      nodesMap.forEach((_, id) => updates.push({ id, opacity: neighbors.has(id) ? 1 : 0.12 }));
+      nodesDS.update(updates);
+    }
+
+    function clearNeighbourHighlight() {
+      if (!nodesDS) return;
+      const inp = document.getElementById('graph-search');
+      if (inp && inp.value.trim()) { searchNodes(inp.value); return; }
+      const updates = [];
+      nodesMap.forEach((_, id) => updates.push({ id, opacity: 1 }));
+      nodesDS.update(updates);
+    }
+
+    // ── Keyboard shortcuts ────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); fitGraph(); }
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openNewLinkModal(); }
+      if (e.key === 'Escape') {
+        closeEdgePanel();
+        closeNodePanel();
+        clearNodeSearch();
+        dismissContextMenu();
+      }
+      if (e.key === '/') {
+        e.preventDefault();
+        const inp = document.getElementById('graph-search');
+        if (inp) inp.focus();
+      }
+    });
+
     buildGraph();
-    ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1']
+    ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1',
+     'learning-hub-v1','scrum-hub-v1','stakeholder-hub-v1']
       .forEach(k => HubStorage.subscribe(k, buildGraph));
     window.__hl_onLinkChange = buildGraph;
 

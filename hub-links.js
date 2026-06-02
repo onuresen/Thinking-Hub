@@ -58,14 +58,17 @@ window.HubLinks = (() => {
     );
   }
 
-  function addLink(a, b) {
+  function addLink(a, b, opts) {
+    opts = opts || {};
     const links = getAll();
     const dupe = links.some(l =>
       (l.a.tool === a.tool && l.a.itemId === a.itemId && l.b.tool === b.tool && l.b.itemId === b.itemId) ||
       (l.a.tool === b.tool && l.a.itemId === b.itemId && l.b.tool === a.tool && l.b.itemId === a.itemId)
     );
     if (dupe) return false;
-    links.push({ id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), a, b, createdAt: new Date().toISOString() });
+    const link = { id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), a, b, createdAt: new Date().toISOString() };
+    if (opts.relType) link.relType = opts.relType;
+    links.push(link);
     _saveAll(links);
     return true;
   }
