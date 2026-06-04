@@ -130,5 +130,7 @@ const HubObsidian = (() => {
     inputEl.addEventListener('focus', () => { if (inputEl.value) show(search(inputEl.value)); });
   }
 
-  return { isAvailable, pickVault, indexVault, search, getIndex, getIndexedAt, attachAutocomplete };
+  function hasHandle() { return !!_dirHandle; }
+
+  return { isAvailable, hasHandle, pickVault, indexVault, search, getIndex, getIndexedAt, attachAutocomplete };
 })();

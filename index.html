@@ -3101,7 +3101,12 @@
       if (ok) updateObsidianIndexUI();
     }
     async function reindexObsidianVault() {
-      await HubObsidian.indexVault();
+      // Directory handles don't survive page reloads — re-pick if gone
+      if (HubObsidian.hasHandle()) {
+        await HubObsidian.indexVault();
+      } else {
+        await HubObsidian.pickVault();
+      }
       updateObsidianIndexUI();
     }
     function updateObsidianIndexUI() {
