@@ -2701,8 +2701,16 @@
       filterBar.appendChild(countEl);
 
       if (!visible.length) {
-        const emptyMsg = state.projects.length === 0 ? 'Click "+ Project" to create one' : 'No projects match your filters';
-        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">◈</div><div class="e-title">${state.projects.length === 0 ? 'No projects yet' : 'No matches'}</div><div class="e-sub">${emptyMsg}</div></div>`;
+        if (state.projects.length === 0) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;padding:48px 24px">
+            <div class="e-icon">◈</div>
+            <div class="e-title">Your projects start here</div>
+            <div class="e-sub" style="max-width:300px;margin:0 auto 20px">Create a project to track tasks, milestones, team members, and goals — all in one place.</div>
+            <button class="btn btn-primary" onclick="showAddProject()" style="font-size:13px;padding:9px 22px">+ Create First Project</button>
+          </div>`;
+        } else {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">◈</div><div class="e-title">No matches</div><div class="e-sub">Try adjusting your filters</div></div>`;
+        }
       }
 
       // Group projects: named groups first (sorted by name), then ungrouped
