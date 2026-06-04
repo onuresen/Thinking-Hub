@@ -454,7 +454,7 @@
     const main = document.getElementById('main');
     const qtr = getQuarter(activeQId);
 
-    if (!qtr) { main.innerHTML = '<div class="empty-quarter"><div class="empty-quarter-icon">◎</div><div class="empty-quarter-text">No quarter selected. Create one to start.</div></div>'; return; }
+    if (!qtr) { main.innerHTML = `<div class="empty-quarter" style="height:auto;gap:14px;padding:48px 24px"><div class="empty-quarter-icon" style="font-size:36px;opacity:0.35">◎</div><div style="font-size:16px;font-weight:600;color:var(--text)">Set your goals for the quarter</div><div class="empty-quarter-text" style="max-width:300px;text-align:center;opacity:0.7">Create a quarter (e.g. "Q3 2026") then add Objectives and Key Results to track what success looks like.</div><button class="btn btn-primary" onclick="openQuarterModal(null)" style="margin-top:4px;font-size:13px;padding:9px 22px">+ Create First Quarter</button></div>`; return; }
 
     const pct = quarterProgress(qtr);
     const overallWrap = document.getElementById('overall-wrap');
