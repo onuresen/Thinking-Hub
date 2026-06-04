@@ -866,6 +866,105 @@
       border-bottom-color: var(--accent);
     }
 
+    /* ── Executive View ───────────────────────────── */
+    #exec-view { padding-bottom: 40px; }
+
+    .ev-kpi-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+      margin-bottom: 24px;
+    }
+    .ev-kpi {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .ev-kpi-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--text3); font-family: var(--font-mono);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ev-kpi-num {
+      font-family: var(--font-display); font-size: 32px; font-weight: 800;
+      line-height: 1; color: var(--text);
+    }
+    .ev-kpi-sub { font-size: 12px; color: var(--text3); line-height: 1.4; }
+    .ev-kpi-bar {
+      height: 4px; background: var(--surface3); border-radius: 2px;
+      margin-top: 4px; overflow: hidden;
+    }
+    .ev-kpi-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
+
+    .ev-section { margin-bottom: 24px; }
+    .ev-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--text3); font-family: var(--font-mono);
+      padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+    }
+
+    .ev-attn-list { display: flex; flex-direction: column; gap: 6px; }
+    .ev-attn-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; border-radius: var(--r-sm);
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 13px; color: var(--text2); cursor: pointer;
+      transition: border-color .12s;
+    }
+    .ev-attn-item:hover { border-color: var(--accent-glow); color: var(--text); }
+    .ev-attn-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;
+    }
+    .ev-attn-dot.high { background: var(--accent-nope); }
+    .ev-attn-dot.med  { background: var(--accent-super); }
+    .ev-attn-dot.low  { background: var(--text3); }
+    .ev-attn-reason { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+    .ev-proj-list { display: flex; flex-direction: column; gap: 8px; }
+    .ev-proj-row {
+      display: grid; grid-template-columns: 1fr auto auto; align-items: center;
+      gap: 12px; padding: 10px 14px; border-radius: var(--r-sm);
+      background: var(--surface); border: 1px solid var(--border);
+      cursor: pointer; transition: border-color .12s;
+    }
+    .ev-proj-row:hover { border-color: var(--accent-glow); }
+    .ev-proj-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .ev-proj-bar-wrap {
+      display: flex; align-items: center; gap: 8px; min-width: 120px;
+    }
+    .ev-proj-bar {
+      flex: 1; height: 5px; background: var(--surface3);
+      border-radius: 3px; overflow: hidden;
+    }
+    .ev-proj-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+    .ev-proj-pct { font-size: 11px; font-family: var(--font-mono); color: var(--text3); width: 30px; text-align: right; }
+    .ev-proj-meta { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+    .ev-dec-list { display: flex; flex-direction: column; }
+    .ev-dec-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 14px; border-bottom: 1px solid var(--surface3);
+      cursor: pointer; transition: background .1s;
+    }
+    .ev-dec-row:last-child { border-bottom: none; }
+    .ev-dec-row:hover { background: var(--surface2); }
+    .ev-dec-title { flex: 1; font-size: 13px; color: var(--text2); }
+    .ev-dec-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+      text-transform: capitalize; white-space: nowrap;
+    }
+    .ev-dec-badge.considering { background: var(--node-yellow); color: var(--border-yellow); }
+    .ev-dec-badge.decided     { background: var(--node-green);  color: var(--border-green); }
+    .ev-dec-badge.revisiting  { background: var(--node-orange); color: var(--border-orange); }
+    .ev-dec-badge.archived    { background: var(--surface3);    color: var(--text3); }
+    .ev-dec-date { font-size: 11px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; }
+
+    .ev-empty { padding: 20px 14px; text-align: center; color: var(--text3); font-size: 12.5px; }
+
+    @media (max-width: 640px) {
+      .ev-kpi-row { grid-template-columns: 1fr 1fr; }
+      .ev-proj-row { grid-template-columns: 1fr auto; }
+      .ev-proj-bar-wrap { display: none; }
+    }
+
     /* ── Today view ───────────────────────────────── */
     .today-card-urgent {
       border-color: rgba(239, 68, 68, 0.3) !important;
@@ -1837,9 +1936,11 @@
         <div class="dash-tabs">
           <button class="dash-tab" id="dash-tab-today" onclick="switchDashView('today')">Today</button>
           <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
+          <button class="dash-tab" id="dash-tab-exec" onclick="switchDashView('exec')">Exec</button>
         </div>
 
         <div id="today-view"></div>
+        <div id="exec-view" style="display:none"></div>
 
         <div id="status-section" style="display:none">
           <div class="home-section-label">Overview</div>
@@ -2949,23 +3050,212 @@
       return card;
     }
 
+    // ── Executive View ────────────────────────────────────────────────────────────
+
+    function buildExecView() {
+      const container = document.getElementById('exec-view');
+      if (!container) return;
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      let ph = {}, goals = {}, riskData = {}, mtgData = {}, decisions = [];
+      try { ph        = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
+      try { goals     = JSON.parse(localStorage.getItem('goals-hub-v1')    || '{}'); } catch {}
+      try { riskData  = JSON.parse(localStorage.getItem('risk-hub-v1')     || '{}'); } catch {}
+      try { mtgData   = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
+      try { const dl  = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+            decisions = Array.isArray(dl) ? dl : (dl.entries || []); } catch {}
+
+      const projects   = ph.projects || [];
+      const allRisks   = riskData.risks || [];
+      const allMeetings = mtgData.meetings || [];
+
+      // ── Project stats ────────────────────────────────────────────
+      const activeProjects = projects.filter(p => p.status !== 'done' && p.status !== 'archived');
+      const allTasks = projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _proj: p })));
+      const doneTasks = allTasks.filter(t => t.done);
+      const projPct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
+      const blockedTasks = allTasks.filter(t => !t.done && t.status === 'blocked');
+      const overdueTasks = allTasks.filter(t => !t.done && t.due && t.due < todayStr);
+
+      // ── OKR stats ────────────────────────────────────────────────
+      const activeQtrs = (goals.quarters || []).filter(q => !q.archived);
+      const latestQtr  = activeQtrs[activeQtrs.length - 1];
+      let okrPct = 0, okrLabel = '—', okrObjCount = 0;
+      if (latestQtr) {
+        okrLabel = latestQtr.label || latestQtr.name || '';
+        const objs = latestQtr.objectives || [];
+        okrObjCount = objs.length;
+        if (objs.length) {
+          const scores = objs.map(obj => {
+            const krs = obj.keyResults || [];
+            if (!krs.length) return 0;
+            const sum = krs.reduce((s, kr) => {
+              if (kr.score !== undefined && kr.score !== '') return s + parseFloat(kr.score) * 100;
+              const cur = parseFloat(kr.current) || 0, tgt = parseFloat(kr.target) || 1;
+              return s + Math.min(100, Math.round(cur / tgt * 100));
+            }, 0);
+            return Math.round(sum / krs.length);
+          });
+          okrPct = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        }
+      }
+      const okrColor = okrPct >= 70 ? 'var(--accent-like)' : okrPct >= 40 ? 'var(--accent-super)' : 'var(--accent-nope)';
+
+      // ── Risk stats ───────────────────────────────────────────────
+      const openRisks = allRisks.filter(r => r.status !== 'closed');
+      const highRisks = openRisks.filter(r => (parseInt(r.probability)||1) * (parseInt(r.impact)||1) >= 15);
+      const medRisks  = openRisks.filter(r => { const s = (parseInt(r.probability)||1)*(parseInt(r.impact)||1); return s >= 6 && s < 15; });
+      const riskColor = highRisks.length ? 'var(--accent-nope)' : medRisks.length ? 'var(--accent-super)' : 'var(--accent-like)';
+
+      // ── Attention items ──────────────────────────────────────────
+      const attn = [];
+
+      // Blocked tasks (grouped by project)
+      const blockedByProj = {};
+      blockedTasks.forEach(t => {
+        const k = t._proj.id;
+        if (!blockedByProj[k]) blockedByProj[k] = { name: t._proj.name, tasks: [] };
+        blockedByProj[k].tasks.push(t);
+      });
+      Object.values(blockedByProj).forEach(g => {
+        attn.push({ sev: 'high', text: `${g.tasks.length} blocked task${g.tasks.length>1?'s':''} in ${g.name}`, sub: g.tasks[0].blockedReason || '', tool: 'project-hub' });
+      });
+
+      // Overdue tasks (projects not already reported as blocked)
+      const overdueByProj = {};
+      overdueTasks.forEach(t => {
+        const k = t._proj.id;
+        if (!overdueByProj[k]) overdueByProj[k] = { name: t._proj.name, count: 0, oldest: t.due };
+        overdueByProj[k].count++;
+        if (t.due < overdueByProj[k].oldest) overdueByProj[k].oldest = t.due;
+      });
+      Object.values(overdueByProj).forEach(g => {
+        if (blockedByProj[Object.keys(overdueByProj).find(k => overdueByProj[k] === g)]) return;
+        const days = Math.floor((new Date(todayStr) - new Date(g.oldest)) / 86400000);
+        attn.push({ sev: 'med', text: `${g.count} overdue task${g.count>1?'s':''} in ${g.name}`, sub: `oldest ${days}d ago`, tool: 'project-hub' });
+      });
+
+      // High risks without owners
+      highRisks.filter(r => !r.owner).forEach(r => {
+        attn.push({ sev: 'high', text: `Risk with no owner: "${r.title}"`, sub: `Severity ${(parseInt(r.probability)||1)*(parseInt(r.impact)||1)} — assign an owner`, tool: 'risk-hub' });
+      });
+
+      // Open meeting actions
+      const openActions = allMeetings.flatMap(m => (m.actionItems||[]).filter(a => !a.done && !a.taskCreated));
+      if (openActions.length) {
+        attn.push({ sev: openActions.length > 7 ? 'med' : 'low', text: `${openActions.length} unresolved meeting action item${openActions.length>1?'s':''}`, sub: '', tool: 'meetings-hub' });
+      }
+
+      // ── Active projects (sorted by open task count desc) ─────────
+      const projRows = activeProjects.map(p => {
+        const tasks = p.tasks || [];
+        const done = tasks.filter(t => t.done).length;
+        const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+        const open = tasks.filter(t => !t.done).length;
+        const overdue = tasks.filter(t => !t.done && t.due && t.due < todayStr).length;
+        const blocked = tasks.filter(t => !t.done && t.status === 'blocked').length;
+        const memberCount = (p.members || []).length;
+        return { id: p.id, name: p.name, color: p.color || 'var(--accent)', pct, open, done, overdue, blocked, memberCount };
+      }).sort((a, b) => b.open - a.open);
+
+      // ── Recent decisions ─────────────────────────────────────────
+      const recentDecs = [...decisions]
+        .sort((a, b) => (b.createdAt||'').localeCompare(a.createdAt||''))
+        .slice(0, 5);
+
+      // ── Render ───────────────────────────────────────────────────
+      const fmtDate = d => { if (!d) return ''; const dt = new Date(d); return dt.toLocaleDateString('en', {month:'short',day:'numeric'}); };
+
+      const kpiBarColor = p => p >= 70 ? 'var(--accent-like)' : p >= 40 ? 'var(--accent-super)' : 'var(--accent-nope)';
+
+      container.innerHTML = `
+        <div class="ev-kpi-row">
+          <div class="ev-kpi">
+            <div class="ev-kpi-label">◈ Projects</div>
+            <div class="ev-kpi-num">${activeProjects.length}</div>
+            <div class="ev-kpi-sub">${allTasks.length} tasks · ${doneTasks.length} done${blockedTasks.length ? ` · <span style="color:var(--accent-nope)">${blockedTasks.length} blocked</span>` : ''}</div>
+            <div class="ev-kpi-bar"><div class="ev-kpi-bar-fill" style="width:${projPct}%;background:${kpiBarColor(projPct)}"></div></div>
+            <div class="ev-kpi-sub" style="margin-top:2px">${projPct}% complete</div>
+          </div>
+          <div class="ev-kpi">
+            <div class="ev-kpi-label">◎ OKRs</div>
+            <div class="ev-kpi-num">${okrPct}<span style="font-size:16px;font-weight:400;color:var(--text3)">%</span></div>
+            <div class="ev-kpi-sub">${okrLabel}${okrObjCount ? ` · ${okrObjCount} objective${okrObjCount>1?'s':''}` : ''}</div>
+            <div class="ev-kpi-bar"><div class="ev-kpi-bar-fill" style="width:${okrPct}%;background:${okrColor}"></div></div>
+            <div class="ev-kpi-sub" style="margin-top:2px">${okrPct >= 70 ? 'On track' : okrPct >= 40 ? 'Needs attention' : okrPct > 0 ? 'At risk' : 'Not started'}</div>
+          </div>
+          <div class="ev-kpi">
+            <div class="ev-kpi-label">⚠ Risks</div>
+            <div class="ev-kpi-num" style="color:${openRisks.length ? riskColor : 'var(--accent-like)'}">${openRisks.length}</div>
+            <div class="ev-kpi-sub">${highRisks.length ? `<span style="color:var(--accent-nope)">${highRisks.length} high</span>` : '0 high'}${medRisks.length ? ` · ${medRisks.length} medium` : ''}</div>
+            <div class="ev-kpi-bar"><div class="ev-kpi-bar-fill" style="width:${Math.min(100,openRisks.length*10)}%;background:${riskColor}"></div></div>
+            <div class="ev-kpi-sub" style="margin-top:2px">${openRisks.length === 0 ? 'All clear' : `${openRisks.length} open`}</div>
+          </div>
+        </div>
+
+        <div class="ev-section">
+          <div class="ev-section-title">Attention Needed</div>
+          ${attn.length ? `<div class="ev-attn-list">${attn.map(a => `
+            <div class="ev-attn-item" onclick="openApp('${a.tool}')">
+              <div class="ev-attn-dot ${a.sev}"></div>
+              <div>
+                <div>${_esc(a.text)}</div>
+                ${a.sub ? `<div class="ev-attn-reason">${_esc(a.sub)}</div>` : ''}
+              </div>
+            </div>`).join('')}</div>`
+          : `<div class="ev-empty">✓ Nothing urgent right now.</div>`}
+        </div>
+
+        ${projRows.length ? `
+        <div class="ev-section">
+          <div class="ev-section-title">Active Projects</div>
+          <div class="ev-proj-list">${projRows.map(p => `
+            <div class="ev-proj-row" onclick="openApp('project-hub')">
+              <div>
+                <div class="ev-proj-name">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:7px;flex-shrink:0"></span>${_esc(p.name)}
+                  ${p.blocked ? `<span style="font-size:10px;color:var(--accent-nope);font-weight:700;margin-left:6px">● ${p.blocked} blocked</span>` : ''}
+                  ${!p.blocked && p.overdue ? `<span style="font-size:10px;color:var(--accent-super);font-weight:700;margin-left:6px">▲ ${p.overdue} overdue</span>` : ''}
+                </div>
+                <div class="ev-proj-meta" style="margin-top:3px">${p.open} open task${p.open!==1?'s':''} · ${p.memberCount} member${p.memberCount!==1?'s':''}</div>
+              </div>
+              <div class="ev-proj-bar-wrap">
+                <div class="ev-proj-bar"><div class="ev-proj-bar-fill" style="width:${p.pct}%;background:${kpiBarColor(p.pct)}"></div></div>
+                <div class="ev-proj-pct">${p.pct}%</div>
+              </div>
+            </div>`).join('')}</div>
+        </div>` : ''}
+
+        ${recentDecs.length ? `
+        <div class="ev-section">
+          <div class="ev-section-title">Recent Decisions</div>
+          <div class="ev-dec-list" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">${recentDecs.map(d => `
+            <div class="ev-dec-row" onclick="openApp('decision-hub')">
+              <div class="ev-dec-title">${_esc(d.title || '—')}</div>
+              <span class="ev-dec-badge ${d.status||'considering'}">${d.status||'considering'}</span>
+              <div class="ev-dec-date">${fmtDate(d.createdAt)}</div>
+            </div>`).join('')}</div>
+        </div>` : ''}
+      `;
+    }
+
     function switchDashView(v) {
       saveSession({ dashView: v });
       document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
       const tab = document.getElementById('dash-tab-' + v);
       if (tab) tab.classList.add('active');
 
-      const todayView = document.getElementById('today-view');
+      const todayView   = document.getElementById('today-view');
+      const execView    = document.getElementById('exec-view');
       const statusSection = document.getElementById('status-section');
 
-      if (v === 'today') {
-        todayView.style.display = '';
-        statusSection.style.display = 'none';
-        buildTodayView();
-      } else {
-        todayView.style.display = 'none';
-        buildStatusWidgets(); // will set statusSection display itself
-      }
+      todayView.style.display   = v === 'today'    ? '' : 'none';
+      execView.style.display    = v === 'exec'     ? '' : 'none';
+      statusSection.style.display = 'none';
+
+      if (v === 'today')    buildTodayView();
+      else if (v === 'exec') buildExecView();
+      else buildStatusWidgets(); // overview — will set statusSection display itself
     }
 
     // ── Cloud panel ───────────────────────────────────────────────────────────────
@@ -2994,16 +3284,21 @@
       _checkHashForWorkspace();
 
       // Live-refresh dashboard widgets when remote changes arrive
-      HubStorage.subscribe('project-hub-v1', () => { buildStatusWidgets(); refreshRecentStrip(); });
-      HubStorage.subscribe('kmqt_current_v2', buildStatusWidgets);
-      HubStorage.subscribe('decision-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('schedule-v1', buildStatusWidgets);
-      HubStorage.subscribe('goals-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('risk-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('meetings-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('focus-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('retro-hub-v1', buildStatusWidgets);
-      HubStorage.subscribe('learning-hub-v1', buildStatusWidgets);
+      const _refreshActive = () => {
+        const v = loadSession().dashView || 'today';
+        if (v === 'overview') buildStatusWidgets();
+        else if (v === 'exec') buildExecView();
+      };
+      HubStorage.subscribe('project-hub-v1',  () => { _refreshActive(); refreshRecentStrip(); });
+      HubStorage.subscribe('kmqt_current_v2',  _refreshActive);
+      HubStorage.subscribe('decision-hub-v1',  _refreshActive);
+      HubStorage.subscribe('schedule-v1',      _refreshActive);
+      HubStorage.subscribe('goals-hub-v1',     _refreshActive);
+      HubStorage.subscribe('risk-hub-v1',      _refreshActive);
+      HubStorage.subscribe('meetings-hub-v1',  _refreshActive);
+      HubStorage.subscribe('focus-hub-v1',     _refreshActive);
+      HubStorage.subscribe('retro-hub-v1',     _refreshActive);
+      HubStorage.subscribe('learning-hub-v1',  _refreshActive);
     }
 
     function updateCloudUI(status) {
