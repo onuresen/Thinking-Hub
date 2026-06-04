@@ -639,6 +639,18 @@
       border-color: var(--accent);
     }
 
+    /* ── Getting Started banner ─────────────────────── */
+    #start-banner {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: var(--r);
+      padding: 14px 18px; margin-bottom: 20px; animation: card-enter .3s ease both;
+    }
+    .start-step {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 11px 13px; cursor: pointer; transition: border-color .12s, background .12s;
+    }
+    .start-step:hover { border-color: var(--accent); background: var(--accent-dim); }
+
     /* ── Status widgets ─────────────────────────────── */
     #status-section {
       margin-bottom: 8px;
@@ -1837,6 +1849,18 @@
         <div class="home-section-label" id="recent-label" style="display:none">Recent</div>
         <div class="recent-strip" id="recent-strip"></div>
 
+        <!-- Getting Started banner — visible until dismissed -->
+        <div id="start-banner" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+            <div>
+              <span style="font-size:12.5px;font-weight:700;color:var(--text);font-family:var(--font-display)">🚀 Getting started</span>
+              <span style="font-size:11px;color:var(--text3);margin-left:8px">Three steps to get value quickly</span>
+            </div>
+            <button onclick="dismissStartBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px" title="Dismiss">✕</button>
+          </div>
+          <div class="start-steps" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
         <div class="home-section-label">Tools</div>
         <div class="app-grid" id="app-grid"></div>
       </div>
@@ -2017,32 +2041,32 @@
     // ── App registry ──────────────────────────────────────────────────────────────
 
     const APPS = [
-      // ── CORE ──────────────────────────────────────────────────────────
-      { id: 'project-hub', label: 'Project Hub', group: 'CORE', wg: 'CORE', icon: '◈', file: 'project-hub.html', desc: 'Track milestones, tasks and workstreams across a project' },
-      { id: 'schedule', label: 'Schedule', group: 'CORE', wg: 'CORE', icon: '▦', file: 'schedule.html', desc: 'Timeline and calendar views for tasks, milestones and events' },
-      { id: 'meetings-hub', label: 'Meeting Hub', group: 'CORE', wg: 'CORE', icon: '▣', file: 'meetings-hub.html', desc: 'Structured meetings — agenda, decisions, action items, recurring templates, and schedule sync' },
-      { id: 'journal-hub', label: 'Journal Hub', group: 'CORE', wg: 'CORE', icon: '◷', file: 'journal-hub.html', desc: 'Daily log + weekly review in one place — mood, streaks, big rocks' },
-      // ── NETWORK ───────────────────────────────────────────────────────
-      { id: 'graph-hub', label: 'Dependency Graph', group: 'NETWORK', wg: 'NETWORK', icon: '🕸️', file: 'graph-hub.html', desc: 'Visual map of your tasks, decisions, and ideas' },
-      { id: 'people-hub', label: 'People Hub', group: 'NETWORK', wg: 'NETWORK', icon: '◉', file: 'people-hub.html', desc: 'Org tree, load balancing, and workload overlap across your team' },
-      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'NETWORK', wg: 'NETWORK', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
-      { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'NETWORK', wg: 'NETWORK', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
-      // ── EXPLORE ───────────────────────────────────────────────────────
-      { id: 'learning-hub', label: 'Learning Hub', group: 'EXPLORE', wg: 'EXPLORE', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
-      { id: 'idea-swiper', label: 'Idea Swiper', group: 'EXPLORE', wg: 'EXPLORE', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
-      { id: 'canvas-hub', label: 'Spatial Canvas', group: 'EXPLORE', wg: 'EXPLORE', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
-      // ── STRATEGY ───────────────────────────────────────────────────────
-      { id: 'decision-hub', label: 'Decision Hub', group: 'STRATEGY', wg: 'STRATEGY', icon: '⊕', file: 'decision-hub.html', desc: 'Comprehensive tool for tracking decisions, framing problems, and gaining alignment' },
-      { id: 'goals-hub', label: 'Goals Hub', group: 'STRATEGY', wg: 'STRATEGY', icon: '◎', file: 'goals-hub.html', desc: 'Quarterly OKRs — connect daily work to strategic objectives' },
-      { id: 'risk-hub', label: 'Risk Register', group: 'STRATEGY', wg: 'STRATEGY', icon: '⚠', file: 'risk-hub.html', desc: 'Track project risks with probability/impact heat-map and mitigation plans' },
-      // ── OPTIONAL ───────────────────────────────────────────────────────
-      { id: 'reflection-hub', label: 'Reflection Board', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '⟲', file: 'reflection-hub.html', desc: 'Signal · Friction · Question · Action — unified reflection board for thinking and retrospectives' },
-      { id: 'frameworks-hub', label: 'Frameworks', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '▾', file: 'frameworks-hub.html', desc: 'Visual methodology tools — Blocked Depth iceberg, V-Model, and more' },
-      { id: 'scrum-hub', label: 'Scrum Board', group: 'OPTIONAL', wg: 'OPTIONAL', icon: '⚡', file: 'scrum-hub.html', desc: 'Product backlog, sprint planning, velocity tracking and Definition of Done' },
-      // ── SYSTEM ──────────────────────────────────────────────────────────
-      { id: 'focus-hub', label: 'Focus Timer', group: 'SYSTEM', wg: 'SYSTEM', icon: '◉', file: 'focus-hub.html', desc: 'Pomodoro-style focus sessions linked to your tasks' },
-      { id: 'achievements-hub', label: 'Achievements', group: 'SYSTEM', wg: 'SYSTEM', icon: '🏅', file: 'achievements-hub.html', desc: 'Your productivity profile — badges, streaks & activity heatmap' },
-      { id: 'help-hub', label: 'Help & Guide', group: 'SYSTEM', wg: 'SYSTEM', icon: 'ℹ', file: 'help-hub.html', desc: 'Tool guide, framework reference, and suggested workflows' },
+      // ── Daily Work ────────────────────────────────────────────────────
+      { id: 'project-hub', label: 'Project Hub', group: 'Daily Work', wg: 'Daily Work', icon: '◈', file: 'project-hub.html', desc: 'Create projects, track tasks and milestones, assign team members — start here' },
+      { id: 'schedule', label: 'Schedule', group: 'Daily Work', wg: 'Daily Work', icon: '▦', file: 'schedule.html', desc: 'See all your tasks and milestones on a timeline or calendar — syncs with Project Hub' },
+      { id: 'meetings-hub', label: 'Meeting Hub', group: 'Daily Work', wg: 'Daily Work', icon: '▣', file: 'meetings-hub.html', desc: 'Run structured meetings — capture agenda, decisions and action items in one place' },
+      { id: 'journal-hub', label: 'Journal Hub', group: 'Daily Work', wg: 'Daily Work', icon: '◷', file: 'journal-hub.html', desc: 'Write a daily log or weekly review — track mood, streaks and key wins' },
+      // ── People & Network ──────────────────────────────────────────────
+      { id: 'graph-hub', label: 'Dependency Graph', group: 'People & Network', wg: 'People & Network', icon: '🕸️', file: 'graph-hub.html', desc: 'Draw links between tasks, decisions and ideas to see what depends on what' },
+      { id: 'people-hub', label: 'People Hub', group: 'People & Network', wg: 'People & Network', icon: '◉', file: 'people-hub.html', desc: 'See your whole team in one place — roles, workload and who is over-allocated' },
+      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'People & Network', wg: 'People & Network', icon: '◇', file: 'stakeholder-hub.html', desc: 'Place stakeholders on a power/interest grid and plan your engagement approach' },
+      { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'People & Network', wg: 'People & Network', icon: '🧰', file: 'tool-portfolio.html', desc: 'Keep a curated map of the tools, platforms and vendors your team uses' },
+      // ── Learning & Ideas ──────────────────────────────────────────────
+      { id: 'learning-hub', label: 'Learning Hub', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '◑', file: 'learning-hub.html', desc: 'Log books, articles and courses — capture highlights, key insights and reading progress' },
+      { id: 'idea-swiper', label: 'Idea Swiper', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '⟳', file: 'idea-swiper.html', desc: 'Capture ideas and swipe to sort them — keep the strong ones, discard the rest' },
+      { id: 'canvas-hub', label: 'Spatial Canvas', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '✏️', file: 'canvas-hub.html', desc: 'Free-form whiteboard — place notes, connect thoughts, think spatially' },
+      // ── Strategy & Decisions ──────────────────────────────────────────
+      { id: 'decision-hub', label: 'Decision Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
+      { id: 'goals-hub', label: 'Goals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
+      { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
+      // ── Reflection & Methods ──────────────────────────────────────────
+      { id: 'reflection-hub', label: 'Reflection Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⟲', file: 'reflection-hub.html', desc: 'Collect signals, friction points, open questions and actions — great for team retrospectives' },
+      { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Visualize blocked work as an iceberg cascade, or map your process with V-Model diagrams' },
+      { id: 'scrum-hub', label: 'Scrum Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⚡', file: 'scrum-hub.html', desc: 'Run Agile sprints — manage backlog, run kanban board and track team velocity' },
+      // ── Tools & Focus ─────────────────────────────────────────────────
+      { id: 'focus-hub', label: 'Focus Timer', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◉', file: 'focus-hub.html', desc: 'Start a Pomodoro session tied to a task — stay in flow and track where your time goes' },
+      { id: 'achievements-hub', label: 'Achievements', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏅', file: 'achievements-hub.html', desc: 'See your productivity history — badges earned, streaks and an activity heatmap' },
+      { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
     ];
 
     const PROFILES = {
@@ -2135,6 +2159,7 @@
           const btn = document.createElement('button');
           btn.className = 'nav-item';
           btn.dataset.app = app.id;
+          btn.title = app.desc || '';
           btn.innerHTML = `<span class="nav-icon">${app.icon}</span>${app.label}`;
           btn.addEventListener('click', () => openApp(app.id));
           groupEl.appendChild(btn);
@@ -2151,7 +2176,55 @@
 
     // ── Home dashboard ────────────────────────────────────────────────────────────
 
+    const START_STEPS = {
+      dx: [
+        { icon: '◈', label: 'Create a Project', sub: 'Track tasks, milestones and your team', tool: 'project-hub' },
+        { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
+        { icon: '◉', label: 'Log a Decision', sub: 'Record choices with context and reasoning', tool: 'decision-hub' },
+      ],
+      bim: [
+        { icon: '◈', label: 'Create a Project', sub: 'Track tasks, milestones and your team', tool: 'project-hub' },
+        { icon: '▦', label: 'Open Schedule', sub: 'Add milestones and sync with your project', tool: 'schedule' },
+        { icon: '▣', label: 'Start a Meeting Log', sub: 'Record decisions and action items', tool: 'meetings-hub' },
+      ],
+      dev: [
+        { icon: '◈', label: 'Create a Project', sub: 'Track tasks and dependencies', tool: 'project-hub' },
+        { icon: '▦', label: 'Open Schedule', sub: 'Plan sprints and milestones', tool: 'schedule' },
+        { icon: '▤', label: 'Open your Journal', sub: 'Daily log and weekly review in one place', tool: 'journal-hub' },
+      ],
+      everything: [
+        { icon: '◈', label: 'Create a Project', sub: 'Start here — it connects everything else', tool: 'project-hub' },
+        { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
+        { icon: '◑', label: 'Open Learning Hub', sub: 'Track books, articles and courses', tool: 'learning-hub' },
+      ],
+    };
+
+    function buildStartBanner() {
+      const banner = document.getElementById('start-banner');
+      if (!banner) return;
+      if (loadSession().startBannerDismissed) { banner.style.display = 'none'; return; }
+      const steps = START_STEPS[_activeProfile] || START_STEPS.everything;
+      const stepsEl = banner.querySelector('.start-steps');
+      if (stepsEl) stepsEl.innerHTML = steps.map((s, i) => `
+        <div class="start-step" onclick="openApp('${s.tool}')">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+            <span style="font-size:10px;font-family:var(--font-mono);font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${i + 1}</span>
+            <span style="font-size:12px">${s.icon}</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display)">${s.label}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.45;padding-left:24px">${s.sub}</div>
+        </div>`).join('');
+      banner.style.display = '';
+    }
+
+    function dismissStartBanner() {
+      saveSession({ startBannerDismissed: true });
+      const b = document.getElementById('start-banner');
+      if (b) { b.style.opacity = '0'; b.style.transition = 'opacity .2s'; setTimeout(() => b.style.display = 'none', 200); }
+    }
+
     function buildHomeDashboard() {
+      buildStartBanner();
       const grid = document.getElementById('app-grid');
       grid.innerHTML = '';
       const profile = PROFILES[_activeProfile] || PROFILES.everything;
@@ -2271,6 +2344,7 @@
       setActiveNav(null);
       document.getElementById('breadcrumb').textContent = '';
       refreshRecentStrip();
+      buildStartBanner();
       buildStatusWidgets();
       updateProjectContextPanel(null);
       activeAppId = null;
@@ -4284,27 +4358,47 @@
     const _isFirstRun = (() => {
       if (HubStorage.get('tutorial-seen-v1')) return false;
       if (window.HubStarter && HubStarter.hasAnyData()) {
-        // Data exists but flag was cleared — treat as returning user
         HubStorage.set('tutorial-seen-v1', true);
         return false;
       }
       return true;
     })();
 
+    let _welcomeProfile = 'everything';
+
+    function selectWelcomeProfile(key) {
+      _welcomeProfile = key;
+      document.querySelectorAll('.wlc-role-card').forEach(c => {
+        const sel = c.dataset.profile === key;
+        c.style.borderColor  = sel ? 'var(--accent)'     : 'var(--border)';
+        c.style.background   = sel ? 'var(--accent-dim)' : 'var(--surface)';
+        c.style.color        = sel ? 'var(--text)'       : 'var(--text2)';
+      });
+    }
+
+    function _applyWelcomeProfile() {
+      if (_welcomeProfile && _welcomeProfile !== _activeProfile) {
+        _activeProfile = _welcomeProfile;
+        saveSession({ profile: _welcomeProfile });
+        buildProfileStrip();
+        buildSidebar();
+        buildHomeDashboard();
+      }
+    }
+
     function welcomeSeedAndStart() {
-      const overlay = document.getElementById('welcome-overlay');
-      if (overlay) overlay.style.display = 'none';
+      document.getElementById('welcome-overlay').style.display = 'none';
       if (window.HubStarter) HubStarter.seed();
       HubStorage.set('tutorial-seen-v1', true);
-      buildHomeDashboard();
+      _applyWelcomeProfile();
       switchDashView(loadSession().dashView || 'today');
       setTimeout(startTour, 300);
     }
 
     function welcomeStartFresh() {
-      const overlay = document.getElementById('welcome-overlay');
-      if (overlay) overlay.style.display = 'none';
+      document.getElementById('welcome-overlay').style.display = 'none';
       HubStorage.set('tutorial-seen-v1', true);
+      _applyWelcomeProfile();
       setTimeout(startTour, 300);
     }
   </script>
@@ -4360,27 +4454,66 @@
   </script>
 
   <!-- Welcome Modal (first-run only) -->
-  <div id="welcome-overlay"
-    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem">
-    <div
-      style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)">
-      <div style="font-size:2.8rem;margin-bottom:.5rem">🧠</div>
-      <h2 style="font-family:var(--font-display);font-size:1.35rem;font-weight:800;margin:0 0 .5rem;color:var(--text)">
-        Welcome to Thinking Hub</h2>
-      <p style="color:var(--text2);font-size:.9rem;margin:0 0 1.5rem;line-height:1.5">Your connected workspace for
-        projects, goals, and decisions.<br>How would you like to get started?</p>
-      <div style="display:flex;gap:.75rem;margin-bottom:1rem">
-        <button class="btn btn-primary" style="flex:1;padding:.65rem 1rem;font-size:.875rem"
-          onclick="welcomeSeedAndStart()">
-          ✦ Explore with sample data
+  <div id="welcome-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:var(--z-modal);align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)">
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:2rem 2rem 1.5rem;max-width:540px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.55)">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+        <div style="width:42px;height:42px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:17px;font-weight:800;color:#111;flex-shrink:0">TH</div>
+        <div>
+          <div style="font-family:var(--font-display);font-size:1.25rem;font-weight:800;color:var(--text);line-height:1.1">Welcome to Thinking Hub</div>
+          <div style="font-size:.8rem;color:var(--text3);margin-top:2px">Your personal workspace for projects, goals, decisions &amp; learning</div>
+        </div>
+      </div>
+
+      <!-- Privacy note -->
+      <div style="display:flex;align-items:center;gap:7px;background:var(--surface3);border-radius:var(--r-sm);padding:7px 12px;margin-bottom:1.4rem;font-size:.78rem;color:var(--text3)">
+        <span style="font-size:13px">🔒</span>
+        <span>Everything is stored <strong style="color:var(--text2)">in your browser only</strong> — nothing is uploaded to any server.</span>
+      </div>
+
+      <!-- Role selection -->
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.65rem">What best describes your work?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.4rem">
+        <button class="wlc-role-card" data-profile="dx" onclick="selectWelcomeProfile('dx')"
+          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
+          <div style="font-size:1.1rem;margin-bottom:4px">◈</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Strategy / DX</div>
+          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Goals, decisions, OKRs, stakeholder management</div>
         </button>
-        <button class="btn btn-ghost" style="flex:1;padding:.65rem 1rem;font-size:.875rem"
-          onclick="welcomeStartFresh()">
-          Start fresh
+        <button class="wlc-role-card" data-profile="bim" onclick="selectWelcomeProfile('bim')"
+          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
+          <div style="font-size:1.1rem;margin-bottom:4px">⬡</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Project / BIM</div>
+          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Projects, schedules, meetings, risk, team coordination</div>
+        </button>
+        <button class="wlc-role-card" data-profile="dev" onclick="selectWelcomeProfile('dev')"
+          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
+          <div style="font-size:1.1rem;margin-bottom:4px">⌥</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Engineering / IT</div>
+          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Tasks, dependencies, journals, development workflow</div>
+        </button>
+        <button class="wlc-role-card" data-profile="everything" onclick="selectWelcomeProfile('everything')"
+          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent-dim);cursor:pointer;transition:all .15s;color:var(--text)">
+          <div style="font-size:1.1rem;margin-bottom:4px">⊞</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Show everything</div>
+          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">I'll explore all tools and decide later</div>
         </button>
       </div>
-      <p style="font-size:.72rem;color:var(--text3);margin:0">Sample data can be cleared any time from ⚙ Settings → Data
-        &amp; Backup</p>
+
+      <!-- Divider -->
+      <div style="border-top:1px solid var(--border);margin-bottom:1rem"></div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:.65rem;margin-bottom:.75rem">
+        <button class="btn btn-primary" style="flex:1;padding:.7rem 1rem;font-size:.875rem" onclick="welcomeSeedAndStart()">
+          ✦ Load sample data &amp; explore
+        </button>
+        <button class="btn btn-ghost" style="flex:1;padding:.7rem 1rem;font-size:.875rem" onclick="welcomeStartFresh()">
+          Start with empty workspace
+        </button>
+      </div>
+      <p style="font-size:.7rem;color:var(--text3);margin:0;text-align:center">Sample data can be cleared anytime from ⚙ Settings → Data &amp; Backup · You can change your profile at any time</p>
     </div>
   </div>
   <!-- AI Floating Chat Panel -->
