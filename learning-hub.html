@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Learning Log</title>
+  <title>Learning Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -286,6 +286,23 @@
     }
     .shelf-empty { padding: 80px 32px; text-align: center; color: var(--text3); font-size: 13px; }
 
+    /* ── Type-specific spine shapes ── */
+    /* Articles: dog-ear corner → reads as a printed page/document */
+    .book-spine.type-article {
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+    }
+    /* Courses: disc ring → DVD / badge / certification */
+    .spine-disc {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2.5px solid rgba(255,255,255,0.38);
+      background: rgba(255,255,255,0.07);
+      flex-shrink: 0; margin-top: 6px;
+    }
+    /* Videos: play indicator */
+    .spine-play {
+      font-size: 10px; opacity: 0.55; flex-shrink: 0; margin-top: 6px; letter-spacing: 0;
+    }
+
     /* ── Mobile drawer ──────────────────────────────────────────── */
     .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
     .sidebar-backdrop.open { display: block; }
@@ -313,7 +330,7 @@
 <div class="topbar">
   <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open filter panel">☰</button>
   <div class="logo-mark">◈</div>
-  <div class="logo-text">Learning Log</div>
+  <div class="logo-text">Learning Hub</div>
   <div class="topbar-spacer"></div>
   <button class="btn btn-ghost" id="view-toggle-btn" onclick="toggleView()" style="font-size:12px;padding:5px 12px" title="Switch view">📚 Shelf</button>
   <button class="btn btn-primary" onclick="openAddModal(null)" style="font-size:12px;padding:6px 14px">+ Add item</button>
@@ -930,11 +947,15 @@
       const spines = row.map((item, i) => {
         const { height, width, bg, fg } = spineSize(item, si * PER_SHELF + i);
         const wishCls = !item.owned ? ' wishlist-spine' : '';
-        return `<div class="book-spine${wishCls}"
+        const shapeEl = item.type === 'course' ? '<div class="spine-disc"></div>'
+                      : item.type === 'video'  ? '<div class="spine-play">▶</div>'
+                      : '';
+        return `<div class="book-spine type-${item.type}${wishCls}"
           style="width:${width}px;height:${height}px;background:${bg};color:${fg}"
           data-spine-id="${item.id}" title="${_esc(item.title)}${item.author ? ' — ' + item.author : ''}">
           <div class="spine-title">${_esc(item.title)}</div>
           ${item.author ? `<div class="spine-author">${_esc(item.author)}</div>` : ''}
+          ${shapeEl}
         </div>`;
       }).join('');
       return `<div class="shelf-section">
