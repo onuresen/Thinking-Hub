@@ -107,11 +107,10 @@
     /* ── Detail panel ── */
     .detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .detail-empty {
-      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      color: var(--text3); gap: 8px;
+      flex: 1; overflow-y: auto;
     }
-    .detail-empty-icon { font-size: 28px; opacity: 0.35; }
-    .detail-empty-text { font-size: 13px; }
+    .detail-empty::-webkit-scrollbar { width: 4px; }
+    .detail-empty::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .detail-header {
       padding: 14px 20px 12px; border-bottom: 1px solid var(--border);
@@ -259,22 +258,20 @@
     .notes-section { display: flex; flex-direction: column; min-height: 130px; }
     .notes-section .notes-textarea { flex: 1; resize: none; min-height: 80px; }
 
-    /* ── Bookshelf view ── */
-    #shelf-view { flex: 1; overflow-y: auto; padding: 32px 40px 64px; background: var(--bg); }
-    #shelf-view::-webkit-scrollbar { width: 5px; }
-    #shelf-view::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    /* ── Bookshelf (lives in #detail-empty) ── */
     .shelf-section { margin-bottom: 28px; }
     .shelf-books-row { display: flex; align-items: flex-end; gap: 5px; padding: 4px 20px 0; min-height: 200px; }
     .shelf-board { height: 14px; border-radius: 2px; background: linear-gradient(to bottom, rgba(180,120,0,0.55) 0%, rgba(100,60,0,0.3) 100%); box-shadow: 0 5px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,200,80,0.25); }
     .shelf-shadow { height: 7px; background: linear-gradient(to bottom, rgba(0,0,0,0.14), transparent); }
+    /* writing-mode: vertical-lr keeps CJK characters upright and Latin readable top→bottom */
     .book-spine {
-      display: flex; align-items: center; justify-content: center; flex-direction: column;
-      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      display: flex; align-items: center; justify-content: center; flex-direction: row;
+      writing-mode: vertical-lr; text-orientation: mixed;
       border-radius: 3px 3px 0 0; cursor: pointer; flex-shrink: 0;
       transition: transform 0.2s cubic-bezier(.2,0,.2,1.6), box-shadow 0.2s;
       overflow: hidden; position: relative; padding: 8px 5px;
     }
-    .book-spine:hover { transform: rotate(180deg) translateY(10px); box-shadow: -3px -8px 20px rgba(0,0,0,0.4); z-index: 3; }
+    .book-spine:hover { transform: translateY(-10px); box-shadow: 0 -8px 20px rgba(0,0,0,0.4); z-index: 3; }
     .book-spine.wishlist-spine { opacity: 0.45; filter: saturate(0.5); outline: 2px dashed rgba(255,255,255,0.25); outline-offset: -3px; }
     .spine-title { font-size: 10px; font-weight: 700; font-family: var(--font-display); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .spine-author { font-size: 8px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
@@ -284,23 +281,21 @@
       padding: 12px 14px; min-width: 190px; max-width: 250px; z-index: 50;
       box-shadow: 0 8px 28px rgba(0,0,0,0.4); pointer-events: all;
     }
+    .shelf-wrap { padding: 28px 20px 60px; }
     .shelf-empty { padding: 80px 32px; text-align: center; color: var(--text3); font-size: 13px; }
 
-    /* ── Type-specific spine shapes ── */
-    /* Articles: dog-ear corner → reads as a printed page/document */
+    /* ── Type-specific spine shapes (CSS-only, no inner elements) ── */
+    /* Articles: dog-ear top-right → printed page feel */
     .book-spine.type-article {
-      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 0 100%);
     }
-    /* Courses: disc ring → DVD / badge / certification */
-    .spine-disc {
-      width: 14px; height: 14px; border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.38);
-      background: rgba(255,255,255,0.07);
-      flex-shrink: 0; margin-top: 6px;
+    /* Courses: elliptical rounded top → binder / badge / certificate */
+    .book-spine.type-course {
+      border-radius: 50% 50% 0 0 / 14px 14px 0 0;
     }
-    /* Videos: play indicator */
-    .spine-play {
-      font-size: 10px; opacity: 0.55; flex-shrink: 0; margin-top: 6px; letter-spacing: 0;
+    /* Videos: angled left edge at top → play-ramp silhouette */
+    .book-spine.type-video {
+      clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
     }
 
     /* ── Mobile drawer ──────────────────────────────────────────── */
@@ -332,11 +327,10 @@
   <div class="logo-mark">◈</div>
   <div class="logo-text">Learning Hub</div>
   <div class="topbar-spacer"></div>
-  <button class="btn btn-ghost" id="view-toggle-btn" onclick="toggleView()" style="font-size:12px;padding:5px 12px" title="Switch view">📚 Shelf</button>
   <button class="btn btn-primary" onclick="openAddModal(null)" style="font-size:12px;padding:6px 14px">+ Add item</button>
 </div>
 
-<div class="body-wrap" id="body-wrap">
+<div class="body-wrap">
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-filters">
@@ -369,17 +363,11 @@
 
   <!-- Detail -->
   <div class="detail" id="detail">
-    <div class="detail-empty" id="detail-empty">
-      <div class="detail-empty-icon">◈</div>
-      <div class="detail-empty-text">Select an item to view details</div>
-    </div>
+    <div class="detail-empty" id="detail-empty"></div>
     <div id="detail-content" style="display:none;flex:1;display:none;flex-direction:column;overflow:hidden">
     </div>
   </div>
 </div>
-
-<!-- Bookshelf view -->
-<div id="shelf-view" style="display:none"></div>
 
 <!-- Add/Edit modal -->
 <div class="modal-overlay" id="add-modal-overlay">
@@ -463,7 +451,6 @@
   let statusFilter = 'all';
   let typeFilter = 'all';
   let ownedFilter = 'all';
-  let viewMode = 'list';
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -560,6 +547,7 @@
 
   function openDetail(id) {
     closeSidebar();
+    document.querySelectorAll('.shelf-popup').forEach(p => p.remove());
     activeId = id;
     renderList();
     renderDetail();
@@ -570,7 +558,7 @@
     const empty = document.getElementById('detail-empty');
     const content = document.getElementById('detail-content');
 
-    if (!item) { empty.style.display = 'flex'; content.style.display = 'none'; return; }
+    if (!item) { empty.style.display = 'block'; content.style.display = 'none'; renderShelf(); return; }
     empty.style.display = 'none';
     content.style.display = 'flex';
 
@@ -837,8 +825,9 @@
     showArchived = !showArchived;
     activeId = null;
     renderList();
-    document.getElementById('detail-empty').style.display = 'flex';
+    document.getElementById('detail-empty').style.display = 'block';
     document.getElementById('detail-content').style.display = 'none';
+    renderShelf();
   }
 
   function deleteItem() {
@@ -905,24 +894,7 @@
     save(); renderList(); renderDetail();
   }
 
-  // ── Bookshelf view ───────────────────────────────────────────────────────────
-
-  function toggleView() {
-    viewMode = viewMode === 'list' ? 'shelf' : 'list';
-    const btn = document.getElementById('view-toggle-btn');
-    const bodyWrap = document.getElementById('body-wrap');
-    const shelfEl = document.getElementById('shelf-view');
-    if (viewMode === 'shelf') {
-      btn.textContent = '📋 List';
-      bodyWrap.style.display = 'none';
-      shelfEl.style.display = 'block';
-      renderShelf();
-    } else {
-      btn.textContent = '📚 Shelf';
-      bodyWrap.style.display = '';
-      shelfEl.style.display = 'none';
-    }
-  }
+  // ── Bookshelf (renders into #detail-empty when no item selected) ─────────────
 
   function spineSize(item, idx) {
     const sum = item.title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -934,28 +906,24 @@
   }
 
   function renderShelf() {
-    const shelfEl = document.getElementById('shelf-view'); if (!shelfEl) return;
+    const shelfEl = document.getElementById('detail-empty'); if (!shelfEl) return;
     const items = data.items.filter(it => !it.archived);
     if (!items.length) {
-      shelfEl.innerHTML = `<div class="shelf-empty">No items yet — add a book, article, or course to fill your shelf.</div>`;
+      shelfEl.innerHTML = `<div class="shelf-empty">Your shelf is empty — add a book, article, or course to get started.</div>`;
       return;
     }
     const PER_SHELF = 13;
     const shelves = [];
     for (let i = 0; i < items.length; i += PER_SHELF) shelves.push(items.slice(i, i + PER_SHELF));
-    shelfEl.innerHTML = shelves.map((row, si) => {
+    shelfEl.innerHTML = `<div class="shelf-wrap">` + shelves.map((row, si) => {
       const spines = row.map((item, i) => {
         const { height, width, bg, fg } = spineSize(item, si * PER_SHELF + i);
         const wishCls = !item.owned ? ' wishlist-spine' : '';
-        const shapeEl = item.type === 'course' ? '<div class="spine-disc"></div>'
-                      : item.type === 'video'  ? '<div class="spine-play">▶</div>'
-                      : '';
         return `<div class="book-spine type-${item.type}${wishCls}"
           style="width:${width}px;height:${height}px;background:${bg};color:${fg}"
           data-spine-id="${item.id}" title="${_esc(item.title)}${item.author ? ' — ' + item.author : ''}">
           <div class="spine-title">${_esc(item.title)}</div>
           ${item.author ? `<div class="spine-author">${_esc(item.author)}</div>` : ''}
-          ${shapeEl}
         </div>`;
       }).join('');
       return `<div class="shelf-section">
@@ -963,9 +931,8 @@
         <div class="shelf-board"></div>
         <div class="shelf-shadow"></div>
       </div>`;
-    }).join('');
+    }).join('') + `</div>`;
 
-    // Attach click handlers for spine popups
     shelfEl.querySelectorAll('.book-spine').forEach(el => {
       el.addEventListener('click', () => shelfClickSpine(el.dataset.spineId, el));
     });
@@ -986,7 +953,7 @@
         <span style="font-size:10px;color:var(--text3)">${item.owned ? '📚 Owned' : '📌 Wishlist'}</span>
       </div>
       ${pct > 0 ? `<div style="height:3px;background:var(--surface3);border-radius:2px;margin-bottom:9px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:2px"></div></div>` : ''}
-      <button class="btn btn-ghost" style="font-size:11px;width:100%;padding:5px" onclick="openFromShelf('${id}')">Open details →</button>`;
+      <button class="btn btn-ghost" style="font-size:11px;width:100%;padding:5px" onclick="openDetail('${id}')">Open details →</button>`;
     el.style.position = 'relative';
     el.appendChild(popup);
     setTimeout(() => {
@@ -994,14 +961,6 @@
         if (!el.contains(e.target)) { popup.remove(); document.removeEventListener('click', h); }
       });
     }, 0);
-  }
-
-  function openFromShelf(id) {
-    viewMode = 'list';
-    document.getElementById('view-toggle-btn').textContent = '📚 Shelf';
-    document.getElementById('shelf-view').style.display = 'none';
-    document.getElementById('body-wrap').style.display = '';
-    openDetail(id);
   }
 
   // ── Boot ─────────────────────────────────────────────────────────────────────
