@@ -2345,7 +2345,7 @@
       document.getElementById('breadcrumb').textContent = '';
       refreshRecentStrip();
       buildStartBanner();
-      buildStatusWidgets();
+      switchDashView(loadSession().dashView || 'today');
       updateProjectContextPanel(null);
       activeAppId = null;
       closeMobileSidebar();
