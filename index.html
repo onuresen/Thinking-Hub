@@ -3531,8 +3531,13 @@
       const data = {};
       const storageKeyMap = {};
       for (const key of storageKeys) {
-        const val = safeParseStorage(key);
+        let val = safeParseStorage(key);
         if (val !== null) {
+          // Strip bulky Obsidian vault index — users can re-index after restore
+          if (key === 'hub-settings-v1' && val && typeof val === 'object') {
+            const { obsidianIndex, obsidianIndexedAt, ...rest } = val;
+            val = rest;
+          }
           const label = EXPORT_KEY_LABELS[key] || key;
           data[label] = (scope === 'curated') ? stripAINoise(val) : val;
           storageKeyMap[label] = key;
