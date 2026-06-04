@@ -248,6 +248,44 @@
     .link-hub-btn { font-size: 11px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text3); cursor: pointer; transition: all 0.12s; }
     .link-hub-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* ── Owned badge ── */
+    .owned-badge { font-size: 9px; font-family: var(--font-mono); font-weight: 700; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; cursor: pointer; transition: all 0.12s; user-select: none; }
+    .owned-badge.owned { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .owned-badge.wishlist { background: var(--surface2); color: var(--text3); border: 1px dashed var(--border); }
+    .owned-badge:hover { opacity: 0.75; }
+
+    /* ── Notes sections (flex-grow to fill panel) ── */
+    .detail-body { display: grid !important; grid-template-rows: auto 1fr 1fr; align-items: stretch; }
+    .notes-section { display: flex; flex-direction: column; min-height: 130px; }
+    .notes-section .notes-textarea { flex: 1; resize: none; min-height: 80px; }
+
+    /* ── Bookshelf view ── */
+    #shelf-view { flex: 1; overflow-y: auto; padding: 32px 40px 64px; background: var(--bg); }
+    #shelf-view::-webkit-scrollbar { width: 5px; }
+    #shelf-view::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .shelf-section { margin-bottom: 28px; }
+    .shelf-books-row { display: flex; align-items: flex-end; gap: 5px; padding: 4px 20px 0; min-height: 200px; }
+    .shelf-board { height: 14px; border-radius: 2px; background: linear-gradient(to bottom, rgba(180,120,0,0.55) 0%, rgba(100,60,0,0.3) 100%); box-shadow: 0 5px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,200,80,0.25); }
+    .shelf-shadow { height: 7px; background: linear-gradient(to bottom, rgba(0,0,0,0.14), transparent); }
+    .book-spine {
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+      border-radius: 3px 3px 0 0; cursor: pointer; flex-shrink: 0;
+      transition: transform 0.2s cubic-bezier(.2,0,.2,1.6), box-shadow 0.2s;
+      overflow: hidden; position: relative; padding: 8px 5px;
+    }
+    .book-spine:hover { transform: rotate(180deg) translateY(10px); box-shadow: -3px -8px 20px rgba(0,0,0,0.4); z-index: 3; }
+    .book-spine.wishlist-spine { opacity: 0.45; filter: saturate(0.5); outline: 2px dashed rgba(255,255,255,0.25); outline-offset: -3px; }
+    .spine-title { font-size: 10px; font-weight: 700; font-family: var(--font-display); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .spine-author { font-size: 8px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
+    .shelf-popup {
+      position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r);
+      padding: 12px 14px; min-width: 190px; max-width: 250px; z-index: 50;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.4); pointer-events: all;
+    }
+    .shelf-empty { padding: 80px 32px; text-align: center; color: var(--text3); font-size: 13px; }
+
     /* ── Mobile drawer ──────────────────────────────────────────── */
     .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; }
     .sidebar-backdrop.open { display: block; }
@@ -277,10 +315,11 @@
   <div class="logo-mark">◈</div>
   <div class="logo-text">Learning Log</div>
   <div class="topbar-spacer"></div>
+  <button class="btn btn-ghost" id="view-toggle-btn" onclick="toggleView()" style="font-size:12px;padding:5px 12px" title="Switch view">📚 Shelf</button>
   <button class="btn btn-primary" onclick="openAddModal(null)" style="font-size:12px;padding:6px 14px">+ Add item</button>
 </div>
 
-<div class="body-wrap">
+<div class="body-wrap" id="body-wrap">
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-filters">
@@ -297,6 +336,11 @@
         <button class="f-chip" data-type="article" onclick="setTypeFilter('article')">Articles</button>
         <button class="f-chip" data-type="course" onclick="setTypeFilter('course')">Courses</button>
         <button class="f-chip" data-type="video" onclick="setTypeFilter('video')">Videos</button>
+      </div>
+      <div class="filter-row" id="owned-filters">
+        <button class="f-chip active" data-owned="all" onclick="setOwnedFilter('all')">All</button>
+        <button class="f-chip" data-owned="owned" onclick="setOwnedFilter('owned')">📚 Owned</button>
+        <button class="f-chip" data-owned="wishlist" onclick="setOwnedFilter('wishlist')">📌 Wishlist</button>
       </div>
     </div>
     <div class="sidebar-list" id="sidebar-list"></div>
@@ -316,6 +360,9 @@
     </div>
   </div>
 </div>
+
+<!-- Bookshelf view -->
+<div id="shelf-view" style="display:none"></div>
 
 <!-- Add/Edit modal -->
 <div class="modal-overlay" id="add-modal-overlay">
@@ -358,6 +405,11 @@
         <div class="field-label">URL (optional)</div>
         <input class="field-input" id="am-url" placeholder="https://…" type="url" />
       </div>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer;color:var(--text2)">
+        <input type="checkbox" id="am-owned" style="accent-color:var(--accent);width:14px;height:14px">
+        <span>📚 I own this / in my library</span>
+        <span style="font-size:11px;color:var(--text3)">(unchecked = 📌 Wishlist)</span>
+      </label>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveItem()">Save</button>
@@ -380,12 +432,21 @@
 
   const TYPE_ICON = { book: '📖', article: '📄', course: '🎓', video: '▶' };
 
+  const SPINE_PALETTES = {
+    book:    [['#c9903e','#1a0e00'],['#b87333','#fff8f0'],['#8b5e14','#fef9ec'],['#e8c14a','#2d1800'],['#6b4c1e','#fef3c7'],['#d4a053','#1e0800']],
+    article: [['#1b5e40','#d1fae5'],['#0d4f33','#a7f3d0'],['#2d7a56','#ecfdf5'],['#3d8b6b','#022c22'],['#145741','#ccfbf1']],
+    course:  [['#1e3a8a','#dbeafe'],['#5b21b6','#ede9fe'],['#0369a1','#e0f2fe'],['#1e40af','#bfdbfe'],['#374151','#f3f4f6']],
+    video:   [['#881337','#ffe4e6'],['#9f1239','#fce7f3'],['#7f1d1d','#fee2e2'],['#be123c','#fff1f2'],['#b91c1c','#fecaca']],
+  };
+
   let data = { items: [] };
   let activeId = null;
   let editingId = null;
   let showArchived = false;
   let statusFilter = 'all';
   let typeFilter = 'all';
+  let ownedFilter = 'all';
+  let viewMode = 'list';
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -397,6 +458,7 @@
     data.items.forEach(it => {
       if (it.progress === undefined) it.progress = it.status === 'done' ? 100 : 0;
       if (!it.platform) it.platform = '';
+      if (it.owned === undefined) it.owned = false;
     });
   }
   function save() { HubStorage.set(STORAGE_KEY, data); }
@@ -413,6 +475,11 @@
     document.querySelectorAll('#type-filters .f-chip').forEach(c => c.classList.toggle('active', c.dataset.type === f));
     renderList();
   }
+  function setOwnedFilter(f) {
+    ownedFilter = f;
+    document.querySelectorAll('#owned-filters .f-chip').forEach(c => c.classList.toggle('active', c.dataset.owned === f));
+    renderList();
+  }
 
   function filteredItems() {
     const q = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
@@ -424,6 +491,8 @@
       if (showArchived ? !it.archived : it.archived) return false;
       if (statusFilter !== 'all' && it.status !== statusFilter) return false;
       if (typeFilter !== 'all' && it.type !== typeFilter) return false;
+      if (ownedFilter === 'owned' && !it.owned) return false;
+      if (ownedFilter === 'wishlist' && it.owned) return false;
       if (q && !it.title.toLowerCase().includes(q) && !(it.author||'').toLowerCase().includes(q) && !(it.tags||[]).join(' ').toLowerCase().includes(q)) return false;
       return true;
     });
@@ -452,6 +521,7 @@
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
           <div class="li-status-dot ${it.status}" title="${STATUS_CONFIG[it.status]?.label || it.status}"></div>
+          <span style="font-size:9px" title="${it.owned ? 'Owned' : 'Wishlist'}">${it.owned ? '📚' : '📌'}</span>
           ${linkCount ? `<span class="li-link-badge">🔗${linkCount}</span>` : ''}
         </div>
       </div>`;
@@ -512,6 +582,7 @@
                 `<option value="${v}"${item.status===v?' selected':''}>${c.label}</option>`
               ).join('')}
             </select>
+            <span class="owned-badge ${item.owned ? 'owned' : 'wishlist'}" onclick="toggleOwned()" title="Click to toggle">${item.owned ? '📚 Owned' : '📌 Wishlist'}</span>
             ${item.url ? `<a class="url-link" href="${_esc(item.url)}" target="_blank" rel="noopener">↗ Open</a>` : ''}
           </div>
           <div class="detail-meta-row" style="margin-top:5px">
@@ -546,11 +617,11 @@
             <button class="btn btn-ghost" onclick="addHighlight()" style="font-size:12px;padding:6px 10px">Add</button>
           </div>
         </div>
-        <div>
+        <div class="notes-section">
           <div class="section-label">Notes</div>
           <textarea class="notes-textarea" id="notes-textarea" placeholder="Personal notes, reflections, to-do from reading…" onblur="saveNotes()">${_esc(item.notes||'')}</textarea>
         </div>
-        <div>
+        <div class="notes-section">
           <div class="section-label">Key Insight <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— Feynman: explain it simply</span></div>
           <textarea class="notes-textarea" id="key-insight-textarea"
             placeholder="Explain the core idea as if teaching someone with no background here. Avoid jargon. Use a concrete analogy if possible. If you can't explain it simply, you don't understand it yet."
@@ -685,6 +756,7 @@
     document.getElementById('am-status').value = item ? item.status : 'to-read';
     document.getElementById('am-platform').value = item ? (item.platform||'') : '';
     document.getElementById('am-url').value = item ? (item.url||'') : '';
+    document.getElementById('am-owned').checked = item ? !!item.owned : false;
     document.getElementById('am-delete-btn').style.display = item ? '' : 'none';
     const archBtn = document.getElementById('am-archive-btn');
     if (archBtn) { archBtn.style.display = item ? '' : 'none'; archBtn.textContent = item && item.archived ? '↩ Restore' : '📦 Archive'; }
@@ -709,6 +781,7 @@
         item.type     = document.getElementById('am-type').value;
         item.platform = document.getElementById('am-platform').value.trim();
         item.url      = document.getElementById('am-url').value.trim();
+        item.owned    = document.getElementById('am-owned').checked;
         if (item.status !== status) {
           item.status = status;
           if (status === 'done') { item.completedAt = new Date().toISOString(); item.progress = 100; }
@@ -724,6 +797,7 @@
         platform: document.getElementById('am-platform').value.trim(),
         url:      document.getElementById('am-url').value.trim(),
         progress: status === 'done' ? 100 : 0,
+        owned: document.getElementById('am-owned').checked,
         tags: [], highlights: [], notes: '', keyInsight: '',
         createdAt: new Date().toISOString(),
       };
@@ -804,6 +878,109 @@
       _id = null;
       save(); renderList();
     });
+  }
+
+  // ── Owned toggle ─────────────────────────────────────────────────────────────
+
+  function toggleOwned() {
+    const item = data.items.find(it => it.id === activeId); if (!item) return;
+    item.owned = !item.owned;
+    save(); renderList(); renderDetail();
+  }
+
+  // ── Bookshelf view ───────────────────────────────────────────────────────────
+
+  function toggleView() {
+    viewMode = viewMode === 'list' ? 'shelf' : 'list';
+    const btn = document.getElementById('view-toggle-btn');
+    const bodyWrap = document.getElementById('body-wrap');
+    const shelfEl = document.getElementById('shelf-view');
+    if (viewMode === 'shelf') {
+      btn.textContent = '📋 List';
+      bodyWrap.style.display = 'none';
+      shelfEl.style.display = 'block';
+      renderShelf();
+    } else {
+      btn.textContent = '📚 Shelf';
+      bodyWrap.style.display = '';
+      shelfEl.style.display = 'none';
+    }
+  }
+
+  function spineSize(item, idx) {
+    const sum = item.title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const height = 130 + (sum % 7) * 10;
+    const width  = 28  + ((sum + item.title.length) % 5) * 5;
+    const palette = SPINE_PALETTES[item.type] || SPINE_PALETTES.book;
+    const [bg, fg] = palette[idx % palette.length];
+    return { height, width, bg, fg };
+  }
+
+  function renderShelf() {
+    const shelfEl = document.getElementById('shelf-view'); if (!shelfEl) return;
+    const items = data.items.filter(it => !it.archived);
+    if (!items.length) {
+      shelfEl.innerHTML = `<div class="shelf-empty">No items yet — add a book, article, or course to fill your shelf.</div>`;
+      return;
+    }
+    const PER_SHELF = 13;
+    const shelves = [];
+    for (let i = 0; i < items.length; i += PER_SHELF) shelves.push(items.slice(i, i + PER_SHELF));
+    shelfEl.innerHTML = shelves.map((row, si) => {
+      const spines = row.map((item, i) => {
+        const { height, width, bg, fg } = spineSize(item, si * PER_SHELF + i);
+        const wishCls = !item.owned ? ' wishlist-spine' : '';
+        return `<div class="book-spine${wishCls}"
+          style="width:${width}px;height:${height}px;background:${bg};color:${fg}"
+          data-spine-id="${item.id}" title="${_esc(item.title)}${item.author ? ' — ' + item.author : ''}">
+          <div class="spine-title">${_esc(item.title)}</div>
+          ${item.author ? `<div class="spine-author">${_esc(item.author)}</div>` : ''}
+        </div>`;
+      }).join('');
+      return `<div class="shelf-section">
+        <div class="shelf-books-row">${spines}</div>
+        <div class="shelf-board"></div>
+        <div class="shelf-shadow"></div>
+      </div>`;
+    }).join('');
+
+    // Attach click handlers for spine popups
+    shelfEl.querySelectorAll('.book-spine').forEach(el => {
+      el.addEventListener('click', () => shelfClickSpine(el.dataset.spineId, el));
+    });
+  }
+
+  function shelfClickSpine(id, el) {
+    document.querySelectorAll('.shelf-popup').forEach(p => p.remove());
+    const item = data.items.find(it => it.id === id); if (!item) return;
+    const pct = item.progress || 0;
+    const popup = document.createElement('div');
+    popup.className = 'shelf-popup';
+    popup.innerHTML = `
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3">${_esc(item.title)}</div>
+      ${item.author ? `<div style="font-size:11px;color:var(--text3);margin-bottom:7px">${_esc(item.author)}</div>` : ''}
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span class="type-pill ${item.type}">${TYPE_ICON[item.type]||''} ${item.type}</span>
+        <span style="font-size:11px;color:var(--text2)">${STATUS_CONFIG[item.status]?.label||''}</span>
+        <span style="font-size:10px;color:var(--text3)">${item.owned ? '📚 Owned' : '📌 Wishlist'}</span>
+      </div>
+      ${pct > 0 ? `<div style="height:3px;background:var(--surface3);border-radius:2px;margin-bottom:9px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:2px"></div></div>` : ''}
+      <button class="btn btn-ghost" style="font-size:11px;width:100%;padding:5px" onclick="openFromShelf('${id}')">Open details →</button>`;
+    el.style.position = 'relative';
+    el.appendChild(popup);
+    setTimeout(() => {
+      document.addEventListener('click', function h(e) {
+        if (!el.contains(e.target)) { popup.remove(); document.removeEventListener('click', h); }
+      });
+    }, 0);
+  }
+
+  function openFromShelf(id) {
+    viewMode = 'list';
+    document.getElementById('view-toggle-btn').textContent = '📚 Shelf';
+    document.getElementById('shelf-view').style.display = 'none';
+    document.getElementById('body-wrap').style.display = '';
+    openDetail(id);
   }
 
   // ── Boot ─────────────────────────────────────────────────────────────────────
