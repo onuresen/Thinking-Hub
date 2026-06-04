@@ -2028,7 +2028,7 @@
       { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'NETWORK', wg: 'NETWORK', icon: '◇', file: 'stakeholder-hub.html', desc: 'Power/interest grid for mapping and managing project stakeholders' },
       { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'NETWORK', wg: 'NETWORK', icon: '🧰', file: 'tool-portfolio.html', desc: 'Curated map of tools, platforms, and vendors' },
       // ── EXPLORE ───────────────────────────────────────────────────────
-      { id: 'learning-hub', label: 'Learning Log', group: 'EXPLORE', wg: 'EXPLORE', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
+      { id: 'learning-hub', label: 'Learning Hub', group: 'EXPLORE', wg: 'EXPLORE', icon: '◑', file: 'learning-hub.html', desc: 'Track books, articles, and courses with highlights and key insights' },
       { id: 'idea-swiper', label: 'Idea Swiper', group: 'EXPLORE', wg: 'EXPLORE', icon: '⟳', file: 'idea-swiper.html', desc: 'Rapid triage — keep, park, or discard ideas' },
       { id: 'canvas-hub', label: 'Spatial Canvas', group: 'EXPLORE', wg: 'EXPLORE', icon: '✏️', file: 'canvas-hub.html', desc: 'Unstructured spatial notes for limitless ideation' },
       // ── STRATEGY ───────────────────────────────────────────────────────
@@ -2662,6 +2662,51 @@
         }
       } catch { }
 
+      // ── Learning Hub (learning-hub-v1) ────────────────────────────────────
+      try {
+        const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
+        const items = (lh.items || []).filter(it => !it.archived);
+        if (items.length) {
+          const reading = items.filter(it => it.status === 'reading');
+          const done    = items.filter(it => it.status === 'done').length;
+          const toRead  = items.filter(it => it.status === 'to-read').length;
+          const owned   = items.filter(it => it.owned).length;
+          const total   = items.length;
+          const readingPct = Math.round((reading.length / total) * 100);
+          const donePct    = Math.round((done / total) * 100);
+          const toReadPct  = 100 - readingPct - donePct;
+          const shown = reading.slice(0, 3);
+          const rows = shown.map(it => {
+            const pct = it.progress || 0;
+            const typeIcons = { book: '📖', article: '📄', course: '🎓', video: '▶' };
+            return `<div class="stat-item" data-tool="learning-hub" data-item-id="${_esc(it.id || '')}">
+              <div class="stat-item-dot" style="background:var(--accent-super)"></div>
+              <div class="stat-item-text">${typeIcons[it.type] || '◑'} ${_esc(it.title)}</div>
+              <div class="stat-item-meta">${pct}%</div>
+            </div>`;
+          }).join('');
+          const stackBar = `<div style="height:5px;border-radius:3px;overflow:hidden;display:flex;gap:1px;margin-top:9px">
+            <div style="width:${toReadPct}%;background:var(--text3);opacity:.3;border-radius:3px 0 0 3px"></div>
+            <div style="width:${readingPct}%;background:var(--accent-super)"></div>
+            <div style="width:${donePct}%;background:var(--accent-like);border-radius:0 3px 3px 0"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:5px;font-size:10px;font-family:var(--font-mono);color:var(--text3)">
+            <span style="color:var(--accent-super)">◑ ${reading.length} reading</span>
+            <span style="color:var(--accent-like)">✓ ${done} done</span>
+            <span>📌 ${toRead} to start</span>
+            <span style="margin-left:auto">📚 ${owned} owned</span>
+          </div>`;
+          const lhAge = relativeAge(latestTimestamp(items));
+          widgets.push({
+            id: 'learning-hub', icon: '◑', title: 'Learning Hub',
+            count: `${total} item${total !== 1 ? 's' : ''}`,
+            body: (reading.length ? rows : `<div style="color:var(--text3);font-size:12px;padding:4px 0">Nothing in progress right now.</div>`) + stackBar,
+            more: reading.length > 3 ? `+${reading.length - 3} more in progress` : '',
+            staleness: lhAge
+          });
+        }
+      } catch { }
+
       // ── Filter by active profile ───────────────────────────────────────────
       const _profile = PROFILES[_activeProfile] || PROFILES.everything;
       const _visibleWidgets = _profile.tools ? widgets.filter(w => _profile.tools.includes(w.id)) : widgets;
@@ -2884,6 +2929,7 @@
       HubStorage.subscribe('meetings-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('focus-hub-v1', buildStatusWidgets);
       HubStorage.subscribe('retro-hub-v1', buildStatusWidgets);
+      HubStorage.subscribe('learning-hub-v1', buildStatusWidgets);
     }
 
     function updateCloudUI(status) {
