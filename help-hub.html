@@ -600,7 +600,7 @@ function renderSidebar() {
     // Group by workgroup
     const groups = {};
     items.forEach(t => { if (!groups[t.wg]) groups[t.wg] = []; groups[t.wg].push(t); });
-    const ORDER = ['WEEKLY CYCLE', 'ALIGN & DECIDE', 'EXECUTE', 'STRATEGY'];
+    const ORDER = ['TODAY', 'THIS WEEK', 'SITUATION', 'BOOKSHELF', 'SYSTEM'];
     const sorted = ORDER.filter(g => groups[g]);
     body.innerHTML = sorted.map(g => `
       <div class="sidebar-group-label">${esc(g)}</div>
