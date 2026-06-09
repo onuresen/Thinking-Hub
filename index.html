@@ -3648,7 +3648,7 @@
 
           if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
             // v2 format — restore each section to its correct storage key
-            // Use HubStorage.set() so Supabase sync + local MCP file subscribers fire
+            // Use HubStorage.set() so local MCP file subscribers fire
             for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
               if (parsed.data[section] !== undefined) {
                 HubStorage.set(storageKey, parsed.data[section]);
