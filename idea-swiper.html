@@ -1338,6 +1338,45 @@
       border-color: var(--border2);
     }
 
+    /* ── TOURNAMENT SETUP SCREEN ── */
+    .t-setup { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .t-setup-desc { font-size: 12px; color: var(--text3); text-align: center; max-width: 340px; line-height: 1.5; }
+    .t-format-options { display: flex; gap: 12px; }
+    .t-format-card {
+      width: 128px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .t-format-card:hover { border-color: var(--border2); background: var(--surface2); }
+    .t-format-card.active { border-color: var(--super); background: var(--super-bg); }
+    .t-format-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .t-format-card.active .t-format-name { color: var(--super); }
+    .t-format-rounds { font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+    .t-format-matches { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+    .t-stop-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      color: var(--text3);
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .t-stop-btn:hover { color: var(--accent); border-color: var(--accent); }
+
     /* ════════════════════════════════════════
    CANVAS OVERLAY
    ════════════════════════════════════════ */
@@ -2175,20 +2214,51 @@
   <!-- ══ TOURNAMENT OVERLAY ══ -->
   <div class="tournament-overlay hidden" id="tournament-overlay">
     <button class="btn-close-overlay" onclick="closeTournament()">✕ Close</button>
-    <div class="t-header">Priority Tournament</div>
-    <div class="t-round" id="t-round">Round 1</div>
-    <div class="t-bar-wrap">
-      <div class="t-bar">
-        <div class="t-bar-fill" id="t-bar-fill" style="width:0%"></div>
+
+    <!-- Setup screen -->
+    <div class="t-setup" id="t-setup">
+      <div class="t-header">Priority Tournament</div>
+      <div class="t-setup-desc">Swiss system — equal-score ideas face each other each round</div>
+      <div class="t-format-options">
+        <div class="t-format-card" data-rounds="3" onclick="selectTFormat(3)">
+          <div class="t-format-name">Quick</div>
+          <div class="t-format-rounds">3 rounds</div>
+          <div class="t-format-matches" id="fmt-3">—</div>
+        </div>
+        <div class="t-format-card active" data-rounds="4" onclick="selectTFormat(4)">
+          <div class="t-format-name">Standard</div>
+          <div class="t-format-rounds">4 rounds</div>
+          <div class="t-format-matches" id="fmt-4">—</div>
+        </div>
+        <div class="t-format-card" data-rounds="6" onclick="selectTFormat(6)">
+          <div class="t-format-name">Deep</div>
+          <div class="t-format-rounds">6 rounds</div>
+          <div class="t-format-matches" id="fmt-6">—</div>
+        </div>
+      </div>
+      <button class="btn-tournament" onclick="beginTournament()">Start Tournament →</button>
+    </div>
+
+    <!-- Matchup screen -->
+    <div id="t-matchup-screen" style="display:none;flex-direction:column;align-items:center;gap:20px;">
+      <div class="t-header">Priority Tournament</div>
+      <div class="t-round" id="t-round">Round 1 of 4 · Match 1 of 8</div>
+      <div class="t-bar-wrap">
+        <div class="t-bar">
+          <div class="t-bar-fill" id="t-bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="t-progress">Pick the idea you'd pursue first</div>
+      <div class="matchup" id="matchup">
+        <div class="t-card" id="t-card-a" onclick="pickWinner(0)"></div>
+        <div class="vs-label">VS</div>
+        <div class="t-card" id="t-card-b" onclick="pickWinner(1)"></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button class="t-skip" onclick="pickWinner(-1)">Tie / skip this one</button>
+        <button class="t-stop-btn" id="t-stop-btn" style="display:none;" onclick="finishTournament()">Stop &amp; see results</button>
       </div>
     </div>
-    <div class="t-progress" id="t-progress">Pick the idea you'd pursue first</div>
-    <div class="matchup" id="matchup">
-      <div class="t-card" id="t-card-a" onclick="pickWinner(0)"></div>
-      <div class="vs-label">VS</div>
-      <div class="t-card" id="t-card-b" onclick="pickWinner(1)"></div>
-    </div>
-    <button class="t-skip" onclick="pickWinner(-1)">Tie / skip this one</button>
   </div>
 
   <!-- ══ CANVAS OVERLAY ══ -->
@@ -2421,7 +2491,10 @@ On-demand tutoring market"></textarea>
     let isDragging = false, startX = 0, startY = 0, currentX = 0, currentY = 0;
     let animating = false, sessionStart = null;
     let rankedResults = [];
-    let tPool = [], tMatchups = [], tMatchIdx = 0, tScores = {}, tTotalMatchups = 0;
+    let tPool = [], tScores = {}, tSeedScores = {};
+    let tRound = 0, tTotalRounds = 4, tSelectedRounds = 4;
+    let tRoundMatchups = [], tRoundMatchIdx = 0;
+    let tByeHistory = new Set(), tPlayedPairs = new Set();
 
     const cardA = document.getElementById('card-a');
     const cardB = document.getElementById('card-b');
@@ -2780,52 +2853,186 @@ On-demand tutoring market"></textarea>
       document.addEventListener('touchend', onEnd);
     }
 
-    /* TOURNAMENT */
+    /* ════════════════════════════════════════
+       TOURNAMENT — SWISS SYSTEM
+       ════════════════════════════════════════ */
+    function tPairKey(a, b) { return a < b ? a + '|||' + b : b + '|||' + a; }
+
+    function computeTSeedScores(pool) {
+      const scores = {};
+      pool.forEach(idea => { scores[idea] = 0; });
+      const lastVote = {};
+      swipeHistory.forEach(r => {
+        if (!lastVote[r.idea] || r.ts > lastVote[r.idea].ts) lastVote[r.idea] = r;
+      });
+      pool.forEach(idea => {
+        const lv = lastVote[idea];
+        if (lv) {
+          if (lv.vote === 'super') scores[idea] = 2;
+          else if (lv.vote === 'like') scores[idea] = 1;
+        }
+      });
+      return scores;
+    }
+
+    function generateSwissRound() {
+      if (tRound === 1) {
+        /* Round 1: sort by seed, split in half, pair top-of-top-half with top-of-bottom-half
+           so higher seeds avoid each other */
+        const sorted = [...tPool].sort((a, b) =>
+          (tSeedScores[b] || 0) - (tSeedScores[a] || 0)
+        );
+        let working = [...sorted];
+        let byeIdea = null;
+        if (working.length % 2 === 1) {
+          byeIdea = working[working.length - 1];
+          working = working.slice(0, -1);
+          tByeHistory.add(byeIdea);
+        }
+        const half = working.length / 2;
+        const pairs = [];
+        for (let i = 0; i < half; i++) pairs.push([working[i], working[half + i]]);
+        return { pairs, byeIdea };
+      }
+
+      /* Rounds 2+: sort by tournament score (desc), then seed (desc), pair adjacent,
+         avoid rematches by swapping to next available opponent */
+      const sorted = [...tPool].sort((a, b) => {
+        const sd = (tScores[b] || 0) - (tScores[a] || 0);
+        return sd !== 0 ? sd : (tSeedScores[b] || 0) - (tSeedScores[a] || 0);
+      });
+      let working = [...sorted];
+      let byeIdea = null;
+      if (working.length % 2 === 1) {
+        let found = false;
+        for (let i = working.length - 1; i >= 0; i--) {
+          if (!tByeHistory.has(working[i])) {
+            byeIdea = working[i]; working.splice(i, 1);
+            tByeHistory.add(byeIdea); found = true; break;
+          }
+        }
+        if (!found) { byeIdea = working[working.length - 1]; working.splice(-1, 1); }
+      }
+
+      const pairs = [], used = new Set();
+      for (let i = 0; i < working.length; i++) {
+        if (used.has(working[i])) continue;
+        let paired = false;
+        /* prefer unplayed opponent */
+        for (let j = i + 1; j < working.length; j++) {
+          if (used.has(working[j])) continue;
+          if (!tPlayedPairs.has(tPairKey(working[i], working[j]))) {
+            pairs.push([working[i], working[j]]);
+            used.add(working[i]); used.add(working[j]);
+            paired = true; break;
+          }
+        }
+        /* fallback: allow rematch if no unplayed option */
+        if (!paired) {
+          for (let j = i + 1; j < working.length; j++) {
+            if (!used.has(working[j])) {
+              pairs.push([working[i], working[j]]);
+              used.add(working[i]); used.add(working[j]);
+              break;
+            }
+          }
+        }
+      }
+      return { pairs, byeIdea };
+    }
+
+    function selectTFormat(rounds) {
+      tSelectedRounds = rounds;
+      document.querySelectorAll('.t-format-card').forEach(c =>
+        c.classList.toggle('active', +c.dataset.rounds === rounds)
+      );
+    }
+
     function startTournament() {
-      const superSet = new Set(results.super);
       tPool = [...new Set([...results.super, ...results.like])];
       if (tPool.length < 2) { alert('Need at least 2 liked/super ideas to rank!'); return; }
+      tSeedScores = computeTSeedScores(tPool);
+      tSelectedRounds = 4;
+      const mpr = Math.floor(tPool.length / 2);
+      document.getElementById('fmt-3').textContent = '~' + (3 * mpr) + ' matches';
+      document.getElementById('fmt-4').textContent = '~' + (4 * mpr) + ' matches';
+      document.getElementById('fmt-6').textContent = '~' + (6 * mpr) + ' matches';
+      document.querySelectorAll('.t-format-card').forEach(c =>
+        c.classList.toggle('active', +c.dataset.rounds === tSelectedRounds)
+      );
+      document.getElementById('t-setup').style.display = 'flex';
+      document.getElementById('t-matchup-screen').style.display = 'none';
+      document.getElementById('tournament-overlay').classList.remove('hidden');
+    }
+
+    function beginTournament() {
+      tTotalRounds = tSelectedRounds;
+      tRound = 0;
+      const superSet = new Set(results.super);
       tScores = {};
       tPool.forEach(idea => { tScores[idea] = superSet.has(idea) ? 1 : 0; });
-      tMatchups = [];
-      for (let i = 0; i < tPool.length; i++)
-        for (let j = i + 1; j < tPool.length; j++)
-          tMatchups.push([tPool[i], tPool[j]]);
-      for (let i = tMatchups.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [tMatchups[i], tMatchups[j]] = [tMatchups[j], tMatchups[i]];
-      }
-      tMatchIdx = 0; tTotalMatchups = tMatchups.length;
-      document.getElementById('tournament-overlay').classList.remove('hidden');
-      showMatchup();
+      tByeHistory = new Set();
+      tPlayedPairs = new Set();
+      document.getElementById('t-setup').style.display = 'none';
+      document.getElementById('t-matchup-screen').style.display = 'flex';
+      document.getElementById('t-stop-btn').style.display = 'none';
+      startNextRound();
     }
-    function showMatchup() {
-      if (tMatchIdx >= tMatchups.length) { finishTournament(); return; }
-      const [a, b] = tMatchups[tMatchIdx];
-      document.getElementById('t-round').textContent = `Round-robin · Match ${tMatchIdx + 1} of ${tTotalMatchups}`;
-      document.getElementById('t-bar-fill').style.width = (tMatchIdx / tTotalMatchups * 100) + '%';
+
+    function startNextRound() {
+      tRound++;
+      if (tRound > tTotalRounds) { finishTournament(); return; }
+      const { pairs, byeIdea } = generateSwissRound();
+      if (byeIdea) tScores[byeIdea] += 2;
+      tRoundMatchups = pairs;
+      tRoundMatchIdx = 0;
+      if (!pairs.length) { finishTournament(); return; }
+      showSwissMatchup();
+    }
+
+    function showSwissMatchup() {
+      const [a, b] = tRoundMatchups[tRoundMatchIdx];
+      const mpr = Math.floor(tPool.length / 2);
+      const totalMatches = tTotalRounds * mpr;
+      const done = (tRound - 1) * mpr + tRoundMatchIdx;
+      document.getElementById('t-round').textContent =
+        `Round ${tRound} of ${tTotalRounds} · Match ${tRoundMatchIdx + 1} of ${tRoundMatchups.length}`;
+      document.getElementById('t-bar-fill').style.width =
+        (totalMatches > 0 ? done / totalMatches * 100 : 0) + '%';
       document.getElementById('t-card-a').textContent = a;
       document.getElementById('t-card-b').textContent = b;
-      /* reliable animation re-trigger */
       const m = document.getElementById('matchup');
       m.classList.remove('pop-anim');
-      void m.offsetWidth; /* force reflow */
+      void m.offsetWidth;
       m.classList.add('pop-anim');
     }
+
     function pickWinner(side) {
-      const [a, b] = tMatchups[tMatchIdx];
+      if (!tRoundMatchups.length || tRoundMatchIdx >= tRoundMatchups.length) return;
+      const [a, b] = tRoundMatchups[tRoundMatchIdx];
+      tPlayedPairs.add(tPairKey(a, b));
       if (side === 0) tScores[a] += 2;
       else if (side === 1) tScores[b] += 2;
       else { tScores[a] += 1; tScores[b] += 1; }
-      tMatchIdx++; showMatchup();
+      tRoundMatchIdx++;
+      if (tRoundMatchIdx >= tRoundMatchups.length) {
+        if (tRound >= tTotalRounds) { finishTournament(); return; }
+        if (tRound >= 2) document.getElementById('t-stop-btn').style.display = 'block';
+        startNextRound();
+      } else {
+        showSwissMatchup();
+      }
     }
+
     function finishTournament() {
       const superSet = new Set(results.super);
-      rankedResults = tPool.map(idea => ({ idea, score: tScores[idea], wasSuper: superSet.has(idea) }))
-        .sort((a, b) => b.score - a.score || (b.wasSuper ? 1 : 0) - (a.wasSuper ? 1 : 0));
+      rankedResults = tPool.map(idea => ({
+        idea, score: tScores[idea], wasSuper: superSet.has(idea)
+      })).sort((a, b) => b.score - a.score || (b.wasSuper ? 1 : 0) - (a.wasSuper ? 1 : 0));
       document.getElementById('t-bar-fill').style.width = '100%';
       closeTournament(); switchTab('rank'); renderRanked();
     }
+
     function closeTournament() { document.getElementById('tournament-overlay').classList.add('hidden'); }
 
     /* EXPORT */
