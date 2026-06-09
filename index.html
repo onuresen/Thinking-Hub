@@ -4147,75 +4147,8 @@
     });
 
     // ── Drag-to-reposition AI drawer ─────────────────────────────────────────────
-    (function () {
-      const AI_POS_KEY = 'ai-drawer-pos-v1';
-      const drawer = document.getElementById('ai-drawer');
-      const grip   = document.getElementById('ai-drag-grip');
-      const header = document.getElementById('ai-panel-header');
-      if (!drawer || !grip || !header) return;
-
-      let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
-
-      function _startDrag(e) {
-        if (e.target.id === 'ai-panel-close') return; // don't drag from close btn
-        e.preventDefault();
-        const rect = drawer.getBoundingClientRect();
-        origLeft = rect.left;
-        origTop  = rect.top;
-        startX   = e.clientX;
-        startY   = e.clientY;
-        dragging = true;
-        // switch to left/top so we can move freely
-        drawer.style.right  = 'auto';
-        drawer.style.bottom = 'auto';
-        drawer.style.left   = origLeft + 'px';
-        drawer.style.top    = origTop  + 'px';
-        drawer.classList.add('dragging');
-        document.body.style.userSelect = 'none';
-      }
-
-      function _onMove(e) {
-        if (!dragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        const maxLeft = window.innerWidth  - drawer.offsetWidth;
-        const maxTop  = window.innerHeight - drawer.offsetHeight;
-        drawer.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
-        drawer.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
-      }
-
-      function _onUp() {
-        if (!dragging) return;
-        dragging = false;
-        drawer.classList.remove('dragging');
-        document.body.style.userSelect = '';
-        try {
-          localStorage.setItem(AI_POS_KEY, JSON.stringify({
-            left: parseInt(drawer.style.left),
-            top:  parseInt(drawer.style.top)
-          }));
-        } catch {}
-      }
-
-      grip.addEventListener('mousedown',   _startDrag);
-      grip.addEventListener('click', e => e.stopPropagation()); // don't toggle drawer
-      header.addEventListener('mousedown', _startDrag);
-      document.addEventListener('mousemove', _onMove);
-      document.addEventListener('mouseup',   _onUp);
-
-      // Restore saved position on load
-      try {
-        const saved = JSON.parse(localStorage.getItem(AI_POS_KEY) || 'null');
-        if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
-          const maxLeft = window.innerWidth  - 220;
-          const maxTop  = window.innerHeight - 46;
-          drawer.style.right  = 'auto';
-          drawer.style.bottom = 'auto';
-          drawer.style.left   = Math.max(0, Math.min(maxLeft, saved.left)) + 'px';
-          drawer.style.top    = Math.max(0, Math.min(maxTop,  saved.top))  + 'px';
-        }
-      } catch {}
-    })();
+    // Registered in DOMContentLoaded (see bottom script block) because #ai-drawer
+    // is defined below this script tag in the HTML.
 
     async function aiCaptureSend() {
       const inp = document.getElementById('ai-input');
@@ -4837,6 +4770,75 @@
         const overlay = document.getElementById('welcome-overlay');
         if (overlay) overlay.style.display = 'flex';
       }
+
+      // Drag-to-reposition AI drawer — must run after DOM is ready (#ai-drawer is below scripts)
+      (function () {
+        const AI_POS_KEY = 'ai-drawer-pos-v1';
+        const drawer = document.getElementById('ai-drawer');
+        const grip   = document.getElementById('ai-drag-grip');
+        const header = document.getElementById('ai-panel-header');
+        if (!drawer || !grip || !header) return;
+
+        let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+        function _startDrag(e) {
+          if (e.target.id === 'ai-panel-close') return;
+          e.preventDefault();
+          const rect = drawer.getBoundingClientRect();
+          origLeft = rect.left;
+          origTop  = rect.top;
+          startX   = e.clientX;
+          startY   = e.clientY;
+          dragging = true;
+          drawer.style.right  = 'auto';
+          drawer.style.bottom = 'auto';
+          drawer.style.left   = origLeft + 'px';
+          drawer.style.top    = origTop  + 'px';
+          drawer.classList.add('dragging');
+          document.body.style.userSelect = 'none';
+        }
+
+        function _onMove(e) {
+          if (!dragging) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          const maxLeft = window.innerWidth  - drawer.offsetWidth;
+          const maxTop  = window.innerHeight - drawer.offsetHeight;
+          drawer.style.left = Math.max(0, Math.min(maxLeft, origLeft + dx)) + 'px';
+          drawer.style.top  = Math.max(0, Math.min(maxTop,  origTop  + dy)) + 'px';
+        }
+
+        function _onUp() {
+          if (!dragging) return;
+          dragging = false;
+          drawer.classList.remove('dragging');
+          document.body.style.userSelect = '';
+          try {
+            localStorage.setItem(AI_POS_KEY, JSON.stringify({
+              left: parseInt(drawer.style.left),
+              top:  parseInt(drawer.style.top)
+            }));
+          } catch {}
+        }
+
+        grip.addEventListener('mousedown',   _startDrag);
+        grip.addEventListener('click', e => e.stopPropagation());
+        header.addEventListener('mousedown', _startDrag);
+        document.addEventListener('mousemove', _onMove);
+        document.addEventListener('mouseup',   _onUp);
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(AI_POS_KEY) || 'null');
+          if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+            const maxLeft = window.innerWidth  - 220;
+            const maxTop  = window.innerHeight - 46;
+            drawer.style.right  = 'auto';
+            drawer.style.bottom = 'auto';
+            drawer.style.left   = Math.max(0, Math.min(maxLeft, saved.left)) + 'px';
+            drawer.style.top    = Math.max(0, Math.min(maxTop,  saved.top))  + 'px';
+          }
+        } catch {}
+      })();
     });
   </script>
 

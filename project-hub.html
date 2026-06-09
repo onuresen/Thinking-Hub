@@ -3657,7 +3657,7 @@
       const c = document.getElementById('proj-members');
       c.innerHTML = state.members.map(m => {
         const { bg, fg } = avatarColors(m.color);
-        return `<div class="checkbox-item"><input type="checkbox" id="pm-${m.id}" value="${m.id}" checked><label for="pm-${m.id}"><div class="avatar" style="background:${bg};color:${fg};width:20px;height:20px;font-size:9px">${initials(m.name)}</div>${HubUtils.esc(m.name)} <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${HubUtils.esc(m.role || '')}</span></label></div>`;
+        return `<div class="checkbox-item"><input type="checkbox" id="pm-${m.id}" value="${m.id}"><label for="pm-${m.id}"><div class="avatar" style="background:${bg};color:${fg};width:20px;height:20px;font-size:9px">${initials(m.name)}</div>${HubUtils.esc(m.name)} <span style="color:var(--text3);font-size:11px;font-family:var(--font-mono)">${HubUtils.esc(m.role || '')}</span></label></div>`;
       }).join('');
       document.getElementById('proj-name').value = '';
       document.getElementById('proj-desc').value = '';
