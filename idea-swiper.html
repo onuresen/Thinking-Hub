@@ -1408,7 +1408,7 @@
     .canvas-overlay {
       position: fixed;
       inset: 0;
-      background: #0a0a0d;
+      background: var(--surface);
       z-index: 150;
       display: flex;
       flex-direction: column;
@@ -1557,7 +1557,7 @@
     }
 
     .sticky.connecting-source {
-      outline: 2px solid #a78bfa;
+      outline: 2px solid var(--border-purple);
       box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2);
     }
 
@@ -1604,21 +1604,21 @@
 
     /* note color variants */
     .note-like {
-      background: #1a2820;
-      border: 1px solid rgba(46, 204, 122, 0.25);
-      color: #b8f0d4;
+      background: var(--node-green);
+      border: 1px solid var(--border-green);
+      color: var(--text);
     }
 
     .note-super {
-      background: #251e0f;
-      border: 1px solid rgba(245, 166, 35, 0.25);
-      color: #f5d9a0;
+      background: var(--node-yellow);
+      border: 1px solid var(--border-yellow);
+      color: var(--text);
     }
 
     .note-label {
-      background: #1c1c28;
-      border: 1px solid rgba(124, 106, 245, 0.25);
-      color: #c4b8f8;
+      background: var(--node-purple);
+      border: 1px solid var(--border-purple);
+      color: var(--text);
     }
 
     /* cluster label */

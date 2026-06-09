@@ -559,7 +559,7 @@
       const toolCounts = {};
       nodesMap.forEach(n => { toolCounts[n.tool] = (toolCounts[n.tool] || 0) + 1; });
 
-      const _isDarkBar = document.documentElement.getAttribute('data-theme') !== 'light';
+      const _isDarkBar = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
       const _tcBar = _isDarkBar ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       tools.forEach(tool => {
         const colors = _tcBar[tool] || { border: _isDarkBar ? '#555' : '#8888a0' };
@@ -588,7 +588,7 @@
       const body = document.createElement('div');
       body.className = 'legend-body';
       tools.forEach(tool => {
-        const _isDarkLeg = document.documentElement.getAttribute('data-theme') !== 'light';
+        const _isDarkLeg = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
         const c = (_isDarkLeg ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT)[tool] || (_isDarkLeg ? { bg: '#333', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
         const item = document.createElement('div');
         item.className = 'legend-item';
@@ -739,7 +739,7 @@
     // ── Build graph ───────────────────────────────────────────
 
     function buildGraph() {
-      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
       const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.60)';

@@ -106,6 +106,41 @@
       transition: box-shadow 0.15s;
     }
 
+    .node-resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 14px;
+      height: 14px;
+      cursor: nwse-resize;
+      z-index: 5;
+      opacity: 0;
+      transition: opacity 0.15s;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 2px;
+    }
+
+    .node-resize-handle::after {
+      content: '';
+      display: block;
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid var(--border2);
+      border-bottom: 2px solid var(--border2);
+      border-radius: 0 0 3px 0;
+    }
+
+    .node:hover .node-resize-handle,
+    .node.selected .node-resize-handle {
+      opacity: 1;
+    }
+
+    .node-resize-handle:hover::after {
+      border-color: var(--accent);
+    }
+
     .node:active {
       cursor: grabbing;
     }
@@ -137,7 +172,7 @@
       color: var(--text);
       line-height: 1.45;
       word-wrap: break-word;
-      overflow-y: hidden;
+      overflow-y: auto;
       cursor: text;
       border-radius: 0 0 8px 8px;
     }
@@ -408,11 +443,22 @@
         renderEdges(); // keep edges attached while dragging
         renderMinimap();
       }
+      if (isResizingNode && resizeState) {
+        const dx = (e.clientX - resizeState.startMouseX) / db.zoom;
+        const dy = (e.clientY - resizeState.startMouseY) / db.zoom;
+        resizeState.node.w = Math.max(120, resizeState.startW + dx);
+        resizeState.node.h = Math.max(60, resizeState.startH + dy);
+        resizeState.el.style.width = resizeState.node.w + 'px';
+        resizeState.el.style.height = resizeState.node.h + 'px';
+        renderEdges();
+        renderMinimap();
+      }
     });
 
     window.addEventListener('mouseup', () => {
       if (isPanning) { isPanning = false; viewport.classList.remove('panning'); pulseSave(); }
       if (isDraggingNode) { isDraggingNode = false; dragState = null; pulseSave(); }
+      if (isResizingNode) { isResizingNode = false; resizeState = null; pulseSave(); }
     });
 
     viewport.addEventListener('wheel', e => {
@@ -451,6 +497,8 @@
     let selectedNodeId = null;
     let isDraggingNode = false;
     let dragState = null;
+    let isResizingNode = false;
+    let resizeState = null;
 
     function selectNode(id) {
       selectedNodeId = id;
@@ -501,9 +549,9 @@
         const tn = db.nodes.find(n => n.id === edge.to);
         if (!fn || !tn) return;
 
-        // Center anchors
-        const x1 = fn.x + NODE_W / 2, y1 = fn.y + NODE_H / 2;
-        const x2 = tn.x + NODE_W / 2, y2 = tn.y + NODE_H / 2;
+        // Center anchors (use stored size or fallback to defaults)
+        const x1 = fn.x + (fn.w || NODE_W) / 2, y1 = fn.y + (fn.h || NODE_H) / 2;
+        const x2 = tn.x + (tn.w || NODE_W) / 2, y2 = tn.y + (tn.h || NODE_H) / 2;
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
@@ -654,6 +702,8 @@
       el.dataset.id = node.id;
       el.style.left = Math.round(node.x) + 'px';
       el.style.top = Math.round(node.y) + 'px';
+      if (node.w) el.style.width = node.w + 'px';
+      if (node.h) el.style.height = node.h + 'px';
 
       // Action bar
       const actions = document.createElement('div');
@@ -723,6 +773,25 @@
         if (!connectMode) e.stopPropagation();
       });
 
+      // Resize handle
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'node-resize-handle';
+      resizeHandle.title = 'Drag to resize';
+      resizeHandle.addEventListener('mousedown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        selectNode(node.id);
+        isResizingNode = true;
+        resizeState = {
+          node, el,
+          startW: node.w || el.offsetWidth,
+          startH: node.h || el.offsetHeight,
+          startMouseX: e.clientX,
+          startMouseY: e.clientY
+        };
+      });
+      el.appendChild(resizeHandle);
+
       // Link-change hook to refresh badge
       const prevHook = window.__hl_onLinkChange;
       window.__hl_onLinkChange = function () {
@@ -753,8 +822,8 @@
       db.nodes.forEach(n => {
         minX = Math.min(minX, n.x - pad);
         minY = Math.min(minY, n.y - pad);
-        maxX = Math.max(maxX, n.x + NODE_W + pad);
-        maxY = Math.max(maxY, n.y + NODE_H + pad);
+        maxX = Math.max(maxX, n.x + (n.w || NODE_W) + pad);
+        maxY = Math.max(maxY, n.y + (n.h || NODE_H) + pad);
       });
 
       const scale = Math.min(W / (maxX - minX), H / (maxY - minY));
@@ -773,8 +842,8 @@
           const f = db.nodes.find(n => n.id === edge.from);
           const t = db.nodes.find(n => n.id === edge.to);
           if (!f || !t) return;
-          const [fx, fy] = toMM(f.x + NODE_W / 2, f.y + NODE_H / 2);
-          const [tx, ty] = toMM(t.x + NODE_W / 2, t.y + NODE_H / 2);
+          const [fx, fy] = toMM(f.x + (f.w || NODE_W) / 2, f.y + (f.h || NODE_H) / 2);
+          const [tx, ty] = toMM(t.x + (t.w || NODE_W) / 2, t.y + (t.h || NODE_H) / 2);
           ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
         });
       }
@@ -784,8 +853,8 @@
         || _css.getPropertyValue('--node-gray').trim() || '#2a2a30';
       db.nodes.forEach(n => {
         const [mx, my] = toMM(n.x, n.y);
-        const nw = Math.max(NODE_W * scale, 3);
-        const nh = Math.max(NODE_H * scale, 3);
+        const nw = Math.max((n.w || NODE_W) * scale, 3);
+        const nh = Math.max((n.h || NODE_H) * scale, 3);
         ctx.fillStyle = nodeFill(n.color);
         ctx.fillRect(mx, my, nw, nh);
         ctx.strokeStyle = n.id === selectedNodeId ? _accent : _border2;
