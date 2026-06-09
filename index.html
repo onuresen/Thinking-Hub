@@ -290,120 +290,6 @@
       background: var(--accent-dim);
     }
 
-    /* ── Cloud connection panel ─────────────────────────────────────── */
-    .cloud-status-row {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .cloud-status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      transition: background 0.3s;
-    }
-
-    .cloud-status-dot.local {
-      background: var(--text3);
-    }
-
-    .cloud-status-dot.syncing {
-      background: #f0b040;
-      animation: cloud-pulse 1.2s infinite;
-    }
-
-    .cloud-status-dot.cloud {
-      background: var(--accent);
-    }
-
-    .cloud-status-dot.error {
-      background: #e8455a;
-    }
-
-    @keyframes cloud-pulse {
-
-      0%,
-      100% {
-        opacity: 1
-      }
-
-      50% {
-        opacity: 0.35
-      }
-    }
-
-    .cloud-status-text {
-      flex: 1;
-      font-size: 10px;
-      color: var(--text3);
-    }
-
-    .cloud-connect-btn {
-      background: transparent;
-      border: 1px solid var(--border2);
-      border-radius: 5px;
-      color: var(--text2);
-      font-size: 10px;
-      padding: 2px 8px;
-      cursor: pointer;
-      font-family: var(--font-mono);
-      white-space: nowrap;
-      transition: color 0.1s, border-color 0.1s;
-    }
-
-    .cloud-connect-btn:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-    }
-
-    .cloud-workspace-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-top: 7px;
-    }
-
-    .cloud-ws-label {
-      font-size: 9px;
-      color: var(--text3);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      flex-shrink: 0;
-    }
-
-    .cloud-ws-code {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      background: var(--surface2);
-      padding: 1px 5px;
-      border-radius: 4px;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--text2);
-    }
-
-    .cloud-copy-btn {
-      background: transparent;
-      border: none;
-      color: var(--text3);
-      cursor: pointer;
-      font-size: 13px;
-      padding: 2px 4px;
-      border-radius: 4px;
-      line-height: 1;
-      transition: color 0.1s, background 0.1s;
-      flex-shrink: 0;
-    }
-
-    .cloud-copy-btn:hover {
-      color: var(--accent);
-      background: var(--accent-dim);
-    }
-
     /* ── Main area ──────────────────────────────────── */
     .main-area {
       flex: 1;
@@ -1899,21 +1785,6 @@
       <div class="proj-ctx-stats" id="proj-ctx-stats"></div>
     </div>
 
-    <div class="sidebar-footer" id="cloud-footer">
-      <div class="cloud-status-row">
-        <span id="cloud-dot" class="cloud-status-dot local"></span>
-        <span id="cloud-text" class="cloud-status-text">Local only</span>
-        <button id="cloud-btn" class="cloud-connect-btn">Connect</button>
-        <button id="cloud-change-btn" onclick="changeCloudCredentials()" title="Change Supabase credentials"
-          style="display:none;background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:3px;line-height:1"
-          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">⚙</button>
-      </div>
-      <div id="cloud-ws-row" class="cloud-workspace-row" style="display:none">
-        <span class="cloud-ws-label">WS</span>
-        <code id="cloud-ws-id" class="cloud-ws-code"></code>
-        <button id="cloud-copy-btn" class="cloud-copy-btn" title="Copy invite link">⧉</button>
-      </div>
-    </div>
   </nav>
 
   <!-- Main area -->
@@ -2031,39 +1902,6 @@
           <div class="sfield-hint">Powers the AI Assistant drawer (bottom of screen). Get a key at <a
               href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
           </div>
-        </div>
-
-        <!-- Supabase -->
-        <div class="sfield-group">
-          <div class="sfield-group-title">☁ Supabase Cloud Sync</div>
-          <div class="sfield-hint" style="margin-bottom:8px">Optional — enables real-time sync across devices. Leave
-            blank to stay local-only.</div>
-          <div style="margin-bottom:6px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Project URL</div>
-            <input type="text" id="sb-url-input" placeholder="https://xxxx.supabase.co" autocomplete="off"
-              spellcheck="false"
-              style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
-          </div>
-          <div style="margin-bottom:8px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Anon Key</div>
-            <div class="sfield-row" style="margin-bottom:0">
-              <input type="password" id="sb-key-input" placeholder="eyJ…" autocomplete="off" spellcheck="false">
-              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap"
-                onclick="toggleSbKeyVisible()">Show</button>
-            </div>
-          </div>
-          <div style="margin-bottom:8px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Workspace ID <span
-                style="color:var(--text3);font-weight:400">(leave blank to create new)</span></div>
-            <input type="text" id="sb-ws-input" placeholder="optional — shared workspace ID"
-              style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn-primary" style="font-size:12px" onclick="connectSupabase()">Connect</button>
-            <button class="btn btn-ghost" style="font-size:12px" id="sb-disconnect-btn" onclick="disconnectSupabase()"
-              style="display:none">Disconnect</button>
-          </div>
-          <div class="sfield-status" id="sb-status"></div>
         </div>
 
         <!-- Obsidian -->
@@ -3279,188 +3117,6 @@
       else buildStatusWidgets(); // overview — will set statusSection display itself
     }
 
-    // ── Cloud panel ───────────────────────────────────────────────────────────────
-
-    // Collaboration keys: shared work content that should sync across collaborators.
-    // UI state keys (hub-session-v1, panel sizes, etc.) are intentionally excluded.
-    const COLLABORATION_KEYS = [
-      'project-hub-v1',
-      'hub-links-v1',
-      'decision-hub-v1',
-      'ideaswipe_history_v6',
-      'schedule-v1',
-      'kmqt_current_v2',
-      'dw-title-v1',
-      'dw-problem-v1',
-      'dw-canvas-v1',
-      'dw-options-v1',
-      'decisionjam_myVotes_v1',
-      'decisionjam_imports_v1',
-    ];
-
-    function initCloudPanel() {
-      HubStorage.onStatusChange(updateCloudUI);
-      document.getElementById('cloud-copy-btn').addEventListener('click', copyWorkspaceLink);
-      updateCloudUI(HubStorage.getStatus());
-      _checkHashForWorkspace();
-
-      // Live-refresh dashboard widgets when remote changes arrive
-      const _refreshActive = () => {
-        const v = loadSession().dashView || 'today';
-        if (v === 'overview') buildStatusWidgets();
-        else if (v === 'exec') buildExecView();
-      };
-      HubStorage.subscribe('project-hub-v1',  () => { _refreshActive(); refreshRecentStrip(); });
-      HubStorage.subscribe('kmqt_current_v2',  _refreshActive);
-      HubStorage.subscribe('decision-hub-v1',  _refreshActive);
-      HubStorage.subscribe('schedule-v1',      _refreshActive);
-      HubStorage.subscribe('goals-hub-v1',     _refreshActive);
-      HubStorage.subscribe('risk-hub-v1',      _refreshActive);
-      HubStorage.subscribe('meetings-hub-v1',  _refreshActive);
-      HubStorage.subscribe('focus-hub-v1',     _refreshActive);
-      HubStorage.subscribe('retro-hub-v1',     _refreshActive);
-      HubStorage.subscribe('learning-hub-v1',  _refreshActive);
-    }
-
-    function updateCloudUI(status) {
-      const dot = document.getElementById('cloud-dot');
-      const text = document.getElementById('cloud-text');
-      const btn = document.getElementById('cloud-btn');
-      const wsRow = document.getElementById('cloud-ws-row');
-      const wsCode = document.getElementById('cloud-ws-id');
-
-      if (status.mode === 'cloud') {
-        dot.className = 'cloud-status-dot cloud';
-        text.textContent = 'Cloud sync';
-        btn.textContent = 'Disconnect';
-        btn.onclick = () => { HubStorage.disconnect(); };
-        wsRow.style.display = 'flex';
-        wsCode.textContent = status.workspaceId || '';
-        document.getElementById('cloud-change-btn').style.display = 'none';
-      } else {
-        dot.className = 'cloud-status-dot local';
-        text.textContent = 'Local only';
-        wsRow.style.display = 'none';
-        // Show Reconnect (one-click) if credentials are saved, otherwise full Connect flow
-        const savedCreds = _getSavedCredentials();
-        if (savedCreds) {
-          btn.textContent = 'Reconnect';
-          btn.onclick = promptConnect;
-          document.getElementById('cloud-change-btn').style.display = '';
-        } else {
-          btn.textContent = 'Connect';
-          btn.onclick = promptConnect;
-          document.getElementById('cloud-change-btn').style.display = 'none';
-        }
-      }
-    }
-
-    function _getSavedCredentials() {
-      try {
-        const raw = localStorage.getItem('hub-cloud-credentials-v1');
-        if (!raw) return null;
-        const cfg = JSON.parse(raw);
-        return (cfg && cfg.url && cfg.key) ? cfg : null;
-      } catch { return null; }
-    }
-
-    function _doConnect(url, key, workspaceId) {
-      const dot = document.getElementById('cloud-dot');
-      dot.className = 'cloud-status-dot syncing';
-      HubStorage.useSupabase(url, key, workspaceId || null)
-        .then(() => HubStorage.migrateToCloud(COLLABORATION_KEYS))
-        .then(() => updateCloudUI(HubStorage.getStatus()))
-        .catch(err => {
-          dot.className = 'cloud-status-dot error';
-          alert('Connection failed: ' + (err.message || err));
-          setTimeout(() => updateCloudUI(HubStorage.getStatus()), 2500);
-        });
-    }
-
-    function promptConnect() {
-      const saved = _getSavedCredentials();
-      if (saved) {
-        // One-click reconnect — no prompts needed
-        _doConnect(saved.url, saved.key, saved.workspaceId);
-        return;
-      }
-      // No saved credentials — open Settings → Integrations
-      openDataModal('integrations');
-    }
-
-    function changeCloudCredentials() {
-      openDataModal('integrations');
-      return;
-      const saved = _getSavedCredentials() || {};
-      const url = prompt('Supabase Project URL:', saved.url || '');
-      if (url === null) return;
-      const key = prompt('Supabase Anon Key:', saved.key || '');
-      if (key === null) return;
-      const wsInput = prompt('Workspace ID (leave blank to keep current):', saved.workspaceId || '');
-      if (wsInput === null) return;
-      // Clear old credentials so they get replaced on connect
-      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch { }
-      _doConnect(url.trim(), key.trim(), wsInput.trim() || saved.workspaceId || null);
-    }
-
-    function copyWorkspaceLink() {
-      const status = HubStorage.getStatus();
-      if (!status.workspaceId) return;
-      try {
-        const cfg = JSON.parse(localStorage.getItem('hub-cloud-config-v1') || '{}');
-        const params = new URLSearchParams({
-          ws: status.workspaceId,
-          url: cfg.url || '',
-          key: cfg.key || ''
-        });
-        const shareUrl = location.href.split('#')[0] + '#' + params.toString();
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          const btn = document.getElementById('cloud-copy-btn');
-          btn.textContent = '✓';
-          setTimeout(() => { btn.textContent = '⧉'; }, 1800);
-        });
-      } catch (e) {
-        alert('Could not copy link: ' + e.message);
-      }
-    }
-
-    function _checkHashForWorkspace() {
-      if (!location.hash || location.hash.length < 5) return;
-      try {
-        const params = new URLSearchParams(location.hash.slice(1));
-        const ws = params.get('ws');
-        const url = params.get('url');
-        const key = params.get('key');
-        if (!ws || !url || !key) return;
-
-        const ok = confirm(
-          'Join shared workspace?\n\nWorkspace: ' + ws +
-          '\nServer: ' + url +
-          '\n\nThis will replace your local data with the shared workspace data.'
-        );
-        if (!ok) return;
-
-        // Clear hash to avoid re-triggering on refresh
-        history.replaceState(null, '', location.pathname);
-
-        const dot = document.getElementById('cloud-dot');
-        dot.className = 'cloud-status-dot syncing';
-
-        HubStorage.useSupabase(url, key, ws)
-          .then(() => HubStorage.pullFromCloud())
-          .then(() => {
-            updateCloudUI(HubStorage.getStatus());
-            buildStatusWidgets();
-            refreshRecentStrip();
-          })
-          .catch(err => {
-            dot.className = 'cloud-status-dot error';
-            alert('Failed to join workspace: ' + (err.message || err));
-            setTimeout(() => updateCloudUI(HubStorage.getStatus()), 2500);
-          });
-      } catch { }
-    }
-
     function startTour() {
       goHome();
       setTimeout(() => {
@@ -3562,7 +3218,7 @@
 
     // ── Local MCP Sync ────────────────────────────────────────────────────────────
     // Writes thinking-hub-data.json into a user-chosen folder so the local
-    // MCP server (thinking-hub-local-mcp) can read hub data without Supabase.
+    // MCP server (thinking-hub-local-mcp) can read hub data.
 
     let _mcpDirHandle = null;   // FileSystemDirectoryHandle — lives for this session only
     let _mcpLastSync = null;   // ISO timestamp of last successful write
@@ -3754,59 +3410,6 @@
       if (btn) { btn.textContent = 'Test'; btn.disabled = false; }
     }
 
-    // ── Supabase form helpers ──────────────────────────────────────────────────────
-
-    function _loadSupabaseFields() {
-      try {
-        const raw = localStorage.getItem('hub-cloud-credentials-v1');
-        if (!raw) return;
-        const creds = JSON.parse(raw);
-        if (creds.url) document.getElementById('sb-url-input').value = creds.url;
-        if (creds.key) document.getElementById('sb-key-input').value = creds.key;
-        if (creds.workspaceId) document.getElementById('sb-ws-input').value = creds.workspaceId;
-      } catch { }
-    }
-
-    function toggleSbKeyVisible() {
-      const inp = document.getElementById('sb-key-input');
-      if (!inp) return;
-      inp.type = inp.type === 'password' ? 'text' : 'password';
-    }
-
-    function _setSbStatus(msg, type) {
-      const el = document.getElementById('sb-status');
-      if (!el) return;
-      el.textContent = msg;
-      el.className = 'sfield-status ' + (type || '');
-    }
-
-    function connectSupabase() {
-      const url = (document.getElementById('sb-url-input')?.value || '').trim();
-      const key = (document.getElementById('sb-key-input')?.value || '').trim();
-      const ws = (document.getElementById('sb-ws-input')?.value || '').trim();
-      if (!url || !key) { _setSbStatus('URL and Anon Key are required', 'err'); return; }
-      _setSbStatus('Connecting…', 'info');
-      HubStorage.useSupabase(url, key, ws || null)
-        .then(() => HubStorage.migrateToCloud(COLLABORATION_KEYS))
-        .then(() => {
-          const status = HubStorage.getStatus();
-          _setSbStatus('Connected ✓' + (status.workspaceId ? ' · WS: ' + status.workspaceId : ''), 'ok');
-          updateCloudUI(status);
-          // Persist credentials
-          try {
-            localStorage.setItem('hub-cloud-credentials-v1', JSON.stringify({ url, key, workspaceId: status.workspaceId || ws }));
-          } catch { }
-        })
-        .catch(err => {
-          _setSbStatus('Connection failed: ' + (err.message || err), 'err');
-        });
-    }
-
-    function disconnectSupabase() {
-      try { localStorage.removeItem('hub-cloud-credentials-v1'); } catch { }
-      location.reload();
-    }
-
     // ── openDataModal / closeDataModal ────────────────────────────────────────────
 
     function openDataModal(tab) {
@@ -3819,8 +3422,6 @@
       if (typeof HubAI !== 'undefined') {
         document.getElementById('ai-key-input').value = HubAI.getKey();
       }
-      _loadSupabaseFields();
-      _updateSupabaseDisconnectBtn();
 
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
         document.getElementById('obsidian-vault-picker').style.display = '';
@@ -3837,13 +3438,6 @@
 
       // Switch to requested tab or default
       switchSettingsTab(tab || 'integrations');
-    }
-
-    function _updateSupabaseDisconnectBtn() {
-      const btn = document.getElementById('sb-disconnect-btn');
-      if (!btn) return;
-      const hasCredentials = !!localStorage.getItem('hub-cloud-credentials-v1');
-      btn.style.display = hasCredentials ? '' : 'none';
     }
 
     function closeDataModal() {
@@ -4665,7 +4259,6 @@
     switchDashView(loadSession().dashView || 'today');
     refreshRecentStrip();
     setGreeting();
-    initCloudPanel();
     _updateAiDrawerHint();
 
     // One-time migration: remove stale 'language' key left by old i18n system
