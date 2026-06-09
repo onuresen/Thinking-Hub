@@ -755,6 +755,89 @@
     /* ── Executive View ───────────────────────────── */
     #exec-view { padding-bottom: 40px; }
 
+    /* ── Analytics View ───────────────────────────── */
+    #analytics-view { padding-bottom: 40px; }
+
+    .an-stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 24px;
+    }
+    .an-stat {
+      background: var(--surface); border: 1px solid var(--border1);
+      border-radius: var(--r); padding: 16px 18px;
+    }
+    .an-stat-value {
+      font-family: var(--font-mono); font-size: 1.7rem;
+      font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 4px;
+    }
+    .an-stat-label {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text3); font-weight: 600;
+    }
+    .an-stat-sub { font-size: 0.72rem; color: var(--text3); margin-top: 3px; }
+    .an-stat-accent { color: var(--accent); }
+
+    .an-section-head {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text3); font-weight: 600; margin-bottom: 10px;
+    }
+
+    /* Heatmap */
+    .hm-wrap { margin-bottom: 24px; }
+    .hm-outer { display: flex; align-items: flex-start; gap: 6px; overflow-x: auto; }
+    .hm-day-labels {
+      display: grid; grid-template-rows: repeat(7, 12px);
+      gap: 3px; flex-shrink: 0; margin-top: 1px;
+    }
+    .hm-day-label {
+      font-size: 0.58rem; color: var(--text3); line-height: 12px;
+      font-family: var(--font-mono);
+    }
+    .hm-grid {
+      display: grid;
+      grid-template-rows: repeat(7, 12px);
+      grid-auto-columns: 12px;
+      grid-auto-flow: column;
+      gap: 3px;
+    }
+    .hm-cell {
+      width: 12px; height: 12px; border-radius: 2px; cursor: default;
+    }
+    .hm-today { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+    .hm-legend {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      font-size: 0.67rem; color: var(--text3);
+    }
+    .hm-legend-cell { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Charts row */
+    .an-charts-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .an-chart-box {
+      background: var(--surface); border: 1px solid var(--border1);
+      border-radius: var(--r); padding: 16px 18px;
+    }
+    .an-chart-title {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text3); font-weight: 600; margin-bottom: 12px;
+    }
+
+    /* Vertical bar chart */
+    .an-bar-wrap { display: flex; align-items: flex-end; gap: 5px; height: 90px; }
+    .an-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+    .an-bar-count { font-size: 0.58rem; font-family: var(--font-mono); color: var(--text3); height: 12px; line-height: 12px; }
+    .an-bar { width: 100%; min-height: 2px; background: var(--accent-dim); border-radius: 2px 2px 0 0; border-top: 1px solid var(--accent-glow); }
+    .an-bar-label { font-size: 0.55rem; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; margin-top: 4px; overflow: hidden; max-width: 100%; text-align: center; }
+
+    /* Horizontal bars */
+    .an-hbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .an-hbar-label { font-size: 0.73rem; color: var(--text2); width: 74px; flex-shrink: 0; text-align: right; }
+    .an-hbar-track { flex: 1; height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .an-hbar-fill { height: 100%; border-radius: 4px; }
+    .an-hbar-count { font-size: 0.65rem; font-family: var(--font-mono); color: var(--text3); width: 20px; text-align: right; flex-shrink: 0; }
+    .an-empty { font-size: 0.82rem; color: var(--text3); font-style: italic; padding: 20px 0; text-align: center; }
+
     .ev-kpi-row {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
       margin-bottom: 24px;
@@ -1851,33 +1934,38 @@
           <button class="dash-tab" id="dash-tab-today" onclick="switchDashView('today')">Today</button>
           <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
           <button class="dash-tab" id="dash-tab-exec" onclick="switchDashView('exec')">Exec</button>
+          <button class="dash-tab" id="dash-tab-analytics" onclick="switchDashView('analytics')">Analytics</button>
         </div>
 
         <div id="today-view"></div>
         <div id="exec-view" style="display:none"></div>
+        <div id="analytics-view" style="display:none"></div>
 
         <div id="status-section" style="display:none">
           <div class="home-section-label">Overview</div>
           <div class="status-grid" id="status-grid"></div>
         </div>
 
-        <div class="home-section-label" id="recent-label" style="display:none">Recent</div>
-        <div class="recent-strip" id="recent-strip"></div>
+        <!-- Today-only: recent strip, getting started, tools grid -->
+        <div id="today-only-content">
+          <div class="home-section-label" id="recent-label" style="display:none">Recent</div>
+          <div class="recent-strip" id="recent-strip"></div>
 
-        <!-- Getting Started banner — visible until dismissed -->
-        <div id="start-banner" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
-            <div>
-              <span style="font-size:12.5px;font-weight:700;color:var(--text);font-family:var(--font-display)">🚀 Getting started</span>
-              <span style="font-size:11px;color:var(--text3);margin-left:8px">Three steps to get value quickly</span>
+          <!-- Getting Started banner — visible until dismissed -->
+          <div id="start-banner" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+              <div>
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);font-family:var(--font-display)">🚀 Getting started</span>
+                <span style="font-size:11px;color:var(--text3);margin-left:8px">Three steps to get value quickly</span>
+              </div>
+              <button onclick="dismissStartBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px" title="Dismiss">✕</button>
             </div>
-            <button onclick="dismissStartBanner()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px" title="Dismiss">✕</button>
+            <div class="start-steps" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
           </div>
-          <div class="start-steps" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-        </div>
 
-        <div class="home-section-label">Tools</div>
-        <div class="app-grid" id="app-grid"></div>
+          <div class="home-section-label">Tools</div>
+          <div class="app-grid" id="app-grid"></div>
+        </div>
       </div>
 
       <!-- Loading progress bar -->
@@ -3121,22 +3209,186 @@
       `;
     }
 
+    // ── Analytics View ────────────────────────────────────────────────────────
+
+    function buildAnalyticsView() {
+      const container = document.getElementById('analytics-view');
+      if (!container) return;
+
+      const todayStr  = new Date().toISOString().slice(0, 10);
+      const weekAgo   = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const monthAgo  = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+
+      let ph = {}, focusData = {}, decArr = [], captureData = {};
+      try { ph          = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
+      try { focusData   = JSON.parse(localStorage.getItem('focus-hub-v1')    || '{}'); } catch {}
+      try { const d     = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+            decArr      = Array.isArray(d) ? d : []; } catch {}
+      try { captureData = JSON.parse(localStorage.getItem('capture-hub-v1')  || '{}'); } catch {}
+
+      const allTasks    = (ph.projects || []).flatMap(p => p.tasks || []);
+      const sessions    = focusData.sessions || [];
+      const inboxItems  = captureData.inbox  || [];
+
+      // ── Key stats ────────────────────────────────────────────────────
+      const thisWeekTasks    = allTasks.filter(t => (t.createdAt || '') >= weekAgo);
+      const completedTasks   = allTasks.filter(t => t.done || t.status === 'done');
+      const weekSessions     = sessions.filter(s => s.completed && (s.startedAt || '') >= weekAgo);
+      const weekFocusMins    = weekSessions.reduce((s, r) => s + (r.durationMin || 0), 0);
+      const weekFocusHrs     = (weekFocusMins / 60).toFixed(1);
+      const monthDecs        = decArr.filter(d => (d.createdAt || '') >= monthAgo).length;
+      const completionRate   = allTasks.length ? Math.round(completedTasks.length / allTasks.length * 100) : 0;
+
+      // ── Focus heatmap ─────────────────────────────────────────────────
+      const focusMap = {};
+      sessions.forEach(s => {
+        const day = (s.startedAt || '').slice(0, 10);
+        if (day) focusMap[day] = (focusMap[day] || 0) + (s.durationMin || 0);
+      });
+
+      // Start 13 weeks ago on a Monday
+      const heatStart = new Date();
+      heatStart.setDate(heatStart.getDate() - 90);
+      const dow = heatStart.getDay();
+      heatStart.setDate(heatStart.getDate() - (dow === 0 ? 6 : dow - 1));
+      heatStart.setHours(0, 0, 0, 0);
+
+      const heatCells = [];
+      const cur = new Date(heatStart);
+      const todayTs = new Date(todayStr).getTime();
+      while (cur.getTime() <= todayTs + 86400000 * 6) {
+        const ds   = cur.toISOString().slice(0, 10);
+        const mins = focusMap[ds] || 0;
+        const future = cur.getTime() > todayTs;
+        let bg;
+        if (future)     bg = 'transparent';
+        else if (!mins) bg = 'var(--surface3)';
+        else if (mins <= 30) bg = 'var(--accent-dim)';
+        else if (mins <= 60) bg = 'var(--accent-glow)';
+        else             bg = 'var(--accent)';
+        const isToday = ds === todayStr;
+        heatCells.push(`<div class="hm-cell${isToday ? ' hm-today' : ''}"
+          style="background:${bg}" title="${future ? '' : ds + ': ' + (mins || 'no') + (mins ? 'min' : ' sessions')}"></div>`);
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      // ── Tasks per week bar chart (last 8 weeks) ───────────────────────
+      const barWeeks = [];
+      for (let i = 7; i >= 0; i--) {
+        const wStart = new Date(Date.now() - (i + 1) * 7 * 86400000);
+        const wEnd   = new Date(Date.now() - i * 7 * 86400000);
+        const wStartStr = wStart.toISOString().slice(0, 10);
+        const wEndStr   = wEnd.toISOString().slice(0, 10);
+        const count = allTasks.filter(t => {
+          const d = (t.createdAt || '').slice(0, 10);
+          return d >= wStartStr && d < wEndStr;
+        }).length;
+        const label = wStart.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+        barWeeks.push({ label, count });
+      }
+      const barMax = Math.max(...barWeeks.map(w => w.count), 1);
+      const barHTML = barWeeks.map(w => {
+        const h = Math.round(w.count / barMax * 100);
+        return `<div class="an-bar-col">
+          <div class="an-bar-count">${w.count || ''}</div>
+          <div class="an-bar" style="height:${Math.max(h, 2)}%"></div>
+          <div class="an-bar-label">${w.label}</div>
+        </div>`;
+      }).join('');
+
+      // ── Capture breakdown (horizontal bars) ──────────────────────────
+      const CAT_LABELS = { task:'Task', question:'Question', idea:'Idea', decision:'Decision', risk:'Risk', learning:'Learning', event:'Event', note:'Note' };
+      const CAT_COLORS = { task:'var(--border-blue)', question:'var(--border-purple)', idea:'var(--border-yellow)', decision:'var(--border-green)', risk:'var(--border-red)', learning:'var(--accent)', event:'var(--accent-super)', note:'var(--border2)' };
+      const catCounts = {};
+      inboxItems.forEach(it => { catCounts[it.cat] = (catCounts[it.cat] || 0) + 1; });
+      const catTotal = inboxItems.length;
+      const hbarHTML = catTotal === 0
+        ? '<div class="an-empty">No captured items yet</div>'
+        : Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, n]) => {
+          const pct = Math.round(n / catTotal * 100);
+          return `<div class="an-hbar-row">
+            <div class="an-hbar-label">${CAT_LABELS[cat] || cat}</div>
+            <div class="an-hbar-track"><div class="an-hbar-fill" style="width:${pct}%;background:${CAT_COLORS[cat] || 'var(--border2)'}"></div></div>
+            <div class="an-hbar-count">${n}</div>
+          </div>`;
+        }).join('');
+
+      // ── Render ────────────────────────────────────────────────────────
+      container.innerHTML = `
+        <div class="an-stats-row">
+          <div class="an-stat">
+            <div class="an-stat-value">${thisWeekTasks.length}</div>
+            <div class="an-stat-label">Tasks Created</div>
+            <div class="an-stat-sub">this week</div>
+          </div>
+          <div class="an-stat">
+            <div class="an-stat-value">${weekFocusHrs}<span style="font-size:1rem;color:var(--text3)">h</span></div>
+            <div class="an-stat-label">Focus Time</div>
+            <div class="an-stat-sub">this week · ${weekSessions.length} session${weekSessions.length !== 1 ? 's' : ''}</div>
+          </div>
+          <div class="an-stat">
+            <div class="an-stat-value">${monthDecs}</div>
+            <div class="an-stat-label">Decisions Logged</div>
+            <div class="an-stat-sub">last 30 days</div>
+          </div>
+          <div class="an-stat">
+            <div class="an-stat-value">${completionRate}<span style="font-size:1rem;color:var(--text3)">%</span></div>
+            <div class="an-stat-label">Task Completion</div>
+            <div class="an-stat-sub">${completedTasks.length} of ${allTasks.length} tasks</div>
+          </div>
+        </div>
+
+        <div class="hm-wrap">
+          <div class="an-section-head">Focus Activity — last 13 weeks</div>
+          <div class="hm-outer">
+            <div class="hm-day-labels">
+              ${['Mon','','Wed','','Fri','','Sun'].map(d => `<div class="hm-day-label">${d}</div>`).join('')}
+            </div>
+            <div class="hm-grid">${heatCells.join('')}</div>
+          </div>
+          <div class="hm-legend">
+            Less
+            <div class="hm-legend-cell" style="background:var(--surface3)"></div>
+            <div class="hm-legend-cell" style="background:var(--accent-dim)"></div>
+            <div class="hm-legend-cell" style="background:var(--accent-glow)"></div>
+            <div class="hm-legend-cell" style="background:var(--accent)"></div>
+            More
+          </div>
+        </div>
+
+        <div class="an-charts-row">
+          <div class="an-chart-box">
+            <div class="an-chart-title">Tasks Created / Week</div>
+            <div class="an-bar-wrap">${barHTML}</div>
+          </div>
+          <div class="an-chart-box">
+            <div class="an-chart-title">Capture Inbox by Category</div>
+            ${hbarHTML}
+          </div>
+        </div>`;
+    }
+
     function switchDashView(v) {
       saveSession({ dashView: v });
       document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
       const tab = document.getElementById('dash-tab-' + v);
       if (tab) tab.classList.add('active');
 
-      const todayView   = document.getElementById('today-view');
-      const execView    = document.getElementById('exec-view');
-      const statusSection = document.getElementById('status-section');
+      const todayView      = document.getElementById('today-view');
+      const execView       = document.getElementById('exec-view');
+      const analyticsView  = document.getElementById('analytics-view');
+      const statusSection  = document.getElementById('status-section');
+      const todayOnly      = document.getElementById('today-only-content');
 
-      todayView.style.display   = v === 'today'    ? '' : 'none';
-      execView.style.display    = v === 'exec'     ? '' : 'none';
+      todayView.style.display     = v === 'today'     ? '' : 'none';
+      execView.style.display      = v === 'exec'       ? '' : 'none';
+      analyticsView.style.display = v === 'analytics'  ? '' : 'none';
       statusSection.style.display = 'none';
+      if (todayOnly) todayOnly.style.display = v === 'today' ? '' : 'none';
 
-      if (v === 'today')    buildTodayView();
-      else if (v === 'exec') buildExecView();
+      if (v === 'today')         buildTodayView();
+      else if (v === 'exec')     buildExecView();
+      else if (v === 'analytics') buildAnalyticsView();
       else buildStatusWidgets(); // overview — will set statusSection display itself
     }
 
