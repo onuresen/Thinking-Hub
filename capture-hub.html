@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capture Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--surface);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Quick Capture Bar ───────────────────────────────────────────── */
+    .qc-bar {
+      padding: 0.9rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--border1);
+      background: var(--surface);
+    }
+    .qc-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface2);
+      border: 1px solid var(--border1);
+      border-radius: var(--r);
+      padding: 0.55rem 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .qc-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .qc-icon {
+      font-size: 1.1rem;
+      color: var(--text3);
+      line-height: 1;
+      flex-shrink: 0;
+      font-weight: 300;
+    }
+    #qc-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+    }
+    #qc-input::placeholder { color: var(--text3); }
+    .qc-hint {
+      font-size: 0.72rem;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Tabs ────────────────────────────────────────────────────────── */
+    .cap-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border1);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .cap-tab {
+      padding: 0.7rem 1.5rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-family: var(--font-body);
+      transition: color 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .cap-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .cap-tab:hover:not(.active) { color: var(--text); }
+
+    .inbox-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      background: var(--accent);
+      color: var(--surface);
+      font-size: 0.68rem;
+      font-weight: 700;
+      border-radius: 9px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .inbox-badge:empty { display: none; }
+
+    /* ── Panes ───────────────────────────────────────────────────────── */
+    .cap-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+    .cap-pane.hidden { display: none; }
+
+    /* ── Dump Phases ─────────────────────────────────────────────────── */
+    .dump-phase {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 1.25rem 1.5rem 1rem;
+      gap: 1rem;
+      overflow: hidden;
+    }
+    .dump-phase.hidden { display: none; }
+
+    .dump-hint {
+      font-size: 0.78rem;
+      color: var(--text3);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* ── Writing area ────────────────────────────────────────────────── */
+    .dump-area-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+    .dump-gutter {
+      position: absolute;
+      left: 0;
+      top: 0.15rem;
+      width: 1.6rem;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .gutter-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      /* vertically center within line-height: 1.75rem */
+      margin-top: calc((1.75rem - 7px) / 2);
+      margin-bottom: calc((1.75rem - 7px) / 2);
+      margin-left: auto;
+      margin-right: auto;
+      transition: background-color 0.25s, transform 0.15s;
+    }
+    .gutter-dot.fresh { transform: scale(1.4); }
+
+    #dump-area {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border1);
+      resize: none;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.75rem;
+      padding: 0 0.5rem 0.5rem 1.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      overflow-y: auto;
+    }
+    #dump-area:focus { border-bottom-color: var(--accent); }
+    #dump-area::placeholder { color: var(--text3); font-style: italic; }
+
+    /* ── Dump Footer ─────────────────────────────────────────────────── */
+    .dump-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+    .dump-stats {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .ds-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--r-chip);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: var(--surface2);
+      border: 1px solid var(--border1);
+      white-space: nowrap;
+    }
+    .ds-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dump-empty-hint {
+      font-size: 0.78rem;
+      color: var(--text3);
+      font-style: italic;
+    }
+
+    /* ── Parse Button ────────────────────────────────────────────────── */
+    #btn-parse {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #btn-parse:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+
+    /* ── Review Phase ────────────────────────────────────────────────── */
+    .review-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .review-count {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .review-sub { font-size: 0.78rem; color: var(--text3); }
+
+    .parsed-cards {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      min-height: 0;
+    }
+
+    /* ── Parsed Card ─────────────────────────────────────────────────── */
+    .pc-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      background: var(--surface2);
+      border-radius: var(--r-sm);
+      border-left: 3px solid var(--_bc, var(--border2));
+      animation: pc-enter 0.22s ease backwards;
+    }
+    @keyframes pc-enter {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .pc-text {
+      flex: 1;
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .pc-chip-wrap { position: relative; flex-shrink: 0; }
+    .pc-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: var(--r-chip);
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .pc-chip:hover { opacity: 0.75; }
+    .pc-chip-arrow { font-size: 0.6rem; opacity: 0.7; }
+    .pc-remove {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+    .pc-remove:hover { color: var(--accent-nope); }
+
+    /* Category dropdown */
+    .pc-cat-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--surface3);
+      border: 1px solid var(--border1);
+      border-radius: var(--r-sm);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      z-index: var(--z-popover);
+      min-width: 150px;
+      overflow: hidden;
+    }
+    .pc-cat-opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text);
+      transition: background 0.1s;
+    }
+    .pc-cat-opt:hover { background: var(--surface2); }
+    .pc-cat-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .pc-cat-dest { font-size: 0.7rem; color: var(--text3); margin-left: auto; }
+
+    /* Review Footer */
+    .review-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border1);
+      margin-top: 0.25rem;
+    }
+
+    /* ── Inbox ───────────────────────────────────────────────────────── */
+    .inbox-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.85rem 1.5rem 0.6rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .if-chip {
+      padding: 0.28rem 0.75rem;
+      border-radius: var(--r-chip);
+      border: 1px solid var(--border1);
+      background: none;
+      color: var(--text2);
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .if-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .if-chip:hover:not(.active) { color: var(--text); border-color: var(--border2); }
+    .if-count {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      opacity: 0.7;
+    }
+
+    .inbox-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    /* ── Inbox Card ──────────────────────────────────────────────────── */
+    .ic-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      padding: 0.65rem 0.85rem;
+      background: var(--surface2);
+      border-radius: var(--r-sm);
+      border-left: 3px solid var(--_bc, var(--border2));
+      transition: background 0.15s;
+      position: relative;
+    }
+    .ic-card::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--_bc, var(--border2));
+      border-radius: var(--r-sm) 0 0 var(--r-sm);
+      transform: scaleY(0);
+      transition: transform 0.2s;
+    }
+    .ic-card:hover { background: var(--surface3); }
+    .ic-content { flex: 1; min-width: 0; }
+    .ic-text {
+      font-size: 0.88rem;
+      color: var(--text);
+      word-break: break-word;
+      line-height: 1.4;
+    }
+    .ic-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 3px;
+    }
+    .ic-cat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ic-cat-label { font-size: 0.71rem; color: var(--text3); }
+    .ic-time { font-size: 0.71rem; color: var(--text3); font-family: var(--font-mono); }
+    .ic-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .ic-card:hover .ic-actions { opacity: 1; }
+    .ic-route-btn {
+      padding: 0.28rem 0.65rem;
+      background: var(--surface3);
+      border: 1px solid var(--border1);
+      border-radius: var(--r-sm);
+      color: var(--text2);
+      font-size: 0.75rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .ic-route-btn:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .ic-del-btn {
+      padding: 0.28rem 0.45rem;
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: var(--r-sm);
+      transition: color 0.15s;
+      line-height: 1;
+    }
+    .ic-del-btn:hover { color: var(--accent-nope); }
+
+    /* ── Empty States ────────────────────────────────────────────────── */
+    .cap-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      color: var(--text3);
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+    .cap-empty-icon { font-size: 2.5rem; opacity: 0.25; }
+    .cap-empty h3 { font-size: 1rem; font-weight: 500; color: var(--text2); }
+    .cap-empty p { font-size: 0.85rem; max-width: 260px; line-height: 1.6; }
+
+    /* Inbox zero SVG */
+    .inbox-zero-svg { opacity: 0.2; }
+
+    /* ── Send animation ──────────────────────────────────────────────── */
+    .pc-card.sending {
+      animation: pc-fly 0.35s ease forwards;
+    }
+    @keyframes pc-fly {
+      to { opacity: 0; transform: translateX(30px) scale(0.95); }
+    }
+
+    /* Badge pulse */
+    @keyframes badge-pulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.35); }
+      100% { transform: scale(1); }
+    }
+    .badge-pulse { animation: badge-pulse 0.4s ease; }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────── */
+    .parsed-cards::-webkit-scrollbar,
+    .inbox-list::-webkit-scrollbar,
+    #dump-area::-webkit-scrollbar { width: 4px; }
+    .parsed-cards::-webkit-scrollbar-thumb,
+    .inbox-list::-webkit-scrollbar-thumb,
+    #dump-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Quick Capture Bar -->
+<div class="qc-bar">
+  <div class="qc-wrap">
+    <span class="qc-icon">+</span>
+    <input id="qc-input" type="text"
+      placeholder="Quick capture — press Enter to drop into inbox"
+      autocomplete="off" spellcheck="false">
+    <span class="qc-hint">↵ Enter</span>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="cap-tabs">
+  <button class="cap-tab active" data-tab="dump" onclick="switchTab('dump')">Brain Dump</button>
+  <button class="cap-tab" data-tab="inbox" onclick="switchTab('inbox')">
+    Inbox <span class="inbox-badge" id="inbox-badge"></span>
+  </button>
+</div>
+
+<!-- Dump Pane -->
+<div class="cap-pane" id="pane-dump">
+
+  <!-- Write Phase -->
+  <div class="dump-phase" id="phase-write">
+    <div class="dump-hint">One thought per line</div>
+    <div class="dump-area-wrap">
+      <div class="dump-gutter" id="dump-gutter"></div>
+      <textarea id="dump-area" spellcheck="true"
+        placeholder="Fix the login bug&#10;Why is the API so slow?&#10;What if we cached the results?&#10;Risk: vendor contract expires in June&#10;Decided to drop the old auth library&#10;Read 'Thinking Fast and Slow'"></textarea>
+    </div>
+    <div class="dump-footer">
+      <div class="dump-stats" id="dump-stats">
+        <span class="dump-empty-hint">Start typing above ↑</span>
+      </div>
+      <button class="btn btn-primary" id="btn-parse" onclick="parseDump()" disabled>
+        Parse &amp; Route →
+      </button>
+    </div>
+  </div>
+
+  <!-- Review Phase -->
+  <div class="dump-phase hidden" id="phase-review">
+    <div class="review-header">
+      <div>
+        <div class="review-count" id="review-count"></div>
+        <div class="review-sub">Review categories, then send</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="backToWrite()">← Edit</button>
+    </div>
+    <div class="parsed-cards" id="parsed-cards"></div>
+    <div class="review-footer">
+      <button class="btn btn-ghost" onclick="sendAllToInbox()">→ All to Inbox</button>
+      <button class="btn btn-primary" onclick="sendAll()">Send All</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Inbox Pane -->
+<div class="cap-pane hidden" id="pane-inbox">
+  <div class="inbox-toolbar" id="inbox-toolbar"></div>
+  <div class="inbox-list" id="inbox-list"></div>
+</div>
+
+<script src="hub-storage.js"></script>
+<script src="hub-utils.js"></script>
+<script src="hub-links.js"></script>
+<script src="hub-toast.js"></script>
+<script src="hub-bootstrap.js"></script>
+<script>
+HubBootstrap.start('capture-hub');
+
+// ── Category definitions ──────────────────────────────────────────────────
+
+const CATS = {
+  task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Project Hub',   routable: true  },
+  question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'KMQT',          routable: true  },
+  idea:     { label: 'Idea',     icon: '✦', dot: 'var(--border-yellow)', chipBg: 'var(--node-yellow)', chipColor: 'var(--border-yellow)', dest: 'Inbox',         routable: false },
+  decision: { label: 'Decision', icon: '⚖', dot: 'var(--border-green)',  chipBg: 'var(--node-green)',  chipColor: 'var(--border-green)',  dest: 'Decision Hub',  routable: true  },
+  risk:     { label: 'Risk',     icon: '⚠', dot: 'var(--border-red)',    chipBg: 'var(--node-red)',    chipColor: 'var(--border-red)',    dest: 'Risk Register', routable: true  },
+  learning: { label: 'Learning', icon: '◎', dot: 'var(--accent)',        chipBg: 'var(--accent-dim)',  chipColor: 'var(--accent)',        dest: 'Learning Hub',  routable: true  },
+  event:    { label: 'Event',    icon: '◷', dot: 'var(--accent-super)',  chipBg: 'var(--surface3)',    chipColor: 'var(--accent-super)',  dest: 'Inbox',         routable: false },
+  note:     { label: 'Note',     icon: '·', dot: 'var(--border2)',       chipBg: 'var(--surface2)',    chipColor: 'var(--text3)',         dest: 'Inbox',         routable: false },
+};
+
+// ── Classifier ───────────────────────────────────────────────────────────
+
+function classify(line) {
+  const t = line.trim();
+  if (!t) return null;
+  const l = t.toLowerCase();
+
+  // Decision — explicit markers first
+  if (/^(decided|going with|choosing|we('ll| will) use|picked|settled on|agreed on)/i.test(t)) return 'decision';
+  if (/ vs\.? /i.test(t) && t.length < 120) return 'decision';
+
+  // Risk
+  if (/^(risk:|concern:|watch out|danger:|caveat:)/i.test(t)) return 'risk';
+  if (/\b(might fail|could break|at risk|risk of|worried about)\b/i.test(l)) return 'risk';
+
+  // Question
+  if (t.endsWith('?')) return 'question';
+  if (/^(how|why|what if|what'?s|should we|should i|is there|are we|can we|will|when should|where should|who should)/i.test(t)) return 'question';
+
+  // Event
+  if (/\b(meeting with|call with|lunch with|sync with|standup|1:1|presentation|demo|workshop)\b/i.test(l)) return 'event';
+  if (/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|tomorrow|at \d{1,2}(:\d{2})?\s*(am|pm))\b/i.test(l)) return 'event';
+
+  // Learning
+  if (/^(read|book:|article:|course:|watch|study|learn|listen to|podcast:)/i.test(t)) return 'learning';
+
+  // Idea
+  if (/^(what if|maybe|idea:|imagine|could we|wouldn't it be|what about|i wonder|how about)/i.test(l)) return 'idea';
+
+  // Task — action verbs and explicit markers
+  if (/^[-*•]\s/.test(t)) return 'task';
+  if (/^\[[ x]\]/i.test(t)) return 'task';
+  if (/^(fix|write|review|send|call|check|update|create|build|make|add|remove|talk to|schedule|email|finish|complete|deploy|test|refactor|clean|organize|prepare|submit|follow.?up|ping|contact|buy|order|research|investigate|draft|design|implement|set up|configure|document|plan|move|delete|archive|migrate|rename|open|close|push|pull|merge|release|announce|ask|tell|remind|book|cancel|confirm|approve|reject|invite|record|publish|upload|download|export|import|convert|process|handle|manage|run|execute|launch|start|stop|restart|enable|disable|verify|validate|test|debug|profile|optimize|monitor|track|measure|report|review|audit|assess|evaluate|compare|analyze|summarize|present|share|discuss|explain|demo|show|help|support|resolve|escalate|escalate|escalate)\b/i.test(t)) return 'task';
+  if (/\b(need to|have to|must|todo:|TODO)\b/.test(t) && !t.endsWith('?')) return 'task';
+
+  return 'note';
+}
+
+// ── Gutter & stats ───────────────────────────────────────────────────────
+
+const dumpArea   = document.getElementById('dump-area');
+const dumpGutter = document.getElementById('dump-gutter');
+const dumpStats  = document.getElementById('dump-stats');
+const btnParse   = document.getElementById('btn-parse');
+
+let _prevLines = [];
+
+function updateGutter() {
+  const raw = dumpArea.value;
+  const lines = raw.split('\n');
+  const cats  = lines.map(l => l.trim() ? classify(l) : null);
+
+  // only rebuild DOM if lines changed
+  const sig = cats.join(',');
+  if (sig === _prevLines.join(',')) return;
+
+  const isNew = cats.length > _prevLines.length;
+  _prevLines = cats;
+
+  dumpGutter.innerHTML = '';
+  cats.forEach((cat, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'gutter-dot' + (isNew && i === cats.length - 1 ? ' fresh' : '');
+    dot.style.background = cat ? CATS[cat].dot : 'transparent';
+    dumpGutter.appendChild(dot);
+    if (dot.classList.contains('fresh')) {
+      setTimeout(() => dot.classList.remove('fresh'), 200);
+    }
+  });
+
+  updateStats(cats.filter(Boolean));
+  btnParse.disabled = !cats.some(Boolean);
+}
+
+function updateStats(validCats) {
+  if (validCats.length === 0) {
+    dumpStats.innerHTML = '<span class="dump-empty-hint">Start typing above ↑</span>';
+    return;
+  }
+  // Count per category
+  const counts = {};
+  validCats.forEach(c => { counts[c] = (counts[c] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  dumpStats.innerHTML = sorted.map(([cat, n]) => {
+    const c = CATS[cat];
+    return `<span class="ds-pill">
+      <span class="ds-dot" style="background:${c.dot}"></span>
+      ${n} ${c.label}${n > 1 ? 's' : ''}
+    </span>`;
+  }).join('');
+}
+
+dumpArea.addEventListener('input', updateGutter);
+
+// ── Parse flow ───────────────────────────────────────────────────────────
+
+let _parsedCards = [];
+let _openMenu    = null;
+
+function parseDump() {
+  const lines = dumpArea.value.split('\n').filter(l => l.trim());
+  if (!lines.length) return;
+
+  _parsedCards = lines.map((text, i) => ({
+    id:   'pc-' + Date.now() + '-' + i,
+    text: text.trim(),
+    cat:  classify(text) || 'note',
+  }));
+
+  document.getElementById('phase-write').classList.add('hidden');
+  document.getElementById('phase-review').classList.remove('hidden');
+  renderReview();
+}
+
+function backToWrite() {
+  document.getElementById('phase-review').classList.add('hidden');
+  document.getElementById('phase-write').classList.remove('hidden');
+}
+
+function renderReview() {
+  const countEl = document.getElementById('review-count');
+  countEl.textContent = _parsedCards.length + ' item' + (_parsedCards.length !== 1 ? 's' : '') + ' captured';
+
+  const container = document.getElementById('parsed-cards');
+  container.innerHTML = '';
+
+  _parsedCards.forEach((card, idx) => {
+    const el = buildParsedCard(card, idx);
+    container.appendChild(el);
+  });
+}
+
+function buildParsedCard(card, idx) {
+  const cat = CATS[card.cat];
+  const el  = document.createElement('div');
+  el.className = 'pc-card';
+  el.id = 'pc-' + card.id;
+  el.style.cssText = `--_bc:${cat.dot}; animation-delay:${idx * 40}ms`;
+
+  el.innerHTML = `
+    <span class="pc-text">${HubUtils.esc(card.text)}</span>
+    <div class="pc-chip-wrap">
+      <button class="pc-chip" style="background:${cat.chipBg};color:${cat.chipColor};border-color:${cat.dot}"
+        onclick="toggleCatMenu('${card.id}', this)">
+        ${cat.icon} ${cat.label}
+        <span class="pc-chip-arrow">▾</span>
+      </button>
+    </div>
+    <button class="pc-remove" title="Remove" onclick="removeCard('${card.id}')">×</button>`;
+
+  return el;
+}
+
+function toggleCatMenu(cardId, chipEl) {
+  // close any open menu
+  if (_openMenu) { _openMenu.remove(); _openMenu = null; if (_openMenu === chipEl._menu) return; }
+
+  const card = _parsedCards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const menu = document.createElement('div');
+  menu.className = 'pc-cat-menu';
+  menu.innerHTML = Object.entries(CATS).map(([key, c]) => `
+    <div class="pc-cat-opt" onclick="setCardCat('${cardId}','${key}',this.closest('.pc-cat-menu'))">
+      <span class="pc-cat-dot" style="background:${c.dot}"></span>
+      ${c.icon} ${c.label}
+      <span class="pc-cat-dest">${c.dest}</span>
+    </div>`).join('');
+
+  chipEl.closest('.pc-chip-wrap').appendChild(menu);
+  _openMenu = menu;
+
+  // close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closer(e) {
+      if (!menu.contains(e.target)) { menu.remove(); _openMenu = null; document.removeEventListener('click', closer); }
+    });
+  }, 0);
+}
+
+function setCardCat(cardId, newCat, menu) {
+  if (menu) menu.remove();
+  _openMenu = null;
+  const card = _parsedCards.find(c => c.id === cardId);
+  if (!card) return;
+  card.cat = newCat;
+  // Rebuild just this card's element
+  const el = document.getElementById('pc-' + cardId);
+  if (el) {
+    const fresh = buildParsedCard(card, 0);
+    fresh.style.animationDuration = '0s'; // no re-animate on re-categorize
+    el.replaceWith(fresh);
+  }
+}
+
+function removeCard(cardId) {
+  _parsedCards = _parsedCards.filter(c => c.id !== cardId);
+  document.getElementById('pc-' + cardId)?.remove();
+  if (_parsedCards.length === 0) backToWrite();
+  else document.getElementById('review-count').textContent =
+    _parsedCards.length + ' item' + (_parsedCards.length !== 1 ? 's' : '') + ' captured';
+}
+
+// ── Routing ──────────────────────────────────────────────────────────────
+
+function routeCard(card) {
+  const cat = card.cat;
+  const text = card.text;
+  const ts = new Date().toISOString();
+
+  if (cat === 'task')     return routeTask(text, ts);
+  if (cat === 'question') return routeQuestion(text, ts);
+  if (cat === 'decision') return routeDecision(text, ts);
+  if (cat === 'risk')     return routeRisk(text, ts);
+  if (cat === 'learning') return routeLearning(text, ts);
+  // idea, event, note → inbox
+  return addToInbox(text, cat, ts);
+}
+
+function routeTask(text, ts) {
+  try {
+    const raw = HubStorage.get('project-hub-v1') || { projects: [], members: [] };
+    if (!Array.isArray(raw.projects)) raw.projects = [];
+    let proj = raw.projects.find(p => p._captureInbox);
+    if (!proj) {
+      proj = {
+        id: 'proj-capture-' + Date.now(),
+        name: '📥 Capture',
+        status: 'active',
+        color: 'blue',
+        tasks: [],
+        members: [],
+        createdAt: ts,
+        _captureInbox: true,
+      };
+      raw.projects.push(proj);
+    }
+    proj.tasks.push({
+      id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      title: text,
+      status: 'open',
+      priority: 'med',
+      createdAt: ts,
+    });
+    HubStorage.set('project-hub-v1', raw);
+    return 'Project Hub';
+  } catch { return addToInbox(text, 'task', ts) && 'Inbox'; }
+}
+
+function routeQuestion(text, ts) {
+  try {
+    const raw = HubStorage.get('kmqt_current_v2') || { columns: { K: [], M: [], Q: [], T: [] }, labels: {} };
+    if (!raw.columns) raw.columns = { K: [], M: [], Q: [], T: [] };
+    if (!Array.isArray(raw.columns.Q)) raw.columns.Q = [];
+    raw.columns.Q.push({ id: 'cap-' + Date.now(), text, tags: [], createdAt: ts });
+    HubStorage.set('kmqt_current_v2', raw);
+    return 'KMQT';
+  } catch { return addToInbox(text, 'question', ts) && 'Inbox'; }
+}
+
+function routeDecision(text, ts) {
+  try {
+    const raw = HubStorage.get('decision-hub-v1');
+    const arr = Array.isArray(raw) ? raw : [];
+    arr.push({
+      id: 'dh-' + Date.now(),
+      title: text,
+      summary: '',
+      status: 'pending',
+      type: 'general',
+      tags: [],
+      createdAt: ts,
+    });
+    HubStorage.set('decision-hub-v1', arr);
+    return 'Decision Hub';
+  } catch { return addToInbox(text, 'decision', ts) && 'Inbox'; }
+}
+
+function routeRisk(text, ts) {
+  try {
+    const raw = HubStorage.get('risk-hub-v1') || { risks: [] };
+    if (!Array.isArray(raw.risks)) raw.risks = [];
+    raw.risks.push({
+      id: 'risk-' + Date.now(),
+      title: text,
+      description: '',
+      probability: 'medium',
+      impact: 'medium',
+      status: 'identified',
+      createdAt: ts,
+    });
+    HubStorage.set('risk-hub-v1', raw);
+    return 'Risk Register';
+  } catch { return addToInbox(text, 'risk', ts) && 'Inbox'; }
+}
+
+function routeLearning(text, ts) {
+  try {
+    const raw = HubStorage.get('learning-hub-v1') || { items: [] };
+    if (!Array.isArray(raw.items)) raw.items = [];
+    raw.items.push({
+      id: 'lh-' + Date.now(),
+      title: text,
+      type: 'article',
+      status: 'want',
+      createdAt: ts,
+    });
+    HubStorage.set('learning-hub-v1', raw);
+    return 'Learning Hub';
+  } catch { return addToInbox(text, 'learning', ts) && 'Inbox'; }
+}
+
+function addToInbox(text, cat, ts) {
+  const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
+  if (!Array.isArray(raw.inbox)) raw.inbox = [];
+  raw.inbox.unshift({ id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), text, cat, capturedAt: ts });
+  HubStorage.set('capture-hub-v1', raw);
+  return true;
+}
+
+// ── Send All ─────────────────────────────────────────────────────────────
+
+function sendAll() {
+  if (!_parsedCards.length) return;
+  const summary = {};
+  const cards   = [..._parsedCards];
+
+  cards.forEach((card, i) => {
+    const el = document.getElementById('pc-' + card.id);
+    if (el) { el.style.animationDelay = (i * 30) + 'ms'; el.classList.add('sending'); }
+    const dest = routeCard(card);
+    summary[dest] = (summary[dest] || 0) + 1;
+  });
+
+  setTimeout(() => {
+    _parsedCards = [];
+    dumpArea.value = '';
+    _prevLines = [];
+    dumpGutter.innerHTML = '';
+    dumpStats.innerHTML = '<span class="dump-empty-hint">Start typing above ↑</span>';
+    btnParse.disabled = true;
+    document.getElementById('phase-review').classList.add('hidden');
+    document.getElementById('phase-write').classList.remove('hidden');
+
+    const msg = Object.entries(summary)
+      .map(([dest, n]) => `${n} → ${dest}`)
+      .join(', ');
+    if (window.showToast) showToast('Sent: ' + msg, 'success');
+    updateInboxBadge();
+    if (_activeTab === 'inbox') renderInbox();
+  }, cards.length * 30 + 300);
+}
+
+function sendAllToInbox() {
+  const ts = new Date().toISOString();
+  _parsedCards.forEach(card => addToInbox(card.text, card.cat, ts));
+  _parsedCards = [];
+  dumpArea.value = '';
+  _prevLines = [];
+  dumpGutter.innerHTML = '';
+  dumpStats.innerHTML = '<span class="dump-empty-hint">Start typing above ↑</span>';
+  btnParse.disabled = true;
+  document.getElementById('phase-review').classList.add('hidden');
+  document.getElementById('phase-write').classList.remove('hidden');
+  updateInboxBadge();
+  if (window.showToast) showToast('All items saved to Inbox', 'info');
+}
+
+// ── Quick Capture ─────────────────────────────────────────────────────────
+
+document.getElementById('qc-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const text = e.target.value.trim();
+  if (!text) return;
+  e.preventDefault();
+  const cat = classify(text) || 'note';
+  addToInbox(text, cat, new Date().toISOString());
+  e.target.value = '';
+  updateInboxBadge();
+  if (_activeTab === 'inbox') renderInbox();
+  if (window.showToast) showToast(`"${text.slice(0, 40)}" → Inbox`, 'success');
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+
+let _activeTab    = 'dump';
+let _inboxFilter  = 'all';
+
+function switchTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.cap-tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  document.querySelectorAll('.cap-pane').forEach(el => {
+    el.classList.toggle('hidden', el.id !== 'pane-' + tab);
+  });
+  if (tab === 'inbox') renderInbox();
+}
+
+// ── Inbox ─────────────────────────────────────────────────────────────────
+
+function updateInboxBadge() {
+  const raw   = HubStorage.get('capture-hub-v1') || { inbox: [] };
+  const count = (raw.inbox || []).length;
+  const badge = document.getElementById('inbox-badge');
+  badge.textContent = count > 0 ? count : '';
+  if (count > 0) {
+    badge.classList.remove('badge-pulse');
+    void badge.offsetWidth;
+    badge.classList.add('badge-pulse');
+  }
+}
+
+function renderInboxToolbar(cats) {
+  const toolbar = document.getElementById('inbox-toolbar');
+  const all     = [{ key: 'all', label: 'All', n: cats.total }]
+    .concat(Object.entries(cats.byCat)
+      .filter(([, n]) => n > 0)
+      .map(([cat, n]) => ({ key: cat, label: CATS[cat]?.label || cat, n, dot: CATS[cat]?.dot })));
+
+  toolbar.innerHTML = all.map(({ key, label, n, dot }) => `
+    <button class="if-chip ${_inboxFilter === key ? 'active' : ''}"
+      onclick="setInboxFilter('${key}')">
+      ${dot ? `<span style="width:6px;height:6px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0"></span>` : ''}
+      ${label}
+      <span class="if-count">${n}</span>
+    </button>`).join('');
+}
+
+function setInboxFilter(cat) {
+  _inboxFilter = cat;
+  renderInbox();
+}
+
+function renderInbox() {
+  const raw   = HubStorage.get('capture-hub-v1') || { inbox: [] };
+  const items = raw.inbox || [];
+
+  // build category counts
+  const byCat = {};
+  items.forEach(it => { byCat[it.cat] = (byCat[it.cat] || 0) + 1; });
+  renderInboxToolbar({ total: items.length, byCat });
+
+  const filtered = _inboxFilter === 'all'
+    ? items
+    : items.filter(it => it.cat === _inboxFilter);
+
+  const list = document.getElementById('inbox-list');
+  list.innerHTML = '';
+
+  if (filtered.length === 0) {
+    list.innerHTML = items.length === 0
+      ? inboxZeroHTML()
+      : `<div class="cap-empty"><div class="cap-empty-icon">◎</div><p>No ${CATS[_inboxFilter]?.label ?? ''} items in inbox.</p></div>`;
+    return;
+  }
+
+  filtered.forEach(item => {
+    const cat  = CATS[item.cat] || CATS.note;
+    const time = relativeTime(item.capturedAt);
+    const card = document.createElement('div');
+    card.className = 'ic-card';
+    card.style.cssText = `--_bc:${cat.dot}`;
+    card.innerHTML = `
+      <div class="ic-content">
+        <div class="ic-text">${HubUtils.esc(item.text)}</div>
+        <div class="ic-meta-row">
+          <span class="ic-cat-dot" style="background:${cat.dot}"></span>
+          <span class="ic-cat-label">${cat.label}</span>
+          <span class="ic-time">${time}</span>
+        </div>
+      </div>
+      <div class="ic-actions">
+        ${cat.routable ? `<button class="ic-route-btn" onclick="routeFromInbox('${item.id}')">→ ${cat.dest}</button>` : ''}
+        <button class="ic-del-btn" title="Delete" onclick="deleteFromInbox('${item.id}')">×</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function routeFromInbox(itemId) {
+  const raw   = HubStorage.get('capture-hub-v1') || { inbox: [] };
+  const idx   = (raw.inbox || []).findIndex(it => it.id === itemId);
+  if (idx === -1) return;
+  const item  = raw.inbox[idx];
+  raw.inbox.splice(idx, 1);
+  HubStorage.set('capture-hub-v1', raw);
+
+  const dest = routeCard({ text: item.text, cat: item.cat });
+  if (window.showToast) showToast(`Sent to ${dest}`, 'success');
+  updateInboxBadge();
+  renderInbox();
+}
+
+function deleteFromInbox(itemId) {
+  const raw  = HubStorage.get('capture-hub-v1') || { inbox: [] };
+  raw.inbox  = (raw.inbox || []).filter(it => it.id !== itemId);
+  HubStorage.set('capture-hub-v1', raw);
+  updateInboxBadge();
+  renderInbox();
+}
+
+function inboxZeroHTML() {
+  return `<div class="cap-empty">
+    <svg class="inbox-zero-svg" width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="36" cy="36" r="28" stroke="currentColor" stroke-width="2"/>
+      <path d="M24 36l8 8 16-16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="36" y1="8" x2="36" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <line x1="36" y1="70" x2="36" y2="64" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <line x1="8" y1="36" x2="2" y2="36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <line x1="70" y1="36" x2="64" y2="36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <line x1="15.5" y1="15.5" x2="11" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+      <line x1="56.5" y1="56.5" x2="61" y2="61" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+      <line x1="56.5" y1="15.5" x2="61" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+      <line x1="15.5" y1="56.5" x2="11" y2="61" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+    </svg>
+    <h3>Inbox zero</h3>
+    <p>All clear. Use Brain Dump or quick capture above to add items.</p>
+  </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  const d = Date.now() - new Date(iso).getTime();
+  if (d < 60000)   return 'just now';
+  if (d < 3600000) return Math.floor(d / 60000) + 'm ago';
+  if (d < 86400000) return Math.floor(d / 3600000) + 'h ago';
+  return Math.floor(d / 86400000) + 'd ago';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+
+updateInboxBadge();
+</script>
+</body>
+</html>

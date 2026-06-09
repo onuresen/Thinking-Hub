@@ -2024,6 +2024,7 @@
 
     const APPS = [
       // ── Daily Work ────────────────────────────────────────────────────
+      { id: 'capture-hub', label: 'Capture Hub', group: 'Daily Work', wg: 'Daily Work', icon: '⊞', file: 'capture-hub.html', desc: 'Brain dump everything at once — one line per thought, auto-sorted to the right tool' },
       { id: 'project-hub', label: 'Project Hub', group: 'Daily Work', wg: 'Daily Work', icon: '◈', file: 'project-hub.html', desc: 'Create projects, track tasks and milestones, assign team members — start here' },
       { id: 'schedule', label: 'Schedule', group: 'Daily Work', wg: 'Daily Work', icon: '▦', file: 'schedule.html', desc: 'See all your tasks and milestones on a timeline or calendar — syncs with Project Hub' },
       { id: 'meetings-hub', label: 'Meeting Hub', group: 'Daily Work', wg: 'Daily Work', icon: '▣', file: 'meetings-hub.html', desc: 'Run structured meetings — capture agenda, decisions and action items in one place' },
@@ -2053,9 +2054,9 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
-      bim: { label: 'Project', icon: '⬡', tools: ['project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
-      dev: { label: 'Core', icon: '⌥', tools: ['project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
+      bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
+      dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
 
     // ── Session state ─────────────────────────────────────────────────────────────
