@@ -1336,7 +1336,29 @@
     }
 
     #ai-result-area.visible {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ai-turn { display: flex; flex-direction: column; gap: 4px; }
+    .ai-turn-q {
+      font-size: 11px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      padding: 4px 8px;
+      background: var(--surface2);
+      border-radius: var(--r-sm) var(--r-sm) 0 0;
+      border-left: 2px solid var(--accent);
+      word-break: break-word;
+    }
+    .ai-turn-a {
+      background: var(--surface3);
+      border-radius: 0 var(--r-sm) var(--r-sm) var(--r-sm);
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.65;
     }
 
     /* Sample prompts */
@@ -3633,6 +3655,7 @@
     function handleImportFile(e) {
       const file = e.target.files[0];
       if (!file) return;
+      if (file.size > 52_428_800) { showToast('File too large (max 50 MB)', 'error'); return; }
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
@@ -3680,11 +3703,13 @@
 
     let _aiDrawerOpen = false;
 
+    let _aiHistoryLoaded = false;
     function toggleAiDrawer() {
       _aiDrawerOpen = !_aiDrawerOpen;
       document.getElementById('ai-drawer').classList.toggle('open', _aiDrawerOpen);
       if (_aiDrawerOpen) {
         _updateAiDrawerHint();
+        if (!_aiHistoryLoaded) { _aiHistoryLoaded = true; _loadAiHistory(); }
         setTimeout(() => document.getElementById('ai-input')?.focus(), 120);
       }
     }
@@ -3744,6 +3769,47 @@
     // Registered in DOMContentLoaded (see bottom script block) because #ai-drawer
     // is defined below this script tag in the HTML.
 
+    // ── AI conversation history ───────────────────────────────────────────────
+    const AI_HISTORY_MAX = 8;
+    let _aiTurns = []; // [{ q, aHtml }]
+
+    function _saveAiHistory() {
+      try {
+        const s = HubStorage.get('hub-settings-v1') || {};
+        s.aiHistory = _aiTurns.slice(-5).map(t => ({ q: t.q, a: t.plainText || '' }));
+        HubStorage.set('hub-settings-v1', s);
+      } catch {}
+    }
+
+    function _loadAiHistory() {
+      try {
+        const s = HubStorage.get('hub-settings-v1') || {};
+        if (!s.aiHistory || !s.aiHistory.length) return;
+        _aiTurns = s.aiHistory.map(t => ({ q: t.q, aHtml: _renderAiQueryResult(t.a, true), plainText: t.a }));
+        _renderAiConversation();
+      } catch {}
+    }
+
+    function _renderAiConversation() {
+      const ra = document.getElementById('ai-result-area');
+      const prompts = document.getElementById('ai-prompts');
+      if (!ra) return;
+      if (!_aiTurns.length) {
+        ra.className = ''; ra.innerHTML = '';
+        if (prompts) prompts.classList.remove('hidden');
+        return;
+      }
+      ra.className = 'visible';
+      ra.innerHTML = _aiTurns.map(t =>
+        `<div class="ai-turn">
+          <div class="ai-turn-q">${HubUtils.esc(t.q)}</div>
+          <div class="ai-turn-a">${t.aHtml}</div>
+        </div>`
+      ).join('') + `<div>${_aiClearBtn()}</div>`;
+      if (prompts) prompts.classList.add('hidden');
+      ra.scrollTop = ra.scrollHeight;
+    }
+
     async function aiCaptureSend() {
       const inp = document.getElementById('ai-input');
       const text = inp ? inp.value.trim() : '';
@@ -3751,43 +3817,58 @@
 
       const sendBtn = document.getElementById('ai-send-btn');
       const resultArea = document.getElementById('ai-result-area');
+      const promptsEl = document.getElementById('ai-prompts');
       sendBtn.disabled = true;
       sendBtn.textContent = '…';
       resultArea.className = 'visible';
-      resultArea.innerHTML = '<span style="color:var(--text3)">Thinking…</span>';
-      const promptsEl = document.getElementById('ai-prompts');
       if (promptsEl) promptsEl.classList.add('hidden');
+
+      // Show thinking indicator at bottom
+      const thinkEl = document.createElement('div');
+      thinkEl.className = 'ai-turn';
+      thinkEl.innerHTML = `<div class="ai-turn-q">${HubUtils.esc(text)}</div><div class="ai-turn-a" style="color:var(--text3)">Thinking…</div>`;
+      resultArea.appendChild(thinkEl);
+      resultArea.scrollTop = resultArea.scrollHeight;
 
       try {
         const intent = HubAI.detectIntent(text);
+        let aHtml, plainText;
         if (intent === 'action') {
           const result = await HubAI.act(text);
-          resultArea.innerHTML = _renderAiActions(result);
+          aHtml = _renderAiActions(result);
+          plainText = '';
         } else if (intent === 'capture') {
           const result = await HubAI.capture(text);
-          resultArea.innerHTML = _renderAiCaptureResult(result, text);
+          aHtml = _renderAiCaptureResult(result, text);
+          plainText = '';
         } else {
           const answer = await HubAI.query(text);
-          resultArea.innerHTML = _renderAiQueryResult(answer);
+          plainText = answer;
+          aHtml = _renderAiQueryResult(answer, true);
         }
         inp.value = '';
+        _aiTurns.push({ q: text, aHtml, plainText });
+        if (_aiTurns.length > AI_HISTORY_MAX) _aiTurns.shift();
+        if (plainText) _saveAiHistory();
+        _renderAiConversation();
       } catch (err) {
-        resultArea.innerHTML = `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
+        thinkEl.querySelector('.ai-turn-a').innerHTML = `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
       } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
       }
     }
 
-    function _renderAiQueryResult(text) {
+    function _renderAiQueryResult(text, inline) {
       const escaped = HubUtils.esc(text);
       const html = escaped
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/^• /gm, '· ')
         .replace(/^- /gm, '· ')
         .split('\n').join('<br>');
-      return `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>
-        ${_aiClearBtn()}`;
+      return inline
+        ? `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>`
+        : `<div style="font-size:12px;color:var(--text);line-height:1.7">${html}</div>${_aiClearBtn()}`;
     }
 
     function _aiClearBtn() {
@@ -3797,10 +3878,9 @@
     }
 
     function aiClearResult() {
-      const ra = document.getElementById('ai-result-area');
-      const prompts = document.getElementById('ai-prompts');
-      if (ra) { ra.className = ''; ra.innerHTML = ''; }
-      if (prompts) prompts.classList.remove('hidden');
+      _aiTurns = [];
+      try { const s = HubStorage.get('hub-settings-v1') || {}; delete s.aiHistory; HubStorage.set('hub-settings-v1', s); } catch {}
+      _renderAiConversation();
     }
 
     // ── Action rendering + execution ──────────────────────────────────────────
@@ -4416,6 +4496,12 @@
 
         grip.addEventListener('mousedown',   _startDrag);
         grip.addEventListener('click', e => e.stopPropagation());
+        grip.addEventListener('dblclick', e => {
+          e.stopPropagation();
+          drawer.style.right = ''; drawer.style.bottom = '';
+          drawer.style.left  = ''; drawer.style.top    = '';
+          try { localStorage.removeItem(AI_POS_KEY); } catch {}
+        });
         header.addEventListener('mousedown', _startDrag);
         document.addEventListener('mousemove', _onMove);
         document.addEventListener('mouseup',   _onUp);
