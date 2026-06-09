@@ -66,6 +66,14 @@ window.HubStorage = (() => {
     localStorage.removeItem('hub-cloud-credentials-v1');
   } catch {}
 
+  // Cross-tab sync: fire subscribers when another tab writes to localStorage
+  window.addEventListener('storage', e => {
+    if (!e.key || !_subscribers[e.key]) return;
+    let value = null;
+    try { value = e.newValue ? JSON.parse(e.newValue) : null; } catch {}
+    _notifySubscribers(e.key, value);
+  });
+
   return { get, set, subscribe };
 
 })();

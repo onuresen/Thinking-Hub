@@ -685,6 +685,23 @@
       };
       actions.appendChild(linkBtn);
 
+      // Reset size button (only shown when node has been resized)
+      if (node.w || node.h) {
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'na-btn';
+        resetBtn.innerHTML = '⊡';
+        resetBtn.title = 'Reset to default size';
+        resetBtn.onmousedown = e => {
+          e.stopPropagation();
+          delete node.w; delete node.h;
+          const el = document.querySelector(`.node[data-id="${node.id}"]`);
+          if (el) { el.style.width = ''; el.style.height = ''; }
+          renderEdges(); renderMinimap(); pulseSave();
+          rebuildActionBar(actions, node);
+        };
+        actions.appendChild(resetBtn);
+      }
+
       // Delete button
       const delBtn = document.createElement('button');
       delBtn.className = 'na-btn del';

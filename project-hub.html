@@ -1876,7 +1876,7 @@
         <div class="panel-project-name" id="panel-project-name"></div>
         <div class="panel-project-desc" id="panel-project-desc"></div>
       </div>
-      <button class="panel-close" title="View Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},'*')" style="font-size:14px">🏅</button>
+      <button class="panel-close" title="View Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},window.location.origin||'*')" style="font-size:14px">🏅</button>
       <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
     <div class="panel-tabs">
@@ -2410,7 +2410,7 @@
       html += `<div class="sidebar-team-footer">
         <span class="sidebar-team-count">${count} member${count !== 1 ? 's' : ''}</span>
         <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px"
-          onclick="parent.postMessage({type:'hub-navigate',tool:'people-hub'},'*')">Team →</button>
+          onclick="parent.postMessage({type:'hub-navigate',tool:'people-hub'},window.location.origin||'*')">Team →</button>
       </div>`;
 
       container.innerHTML = html;
@@ -3326,7 +3326,7 @@
         const nextDue = proj.tasks.filter(t => !t.done && t.due).map(t => t.due).sort()[0] || null;
         const riskCount = ((HubStorage.get('risk-hub-v1') || {}).risks || []).filter(r => r.projectId === projId).length;
         const goalCount = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []).filter(o => o.projectId === projId).length;
-        parent.postMessage({ type: 'hub-project-active', project: { id: proj.id, name: proj.name, color: proj.color, openTasks: proj.tasks.filter(t => !t.done).length, nextDue, riskCount, goalCount } }, '*');
+        parent.postMessage({ type: 'hub-project-active', project: { id: proj.id, name: proj.name, color: proj.color, openTasks: proj.tasks.filter(t => !t.done).length, nextDue, riskCount, goalCount } }, window.location.origin || '*');
       }
     }
 
@@ -3334,7 +3334,7 @@
       state.selectedProject = null;
       document.getElementById('detail-panel').classList.add('hidden');
       renderContent();
-      parent.postMessage({ type: 'hub-project-active', project: null }, '*');
+      parent.postMessage({ type: 'hub-project-active', project: null }, window.location.origin || '*');
     }
 
     function setTab(tab) {
@@ -3670,7 +3670,7 @@
       const isFirst = state.projects.length === 0;
       state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [] });
       saveState(); closeModal('modal-project'); showToast('Project created'); renderContent();
-      if (isFirst) window.parent.postMessage({ type: 'hub-first-project' }, '*');
+      if (isFirst) window.parent.postMessage({ type: 'hub-first-project' }, window.location.origin || '*');
     }
 
     function showAddTask(preProjectId, preStatus) {
