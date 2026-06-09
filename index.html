@@ -838,6 +838,39 @@
 
     .wr-empty { font-size: 0.65rem; color: #1e3050; padding: 8px 4px; font-style: italic; }
 
+    /* ── Project cards ── */
+    .wr-proj-card { padding: 8px 10px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; }
+    .wr-proj-head { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .wr-proj-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .wr-proj-name { font-size: 0.7rem; color: #e8f4ff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wr-proj-pct { font-size: 0.6rem; color: #3a5a78; font-weight: 600; flex-shrink: 0; }
+    .wr-proj-bar { height: 4px; background: #1a2a3a; border-radius: 2px; overflow: hidden; }
+    .wr-proj-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+    .wr-proj-meta { font-size: 0.58rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
+
+    /* ── This Week strip ── */
+    .wr-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 9px; }
+    .wr-week-day { background: #0c1520; border-radius: 3px; padding: 6px 2px; text-align: center; border: 1px solid #1a2a3a; }
+    .wr-week-day.is-today { border-color: #3b82f6; background: #0c1a28; }
+    .wr-week-dow { font-size: 0.5rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; }
+    .wr-week-num { font-size: 0.78rem; color: #e8f4ff; font-weight: 700; margin: 2px 0; }
+    .wr-week-count { font-size: 0.55rem; color: #1e3050; }
+    .wr-week-count.has { color: #a78bfa; }
+
+    /* ── Dependency pulse ── */
+    .wr-dep-cluster { display: flex; align-items: center; gap: 10px; padding: 8px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; }
+    .wr-dep-svg { flex-shrink: 0; }
+    .wr-dep-core { animation: wr-dep-pulse 2s ease-in-out infinite; transform-origin: 30px 30px; }
+    @keyframes wr-dep-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.55; } }
+    .wr-dep-line { stroke-dasharray: 3 3; animation: wr-dep-flow 1s linear infinite; }
+    @keyframes wr-dep-flow { to { stroke-dashoffset: -12; } }
+    .wr-dep-info { flex: 1; min-width: 0; }
+    .wr-dep-title { font-size: 0.7rem; color: #e8f4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wr-dep-meta { font-size: 0.58rem; color: #3a5a78; margin-top: 2px; }
+    .wr-dep-clear { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 8px; gap: 8px; height: 100%; }
+    .wr-dep-clear-dot { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; animation: wr-pulse 2s ease-in-out infinite; }
+    .wr-dep-clear-text { font-size: 0.65rem; color: #3a5a78; }
+
     .wr-footer {
       padding: 5px 20px; background: #060a0e; border-top: 1px solid #111820;
       font-size: 0.58rem; color: #1e3050; display: flex;
@@ -4701,22 +4734,26 @@
     }
 
     function _buildWarRoom() {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
 
       // Update header
       const dateEl = document.getElementById('wr-date');
-      if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (dateEl) dateEl.textContent = now.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
       _wrTickClock();
 
-      let ph = {}, riskData = {}, decArr = [], goals = {}, focusData = {};
+      let ph = {}, riskData = {}, decArr = [], goals = {}, focusData = {}, sc = {}, session = {};
       try { ph        = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
       try { riskData  = JSON.parse(localStorage.getItem('risk-hub-v1')     || '{}'); } catch {}
       try { const d   = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
             decArr    = Array.isArray(d) ? d : []; } catch {}
       try { goals     = JSON.parse(localStorage.getItem('goals-hub-v1')    || '{}'); } catch {}
       try { focusData = JSON.parse(localStorage.getItem('focus-hub-v1')    || '{}'); } catch {}
+      try { sc        = JSON.parse(localStorage.getItem('schedule-v1')     || '{}'); } catch {}
+      try { session   = JSON.parse(localStorage.getItem('hub-session-v1')  || '{}'); } catch {}
 
-      const allTasks  = (ph.projects || []).flatMap(p => (p.tasks || []).map(t => ({ ...t, _proj: p.name || '' })));
+      const projects  = ph.projects || [];
+      const allTasks  = projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _proj: p.name || '', _projId: p.id })));
       const blocked   = allTasks.filter(t => !t.done && t.status === 'blocked');
       const dueToday  = allTasks.filter(t => !t.done && t.due === todayStr);
       const overdue   = allTasks.filter(t => !t.done && t.due && t.due < todayStr);
@@ -4725,72 +4762,13 @@
       const sessions  = focusData.sessions || [];
       const todaySess = sessions.filter(s => s.completed && (s.startedAt || '').slice(0, 10) === todayStr);
       const todayMins = todaySess.reduce((sum, s) => sum + (s.durationMin || 0), 0);
+      const hrs       = (todayMins / 60).toFixed(1);
+      const scItems   = sc.items || [];
 
-      // ── Panel 1: Blocked ────────────────────────────────────────────
-      _wrSetPanel('wr-blocked', blocked.length
-        ? blocked.slice(0, 7).map(t =>
-            `<div class="wr-item" style="--_wric:#ef4444">
-              <div class="wr-item-text">${_esc(t.title)}</div>
-              <div class="wr-item-meta">${_esc(t._proj)}</div>
-            </div>`).join('')
-        : '<div class="wr-empty">No blocked tasks ✓</div>');
-
-      // ── Panel 2: Due Today + Overdue ─────────────────────────────────
-      const dueItems = [...dueToday.map(t => ({ ...t, _od: false })), ...overdue.slice(0, 4).map(t => ({ ...t, _od: true }))];
-      _wrSetPanel('wr-due', dueItems.length
-        ? dueItems.slice(0, 8).map(t =>
-            `<div class="wr-item" style="--_wric:${t._od ? '#f59e0b' : '#3b82f6'}">
-              <div class="wr-item-text">${_esc(t.title)}</div>
-              <div class="wr-item-meta">${t._od ? 'OVERDUE · ' : ''}${_esc(t._proj)}</div>
-            </div>`).join('')
-        : '<div class="wr-empty">Clear schedule ✓</div>');
-
-      // ── Panel 3: Risks ────────────────────────────────────────────────
-      const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      const sevColor = { critical: '#ef4444', high: '#f59e0b', medium: '#eab308', low: '#3a5a78' };
-      const sortedR  = [...risks].sort((a, b) => (sevOrder[a.probability] ?? 2) - (sevOrder[b.probability] ?? 2));
-      _wrSetPanel('wr-risks', sortedR.length
-        ? sortedR.slice(0, 7).map(r => {
-            const sev = r.probability || 'medium';
-            const col = sevColor[sev] || '#3a5a78';
-            return `<div class="wr-risk-row">
-              <div class="wr-risk-dot" style="background:${col}"></div>
-              <div class="wr-risk-text">${_esc(r.title || '—')}</div>
-              <div class="wr-risk-sev" style="color:${col}">${sev.slice(0, 3).toUpperCase()}</div>
-            </div>`;
-          }).join('')
-        : '<div class="wr-empty">No active risks ✓</div>');
-
-      // ── Panel 4: Decisions ────────────────────────────────────────────
-      _wrSetPanel('wr-decisions', openDecs.length
-        ? openDecs.slice(0, 7).map(d =>
-            `<div class="wr-item" style="--_wric:#3b82f6">
-              <div class="wr-item-text">${_esc(d.title || '—')}</div>
-              <div class="wr-item-meta">${_esc(d.type || 'decision')}</div>
-            </div>`).join('')
-        : '<div class="wr-empty">No pending decisions ✓</div>');
-
-      // ── Panel 5: OKR ──────────────────────────────────────────────────
-      const activeQtrs = (goals.quarters || []).filter(q => !q.archived);
-      const latestQtr  = activeQtrs[activeQtrs.length - 1];
-      const objectives = latestQtr ? (latestQtr.objectives || []) : [];
-      _wrSetPanel('wr-okr', objectives.length
-        ? objectives.slice(0, 5).map(obj => {
-            const krs  = obj.keyResults || [];
-            const pct  = krs.length ? Math.round(krs.reduce((s, kr) => s + (parseFloat(kr.score) || 0), 0) / krs.length * 100) : 0;
-            const col  = pct >= 70 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444';
-            return `<div class="wr-okr-row">
-              <div class="wr-okr-name">${_esc(obj.title || '—')}</div>
-              <div class="wr-okr-track"><div class="wr-okr-fill" style="width:${pct}%;background:${col}"></div></div>
-              <div class="wr-okr-pct">${pct}%</div>
-            </div>`;
-          }).join('')
-        : '<div class="wr-empty">No OKRs in latest quarter</div>');
-
-      // ── Panel 6: Focus + summary stats ────────────────────────────────
-      const totalTasks = allTasks.length;
-      const doneTasks  = allTasks.filter(t => t.done || t.status === 'done').length;
-      const hrs = (todayMins / 60).toFixed(1);
+      // ── Panel 1: Today ──────────────────────────────────────────────
+      const todayItems = scItems
+        .filter(it => !it.done && (it.start || '').slice(0, 10) === todayStr)
+        .sort((a, b) => a.start.localeCompare(b.start));
       const focusBit = todayMins > 0
         ? `<div class="wr-focus-row">
             <div class="wr-focus-pdot"></div>
@@ -4800,23 +4778,157 @@
             </div>
           </div>`
         : `<div class="wr-empty" style="margin-bottom:8px">No focus sessions today</div>`;
-      _wrSetPanel('wr-focus',
-        focusBit +
-        `<div class="wr-stat-row">
+      const todayList = todayItems.length
+        ? todayItems.slice(0, 5).map(it => {
+            const time = new Date(it.start).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+            return `<div class="wr-item" style="--_wric:${it.color || '#3b82f6'}">
+              <div class="wr-item-text">${_esc(it.title)}</div>
+              <div class="wr-item-meta">${time}</div>
+            </div>`;
+          }).join('')
+        : '<div class="wr-empty">Nothing scheduled today</div>';
+      _wrSetPanel('wr-today', focusBit + todayList);
+
+      // ── Panel 2: My Active Projects ──────────────────────────────────
+      const selfId = session.selfMemberId || null;
+      const memberIds = p => (p.members || []).map(m => typeof m === 'string' ? m : m.memberId);
+      let myProjects = projects.filter(p => p.status !== 'done' && p.status !== 'archived');
+      if (selfId) {
+        const mine = myProjects.filter(p => memberIds(p).includes(selfId));
+        if (mine.length) myProjects = mine;
+      }
+      const projRows = myProjects
+        .map(p => {
+          const tasks = p.tasks || [];
+          const open  = tasks.filter(t => !t.done).length;
+          const done  = tasks.filter(t => t.done).length;
+          const pct   = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+          const myOpen = selfId ? tasks.filter(t => !t.done && t.assigneeId === selfId).length : 0;
+          return { p, open, pct, myOpen, total: tasks.length };
+        })
+        .sort((a, b) => b.open - a.open)
+        .slice(0, 4);
+      _wrSetPanel('wr-projects', projRows.length
+        ? projRows.map(({ p, open, pct, myOpen, total }) =>
+            `<div class="wr-proj-card">
+              <div class="wr-proj-head">
+                <span class="wr-proj-dot" style="background:${p.color || '#3a5a78'}"></span>
+                <span class="wr-proj-name">${_esc(p.name)}</span>
+                <span class="wr-proj-pct">${pct}%</span>
+              </div>
+              <div class="wr-proj-bar"><div class="wr-proj-fill" style="width:${pct}%;background:${p.color || '#3b82f6'}"></div></div>
+              <div class="wr-proj-meta">${open} open${total ? ` / ${total}` : ''}${selfId && myOpen ? ` · ${myOpen} mine` : ''}</div>
+            </div>`).join('')
+        : '<div class="wr-empty">No active projects</div>');
+
+      // ── Panel 3: This Week ────────────────────────────────────────────
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now); d.setDate(d.getDate() + i);
+        const dStr = d.toISOString().slice(0, 10);
+        const count = scItems.filter(it => !it.done && (it.start || '').slice(0, 10) === dStr).length;
+        days.push({ d, count, isToday: i === 0 });
+      }
+      const weekGrid = `<div class="wr-week-grid">${days.map(({ d, count, isToday }) =>
+        `<div class="wr-week-day${isToday ? ' is-today' : ''}">
+          <div class="wr-week-dow">${d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2)}</div>
+          <div class="wr-week-num">${d.getDate()}</div>
+          <div class="wr-week-count${count ? ' has' : ''}">${count || '·'}</div>
+        </div>`).join('')}</div>`;
+      const upcoming = scItems
+        .filter(it => !it.done && (it.start || '').slice(0, 10) > todayStr)
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .slice(0, 4);
+      const upcomingList = upcoming.length
+        ? upcoming.map(it => {
+            const label = new Date(it.start).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+            return `<div class="wr-item" style="--_wric:${it.color || '#a78bfa'}">
+              <div class="wr-item-text">${_esc(it.title)}</div>
+              <div class="wr-item-meta">${label}</div>
+            </div>`;
+          }).join('')
+        : '<div class="wr-empty">Nothing else this week</div>';
+      _wrSetPanel('wr-week', weekGrid + upcomingList);
+
+      // ── Panel 4: Dependency Pulse ──────────────────────────────────────
+      _wrSetPanel('wr-deps', blocked.length
+        ? blocked.slice(0, 3).map(t => {
+            const siblings = allTasks.filter(s =>
+              s._projId === t._projId && s.id !== t.id && !s.done && s.status !== 'done' && s.status !== 'blocked');
+            return `<div class="wr-dep-cluster">
+              ${_wrDepCluster(siblings.length)}
+              <div class="wr-dep-info">
+                <div class="wr-dep-title">${_esc(t.title)}</div>
+                <div class="wr-dep-meta">${_esc(t._proj)} · ${siblings.length} task${siblings.length !== 1 ? 's' : ''} waiting</div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div class="wr-dep-clear"><div class="wr-dep-clear-dot"></div><div class="wr-dep-clear-text">No blockers — flow is clear</div></div>');
+
+      // ── Panel 5: Key Metrics ─────────────────────────────────────────
+      const totalTasks = allTasks.length;
+      const openTasks  = allTasks.filter(t => !t.done).length;
+      const activeQtrs = (goals.quarters || []).filter(q => !q.archived);
+      const latestQtr  = activeQtrs[activeQtrs.length - 1];
+      const objectives = latestQtr ? (latestQtr.objectives || []) : [];
+      const okrPct = objectives.length
+        ? Math.round(objectives.reduce((sum, obj) => {
+            const krs = obj.keyResults || [];
+            const avg = krs.length ? krs.reduce((s, kr) => s + (parseFloat(kr.score) || 0), 0) / krs.length : 0;
+            return sum + avg;
+          }, 0) / objectives.length * 100)
+        : null;
+      _wrSetPanel('wr-metrics', `
+        <div class="wr-stat-row">
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${openTasks}</div><div class="wr-stat-chip-lbl">Open Tasks</div></div>
           <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${blocked.length ? '#ef4444' : '#22c55e'}">${blocked.length}</div><div class="wr-stat-chip-lbl">Blocked</div></div>
           <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${overdue.length ? '#f59e0b' : '#22c55e'}">${overdue.length}</div><div class="wr-stat-chip-lbl">Overdue</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${dueToday.length}</div><div class="wr-stat-chip-lbl">Due Today</div></div>
         </div>
         <div class="wr-stat-row">
           <div class="wr-stat-chip"><div class="wr-stat-chip-val">${openDecs.length}</div><div class="wr-stat-chip-lbl">Decisions</div></div>
           <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${risks.length > 2 ? '#f59e0b' : 'inherit'}">${risks.length}</div><div class="wr-stat-chip-lbl">Risks</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${totalTasks ? Math.round(doneTasks / totalTasks * 100) : 0}%</div><div class="wr-stat-chip-lbl">Done</div></div>
-        </div>`
-      );
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${okrPct === null ? '—' : okrPct + '%'}</div><div class="wr-stat-chip-lbl">OKR Avg</div></div>
+        </div>
+        <div class="wr-stat-row">
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${totalTasks ? Math.round((totalTasks - openTasks) / totalTasks * 100) : 0}%</div><div class="wr-stat-chip-lbl">Tasks Done</div></div>
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${hrs}h</div><div class="wr-stat-chip-lbl">Focus Today</div></div>
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${projects.length}</div><div class="wr-stat-chip-lbl">Projects</div></div>
+        </div>`);
+
+      // ── Panel 6: Needs Attention ───────────────────────────────────────
+      const attention = [
+        ...blocked.map(t => ({ t, kind: 'BLOCKED', col: '#ef4444' })),
+        ...overdue.map(t => ({ t, kind: 'OVERDUE', col: '#f59e0b' })),
+        ...dueToday.map(t => ({ t, kind: 'DUE TODAY', col: '#3b82f6' })),
+      ];
+      _wrSetPanel('wr-attention', attention.length
+        ? attention.slice(0, 8).map(({ t, kind, col }) =>
+            `<div class="wr-item" style="--_wric:${col}">
+              <div class="wr-item-text">${_esc(t.title)}</div>
+              <div class="wr-item-meta">${kind} · ${_esc(t._proj)}</div>
+            </div>`).join('')
+        : '<div class="wr-empty">All clear ✓</div>');
 
       // Footer timestamp
       const ft = document.getElementById('wr-footer-ts');
       if (ft) ft.textContent = 'Updated ' + new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function _wrDepCluster(n) {
+      n = Math.min(n, 5);
+      const cx = 30, cy = 30, r = 22;
+      let satellites = '', lines = '';
+      for (let i = 0; i < n; i++) {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        const x = (cx + Math.cos(angle) * r).toFixed(1);
+        const y = (cy + Math.sin(angle) * r).toFixed(1);
+        lines += `<line class="wr-dep-line" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#3a5a78" stroke-width="1.5"/>`;
+        satellites += `<circle cx="${x}" cy="${y}" r="3.5" fill="#3b82f6"/>`;
+      }
+      return `<svg class="wr-dep-svg" width="60" height="60" viewBox="0 0 60 60">
+        ${lines}${satellites}
+        <circle class="wr-dep-core" cx="${cx}" cy="${cy}" r="6" fill="#ef4444"/>
+      </svg>`;
     }
 
     function _wrSetPanel(id, html) {
@@ -5153,29 +5265,29 @@
     </div>
 
     <div class="wr-body">
-      <div class="wr-panel" style="--_wra:#ef4444">
-        <div class="wr-panel-head"><div class="wr-panel-label">Blocked Tasks</div></div>
-        <div class="wr-panel-list" id="wr-blocked"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#f59e0b">
-        <div class="wr-panel-head"><div class="wr-panel-label">Due Today · Overdue</div></div>
-        <div class="wr-panel-list" id="wr-due"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#ef4444">
-        <div class="wr-panel-head"><div class="wr-panel-label">Active Risks</div></div>
-        <div class="wr-panel-list" id="wr-risks"></div>
-      </div>
       <div class="wr-panel" style="--_wra:#3b82f6">
-        <div class="wr-panel-head"><div class="wr-panel-label">Open Decisions</div></div>
-        <div class="wr-panel-list" id="wr-decisions"></div>
+        <div class="wr-panel-head"><div class="wr-panel-label">Today</div></div>
+        <div class="wr-panel-list" id="wr-today"></div>
       </div>
       <div class="wr-panel" style="--_wra:#22c55e">
-        <div class="wr-panel-head"><div class="wr-panel-label">OKR Progress</div></div>
-        <div class="wr-panel-list" id="wr-okr"></div>
+        <div class="wr-panel-head"><div class="wr-panel-label">My Active Projects</div></div>
+        <div class="wr-panel-list" id="wr-projects"></div>
       </div>
-      <div class="wr-panel" style="--_wra:#3b82f6">
-        <div class="wr-panel-head"><div class="wr-panel-label">Focus · Summary</div></div>
-        <div class="wr-panel-list" id="wr-focus"></div>
+      <div class="wr-panel" style="--_wra:#a78bfa">
+        <div class="wr-panel-head"><div class="wr-panel-label">This Week</div></div>
+        <div class="wr-panel-list" id="wr-week"></div>
+      </div>
+      <div class="wr-panel" style="--_wra:#ef4444">
+        <div class="wr-panel-head"><div class="wr-panel-label">Dependency Pulse</div></div>
+        <div class="wr-panel-list" id="wr-deps"></div>
+      </div>
+      <div class="wr-panel" style="--_wra:#f59e0b">
+        <div class="wr-panel-head"><div class="wr-panel-label">Key Metrics</div></div>
+        <div class="wr-panel-list" id="wr-metrics"></div>
+      </div>
+      <div class="wr-panel" style="--_wra:#ef4444">
+        <div class="wr-panel-head"><div class="wr-panel-label">Needs Attention</div></div>
+        <div class="wr-panel-list" id="wr-attention"></div>
       </div>
     </div>
 
