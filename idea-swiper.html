@@ -3032,6 +3032,15 @@ On-demand tutoring market"></textarea>
       );
     }
 
+    function _tShowSetup() {
+      document.getElementById('t-setup').style.display = 'flex';
+      document.getElementById('t-matchup-screen').style.display = 'none';
+    }
+    function _tShowMatchup() {
+      document.getElementById('t-setup').style.display = 'none';
+      document.getElementById('t-matchup-screen').style.display = 'flex';
+    }
+
     function startTournament() {
       tPool = [...new Set([...results.super, ...results.like])];
       if (tPool.length < 2) { alert('Need at least 2 liked/super ideas to rank!'); return; }
@@ -3044,23 +3053,25 @@ On-demand tutoring market"></textarea>
       document.querySelectorAll('.t-format-card').forEach(c =>
         c.classList.toggle('active', +c.dataset.rounds === tSelectedRounds)
       );
-      document.getElementById('t-setup').classList.remove('t-hidden');
-      document.getElementById('t-matchup-screen').classList.remove('t-visible');
+      _tShowSetup();
       document.getElementById('tournament-overlay').classList.remove('hidden');
     }
 
     function beginTournament() {
-      tTotalRounds = tSelectedRounds;
-      tRound = 0;
-      const superSet = new Set(results.super);
-      tScores = {};
-      tPool.forEach(idea => { tScores[idea] = superSet.has(idea) ? 1 : 0; });
-      tByeHistory = new Set();
-      tPlayedPairs = new Set();
-      document.getElementById('t-setup').classList.add('t-hidden');
-      document.getElementById('t-matchup-screen').classList.add('t-visible');
-      document.getElementById('t-stop-btn').style.display = 'none';
-      startNextRound();
+      try {
+        tTotalRounds = tSelectedRounds;
+        tRound = 0;
+        const superSet = new Set(results.super);
+        tScores = {};
+        tPool.forEach(idea => { tScores[idea] = superSet.has(idea) ? 1 : 0; });
+        tByeHistory = new Set();
+        tPlayedPairs = new Set();
+        _tShowMatchup();
+        document.getElementById('t-stop-btn').style.display = 'none';
+        startNextRound();
+      } catch (e) {
+        console.error('[Tournament] beginTournament error:', e);
+      }
     }
 
     function startNextRound() {
@@ -3117,7 +3128,10 @@ On-demand tutoring market"></textarea>
       closeTournament(); switchTab('rank'); renderRanked();
     }
 
-    function closeTournament() { document.getElementById('tournament-overlay').classList.add('hidden'); }
+    function closeTournament() {
+      document.getElementById('tournament-overlay').classList.add('hidden');
+      _tShowSetup(); // reset for next open
+    }
 
     /* EXPORT */
     function exportSession() {
