@@ -568,6 +568,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      padding-bottom: 48px; /* clear fixed AI assistant tab in shell */
     }
 
     .results-tabs {
@@ -2487,6 +2488,50 @@ On-demand tutoring market"></textarea>
       HubStorage.set(HISTORY_KEY, swipeHistory);
     }
 
+    /* ════════════════════════════════════════
+       SESSION PERSISTENCE (survives refresh)
+       ════════════════════════════════════════ */
+    const SESSION_KEY = 'ideaswipe_session_v7';
+
+    function saveSession() {
+      if (!ideas.length) return;
+      try {
+        HubStorage.set(SESSION_KEY, {
+          ideas,
+          results,
+          current,
+          rankedResults,
+          ideaText: document.getElementById('idea-input').value
+        });
+      } catch(e) {}
+    }
+
+    function loadSession() {
+      try {
+        const s = HubStorage.get(SESSION_KEY);
+        if (!s || !Array.isArray(s.ideas) || !s.ideas.length) return;
+        ideas = s.ideas;
+        results = s.results && typeof s.results === 'object'
+          ? { like: s.results.like || [], super: s.results.super || [], nope: s.results.nope || [] }
+          : { like: [], super: [], nope: [] };
+        current = typeof s.current === 'number' ? s.current : 0;
+        rankedResults = Array.isArray(s.rankedResults) ? s.rankedResults : [];
+        sessionStart = new Date();
+        sessionId = 'S' + Date.now();
+        window._resurfacedSet = new Set();
+        if (s.ideaText) document.getElementById('idea-input').value = s.ideaText;
+        document.getElementById('welcome-state').classList.add('hidden');
+        document.getElementById('progress-wrap').style.display = 'flex';
+        updateCounters();
+        renderResults();
+        if (current < ideas.length) {
+          startSwiping();
+        } else {
+          showEmpty();
+        }
+      } catch(e) {}
+    }
+
     function clearHistory() {
       if (!confirm('Clear all swipe history? This cannot be undone.')) return;
       swipeHistory = []; saveSwipeHistory(); renderResults();
@@ -2569,6 +2614,7 @@ On-demand tutoring market"></textarea>
       saveCanvasState();
       document.getElementById('welcome-state').classList.add('hidden');
       renderResults(); updateCounters(); startSwiping();
+      saveSession();
     }
 
     function startSwiping() {
@@ -2626,6 +2672,7 @@ On-demand tutoring market"></textarea>
       saveSwipeHistory();
 
       current++;
+      saveSession();
       const cls = type === 'like' ? 'flying-right' : type === 'nope' ? 'flying-left' : 'flying-up';
       cardA.classList.add(cls);
       updateCounters(); renderResults();
@@ -2640,6 +2687,7 @@ On-demand tutoring market"></textarea>
       if (idx !== -1) arr.splice(idx, 1);
       current--;
       renderResults(); updateCounters(); updateCards();
+      saveSession();
       document.getElementById('card-stack').style.display = 'block';
       document.getElementById('action-buttons').style.display = 'flex';
       document.getElementById('key-hint').style.display = 'flex';
@@ -2794,9 +2842,17 @@ On-demand tutoring market"></textarea>
     function clearResults() {
       if (!confirm('Clear all results, rankings, canvas and team votes?')) return;
       results = { like: [], super: [], nope: [] }; rankedResults = [];
+      ideas = []; current = 0; history = [];
       canvasNotes = []; canvasConnections = []; canvasLabels = [];
       teamVoters = [];
+      HubStorage.set(SESSION_KEY, null);
       saveCanvasState(); renderResults(); updateCounters();
+      document.getElementById('welcome-state').classList.remove('hidden');
+      document.getElementById('card-stack').style.display = 'none';
+      document.getElementById('action-buttons').style.display = 'none';
+      document.getElementById('key-hint').style.display = 'none';
+      document.getElementById('progress-wrap').style.display = 'none';
+      document.getElementById('empty-state').classList.remove('visible');
     }
 
     document.addEventListener('keydown', e => {
@@ -3725,6 +3781,7 @@ On-demand tutoring market"></textarea>
     loadCanvasState();
     loadSwipeHistory();
     window._resurfacedSet = new Set();
+    loadSession();
 
     /* ════════════════════════════════════════
        PANEL RESIZE
