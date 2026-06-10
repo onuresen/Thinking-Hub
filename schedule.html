@@ -697,6 +697,10 @@
       text-transform: uppercase;
     }
 
+    .cal-week-label.weekend {
+      color: var(--accent2);
+    }
+
     .cal-grid-wrap {
       flex: 1;
       overflow-y: auto;
@@ -715,23 +719,34 @@
     .cal-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(var(--cal-rows, 6), minmax(0, 1fr));
       gap: 3px;
+      height: 100%;
+      min-height: 480px;
     }
 
     .cal-day-cell {
-      min-height: 88px;
+      min-height: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-sm);
       padding: 6px;
       cursor: pointer;
       transition: border-color 0.12s, background 0.12s;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     .cal-day-cell:hover {
       border-color: var(--border2);
       background: var(--surface2);
+    }
+
+    .cal-day-cell.weekend {
+      background: var(--accent2-dim);
+    }
+
+    .cal-day-cell.weekend:hover {
+      background: var(--accent2-glow);
     }
 
     .cal-day-cell.today {
@@ -774,6 +789,12 @@
 
     .cal-pill.done {
       opacity: 0.38;
+    }
+
+    .cal-pill.meeting {
+      background: var(--node-blue);
+      border: 1px solid var(--border-blue);
+      color: var(--text2);
     }
 
     .cal-more {
@@ -1360,8 +1381,8 @@
           <div class="cal-week-label">Wed</div>
           <div class="cal-week-label">Thu</div>
           <div class="cal-week-label">Fri</div>
-          <div class="cal-week-label">Sat</div>
-          <div class="cal-week-label">Sun</div>
+          <div class="cal-week-label weekend">Sat</div>
+          <div class="cal-week-label weekend">Sun</div>
         </div>
         <div class="cal-grid-wrap">
           <div class="cal-grid" id="cal-grid"></div>
@@ -1767,10 +1788,28 @@
       else renderCalMonth();
     }
 
+    function getMeetingsByDate() {
+      let meetingsData = {};
+      try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { }
+      const byDate = {};
+      (meetingsData.meetings || []).forEach(m => {
+        if (!m.date) return;
+        (byDate[m.date] = byDate[m.date] || []).push(m);
+      });
+      return byDate;
+    }
+
+    function meetingPillHtml(m) {
+      return `<span class="cal-pill meeting"
+        onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
+        title="${esc(m.title || 'Meeting')}">▣ ${esc((m.title || 'Meeting').slice(0, 16))}</span>`;
+    }
+
     function renderCalMonth() {
       const { calYear: year, calMonth: month } = ui;
       document.getElementById('cal-title').textContent = fmtMonth(year, month);
       const items = filteredItems();
+      const meetingsByDate = getMeetingsByDate();
 
       const firstDay = new Date(year, month, 1);
       const firstDow = firstDay.getDay();
@@ -1790,16 +1829,25 @@
       const cur = new Date(gridStart);
       while (cur <= gridEnd) { days.push(dateToIso(cur)); cur.setDate(cur.getDate() + 1); }
 
+      document.getElementById('cal-grid').style.setProperty('--cal-rows', days.length / 7);
+
       document.getElementById('cal-grid').innerHTML = days.map(iso => {
         const d = isoToDate(iso);
         const isThisMonth = d.getMonth() === month;
         const isToday = iso === TODAY;
+        const isWE = isWeekend(iso);
 
+        const dayMeetings = meetingsByDate[iso] || [];
         const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
-        const shown = dayItems.slice(0, 3);
-        const overflow = dayItems.length - 3;
+        const total = dayMeetings.length + dayItems.length;
+        const shownLimit = 4;
+        const shownMeetings = dayMeetings.slice(0, shownLimit);
+        const meetingPills = shownMeetings.map(meetingPillHtml).join('');
+        const remaining = shownLimit - shownMeetings.length;
+        const shownItems = remaining > 0 ? dayItems.slice(0, remaining) : [];
+        const overflow = total - shownMeetings.length - shownItems.length;
 
-        const pills = shown.map(it => {
+        const pills = shownItems.map(it => {
           const bg = it.color + '28';
           const bd = it.color + '88';
           const cont = it.start !== it.end && it.end > iso ? ' →' : '';
@@ -1809,9 +1857,10 @@
         title="${esc(it.title)}">${esc((it.title || '').slice(0, 18))}${cont}</span>`;
         }).join('');
 
-        return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}"
+        return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}${isWE ? ' weekend' : ''}"
       onclick="openDrawer(null, '${iso}')">
       <div class="cal-day-num">${d.getDate()}</div>
+      ${meetingPills}
       ${pills}
       ${overflow > 0 ? `<span class="cal-more">+${overflow} more</span>` : ''}
     </div>`;
@@ -1823,6 +1872,7 @@
       const days = [];
       for (let i = 0; i < 7; i++) days.push(addDays(weekStart, i));
       const items = filteredItems();
+      const meetingsByDate = getMeetingsByDate();
 
       const d0 = isoToDate(days[0]);
       const d6 = isoToDate(days[6]);
@@ -1830,11 +1880,16 @@
         `${d0.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
         `${d6.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
+      document.getElementById('cal-grid').style.setProperty('--cal-rows', 1);
+
       document.getElementById('cal-grid').innerHTML = days.map(iso => {
         const d = isoToDate(iso);
         const isToday = iso === TODAY;
+        const isWE = isWeekend(iso);
         const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
+        const dayMeetings = meetingsByDate[iso] || [];
 
+        const meetingPills = dayMeetings.map(meetingPillHtml).join('');
         const pills = dayItems.map(it => {
           const bg = it.color + '28';
           const bd = it.color + '88';
@@ -1843,9 +1898,10 @@
         onclick="event.stopPropagation(); selectAndEdit('${it.id}')">${esc(it.title || '(untitled)')}</span>`;
         }).join('');
 
-        return `<div class="cal-day-cell${isToday ? ' today' : ''}" style="min-height:140px"
+        return `<div class="cal-day-cell${isToday ? ' today' : ''}${isWE ? ' weekend' : ''}"
       onclick="openDrawer(null, '${iso}')">
       <div class="cal-day-num">${DAY_NAMES[getDow(iso)]} ${d.getDate()}</div>
+      ${meetingPills}
       ${pills}
     </div>`;
       }).join('');

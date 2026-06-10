@@ -627,3 +627,14 @@ Follow-up to Priority 42 (War Room Mode) — readability, calendar, animation, A
 - **Today tab "Today's Focus" card** — `buildTodayView()` now reads pinned tasks from `hub-warroom-v1` (today's `focusIds`) and renders them first in the Today grid, each with a `.today-focus-check` ○ button calling `_wrToggleDone()`. `_wrToggleDone`/`_wrRemoveFocus` now also call `buildTodayView()` so the card updates live.
 
 **Files:** `index.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 46 — Schedule Calendar: meetings, full-height grid, weekend styling~~ ✓ Done `[group: schedule-calendar]`
+Three improvements to the Calendar view in `schedule.html`.
+
+- **Meetings on calendar** — `getMeetingsByDate()` reads `meetings-hub-v1` and groups meetings by `date`. `meetingPillHtml(m)` renders each as a `.cal-pill.meeting` (▣ icon, `--node-blue`/`--border-blue` styling) that calls `parent.postMessage({type:'hub-navigate', tool:'meetings-hub', itemId:m.id}, ...)` on click. Both `renderCalMonth()` and `renderCalWeek()` show meeting pills first, then schedule-item pills, up to a combined `shownLimit` of 4 per day (month view), with a `+N more` overflow indicator.
+- **Full-height grid** — `.cal-grid` now uses `grid-template-rows: repeat(var(--cal-rows, 6), minmax(0, 1fr))` + `height: 100%` + `min-height: 480px`; JS sets `--cal-rows` per render (`days.length / 7` for month view — 5 or 6 depending on the month, `1` for week view). Eliminates the gap below the grid and gives each day cell more room. `.cal-day-cell` switched from fixed `min-height: 88px` to `min-height: 0; overflow-y: auto`.
+- **Weekend styling** — `.cal-week-label.weekend` (Sat/Sun headers) uses `var(--accent2)`; `.cal-day-cell.weekend` / `:hover` use `var(--accent2-dim)` / `var(--accent2-glow)` — same secondary-identity tokens as the War Room weekend calendar (Priority 45), theme-aware across dark/light/ink.
+
+**Files:** `schedule.html`, `CLAUDE.md`
