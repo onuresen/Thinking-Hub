@@ -613,3 +613,17 @@ Follow-up to ICS import — large imported attendee lists were unwieldy, attende
 - **Repeat / duplicate meeting** — "🔁 Repeat" button opens `#repeat-modal-overlay` with quick-pick chips (+1 day / +1 week / +2 weeks / +1 month, default based on meeting type) and a date input. `confirmRepeatMeeting()` creates a new meeting copying title/type/attendees/agenda/project, with notes/action items/decisions/schedule sync reset to fresh. `addDaysToDate`/`addMonthToDate` reuse the `dateFromYMD`/`ymdFromDate` helpers from ICS import.
 
 **Files:** `meetings-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 45 — War Room polish + AI Smart Priorities + home page integration~~ ✓ Done `[group: war-room-polish]`
+Follow-up to Priority 42 (War Room Mode) — readability, calendar, animation, AI, and discoverability improvements.
+
+- **Readability colors** — `.wr-clock`, `.wr-date`, `.wr-exit-hint` (+ `kbd`), and `.wr-footer` brightened from near-invisible dark blues (`#1e3050`/`#2a3a50`/`#3a5a78`) to the existing readable palette (`#b8d0e8`/`#7a98b8`/`#5a7a98`).
+- **Weekend calendar styling** — "This Month" panel: Sat/Sun `.wr-cal-dow` headers and `.wr-cal-day` cells get `.is-weekend` (warm terracotta tint `#d97757`/`#d99a85`), placed before `.is-today` in source order so today's styling still wins when both apply.
+- **Panel entrance + refresh animation** — `.wr-panel` plays a staggered `wr-panel-enter` (translateY+scale fade-in, `nth-child` delays) each time War Room opens; `.wr-panel-list` gets a `wr-refreshing` flash class re-triggered via reflow on every 60s `_buildWarRoom()` cycle.
+- **AI Smart Priorities panel** — replaces "Needs Attention". New `✦ Smart Priorities` panel (purple `--_wra:#a78bfa`) with a `↻` refresh button (`#wr-briefing-refresh`, spins while loading). Manual-trigger only (no auto token spend). `_wrGenerateBriefing()` sends today's blocked/overdue/due-today tasks + open risks to `HubAI.chat()` with a system prompt asking for the top 3-5 items to tackle first, each as one short "<item> — <reason>" line. Result cached in `hub-warroom-v1.aiBriefing {text, generatedAt}`, reset daily alongside `focusIds` via new `_wrLoadState()`. Shows a "Settings → Integrations" hint link if `HubAI.isConfigured()` is false.
+- **Home page War Room button** — `⚔` icon button in the session bar (next to the tour `?` button) calls `toggleWarRoom()`, for users who don't know the `W` shortcut.
+- **Today tab "Today's Focus" card** — `buildTodayView()` now reads pinned tasks from `hub-warroom-v1` (today's `focusIds`) and renders them first in the Today grid, each with a `.today-focus-check` ○ button calling `_wrToggleDone()`. `_wrToggleDone`/`_wrRemoveFocus` now also call `buildTodayView()` so the card updates live.
+
+**Files:** `index.html`, `CLAUDE.md`
