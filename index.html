@@ -768,10 +768,10 @@
     #war-room > .wr-atmo {
       position: absolute; inset: -25%; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(circle at 24% 28%, rgba(59,130,246,0.14), transparent 38%),
-        radial-gradient(circle at 76% 64%, rgba(167,139,250,0.11), transparent 40%),
-        radial-gradient(circle at 50% 95%, rgba(239,68,68,0.07), transparent 35%);
-      filter: blur(60px);
+        radial-gradient(circle at 24% 28%, rgba(59,130,246,0.40), transparent 42%),
+        radial-gradient(circle at 76% 64%, rgba(167,139,250,0.32), transparent 44%),
+        radial-gradient(circle at 50% 95%, rgba(239,68,68,0.22), transparent 40%);
+      filter: blur(45px);
       animation: wr-atmo-drift 60s ease-in-out infinite alternate;
     }
     @keyframes wr-atmo-drift {
@@ -789,7 +789,7 @@
     .wr-header {
       display: flex; align-items: center; gap: 1.25rem;
       padding: 9px 20px; border-bottom: 1px solid #1a2235;
-      background: #060a0e; flex-shrink: 0;
+      background: rgba(6,10,14,0.45); flex-shrink: 0;
     }
     .wr-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #e8f4ff; }
     .wr-live { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; letter-spacing: 0.1em; color: #ef4444; }
@@ -803,10 +803,10 @@
     .wr-body {
       display: grid; grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(2, 1fr);
-      gap: 1px; flex: 1; overflow: hidden; background: #111820;
+      gap: 1px; flex: 1; overflow: hidden; background: rgba(17,24,32,0.35);
     }
     .wr-panel {
-      background: #080d14; display: flex; flex-direction: column;
+      background: rgba(8,13,20,0.62); display: flex; flex-direction: column;
       overflow: hidden; position: relative;
     }
     .wr-panel::before {
@@ -879,14 +879,34 @@
     @keyframes wr-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .wr-proj-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
 
-    /* ── This Week strip ── */
-    .wr-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 9px; }
-    .wr-week-day { background: #0c1520; border-radius: 3px; padding: 6px 2px; text-align: center; border: 1px solid #1a2a3a; }
-    .wr-week-day.is-today { border-color: #3b82f6; background: #0c1a28; }
-    .wr-week-dow { font-size: 0.58rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; }
-    .wr-week-num { font-size: 0.88rem; color: #e8f4ff; font-weight: 700; margin: 2px 0; }
-    .wr-week-count { font-size: 0.63rem; color: #1e3050; }
-    .wr-week-count.has { color: #a78bfa; }
+    /* ── This Month calendar ── */
+    .wr-cal-month-label { font-size: 0.74rem; color: #b8d0e8; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .wr-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 9px; }
+    .wr-cal-dow { font-size: 0.56rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; padding-bottom: 2px; }
+    .wr-cal-day {
+      position: relative; background: #0c1520; border-radius: 3px; border: 1px solid #1a2a3a;
+      min-height: 24px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; color: #5a7a98;
+    }
+    .wr-cal-day.is-today { border-color: #3b82f6; background: #0c1a28; color: #e8f4ff; font-weight: 700; }
+    .wr-cal-day.is-other-month { opacity: 0.3; }
+    .wr-cal-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: #a78bfa; }
+
+    /* ── Today's Web (linked-item clusters) ── */
+    .wr-graph-cluster { display: flex; gap: 10px; padding: 8px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; align-items: flex-start; }
+    .wr-graph-svg { flex-shrink: 0; }
+    .wr-graph-core { animation: wr-graph-pulse 2.4s ease-in-out infinite; transform-origin: 40px 40px; }
+    .wr-graph-line { stroke: #2a3a50; stroke-width: 1.5; stroke-dasharray: 3 3; animation: wr-graph-flow 2s linear infinite; }
+    .wr-graph-sat circle { fill: #16222e; stroke: #2a3a50; stroke-width: 1; }
+    .wr-graph-sat text { fill: #b8d0e8; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
+    .wr-graph-info { flex: 1; min-width: 0; }
+    .wr-graph-title { font-size: 0.85rem; color: #e8f4ff; font-weight: 600; line-height: 1.3; }
+    .wr-graph-sub { font-size: 0.66rem; color: #3a5a78; margin: 2px 0 6px; }
+    .wr-graph-list { display: flex; flex-direction: column; gap: 2px; }
+    .wr-graph-item { font-size: 0.7rem; color: #7a98b8; line-height: 1.35; }
+    .wr-graph-glyph { color: #5a7a98; margin-right: 3px; }
+    @keyframes wr-graph-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.8; } }
+    @keyframes wr-graph-flow { to { stroke-dashoffset: -12; } }
 
     /* ── Empty / all-clear state ── */
     .wr-empty-fill { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 8px; gap: 8px; height: 100%; }
@@ -4788,9 +4808,6 @@
       const scItems   = sc.items || [];
 
       // ── Panel 1: Today's Focus ────────────────────────────────────────
-      const todayItems = scItems
-        .filter(it => !it.done && (it.start || '').slice(0, 10) === todayStr)
-        .sort((a, b) => a.start.localeCompare(b.start));
       const focusBit = todayMins > 0
         ? `<div class="wr-focus-row">
             <div class="wr-focus-pdot"></div>
@@ -4876,24 +4893,32 @@
             </div>`).join('')
         : '<div class="wr-empty">No active projects</div>');
 
-      // ── Panel 3: This Week ────────────────────────────────────────────
-      const days = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(now); d.setDate(d.getDate() + i);
-        const dStr = d.toISOString().slice(0, 10);
-        const count = scItems.filter(it => !it.done && (it.start || '').slice(0, 10) === dStr).length;
-        days.push({ d, count, isToday: i === 0 });
+      // ── Panel 3: This Month ───────────────────────────────────────────
+      const calYear = now.getFullYear(), calMonth = now.getMonth();
+      const startOffset = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      const calCells = [];
+      for (let i = 0; i < startOffset; i++) calCells.push({ d: new Date(calYear, calMonth, 1 - (startOffset - i)), otherMonth: true });
+      for (let day = 1; day <= daysInMonth; day++) calCells.push({ d: new Date(calYear, calMonth, day), otherMonth: false });
+      while (calCells.length % 7 !== 0) {
+        const last = calCells[calCells.length - 1].d;
+        calCells.push({ d: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), otherMonth: true });
       }
-      const weekGrid = `<div class="wr-week-grid">${days.map(({ d, count, isToday }) =>
-        `<div class="wr-week-day${isToday ? ' is-today' : ''}">
-          <div class="wr-week-dow">${d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2)}</div>
-          <div class="wr-week-num">${d.getDate()}</div>
-          <div class="wr-week-count${count ? ' has' : ''}">${count || '·'}</div>
-        </div>`).join('')}</div>`;
+      const dowLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+      const calGrid = `<div class="wr-cal-grid">
+        ${dowLabels.map(l => `<div class="wr-cal-dow">${l}</div>`).join('')}
+        ${calCells.map(({ d, otherMonth }) => {
+          const dStr = d.toISOString().slice(0, 10);
+          const count = scItems.filter(it => !it.done && (it.start || '').slice(0, 10) === dStr).length;
+          const isToday = dStr === todayStr;
+          return `<div class="wr-cal-day${isToday ? ' is-today' : ''}${otherMonth ? ' is-other-month' : ''}">${d.getDate()}${count ? '<div class="wr-cal-dot"></div>' : ''}</div>`;
+        }).join('')}
+      </div>`;
+      const monthLabel = now.toLocaleDateString('en', { month: 'long', year: 'numeric' });
       const upcoming = scItems
-        .filter(it => !it.done && (it.start || '').slice(0, 10) > todayStr)
+        .filter(it => !it.done && (it.start || '').slice(0, 10) >= todayStr)
         .sort((a, b) => a.start.localeCompare(b.start))
-        .slice(0, 4);
+        .slice(0, 3);
       const upcomingList = upcoming.length
         ? upcoming.map(it => {
             const label = new Date(it.start).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -4902,48 +4927,44 @@
               <div class="wr-item-meta">${label}</div>
             </div>`;
           }).join('')
-        : '<div class="wr-empty">Nothing else this week</div>';
-      _wrSetPanel('wr-week', weekGrid + upcomingList);
+        : '<div class="wr-empty">Nothing scheduled this month</div>';
+      _wrSetPanel('wr-week', `<div class="wr-cal-month-label">${monthLabel}</div>` + calGrid + upcomingList);
 
-      // ── Panel 4: Today's Agenda ────────────────────────────────────────
+      // ── Panel 4: Today's Web (linked-item clusters) ────────────────────
       let meetingsData = {};
       try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
       const meetingsToday = (meetingsData.meetings || []).filter(m => m.date === todayStr);
 
-      const agendaTaskIds = new Set([...dueToday.map(t => t._projId + '::' + t.id), ...focusIds]);
-      const agendaTasks = allTasks.filter(t => !t.done && agendaTaskIds.has(t._projId + '::' + t.id));
+      const coreItems = [];
+      pinned.forEach(({ task, proj }) => {
+        if (!coreItems.some(c => c.tool === 'project-hub' && c.itemId === task.id))
+          coreItems.push({ tool: 'project-hub', itemId: task.id, title: task.title, sub: proj.name, col: '#22c55e' });
+      });
+      dueToday.forEach(t => {
+        if (!coreItems.some(c => c.tool === 'project-hub' && c.itemId === t.id))
+          coreItems.push({ tool: 'project-hub', itemId: t.id, title: t.title, sub: t._proj, col: '#3b82f6' });
+      });
+      meetingsToday.forEach(m =>
+        coreItems.push({ tool: 'meetings-hub', itemId: m.id, title: m.title || '(untitled meeting)', sub: 'Meeting', col: '#a78bfa' }));
 
-      const agendaItems = [
-        ...meetingsToday.map(m => ({
-          col: '#a78bfa',
-          title: m.title || '(untitled meeting)',
-          meta: 'Meeting' + (m.type ? ' · ' + m.type : ''),
-          badges: _wrLinkBadges('meetings-hub', m.id)
-        })),
-        ...todayItems.map(it => ({
-          col: it.color || '#3b82f6',
-          title: it.title,
-          meta: new Date(it.start).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
-          badges: _wrLinkBadges('schedule', it.id)
-        })),
-        ...agendaTasks.map(t => ({
-          col: pinnedKeySet.has(t._projId + '::' + t.id) ? '#22c55e' : '#3b82f6',
-          title: t.title,
-          meta: (pinnedKeySet.has(t._projId + '::' + t.id) ? 'Focus · ' : 'Due Today · ') + t._proj,
-          badges: _wrLinkBadges('project-hub', t.id)
-        })),
-      ];
+      const withLinks = [], withoutLinks = [];
+      coreItems.forEach(c => {
+        let links = [];
+        try { links = window.HubLinks ? HubLinks.getLinksFor(c.tool, c.itemId) : []; } catch {}
+        if (links.length) withLinks.push({ ...c, links });
+        else withoutLinks.push(c);
+      });
 
-      _wrSetPanel('wr-agenda', agendaItems.length
-        ? agendaItems.map(it =>
-            `<div class="wr-item" style="--_wric:${it.col}">
-              <div class="wr-item-row">
-                <div class="wr-item-text">${_esc(it.title)}</div>
-                ${it.badges}
-              </div>
-              <div class="wr-item-meta">${_esc(it.meta)}</div>
-            </div>`).join('')
-        : '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
+      let webHtml = '';
+      if (withLinks.length) webHtml += withLinks.slice(0, 3).map(c => _wrGraphCluster(c)).join('');
+      if (withoutLinks.length) {
+        if (withLinks.length) webHtml += '<div class="wr-pick-section-label">Also today</div>';
+        webHtml += withoutLinks.slice(0, 5).map(c =>
+          `<div class="wr-item" style="--_wric:${c.col}"><div class="wr-item-text">${_esc(c.title)}</div><div class="wr-item-meta">${_esc(c.sub)}</div></div>`
+        ).join('');
+      }
+      _wrSetPanel('wr-agenda', webHtml ||
+        '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
 
       // ── Panel 5: Key Metrics ─────────────────────────────────────────
       const totalTasks = allTasks.length;
@@ -5059,6 +5080,42 @@
         const name  = WR_TOOL_NAME[other.tool] || other.tool;
         return `<span class="wr-link-badge" title="${_esc(name)}: ${_esc(other.label || '')}">${glyph}</span>`;
       }).join('') + '</div>';
+    }
+
+    // Renders a small radial cluster: a core "today" item with its linked items as satellites
+    function _wrGraphCluster(c) {
+      const sats = c.links.slice(0, 5).map(l => {
+        const other = l.a.tool === c.tool && l.a.itemId === c.itemId ? l.b : l.a;
+        return {
+          glyph: WR_TOOL_GLYPH[other.tool] || '○',
+          name: WR_TOOL_NAME[other.tool] || other.tool,
+          label: other.label || ''
+        };
+      });
+      const n = sats.length, cx = 40, cy = 40, r = 26;
+      let lines = '', nodes = '';
+      sats.forEach((s, i) => {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        const x = (cx + Math.cos(angle) * r).toFixed(1);
+        const y = (cy + Math.sin(angle) * r).toFixed(1);
+        lines += `<line class="wr-graph-line" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`;
+        nodes += `<g class="wr-graph-sat"><circle cx="${x}" cy="${y}" r="9"/><text x="${x}" y="${y}" dy="0.32em" text-anchor="middle">${s.glyph}</text></g>`;
+      });
+      const list = sats.map(s =>
+        `<div class="wr-graph-item"><span class="wr-graph-glyph">${s.glyph}</span>${_esc(s.name)}${s.label ? ': ' + _esc(s.label) : ''}</div>`
+      ).join('');
+      return `<div class="wr-graph-cluster">
+        <svg class="wr-graph-svg" width="80" height="80" viewBox="0 0 80 80">
+          ${lines}
+          <circle class="wr-graph-core" cx="${cx}" cy="${cy}" r="14" fill="${c.col}"/>
+          ${nodes}
+        </svg>
+        <div class="wr-graph-info">
+          <div class="wr-graph-title">${_esc(c.title)}</div>
+          <div class="wr-graph-sub">${_esc(c.sub)}</div>
+          <div class="wr-graph-list">${list}</div>
+        </div>
+      </div>`;
     }
 
     // W key toggle — skip when typing in inputs
@@ -5400,11 +5457,11 @@
         <div class="wr-panel-list" id="wr-projects"></div>
       </div>
       <div class="wr-panel" style="--_wra:#a78bfa">
-        <div class="wr-panel-head"><div class="wr-panel-label">This Week</div></div>
+        <div class="wr-panel-head"><div class="wr-panel-label">This Month</div></div>
         <div class="wr-panel-list" id="wr-week"></div>
       </div>
       <div class="wr-panel" style="--_wra:#3b82f6">
-        <div class="wr-panel-head"><div class="wr-panel-label">Today's Agenda</div></div>
+        <div class="wr-panel-head"><div class="wr-panel-label">Today's Web</div></div>
         <div class="wr-panel-list" id="wr-agenda"></div>
       </div>
       <div class="wr-panel" style="--_wra:#f59e0b">

@@ -575,11 +575,11 @@ Fullscreen "glanceable status board" overlay, toggled by `W` key (`toggleWarRoom
 **6 panels:**
 - **Today's Focus** — pick-your-own-focus list. Pinned tasks (✓/× to mark done or unpin) + a "Pick for today" list of open tasks sorted by due date then priority, plus today's focus-session summary. Persisted to new key `hub-warroom-v1` (`{ date, focusIds: ['projId::taskId', ...] }`, max 8, resets daily).
 - **My Active Projects** — up to 8 active projects (was 4), filtered to `selfMemberId` if set, with progress bar + open/mine counts.
-- **This Week** — 7-day grid + upcoming schedule items.
-- **Today's Agenda** — replaces the old "Dependency Pulse" (too sparse). Combines today's meetings (`meetings-hub-v1`), today's schedule items, and tasks due today / pinned as focus — each row shows small cross-tool link-badge glyphs via `HubLinks.getLinksFor()`.
+- **This Month** — full month calendar grid (current month, leading/trailing days from adjacent months dimmed), days with schedule items get a dot; today outlined. Below the grid, next 3 upcoming schedule items.
+- **Today's Web** — radial "dependency cluster" graphs (`_wrGraphCluster()`): for each of today's core items (pinned focus tasks, due-today tasks, today's meetings) that has cross-tool links via `HubLinks.getLinksFor()`, renders a small SVG with the item as a center node and its linked items as satellite nodes (glyph + tool name + label), animated dashed connector lines. Core items with no links fall through to a plain "Also today" list below.
 - **Key Metrics** — open/blocked/overdue tasks, decisions, risks, OKR avg, % done, focus time, project count.
 - **Needs Attention** — blocked / overdue / due-today tasks.
 
-**Visual pass:** added `.wr-atmo` ambient drifting gradient-mesh background (`@keyframes wr-atmo-drift`, 60s loop) behind the scanlines layer; bumped font sizes across all panels for readability at a glance.
+**Visual pass:** `.wr-atmo` ambient drifting gradient-mesh background (`@keyframes wr-atmo-drift`, 60s loop); `.wr-body`/`.wr-panel`/`.wr-header` backgrounds made semi-transparent (`rgba`) so the atmo glow actually bleeds through (previously hidden behind opaque panel fills); bumped font sizes across all panels for readability at a glance.
 
 **Files:** `index.html`, `CLAUDE.md`
