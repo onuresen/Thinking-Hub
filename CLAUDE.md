@@ -70,7 +70,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1`, `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1`, `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1`
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -566,3 +566,20 @@ Frontend-design review found the app read as "generic dark dashboard + one neon-
 **Follow-up — canvas-hub minimap ink fix ✓ Done:** the minimap previously classified `ink` as dark (`_isDark = theme !== 'light'`), drawing dark node tiles on ink's paper background. Removed the `_isDark` branch and the hardcoded `colorFillDark`/`colorFillLight` maps entirely; node fills now read the theme-aware `--node-*` tokens via `getComputedStyle` (`--node-` + class.slice(2)), node borders use `--border2`, and the viewport rectangle uses `--text2`. Correct in all three themes. Verified: under `ink`, tokens resolve to paper values (`--node-blue #cdd9ec`, `--border2`/`--text2` dark ink) with no console errors. `_isDark` no longer appears anywhere in canvas-hub.
 
 **Files:** `theme.css`, `index.html`, `focus-hub.html`, `decision-hub.html`, `graph-hub.html`, `stakeholder-hub.html`, `matrix-hub.html`, `tool-portfolio.html`, `project-hub.html`, `schedule.html`, `canvas-hub.html`
+
+---
+
+### ~~Priority 42 — War Room Mode~~ ✓ Done `[group: war-room]`
+Fullscreen "glanceable status board" overlay, toggled by `W` key (`toggleWarRoom()`), always-dark hardcoded palette (intentional — not theme-aware). Auto-refreshes every 60s; live clock ticks every 1s.
+
+**6 panels:**
+- **Today's Focus** — pick-your-own-focus list. Pinned tasks (✓/× to mark done or unpin) + a "Pick for today" list of open tasks sorted by due date then priority, plus today's focus-session summary. Persisted to new key `hub-warroom-v1` (`{ date, focusIds: ['projId::taskId', ...] }`, max 8, resets daily).
+- **My Active Projects** — up to 8 active projects (was 4), filtered to `selfMemberId` if set, with progress bar + open/mine counts.
+- **This Week** — 7-day grid + upcoming schedule items.
+- **Today's Agenda** — replaces the old "Dependency Pulse" (too sparse). Combines today's meetings (`meetings-hub-v1`), today's schedule items, and tasks due today / pinned as focus — each row shows small cross-tool link-badge glyphs via `HubLinks.getLinksFor()`.
+- **Key Metrics** — open/blocked/overdue tasks, decisions, risks, OKR avg, % done, focus time, project count.
+- **Needs Attention** — blocked / overdue / due-today tasks.
+
+**Visual pass:** added `.wr-atmo` ambient drifting gradient-mesh background (`@keyframes wr-atmo-drift`, 60s loop) behind the scanlines layer; bumped font sizes across all panels for readability at a glance.
+
+**Files:** `index.html`, `CLAUDE.md`

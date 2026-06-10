@@ -765,7 +765,22 @@
     #war-room.wr-active { display: flex; animation: wr-enter 0.18s ease; }
     @keyframes wr-enter { from { opacity:0; transform:scale(0.98); } to { opacity:1; transform:scale(1); } }
 
-    .wr-scanlines {
+    #war-room > .wr-atmo {
+      position: absolute; inset: -25%; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(circle at 24% 28%, rgba(59,130,246,0.14), transparent 38%),
+        radial-gradient(circle at 76% 64%, rgba(167,139,250,0.11), transparent 40%),
+        radial-gradient(circle at 50% 95%, rgba(239,68,68,0.07), transparent 35%);
+      filter: blur(60px);
+      animation: wr-atmo-drift 60s ease-in-out infinite alternate;
+    }
+    @keyframes wr-atmo-drift {
+      0%   { transform: translate(-2%, -1%) scale(1); }
+      50%  { transform: translate(3%, 2%) scale(1.12); }
+      100% { transform: translate(-1%, 3%) scale(1.02); }
+    }
+
+    #war-room > .wr-scanlines {
       position: absolute; inset: 0; pointer-events: none; z-index: 0;
       background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
     }
@@ -776,13 +791,13 @@
       padding: 9px 20px; border-bottom: 1px solid #1a2235;
       background: #060a0e; flex-shrink: 0;
     }
-    .wr-title { font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #e8f4ff; }
-    .wr-live { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; letter-spacing: 0.1em; color: #ef4444; }
+    .wr-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #e8f4ff; }
+    .wr-live { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; letter-spacing: 0.1em; color: #ef4444; }
     .wr-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: wr-pulse 2s ease-in-out infinite; }
     @keyframes wr-pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
-    .wr-clock { font-size: 0.75rem; color: #3a5a78; letter-spacing: 0.08em; }
-    .wr-date  { font-size: 0.65rem; color: #2a3a50; }
-    .wr-exit-hint { margin-left: auto; font-size: 0.62rem; color: #2a3a52; }
+    .wr-clock { font-size: 0.85rem; color: #3a5a78; letter-spacing: 0.08em; }
+    .wr-date  { font-size: 0.74rem; color: #2a3a50; }
+    .wr-exit-hint { margin-left: auto; font-size: 0.7rem; color: #2a3a52; }
     .wr-exit-hint kbd { display:inline-block; padding:1px 6px; border:1px solid #1e2e40; border-radius:3px; color:#3a5a78; }
 
     .wr-body {
@@ -799,7 +814,7 @@
       background: var(--_wra, #1e2e40);
     }
     .wr-panel-head { padding: 10px 14px 5px; flex-shrink: 0; }
-    .wr-panel-label { font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: #3a5a78; font-weight: 600; }
+    .wr-panel-label { font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: #3a5a78; font-weight: 600; }
 
     .wr-panel-list {
       flex: 1; overflow-y: auto; padding: 0 10px 10px;
@@ -812,68 +827,75 @@
       padding: 6px 8px; background: #0c1520; border-radius: 3px;
       border-left: 2px solid var(--_wric, #1e2e40);
     }
-    .wr-item-text { font-size: 0.7rem; color: #b8d0e8; line-height: 1.35; word-break: break-word; }
-    .wr-item-meta { font-size: 0.58rem; color: #3a5a78; margin-top: 2px; letter-spacing: 0.03em; }
+    .wr-item-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .wr-item-text { font-size: 0.8rem; color: #b8d0e8; line-height: 1.35; word-break: break-word; }
+    .wr-item-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 2px; letter-spacing: 0.03em; }
 
-    .wr-risk-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #0c1520; border-radius: 3px; }
-    .wr-risk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .wr-risk-text { font-size: 0.7rem; color: #b8d0e8; flex: 1; line-height: 1.3; }
-    .wr-risk-sev { font-size: 0.55rem; letter-spacing: 0.08em; flex-shrink: 0; font-weight: 600; }
-
-    .wr-okr-row { margin-bottom: 9px; }
-    .wr-okr-name { font-size: 0.67rem; color: #b8d0e8; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wr-okr-track { height: 4px; background: #1a2a3a; border-radius: 2px; overflow: hidden; }
-    .wr-okr-fill { height: 100%; border-radius: 2px; }
-    .wr-okr-pct { font-size: 0.58rem; color: #3a5a78; margin-top: 3px; text-align: right; }
+    .wr-link-badges { display: flex; gap: 3px; flex-shrink: 0; }
+    .wr-link-badge { font-size: 0.7rem; color: #3a5a78; opacity: 0.85; cursor: default; }
 
     .wr-stat-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
     .wr-stat-chip { flex: 1; padding: 8px 6px; background: #0c1520; border-radius: 3px; border: 1px solid #1a2a3a; text-align: center; min-width: 60px; }
-    .wr-stat-chip-val { font-size: 1.4rem; font-weight: 700; color: #e8f4ff; line-height: 1; }
-    .wr-stat-chip-lbl { font-size: 0.55rem; color: #3a5a78; letter-spacing: 0.06em; margin-top: 3px; text-transform: uppercase; }
+    .wr-stat-chip-val { font-size: 1.55rem; font-weight: 700; color: #e8f4ff; line-height: 1; }
+    .wr-stat-chip-lbl { font-size: 0.63rem; color: #3a5a78; letter-spacing: 0.06em; margin-top: 3px; text-transform: uppercase; }
 
     .wr-focus-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; background: #0c1a28; border-radius: 3px; border-left: 2px solid #3b82f6; margin-bottom: 8px; }
     .wr-focus-pdot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; animation: wr-pulse 1.5s ease-in-out infinite; }
-    .wr-focus-task { font-size: 0.7rem; color: #e8f4ff; }
-    .wr-focus-time { font-size: 0.6rem; color: #3a5a78; margin-top: 2px; }
+    .wr-focus-task { font-size: 0.8rem; color: #e8f4ff; }
+    .wr-focus-time { font-size: 0.68rem; color: #3a5a78; margin-top: 2px; }
 
-    .wr-empty { font-size: 0.65rem; color: #1e3050; padding: 8px 4px; font-style: italic; }
+    .wr-empty { font-size: 0.74rem; color: #1e3050; padding: 8px 4px; font-style: italic; }
+
+    /* ── Today's Focus picker ── */
+    .wr-pick-section-label { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #2a3a50; margin: 10px 0 5px; }
+    .wr-pick-section-label:first-child { margin-top: 0; }
+    .wr-pick-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #0c1520; border-radius: 3px; margin-bottom: 3px; }
+    .wr-pick-item.is-pinned { border-left: 2px solid #22c55e; }
+    .wr-pick-text { flex: 1; font-size: 0.8rem; color: #e8f4ff; line-height: 1.3; word-break: break-word; }
+    .wr-pick-item.is-pinned .wr-pick-text { color: #b8d0e8; }
+    .wr-pick-meta { font-size: 0.62rem; color: #3a5a78; flex-shrink: 0; }
+    .wr-pick-check, .wr-pick-add, .wr-pick-remove {
+      width: 18px; height: 18px; flex-shrink: 0; border: 1px solid #1e2e40; border-radius: 50%;
+      background: transparent; color: #3a5a78; font-size: 0.74rem; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+      transition: all 0.15s ease; font-family: inherit;
+    }
+    .wr-pick-check:hover { border-color: #22c55e; color: #22c55e; }
+    .wr-pick-add:hover { border-color: #3b82f6; color: #3b82f6; }
+    .wr-pick-remove:hover { border-color: #ef4444; color: #ef4444; }
 
     /* ── Project cards ── */
     .wr-proj-card { padding: 8px 10px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; }
     .wr-proj-head { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
     .wr-proj-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .wr-proj-name { font-size: 0.7rem; color: #e8f4ff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wr-proj-pct { font-size: 0.6rem; color: #3a5a78; font-weight: 600; flex-shrink: 0; }
+    .wr-proj-name { font-size: 0.8rem; color: #e8f4ff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wr-proj-pct { font-size: 0.68rem; color: #3a5a78; font-weight: 600; flex-shrink: 0; }
     .wr-proj-bar { height: 4px; background: #1a2a3a; border-radius: 2px; overflow: hidden; }
-    .wr-proj-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
-    .wr-proj-meta { font-size: 0.58rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
+    .wr-proj-fill {
+      height: 100%; border-radius: 2px; transition: width 0.6s ease;
+      background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+      background-size: 200% 100%; animation: wr-shimmer 2.8s linear infinite;
+    }
+    @keyframes wr-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .wr-proj-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
 
     /* ── This Week strip ── */
     .wr-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 9px; }
     .wr-week-day { background: #0c1520; border-radius: 3px; padding: 6px 2px; text-align: center; border: 1px solid #1a2a3a; }
     .wr-week-day.is-today { border-color: #3b82f6; background: #0c1a28; }
-    .wr-week-dow { font-size: 0.5rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; }
-    .wr-week-num { font-size: 0.78rem; color: #e8f4ff; font-weight: 700; margin: 2px 0; }
-    .wr-week-count { font-size: 0.55rem; color: #1e3050; }
+    .wr-week-dow { font-size: 0.58rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; }
+    .wr-week-num { font-size: 0.88rem; color: #e8f4ff; font-weight: 700; margin: 2px 0; }
+    .wr-week-count { font-size: 0.63rem; color: #1e3050; }
     .wr-week-count.has { color: #a78bfa; }
 
-    /* ── Dependency pulse ── */
-    .wr-dep-cluster { display: flex; align-items: center; gap: 10px; padding: 8px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; }
-    .wr-dep-svg { flex-shrink: 0; }
-    .wr-dep-core { animation: wr-dep-pulse 2s ease-in-out infinite; transform-origin: 30px 30px; }
-    @keyframes wr-dep-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.55; } }
-    .wr-dep-line { stroke-dasharray: 3 3; animation: wr-dep-flow 1s linear infinite; }
-    @keyframes wr-dep-flow { to { stroke-dashoffset: -12; } }
-    .wr-dep-info { flex: 1; min-width: 0; }
-    .wr-dep-title { font-size: 0.7rem; color: #e8f4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wr-dep-meta { font-size: 0.58rem; color: #3a5a78; margin-top: 2px; }
-    .wr-dep-clear { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 8px; gap: 8px; height: 100%; }
-    .wr-dep-clear-dot { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; animation: wr-pulse 2s ease-in-out infinite; }
-    .wr-dep-clear-text { font-size: 0.65rem; color: #3a5a78; }
+    /* ── Empty / all-clear state ── */
+    .wr-empty-fill { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 8px; gap: 8px; height: 100%; }
+    .wr-empty-fill-dot { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; animation: wr-pulse 2s ease-in-out infinite; }
+    .wr-empty-fill-text { font-size: 0.74rem; color: #3a5a78; }
 
     .wr-footer {
       padding: 5px 20px; background: #060a0e; border-top: 1px solid #111820;
-      font-size: 0.58rem; color: #1e3050; display: flex;
+      font-size: 0.66rem; color: #1e3050; display: flex;
       align-items: center; justify-content: space-between; flex-shrink: 0; letter-spacing: 0.05em;
     }
 
@@ -4765,7 +4787,7 @@
       const hrs       = (todayMins / 60).toFixed(1);
       const scItems   = sc.items || [];
 
-      // ── Panel 1: Today ──────────────────────────────────────────────
+      // ── Panel 1: Today's Focus ────────────────────────────────────────
       const todayItems = scItems
         .filter(it => !it.done && (it.start || '').slice(0, 10) === todayStr)
         .sort((a, b) => a.start.localeCompare(b.start));
@@ -4778,16 +4800,49 @@
             </div>
           </div>`
         : `<div class="wr-empty" style="margin-bottom:8px">No focus sessions today</div>`;
-      const todayList = todayItems.length
-        ? todayItems.slice(0, 5).map(it => {
-            const time = new Date(it.start).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
-            return `<div class="wr-item" style="--_wric:${it.color || '#3b82f6'}">
-              <div class="wr-item-text">${_esc(it.title)}</div>
-              <div class="wr-item-meta">${time}</div>
-            </div>`;
-          }).join('')
-        : '<div class="wr-empty">Nothing scheduled today</div>';
-      _wrSetPanel('wr-today', focusBit + todayList);
+
+      const focus      = _wrLoadFocus();
+      const focusIds   = focus.focusIds;
+      const pinned     = focusIds.map(key => {
+        const [projId, taskId] = key.split('::');
+        const proj = projects.find(p => p.id === projId);
+        const task = proj && (proj.tasks || []).find(t => t.id === taskId);
+        return task ? { task, proj, key } : null;
+      }).filter(Boolean);
+      const pinnedKeySet = new Set(pinned.map(x => x.key));
+      const candidates = allTasks
+        .filter(t => !t.done && !pinnedKeySet.has(t._projId + '::' + t.id))
+        .sort((a, b) => {
+          const ad = a.due || '9999-99-99', bd = b.due || '9999-99-99';
+          if (ad !== bd) return ad.localeCompare(bd);
+          const pri = { high: 0, medium: 1, low: 2 };
+          return (pri[a.priority] ?? 1) - (pri[b.priority] ?? 1);
+        })
+        .slice(0, 6);
+
+      let todayHtml = '<div class="wr-pick-section-label">🎯 Focus</div>';
+      todayHtml += pinned.length
+        ? pinned.map(({ task, proj, key }) =>
+            `<div class="wr-pick-item is-pinned">
+              <button class="wr-pick-check" onclick="_wrToggleDone('${proj.id}','${task.id}')" title="Mark done">○</button>
+              <div class="wr-pick-text">${_esc(task.title)}</div>
+              <div class="wr-pick-meta">${_esc(proj.name)}</div>
+              <button class="wr-pick-remove" onclick="_wrRemoveFocus('${key}')" title="Remove from focus">×</button>
+            </div>`).join('')
+        : '<div class="wr-empty">Pick tasks below to focus on today</div>';
+      if (candidates.length) {
+        todayHtml += '<div class="wr-pick-section-label">Pick for today</div>';
+        todayHtml += candidates.map(t => {
+          const due = t.due ? (t.due < todayStr ? 'overdue' : t.due === todayStr ? 'due today' : t.due) : '';
+          return `<div class="wr-pick-item">
+            <button class="wr-pick-add" onclick="_wrAddFocus('${t._projId}::${t.id}')" title="Add to today's focus">+</button>
+            <div class="wr-pick-text">${_esc(t.title)}</div>
+            <div class="wr-pick-meta">${_esc(t._proj)}${due ? ' · ' + due : ''}</div>
+          </div>`;
+        }).join('');
+      }
+      todayHtml += focusBit;
+      _wrSetPanel('wr-today', todayHtml);
 
       // ── Panel 2: My Active Projects ──────────────────────────────────
       const selfId = session.selfMemberId || null;
@@ -4807,7 +4862,7 @@
           return { p, open, pct, myOpen, total: tasks.length };
         })
         .sort((a, b) => b.open - a.open)
-        .slice(0, 4);
+        .slice(0, 8);
       _wrSetPanel('wr-projects', projRows.length
         ? projRows.map(({ p, open, pct, myOpen, total }) =>
             `<div class="wr-proj-card">
@@ -4850,20 +4905,45 @@
         : '<div class="wr-empty">Nothing else this week</div>';
       _wrSetPanel('wr-week', weekGrid + upcomingList);
 
-      // ── Panel 4: Dependency Pulse ──────────────────────────────────────
-      _wrSetPanel('wr-deps', blocked.length
-        ? blocked.slice(0, 3).map(t => {
-            const siblings = allTasks.filter(s =>
-              s._projId === t._projId && s.id !== t.id && !s.done && s.status !== 'done' && s.status !== 'blocked');
-            return `<div class="wr-dep-cluster">
-              ${_wrDepCluster(siblings.length)}
-              <div class="wr-dep-info">
-                <div class="wr-dep-title">${_esc(t.title)}</div>
-                <div class="wr-dep-meta">${_esc(t._proj)} · ${siblings.length} task${siblings.length !== 1 ? 's' : ''} waiting</div>
+      // ── Panel 4: Today's Agenda ────────────────────────────────────────
+      let meetingsData = {};
+      try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
+      const meetingsToday = (meetingsData.meetings || []).filter(m => m.date === todayStr);
+
+      const agendaTaskIds = new Set([...dueToday.map(t => t._projId + '::' + t.id), ...focusIds]);
+      const agendaTasks = allTasks.filter(t => !t.done && agendaTaskIds.has(t._projId + '::' + t.id));
+
+      const agendaItems = [
+        ...meetingsToday.map(m => ({
+          col: '#a78bfa',
+          title: m.title || '(untitled meeting)',
+          meta: 'Meeting' + (m.type ? ' · ' + m.type : ''),
+          badges: _wrLinkBadges('meetings-hub', m.id)
+        })),
+        ...todayItems.map(it => ({
+          col: it.color || '#3b82f6',
+          title: it.title,
+          meta: new Date(it.start).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }),
+          badges: _wrLinkBadges('schedule', it.id)
+        })),
+        ...agendaTasks.map(t => ({
+          col: pinnedKeySet.has(t._projId + '::' + t.id) ? '#22c55e' : '#3b82f6',
+          title: t.title,
+          meta: (pinnedKeySet.has(t._projId + '::' + t.id) ? 'Focus · ' : 'Due Today · ') + t._proj,
+          badges: _wrLinkBadges('project-hub', t.id)
+        })),
+      ];
+
+      _wrSetPanel('wr-agenda', agendaItems.length
+        ? agendaItems.map(it =>
+            `<div class="wr-item" style="--_wric:${it.col}">
+              <div class="wr-item-row">
+                <div class="wr-item-text">${_esc(it.title)}</div>
+                ${it.badges}
               </div>
-            </div>`;
-          }).join('')
-        : '<div class="wr-dep-clear"><div class="wr-dep-clear-dot"></div><div class="wr-dep-clear-text">No blockers — flow is clear</div></div>');
+              <div class="wr-item-meta">${_esc(it.meta)}</div>
+            </div>`).join('')
+        : '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
 
       // ── Panel 5: Key Metrics ─────────────────────────────────────────
       const totalTasks = allTasks.length;
@@ -4914,26 +4994,71 @@
       if (ft) ft.textContent = 'Updated ' + new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
-    function _wrDepCluster(n) {
-      n = Math.min(n, 5);
-      const cx = 30, cy = 30, r = 22;
-      let satellites = '', lines = '';
-      for (let i = 0; i < n; i++) {
-        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-        const x = (cx + Math.cos(angle) * r).toFixed(1);
-        const y = (cy + Math.sin(angle) * r).toFixed(1);
-        lines += `<line class="wr-dep-line" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#3a5a78" stroke-width="1.5"/>`;
-        satellites += `<circle cx="${x}" cy="${y}" r="3.5" fill="#3b82f6"/>`;
-      }
-      return `<svg class="wr-dep-svg" width="60" height="60" viewBox="0 0 60 60">
-        ${lines}${satellites}
-        <circle class="wr-dep-core" cx="${cx}" cy="${cy}" r="6" fill="#ef4444"/>
-      </svg>`;
-    }
-
     function _wrSetPanel(id, html) {
       const el = document.getElementById(id);
       if (el) el.innerHTML = html;
+    }
+
+    // ── War Room: Today's Focus persistence ────────────────────────────────
+    const WARROOM_KEY = 'hub-warroom-v1';
+
+    function _wrLoadFocus() {
+      const data = HubStorage.get(WARROOM_KEY) || {};
+      const todayStr = new Date().toISOString().slice(0, 10);
+      return data.date === todayStr ? { date: data.date, focusIds: data.focusIds || [] } : { date: todayStr, focusIds: [] };
+    }
+
+    function _wrAddFocus(key) {
+      const focus = _wrLoadFocus();
+      if (!focus.focusIds.includes(key) && focus.focusIds.length < 8) focus.focusIds.push(key);
+      HubStorage.set(WARROOM_KEY, focus);
+      _buildWarRoom();
+    }
+
+    function _wrRemoveFocus(key) {
+      const focus = _wrLoadFocus();
+      focus.focusIds = focus.focusIds.filter(k => k !== key);
+      HubStorage.set(WARROOM_KEY, focus);
+      _buildWarRoom();
+    }
+
+    function _wrToggleDone(projId, taskId) {
+      const ph = HubStorage.get('project-hub-v1') || {};
+      const proj = (ph.projects || []).find(p => p.id === projId);
+      const task = proj && (proj.tasks || []).find(t => t.id === taskId);
+      if (!task) return;
+      task.done = !task.done;
+      if (task.done) task.completedAt = new Date().toISOString();
+      HubStorage.set('project-hub-v1', ph);
+      if (task.done) _wrRemoveFocus(projId + '::' + taskId);
+      else _buildWarRoom();
+    }
+
+    // ── War Room: cross-tool link badges ────────────────────────────────────
+    const WR_TOOL_GLYPH = {
+      'project-hub': '◈', 'schedule': '▦', 'decision-hub': '◎', 'learning-hub': '▥',
+      'risk-hub': '⚠', 'meetings-hub': '☰', 'goals-hub': '◆', 'scrum-hub': '▤',
+      'stakeholder-hub': '◷', 'retro-hub': '↺', 'reflection-hub': '▣', 'kmqt-board': '▧',
+      'idea-swiper': '◇', 'tool-portfolio': '⬡'
+    };
+    const WR_TOOL_NAME = {
+      'project-hub': 'Project Hub', 'schedule': 'Schedule', 'decision-hub': 'Decision Hub',
+      'learning-hub': 'Learning Log', 'risk-hub': 'Risk Register', 'meetings-hub': 'Meetings',
+      'goals-hub': 'Goals', 'scrum-hub': 'Scrum Board', 'stakeholder-hub': 'Stakeholders',
+      'retro-hub': 'Retrospective', 'reflection-hub': 'Reflection Board', 'kmqt-board': 'KMQT Board',
+      'idea-swiper': 'Idea Swiper', 'tool-portfolio': 'Tool Portfolio'
+    };
+    function _wrLinkBadges(tool, itemId) {
+      if (!window.HubLinks || !itemId) return '';
+      let links = [];
+      try { links = HubLinks.getLinksFor(tool, itemId); } catch {}
+      if (!links.length) return '';
+      return '<div class="wr-link-badges">' + links.slice(0, 3).map(l => {
+        const other = l.a.tool === tool && l.a.itemId === itemId ? l.b : l.a;
+        const glyph = WR_TOOL_GLYPH[other.tool] || '○';
+        const name  = WR_TOOL_NAME[other.tool] || other.tool;
+        return `<span class="wr-link-badge" title="${_esc(name)}: ${_esc(other.label || '')}">${glyph}</span>`;
+      }).join('') + '</div>';
     }
 
     // W key toggle — skip when typing in inputs
@@ -5254,6 +5379,7 @@
 
   <!-- ── War Room Mode overlay ─────────────────────────────────────────── -->
   <div id="war-room">
+    <div class="wr-atmo"></div>
     <div class="wr-scanlines"></div>
 
     <div class="wr-header">
@@ -5265,8 +5391,8 @@
     </div>
 
     <div class="wr-body">
-      <div class="wr-panel" style="--_wra:#3b82f6">
-        <div class="wr-panel-head"><div class="wr-panel-label">Today</div></div>
+      <div class="wr-panel" style="--_wra:#22c55e">
+        <div class="wr-panel-head"><div class="wr-panel-label">Today's Focus</div></div>
         <div class="wr-panel-list" id="wr-today"></div>
       </div>
       <div class="wr-panel" style="--_wra:#22c55e">
@@ -5277,9 +5403,9 @@
         <div class="wr-panel-head"><div class="wr-panel-label">This Week</div></div>
         <div class="wr-panel-list" id="wr-week"></div>
       </div>
-      <div class="wr-panel" style="--_wra:#ef4444">
-        <div class="wr-panel-head"><div class="wr-panel-label">Dependency Pulse</div></div>
-        <div class="wr-panel-list" id="wr-deps"></div>
+      <div class="wr-panel" style="--_wra:#3b82f6">
+        <div class="wr-panel-head"><div class="wr-panel-label">Today's Agenda</div></div>
+        <div class="wr-panel-list" id="wr-agenda"></div>
       </div>
       <div class="wr-panel" style="--_wra:#f59e0b">
         <div class="wr-panel-head"><div class="wr-panel-label">Key Metrics</div></div>
