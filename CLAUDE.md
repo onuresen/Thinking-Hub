@@ -600,3 +600,16 @@ Fullscreen "glanceable status board" overlay, toggled by `W` key (`toggleWarRoom
 - `handleIcsImport(event)` reads the file via `FileReader`, calls `importICSText(text)`, shows a toast with import counts.
 
 **Files:** `meetings-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 44 — Meeting Hub: attendee management + repeat~~ ✓ Done `[group: meetings-import]`
+Follow-up to ICS import — large imported attendee lists were unwieldy, attendee names had no link to registered members, and recurring meeting types were tags only with no way to create the next occurrence.
+
+**Implementation (`meetings-hub.html`):**
+- **Attendee pill collapse** — `ATTENDEE_COLLAPSE_THRESHOLD = 15`; lists longer than that show the first 15 + a "+N more" toggle (`toggleAttendeesExpanded()`, module-level `attendeesExpanded` flag).
+- **Bulk attendee edit** — "✎ Edit list" button opens a modal (`#attendees-modal-overlay`) with a one-name-per-line textarea; `saveAttendeesBulk()` re-diffs against the existing list (preserving roles for names that still match) and `clearAllAttendees()` wipes the list with a confirm.
+- **Member-aware autocomplete** — `getHubMembers()` reads `HubData.getMembers()`; the "+ Add" name input gets a `<datalist id="att-member-suggestions">` of registered member names (free text still allowed). Attendees whose name matches a registered member show a small colored `.att-member-dot` (member's saved color) in their pill.
+- **Repeat / duplicate meeting** — "🔁 Repeat" button opens `#repeat-modal-overlay` with quick-pick chips (+1 day / +1 week / +2 weeks / +1 month, default based on meeting type) and a date input. `confirmRepeatMeeting()` creates a new meeting copying title/type/attendees/agenda/project, with notes/action items/decisions/schedule sync reset to fresh. `addDaysToDate`/`addMonthToDate` reuse the `dateFromYMD`/`ymdFromDate` helpers from ICS import.
+
+**Files:** `meetings-hub.html`, `CLAUDE.md`
