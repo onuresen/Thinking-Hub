@@ -40,7 +40,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `review-hub.html` | ⚠ Retired from sidebar — data lives on in `review-hub-v1`, accessed via Journal Hub → Weekly tab |
 | `journal-hub.html` | Journal Hub — Daily Log + Weekly Review under one tab bar; day chips link weekly → daily; data stays in `log-hub-v1` + `review-hub-v1` |
 | `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
-| `meetings-hub.html` | Meeting Hub — structured meetings with type templates, RACI-lite attendee roles, decision register, schedule sync, recurring templates, and dependency graph links |
+| `meetings-hub.html` | Meeting Hub — structured meetings with type templates, RACI-lite attendee roles, decision register, schedule sync, recurring templates, dependency graph links, and .ics calendar import (Outlook/Teams) |
 | `goals-hub.html` | OKR / quarterly goals hub |
 | `learning-hub.html` | Reading & learning log |
 | `stakeholder-hub.html` | Visual power/interest stakeholder grid |
@@ -585,3 +585,18 @@ Fullscreen "glanceable status board" overlay, toggled by `W` key (`toggleWarRoom
 **Project Hub → War Room focus picker:** Each task row in `project-hub.html` has a 🎯 action button (`toggleWarRoomFocus()`) that pins/unpins the task to/from `hub-warroom-v1` (max 8, resets daily, shows a toast). `_warroomFocusSet` / `buildWarroomFocusSet()` track today's pinned keys (`projectId::taskId`); the button shows active (green) state and the task's action bar stays visible without hover via `.task-item:has(.task-action-btn.warroom.active)`.
 
 **Files:** `index.html`, `project-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 43 — Meeting Hub: ICS calendar import~~ ✓ Done `[group: meetings-import]`
+"📥 Import .ics" button in the Meeting Hub topbar lets users import meetings from an Outlook/Teams/Google calendar export (`.ics` file), including weekly recurring meetings.
+
+**Implementation (`meetings-hub.html`):**
+- Inline RFC5545-ish parser: `unfoldICS` (line continuation), `parseICS` (VEVENT → object: uid, summary, description, location, status, dtstart/dtend, rrule, exdates, attendees via `CN=` extraction), `parseICSDateValue` (UTC / local / all-day formats), `parseRRULE`.
+- `expandEventOccurrences(ev, windowStart, windowEnd)` expands DAILY/WEEKLY (incl. BYDAY)/MONTHLY/YEARLY RRULEs with INTERVAL/COUNT/UNTIL/EXDATE support, capped at 5000 iterations.
+- Import window: today − 7 days to today + 90 days. `STATUS:CANCELLED` events are skipped.
+- `guessMeetingType(title)` maps keywords (standup, 1:1, retro, planning, kickoff, review, decision, weekly/sync) to `MEETING_TYPES` keys; defaults to `custom`.
+- Each imported meeting gets `icsUid` + `icsKey` (`${uid}::${date}`) fields for dedup on re-import. Time/location/description go into the `notes` field (no schema changes).
+- `handleIcsImport(event)` reads the file via `FileReader`, calls `importICSText(text)`, shows a toast with import counts.
+
+**Files:** `meetings-hub.html`, `CLAUDE.md`
