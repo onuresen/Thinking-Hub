@@ -768,16 +768,17 @@
     #war-room > .wr-atmo {
       position: absolute; inset: -25%; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(circle at 24% 28%, rgba(59,130,246,0.40), transparent 42%),
-        radial-gradient(circle at 76% 64%, rgba(167,139,250,0.32), transparent 44%),
-        radial-gradient(circle at 50% 95%, rgba(239,68,68,0.22), transparent 40%);
-      filter: blur(45px);
-      animation: wr-atmo-drift 60s ease-in-out infinite alternate;
+        radial-gradient(circle at 22% 26%, rgba(59,130,246,0.55), transparent 45%),
+        radial-gradient(circle at 78% 60%, rgba(167,139,250,0.46), transparent 48%),
+        radial-gradient(circle at 48% 92%, rgba(239,68,68,0.32), transparent 42%),
+        radial-gradient(circle at 88% 12%, rgba(34,197,94,0.28), transparent 40%);
+      filter: blur(35px);
+      animation: wr-atmo-drift 32s ease-in-out infinite alternate;
     }
     @keyframes wr-atmo-drift {
-      0%   { transform: translate(-2%, -1%) scale(1); }
-      50%  { transform: translate(3%, 2%) scale(1.12); }
-      100% { transform: translate(-1%, 3%) scale(1.02); }
+      0%   { transform: translate(-5%, -3%) scale(1); }
+      50%  { transform: translate(6%, 4%) scale(1.22); }
+      100% { transform: translate(-3%, 6%) scale(1.05); }
     }
 
     #war-room > .wr-scanlines {
@@ -789,7 +790,7 @@
     .wr-header {
       display: flex; align-items: center; gap: 1.25rem;
       padding: 9px 20px; border-bottom: 1px solid #1a2235;
-      background: rgba(6,10,14,0.45); flex-shrink: 0;
+      background: rgba(6,10,14,0.3); flex-shrink: 0;
     }
     .wr-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #e8f4ff; }
     .wr-live { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; letter-spacing: 0.1em; color: #ef4444; }
@@ -803,10 +804,10 @@
     .wr-body {
       display: grid; grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(2, 1fr);
-      gap: 1px; flex: 1; overflow: hidden; background: rgba(17,24,32,0.35);
+      gap: 1px; flex: 1; overflow: hidden; background: rgba(17,24,32,0.2);
     }
     .wr-panel {
-      background: rgba(8,13,20,0.62); display: flex; flex-direction: column;
+      background: rgba(8,13,20,0.46); display: flex; flex-direction: column;
       overflow: hidden; position: relative;
     }
     .wr-panel::before {
@@ -831,9 +832,6 @@
     .wr-item-text { font-size: 0.8rem; color: #b8d0e8; line-height: 1.35; word-break: break-word; }
     .wr-item-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 2px; letter-spacing: 0.03em; }
 
-    .wr-link-badges { display: flex; gap: 3px; flex-shrink: 0; }
-    .wr-link-badge { font-size: 0.7rem; color: #3a5a78; opacity: 0.85; cursor: default; }
-
     .wr-stat-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
     .wr-stat-chip { flex: 1; padding: 8px 6px; background: #0c1520; border-radius: 3px; border: 1px solid #1a2a3a; text-align: center; min-width: 60px; }
     .wr-stat-chip-val { font-size: 1.55rem; font-weight: 700; color: #e8f4ff; line-height: 1; }
@@ -854,14 +852,13 @@
     .wr-pick-text { flex: 1; font-size: 0.8rem; color: #e8f4ff; line-height: 1.3; word-break: break-word; }
     .wr-pick-item.is-pinned .wr-pick-text { color: #b8d0e8; }
     .wr-pick-meta { font-size: 0.62rem; color: #3a5a78; flex-shrink: 0; }
-    .wr-pick-check, .wr-pick-add, .wr-pick-remove {
+    .wr-pick-check, .wr-pick-remove {
       width: 18px; height: 18px; flex-shrink: 0; border: 1px solid #1e2e40; border-radius: 50%;
       background: transparent; color: #3a5a78; font-size: 0.74rem; line-height: 1; cursor: pointer;
       display: flex; align-items: center; justify-content: center; padding: 0;
       transition: all 0.15s ease; font-family: inherit;
     }
     .wr-pick-check:hover { border-color: #22c55e; color: #22c55e; }
-    .wr-pick-add:hover { border-color: #3b82f6; color: #3b82f6; }
     .wr-pick-remove:hover { border-color: #ef4444; color: #ef4444; }
 
     /* ── Project cards ── */
@@ -880,31 +877,32 @@
     .wr-proj-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
 
     /* ── This Month calendar ── */
-    .wr-cal-month-label { font-size: 0.74rem; color: #b8d0e8; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; }
-    .wr-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 9px; }
-    .wr-cal-dow { font-size: 0.56rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; padding-bottom: 2px; }
+    .wr-cal-month-label { font-size: 0.8rem; color: #b8d0e8; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; flex-shrink: 0; }
+    .wr-cal-grid {
+      flex: 1; display: grid; grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: auto repeat(6, 1fr); gap: 4px; min-height: 0;
+    }
+    .wr-cal-dow { font-size: 0.62rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; padding-bottom: 3px; }
     .wr-cal-day {
-      position: relative; background: #0c1520; border-radius: 3px; border: 1px solid #1a2a3a;
-      min-height: 24px; display: flex; align-items: center; justify-content: center;
-      font-size: 0.68rem; color: #5a7a98;
+      position: relative; background: #0c1520; border-radius: 4px; border: 1px solid #1a2a3a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.84rem; color: #5a7a98;
     }
     .wr-cal-day.is-today { border-color: #3b82f6; background: #0c1a28; color: #e8f4ff; font-weight: 700; }
     .wr-cal-day.is-other-month { opacity: 0.3; }
-    .wr-cal-dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: #a78bfa; }
+    .wr-cal-dot { position: absolute; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: #a78bfa; }
 
-    /* ── Today's Web (linked-item clusters) ── */
-    .wr-graph-cluster { display: flex; gap: 10px; padding: 8px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; align-items: flex-start; }
-    .wr-graph-svg { flex-shrink: 0; }
-    .wr-graph-core { animation: wr-graph-pulse 2.4s ease-in-out infinite; transform-origin: 40px 40px; }
-    .wr-graph-line { stroke: #2a3a50; stroke-width: 1.5; stroke-dasharray: 3 3; animation: wr-graph-flow 2s linear infinite; }
-    .wr-graph-sat circle { fill: #16222e; stroke: #2a3a50; stroke-width: 1; }
-    .wr-graph-sat text { fill: #b8d0e8; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
-    .wr-graph-info { flex: 1; min-width: 0; }
-    .wr-graph-title { font-size: 0.85rem; color: #e8f4ff; font-weight: 600; line-height: 1.3; }
-    .wr-graph-sub { font-size: 0.66rem; color: #3a5a78; margin: 2px 0 6px; }
-    .wr-graph-list { display: flex; flex-direction: column; gap: 2px; }
-    .wr-graph-item { font-size: 0.7rem; color: #7a98b8; line-height: 1.35; }
-    .wr-graph-glyph { color: #5a7a98; margin-right: 3px; }
+    /* ── Today's Web (unified radial graph) ── */
+    .wr-graph-web { width: 100%; height: 100%; display: block; }
+    .wr-graph-hub { fill: #16222e; stroke: #2a3a50; stroke-width: 1.5; animation: wr-graph-pulse 3s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+    .wr-graph-hub-label { fill: #5a7a98; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
+    .wr-graph-node { animation: wr-graph-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+    .wr-graph-node-glyph { fill: #0a0f16; font-size: 12px; font-family: 'JetBrains Mono', monospace; pointer-events: none; }
+    .wr-graph-node-label { fill: #b8d0e8; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+    .wr-graph-line { stroke: #2a3a50; stroke-width: 1.5; stroke-dasharray: 4 4; animation: wr-graph-flow 2s linear infinite; }
+    .wr-graph-line-2 { stroke: #1e2e40; stroke-width: 1; stroke-dasharray: 2 3; }
+    .wr-graph-sat circle { fill: #0c1520; stroke: #2a3a50; stroke-width: 1; }
+    .wr-graph-sat text { fill: #7a98b8; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
     @keyframes wr-graph-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.8; } }
     @keyframes wr-graph-flow { to { stroke-dashoffset: -12; } }
 
@@ -4827,15 +4825,6 @@
         return task ? { task, proj, key } : null;
       }).filter(Boolean);
       const pinnedKeySet = new Set(pinned.map(x => x.key));
-      const candidates = allTasks
-        .filter(t => !t.done && !pinnedKeySet.has(t._projId + '::' + t.id))
-        .sort((a, b) => {
-          const ad = a.due || '9999-99-99', bd = b.due || '9999-99-99';
-          if (ad !== bd) return ad.localeCompare(bd);
-          const pri = { high: 0, medium: 1, low: 2 };
-          return (pri[a.priority] ?? 1) - (pri[b.priority] ?? 1);
-        })
-        .slice(0, 6);
 
       let todayHtml = '<div class="wr-pick-section-label">🎯 Focus</div>';
       todayHtml += pinned.length
@@ -4846,18 +4835,7 @@
               <div class="wr-pick-meta">${_esc(proj.name)}</div>
               <button class="wr-pick-remove" onclick="_wrRemoveFocus('${key}')" title="Remove from focus">×</button>
             </div>`).join('')
-        : '<div class="wr-empty">Pick tasks below to focus on today</div>';
-      if (candidates.length) {
-        todayHtml += '<div class="wr-pick-section-label">Pick for today</div>';
-        todayHtml += candidates.map(t => {
-          const due = t.due ? (t.due < todayStr ? 'overdue' : t.due === todayStr ? 'due today' : t.due) : '';
-          return `<div class="wr-pick-item">
-            <button class="wr-pick-add" onclick="_wrAddFocus('${t._projId}::${t.id}')" title="Add to today's focus">+</button>
-            <div class="wr-pick-text">${_esc(t.title)}</div>
-            <div class="wr-pick-meta">${_esc(t._proj)}${due ? ' · ' + due : ''}</div>
-          </div>`;
-        }).join('');
-      }
+        : '<div class="wr-empty">Pin tasks from Project Hub (🎯 button) to focus on today</div>';
       todayHtml += focusBit;
       _wrSetPanel('wr-today', todayHtml);
 
@@ -4878,8 +4856,7 @@
           const myOpen = selfId ? tasks.filter(t => !t.done && t.assigneeId === selfId).length : 0;
           return { p, open, pct, myOpen, total: tasks.length };
         })
-        .sort((a, b) => b.open - a.open)
-        .slice(0, 8);
+        .sort((a, b) => b.open - a.open);
       _wrSetPanel('wr-projects', projRows.length
         ? projRows.map(({ p, open, pct, myOpen, total }) =>
             `<div class="wr-proj-card">
@@ -4915,22 +4892,9 @@
         }).join('')}
       </div>`;
       const monthLabel = now.toLocaleDateString('en', { month: 'long', year: 'numeric' });
-      const upcoming = scItems
-        .filter(it => !it.done && (it.start || '').slice(0, 10) >= todayStr)
-        .sort((a, b) => a.start.localeCompare(b.start))
-        .slice(0, 3);
-      const upcomingList = upcoming.length
-        ? upcoming.map(it => {
-            const label = new Date(it.start).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
-            return `<div class="wr-item" style="--_wric:${it.color || '#a78bfa'}">
-              <div class="wr-item-text">${_esc(it.title)}</div>
-              <div class="wr-item-meta">${label}</div>
-            </div>`;
-          }).join('')
-        : '<div class="wr-empty">Nothing scheduled this month</div>';
-      _wrSetPanel('wr-week', `<div class="wr-cal-month-label">${monthLabel}</div>` + calGrid + upcomingList);
+      _wrSetPanel('wr-week', `<div class="wr-cal-month-label">${monthLabel}</div>` + calGrid);
 
-      // ── Panel 4: Today's Web (linked-item clusters) ────────────────────
+      // ── Panel 4: Today's Web (unified radial graph) ───────────────────
       let meetingsData = {};
       try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
       const meetingsToday = (meetingsData.meetings || []).filter(m => m.date === todayStr);
@@ -4947,24 +4911,15 @@
       meetingsToday.forEach(m =>
         coreItems.push({ tool: 'meetings-hub', itemId: m.id, title: m.title || '(untitled meeting)', sub: 'Meeting', col: '#a78bfa' }));
 
-      const withLinks = [], withoutLinks = [];
-      coreItems.forEach(c => {
+      const webItems = coreItems.slice(0, 5).map(c => {
         let links = [];
         try { links = window.HubLinks ? HubLinks.getLinksFor(c.tool, c.itemId) : []; } catch {}
-        if (links.length) withLinks.push({ ...c, links });
-        else withoutLinks.push(c);
+        return { ...c, links };
       });
 
-      let webHtml = '';
-      if (withLinks.length) webHtml += withLinks.slice(0, 3).map(c => _wrGraphCluster(c)).join('');
-      if (withoutLinks.length) {
-        if (withLinks.length) webHtml += '<div class="wr-pick-section-label">Also today</div>';
-        webHtml += withoutLinks.slice(0, 5).map(c =>
-          `<div class="wr-item" style="--_wric:${c.col}"><div class="wr-item-text">${_esc(c.title)}</div><div class="wr-item-meta">${_esc(c.sub)}</div></div>`
-        ).join('');
-      }
-      _wrSetPanel('wr-agenda', webHtml ||
-        '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
+      _wrSetPanel('wr-agenda', webItems.length
+        ? _wrTodayWebGraph(webItems, now.getDate())
+        : '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
 
       // ── Panel 5: Key Metrics ─────────────────────────────────────────
       const totalTasks = allTasks.length;
@@ -4979,6 +4934,14 @@
             return sum + avg;
           }, 0) / objectives.length * 100)
         : null;
+      const teamSize = (ph.members || []).length;
+      const next7 = new Date(now); next7.setDate(next7.getDate() + 7);
+      const next7Str = next7.toISOString().slice(0, 10);
+      const meetingsWeek = (meetingsData.meetings || []).filter(m => m.date >= todayStr && m.date <= next7Str).length;
+      const last7 = new Date(now); last7.setDate(last7.getDate() - 7);
+      const last7Str = last7.toISOString().slice(0, 10);
+      const doneThisWeek = allTasks.filter(t => t.done && t.completedAt && t.completedAt.slice(0, 10) >= last7Str).length;
+
       _wrSetPanel('wr-metrics', `
         <div class="wr-stat-row">
           <div class="wr-stat-chip"><div class="wr-stat-chip-val">${openTasks}</div><div class="wr-stat-chip-lbl">Open Tasks</div></div>
@@ -4994,6 +4957,11 @@
           <div class="wr-stat-chip"><div class="wr-stat-chip-val">${totalTasks ? Math.round((totalTasks - openTasks) / totalTasks * 100) : 0}%</div><div class="wr-stat-chip-lbl">Tasks Done</div></div>
           <div class="wr-stat-chip"><div class="wr-stat-chip-val">${hrs}h</div><div class="wr-stat-chip-lbl">Focus Today</div></div>
           <div class="wr-stat-chip"><div class="wr-stat-chip-val">${projects.length}</div><div class="wr-stat-chip-lbl">Projects</div></div>
+        </div>
+        <div class="wr-stat-row">
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${teamSize}</div><div class="wr-stat-chip-lbl">Team Members</div></div>
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${meetingsWeek}</div><div class="wr-stat-chip-lbl">Meetings (7d)</div></div>
+          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${doneThisWeek}</div><div class="wr-stat-chip-lbl">Done This Week</div></div>
         </div>`);
 
       // ── Panel 6: Needs Attention ───────────────────────────────────────
@@ -5029,13 +4997,6 @@
       return data.date === todayStr ? { date: data.date, focusIds: data.focusIds || [] } : { date: todayStr, focusIds: [] };
     }
 
-    function _wrAddFocus(key) {
-      const focus = _wrLoadFocus();
-      if (!focus.focusIds.includes(key) && focus.focusIds.length < 8) focus.focusIds.push(key);
-      HubStorage.set(WARROOM_KEY, focus);
-      _buildWarRoom();
-    }
-
     function _wrRemoveFocus(key) {
       const focus = _wrLoadFocus();
       focus.focusIds = focus.focusIds.filter(k => k !== key);
@@ -5069,53 +5030,49 @@
       'retro-hub': 'Retrospective', 'reflection-hub': 'Reflection Board', 'kmqt-board': 'KMQT Board',
       'idea-swiper': 'Idea Swiper', 'tool-portfolio': 'Tool Portfolio'
     };
-    function _wrLinkBadges(tool, itemId) {
-      if (!window.HubLinks || !itemId) return '';
-      let links = [];
-      try { links = HubLinks.getLinksFor(tool, itemId); } catch {}
-      if (!links.length) return '';
-      return '<div class="wr-link-badges">' + links.slice(0, 3).map(l => {
-        const other = l.a.tool === tool && l.a.itemId === itemId ? l.b : l.a;
-        const glyph = WR_TOOL_GLYPH[other.tool] || '○';
-        const name  = WR_TOOL_NAME[other.tool] || other.tool;
-        return `<span class="wr-link-badge" title="${_esc(name)}: ${_esc(other.label || '')}">${glyph}</span>`;
-      }).join('') + '</div>';
+    // Truncates a string to n chars, appending an ellipsis if shortened
+    function _wrTruncate(str, n) {
+      return str.length > n ? str.slice(0, n - 1) + '…' : str;
     }
 
-    // Renders a small radial cluster: a core "today" item with its linked items as satellites
-    function _wrGraphCluster(c) {
-      const sats = c.links.slice(0, 5).map(l => {
-        const other = l.a.tool === c.tool && l.a.itemId === c.itemId ? l.b : l.a;
-        return {
-          glyph: WR_TOOL_GLYPH[other.tool] || '○',
-          name: WR_TOOL_NAME[other.tool] || other.tool,
-          label: other.label || ''
-        };
+    // Renders a unified radial graph: hub (today) -> first ring (today's items) -> second ring (linked items)
+    function _wrTodayWebGraph(items, hubLabel) {
+      const W = 400, H = 260, hub = { x: 200, y: 132 }, r1 = 92;
+      const n = items.length;
+      let lines1 = '', lines2 = '', nodes1 = '', nodes2 = '';
+      items.forEach((c, i) => {
+        const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+        c._x = hub.x + Math.cos(angle) * r1;
+        c._y = hub.y + Math.sin(angle) * r1 * 0.85;
+        c._angle = angle;
+        lines1 += `<line class="wr-graph-line" x1="${hub.x}" y1="${hub.y}" x2="${c._x.toFixed(1)}" y2="${c._y.toFixed(1)}"/>`;
       });
-      const n = sats.length, cx = 40, cy = 40, r = 26;
-      let lines = '', nodes = '';
-      sats.forEach((s, i) => {
-        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-        const x = (cx + Math.cos(angle) * r).toFixed(1);
-        const y = (cy + Math.sin(angle) * r).toFixed(1);
-        lines += `<line class="wr-graph-line" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`;
-        nodes += `<g class="wr-graph-sat"><circle cx="${x}" cy="${y}" r="9"/><text x="${x}" y="${y}" dy="0.32em" text-anchor="middle">${s.glyph}</text></g>`;
+      items.forEach(c => {
+        const links = (c.links || []).slice(0, 2);
+        const m = links.length;
+        links.forEach((l, j) => {
+          const spread = m > 1 ? (j - (m - 1) / 2) * 0.6 : 0;
+          const a2 = c._angle + spread;
+          const r2 = 36;
+          const x2 = c._x + Math.cos(a2) * r2;
+          const y2 = c._y + Math.sin(a2) * r2 * 0.85;
+          const other = l.a.tool === c.tool && l.a.itemId === c.itemId ? l.b : l.a;
+          const glyph = WR_TOOL_GLYPH[other.tool] || '○';
+          const name = WR_TOOL_NAME[other.tool] || other.tool;
+          lines2 += `<line class="wr-graph-line wr-graph-line-2" x1="${c._x.toFixed(1)}" y1="${c._y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+          nodes2 += `<g class="wr-graph-sat"><title>${_esc(name)}: ${_esc(other.label || '')}</title><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="9"/><text x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" dy="0.32em" text-anchor="middle">${glyph}</text></g>`;
+        });
       });
-      const list = sats.map(s =>
-        `<div class="wr-graph-item"><span class="wr-graph-glyph">${s.glyph}</span>${_esc(s.name)}${s.label ? ': ' + _esc(s.label) : ''}</div>`
-      ).join('');
-      return `<div class="wr-graph-cluster">
-        <svg class="wr-graph-svg" width="80" height="80" viewBox="0 0 80 80">
-          ${lines}
-          <circle class="wr-graph-core" cx="${cx}" cy="${cy}" r="14" fill="${c.col}"/>
-          ${nodes}
-        </svg>
-        <div class="wr-graph-info">
-          <div class="wr-graph-title">${_esc(c.title)}</div>
-          <div class="wr-graph-sub">${_esc(c.sub)}</div>
-          <div class="wr-graph-list">${list}</div>
-        </div>
-      </div>`;
+      items.forEach(c => {
+        const labelY = c._y + (c._y > hub.y ? -20 : 24);
+        const anchor = c._x < hub.x - 10 ? 'end' : c._x > hub.x + 10 ? 'start' : 'middle';
+        const lx = c._x + (anchor === 'end' ? -16 : anchor === 'start' ? 16 : 0);
+        nodes1 += `<circle class="wr-graph-node" cx="${c._x.toFixed(1)}" cy="${c._y.toFixed(1)}" r="13" fill="${c.col}"/>`;
+        nodes1 += `<text x="${c._x.toFixed(1)}" y="${c._y.toFixed(1)}" dy="0.32em" text-anchor="middle" class="wr-graph-node-glyph">${WR_TOOL_GLYPH[c.tool] || '○'}</text>`;
+        nodes1 += `<text x="${lx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" class="wr-graph-node-label">${_esc(_wrTruncate(c.title, 16))}</text>`;
+      });
+      const hubSvg = `<circle class="wr-graph-hub" cx="${hub.x}" cy="${hub.y}" r="18"/><text x="${hub.x}" y="${hub.y}" dy="0.32em" text-anchor="middle" class="wr-graph-hub-label">${hubLabel}</text>`;
+      return `<svg class="wr-graph-web" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${lines1}${lines2}${hubSvg}${nodes1}${nodes2}</svg>`;
     }
 
     // W key toggle — skip when typing in inputs

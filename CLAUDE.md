@@ -573,13 +573,15 @@ Frontend-design review found the app read as "generic dark dashboard + one neon-
 Fullscreen "glanceable status board" overlay, toggled by `W` key (`toggleWarRoom()`), always-dark hardcoded palette (intentional — not theme-aware). Auto-refreshes every 60s; live clock ticks every 1s.
 
 **6 panels:**
-- **Today's Focus** — pick-your-own-focus list. Pinned tasks (✓/× to mark done or unpin) + a "Pick for today" list of open tasks sorted by due date then priority, plus today's focus-session summary. Persisted to new key `hub-warroom-v1` (`{ date, focusIds: ['projId::taskId', ...] }`, max 8, resets daily).
-- **My Active Projects** — up to 8 active projects (was 4), filtered to `selfMemberId` if set, with progress bar + open/mine counts.
-- **This Month** — full month calendar grid (current month, leading/trailing days from adjacent months dimmed), days with schedule items get a dot; today outlined. Below the grid, next 3 upcoming schedule items.
-- **Today's Web** — radial "dependency cluster" graphs (`_wrGraphCluster()`): for each of today's core items (pinned focus tasks, due-today tasks, today's meetings) that has cross-tool links via `HubLinks.getLinksFor()`, renders a small SVG with the item as a center node and its linked items as satellite nodes (glyph + tool name + label), animated dashed connector lines. Core items with no links fall through to a plain "Also today" list below.
-- **Key Metrics** — open/blocked/overdue tasks, decisions, risks, OKR avg, % done, focus time, project count.
+- **Today's Focus** — read-only display of pinned tasks (✓ mark done / × unpin), plus today's focus-session summary. Picking happens in **Project Hub** via the new 🎯 task action button (see below); empty state points users there. Persisted to `hub-warroom-v1` (`{ date, focusIds: ['projId::taskId', ...] }`, max 8, resets daily).
+- **My Active Projects** — ALL active projects (no cap), filtered to `selfMemberId` if set, with progress bar + open/mine counts.
+- **This Month** — full-panel month calendar grid (current month, leading/trailing days from adjacent months dimmed), days with schedule items get a dot; today outlined. No upcoming-list below — calendar fills the whole panel like the Schedule tool.
+- **Today's Web** — single unified radial dependency graph (`_wrTodayWebGraph()`): a center "hub" node (today's date number) connects to up to 5 first-ring "today" items (pinned focus tasks, due-today tasks, today's meetings — color-coded), each of which can have up to 2 second-ring satellite nodes for cross-tool linked items via `HubLinks.getLinksFor()` (glyph + tooltip with tool name/label). Animated dashed connector lines (hub→item solid dash, item→satellite finer dash). Item labels render toward the hub side (not away) to avoid overlapping satellite nodes. Empty state if no items today.
+- **Key Metrics** — 4 rows / 12 chips: open/blocked/overdue tasks; decisions/risks/OKR avg; % tasks done/focus time today/project count; team members/meetings in next 7d/tasks done in last 7d.
 - **Needs Attention** — blocked / overdue / due-today tasks.
 
-**Visual pass:** `.wr-atmo` ambient drifting gradient-mesh background (`@keyframes wr-atmo-drift`, 60s loop); `.wr-body`/`.wr-panel`/`.wr-header` backgrounds made semi-transparent (`rgba`) so the atmo glow actually bleeds through (previously hidden behind opaque panel fills); bumped font sizes across all panels for readability at a glance.
+**Visual pass:** `.wr-atmo` ambient drifting gradient-mesh background (`@keyframes wr-atmo-drift`, 32s loop, 4 gradients, higher opacity/blur); `.wr-body`/`.wr-panel`/`.wr-header` backgrounds further lightened (`rgba`) so the atmo glow bleeds through clearly.
 
-**Files:** `index.html`, `CLAUDE.md`
+**Project Hub → War Room focus picker:** Each task row in `project-hub.html` has a 🎯 action button (`toggleWarRoomFocus()`) that pins/unpins the task to/from `hub-warroom-v1` (max 8, resets daily, shows a toast). `_warroomFocusSet` / `buildWarroomFocusSet()` track today's pinned keys (`projectId::taskId`); the button shows active (green) state and the task's action bar stays visible without hover via `.task-item:has(.task-action-btn.warroom.active)`.
+
+**Files:** `index.html`, `project-hub.html`, `CLAUDE.md`
