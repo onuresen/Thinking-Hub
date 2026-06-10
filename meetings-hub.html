@@ -166,6 +166,9 @@
     .add-att-name { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font-body); font-size: 12px; min-width: 70px; }
     .add-att-role { background: none; border: none; color: var(--text2); font-size: 11px; cursor: pointer; outline: none; font-family: var(--font-body); }
     .add-att-confirm { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 0 2px; transition: color 0.12s; }
+    .att-member-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--accent); }
+    .repeat-quick-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .repeat-quick-row .btn { font-size: 11px; padding: 5px 10px; }
 
     .detail-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
     .save-indicator { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
@@ -356,6 +359,54 @@
       <div class="detail-empty-text">Select or create a meeting to start</div>
     </div>
     <div id="detail-content" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
+  </div>
+</div>
+
+<!-- Bulk-edit attendees modal -->
+<div class="modal-overlay" id="attendees-modal-overlay">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Edit Attendees</div>
+      <button class="modal-close" onclick="closeAttendeesModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">One name per line — remove a line to remove that attendee</div>
+      <textarea class="field-input" id="attendees-bulk-text" style="height:220px;resize:vertical;font-family:var(--font-mono);font-size:12px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="clearAllAttendees()" style="margin-right:auto;color:var(--accent-nope)">Clear all</button>
+      <button class="btn btn-primary" onclick="saveAttendeesBulk()">Save</button>
+      <button class="btn btn-ghost" onclick="closeAttendeesModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Repeat meeting modal -->
+<div class="modal-overlay" id="repeat-modal-overlay">
+  <div class="modal" style="width:340px">
+    <div class="modal-header">
+      <div class="modal-title">Repeat Meeting</div>
+      <button class="modal-close" onclick="closeRepeatModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="repeat-quick-row">
+        <button class="btn btn-ghost" onclick="setRepeatDate(1)">+1 day</button>
+        <button class="btn btn-ghost" onclick="setRepeatDate(7)">+1 week</button>
+        <button class="btn btn-ghost" onclick="setRepeatDate(14)">+2 weeks</button>
+        <button class="btn btn-ghost" onclick="setRepeatDateMonth()">+1 month</button>
+      </div>
+      <div>
+        <div class="field-label">New date</div>
+        <input class="field-input" id="repeat-date" type="date">
+      </div>
+      <div class="field-label" style="margin-top:10px;color:var(--text3);text-transform:none;letter-spacing:normal">
+        Creates a copy with the same title, type, attendees, and agenda. Notes, action items, and decisions start fresh.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="confirmRepeatMeeting()">Create</button>
+      <button class="btn btn-ghost" onclick="closeRepeatModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -722,22 +773,53 @@
 
   // ── Attendee helpers ──────────────────────────────────────────────────────────
 
+  const ATTENDEE_COLLAPSE_THRESHOLD = 15;
+  let attendeesExpanded = false;
+
+  function getHubMembers() {
+    try { return HubData.getMembers(); } catch { return []; }
+  }
+
   function buildAttendeeWrapInner(m) {
-    const pills = (m.attendeesList || []).map(a => `
+    const list = m.attendeesList || [];
+    const members = getHubMembers();
+    const memberByName = new Map(members.map(mb => [mb.name.toLowerCase(), mb]));
+    const showAll = attendeesExpanded || list.length <= ATTENDEE_COLLAPSE_THRESHOLD;
+    const visible = showAll ? list : list.slice(0, ATTENDEE_COLLAPSE_THRESHOLD);
+
+    const pills = visible.map(a => {
+      const mb = memberByName.get(a.name.toLowerCase());
+      const dot = mb ? `<span class="att-member-dot" style="background:${esc(mb.color || '')}" title="Registered member"></span>` : '';
+      return `
       <div class="att-pill" data-role="${esc(a.role)}">
-        <span class="att-name">${esc(a.name)}</span>
+        ${dot}<span class="att-name">${esc(a.name)}</span>
         <select class="att-role-sel" onchange="changeAttendeeRole('${esc(a.name)}',this.value)">
           ${Object.entries(ROLE_LABELS).map(([k, v]) =>
             `<option value="${k}"${a.role === k ? ' selected' : ''}>${v}</option>`
           ).join('')}
         </select>
         <button class="att-remove" onclick="removeAttendee('${esc(a.name)}')" title="Remove">✕</button>
-      </div>`).join('');
-    return `${pills}
+      </div>`;
+    }).join('');
+
+    const toggleBtn = !showAll
+      ? `<button class="add-att-btn" onclick="toggleAttendeesExpanded()">+${list.length - ATTENDEE_COLLAPSE_THRESHOLD} more</button>`
+      : (list.length > ATTENDEE_COLLAPSE_THRESHOLD
+          ? `<button class="add-att-btn" onclick="toggleAttendeesExpanded()">Show less</button>`
+          : '');
+
+    const editListBtn = list.length > 0
+      ? `<button class="add-att-btn" onclick="openAttendeesModal()" title="Bulk-edit attendee list">✎ Edit list</button>`
+      : '';
+
+    return `${pills}${toggleBtn}${editListBtn}
       <button class="add-att-btn" onclick="showAddAttendee()">+ Add</button>
       <div class="add-att-row" id="add-att-row">
-        <input class="add-att-name" id="add-att-name" placeholder="Name"
+        <input class="add-att-name" id="add-att-name" placeholder="Name" list="att-member-suggestions"
           onkeydown="if(event.key==='Enter')addAttendee();if(event.key==='Escape')hideAddAttendee()">
+        <datalist id="att-member-suggestions">
+          ${members.map(mb => `<option value="${esc(mb.name)}"></option>`).join('')}
+        </datalist>
         <select class="add-att-role" id="add-att-role">
           <option value="contributor">Contributor</option>
           <option value="lead">Lead</option>
@@ -747,6 +829,11 @@
         <button class="add-att-confirm" onclick="addAttendee()" style="color:var(--accent)">✓</button>
         <button class="add-att-confirm" onclick="hideAddAttendee()" style="color:var(--text3)">✕</button>
       </div>`;
+  }
+
+  function toggleAttendeesExpanded() {
+    attendeesExpanded = !attendeesExpanded;
+    refreshAttendeesWrap();
   }
 
   function refreshAttendeesWrap() {
@@ -797,6 +884,51 @@
     if (att) att.role = role;
     save();
     refreshAttendeesWrap();
+  }
+
+  function openAttendeesModal() {
+    const m = activeMeeting(); if (!m) return;
+    document.getElementById('attendees-bulk-text').value = (m.attendeesList || []).map(a => a.name).join('\n');
+    document.getElementById('attendees-modal-overlay').classList.add('open');
+  }
+
+  function closeAttendeesModal() {
+    document.getElementById('attendees-modal-overlay').classList.remove('open');
+  }
+
+  function saveAttendeesBulk() {
+    const m = activeMeeting(); if (!m) return;
+    const existingByName = new Map((m.attendeesList || []).map(a => [a.name.toLowerCase(), a]));
+    const seen = new Set();
+    m.attendeesList = document.getElementById('attendees-bulk-text').value
+      .split('\n').map(s => s.trim()).filter(Boolean)
+      .filter(name => {
+        const key = name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map(name => existingByName.get(name.toLowerCase()) || { name, role: 'contributor' });
+    m.attendees = m.attendeesList.map(a => a.name).join(', ');
+    save();
+    attendeesExpanded = false;
+    refreshAttendeesWrap();
+    refreshDecisionsBody();
+    closeAttendeesModal();
+    showToast('Attendees updated');
+  }
+
+  function clearAllAttendees() {
+    if (!confirm('Remove all attendees from this meeting?')) return;
+    const m = activeMeeting(); if (!m) return;
+    m.attendeesList = [];
+    m.attendees = '';
+    save();
+    attendeesExpanded = false;
+    refreshAttendeesWrap();
+    refreshDecisionsBody();
+    closeAttendeesModal();
+    showToast('Attendees cleared');
   }
 
   // ── Decision helpers ──────────────────────────────────────────────────────────
@@ -1014,6 +1146,18 @@
     return new Date(Date.UTC(y, mo - 1, d));
   }
   function ymdFromDate(d) { return d.toISOString().slice(0, 10); }
+
+  function addDaysToDate(dateStr, n) {
+    const d = dateFromYMD(dateStr);
+    d.setUTCDate(d.getUTCDate() + n);
+    return ymdFromDate(d);
+  }
+
+  function addMonthToDate(dateStr) {
+    const d = dateFromYMD(dateStr);
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    return ymdFromDate(d);
+  }
 
   function expandEventOccurrences(ev, windowStart, windowEnd) {
     const dates = [];
@@ -1266,6 +1410,7 @@
           </button>
           <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
           <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
+          <button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>
           <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
           <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete</button>
         </div>
@@ -1497,6 +1642,53 @@
     document.getElementById('detail-empty').style.display = 'flex';
     document.getElementById('detail-content').style.display = 'none';
     showToast(m.archived ? 'Meeting archived' : 'Meeting restored');
+  }
+
+  // ── Repeat meeting ────────────────────────────────────────────────────────────
+
+  function openRepeatModal() {
+    const m = activeMeeting(); if (!m) return;
+    const baseDate = m.date || new Date().toISOString().slice(0, 10);
+    const defaultOffset = m.type === 'standup' ? 1 : 7;
+    document.getElementById('repeat-date').value = addDaysToDate(baseDate, defaultOffset);
+    document.getElementById('repeat-modal-overlay').classList.add('open');
+  }
+
+  function closeRepeatModal() {
+    document.getElementById('repeat-modal-overlay').classList.remove('open');
+  }
+
+  function setRepeatDate(days) {
+    const m = activeMeeting(); if (!m) return;
+    document.getElementById('repeat-date').value = addDaysToDate(m.date || new Date().toISOString().slice(0, 10), days);
+  }
+
+  function setRepeatDateMonth() {
+    const m = activeMeeting(); if (!m) return;
+    document.getElementById('repeat-date').value = addMonthToDate(m.date || new Date().toISOString().slice(0, 10));
+  }
+
+  function confirmRepeatMeeting() {
+    const m = activeMeeting(); if (!m) return;
+    const newDate = document.getElementById('repeat-date').value;
+    if (!newDate) { showToast('Pick a date', 'warn'); return; }
+    flushCurrentDetail();
+    const copy = normalizeMeeting({
+      id: uid(), title: m.title, date: newDate, type: m.type,
+      desiredOutcome: m.desiredOutcome || '',
+      attendees: m.attendees || '', attendeesList: (m.attendeesList || []).map(a => ({ ...a })),
+      projectId: m.projectId || null, projectName: m.projectName || null,
+      agenda: m.agenda || '', notes: '',
+      actionItems: [], decisions: [], scheduleEventId: null,
+      createdAt: new Date().toISOString(),
+    });
+    data.meetings.unshift(copy);
+    save();
+    closeRepeatModal();
+    activeId = copy.id;
+    attendeesExpanded = false;
+    renderList(); renderDetail();
+    showToast(`Follow-up meeting created for ${newDate}`);
   }
 
   function toggleShowArchived() {
