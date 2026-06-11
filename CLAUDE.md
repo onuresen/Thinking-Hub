@@ -683,3 +683,19 @@ Three follow-up fixes from real-world use of Priority 47's time-block grid.
 - **Meeting time picker is a plain `<select>`, not a custom popup** — matches the existing `.type-select`/`.project-select` pattern already in the same toolbar row, needs no new CSS/JS widget, and browsers' native select search-by-typed-text still works for quick navigation.
 
 **Files:** `meetings-hub.html`, `schedule.html`, `CLAUDE.md`
+
+---
+
+## Decision Log Convention
+<!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
+Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
+above into a shared schema used across all repos. When a non-obvious choice is made
+(a tradeoff, "why this over that", a convention to follow or avoid), record it — as a
+"Key decisions" bullet under the backlog entry / in the Decision Hub — using:
+- **Decision:** what was chosen
+- **Why:** the reasoning (the cause behind the effect)
+- **Alternative:** what was rejected, and why
+- **Revisit when:** the condition that would reopen this *(optional)*
+- **Confidence:** low / med / high
+
+Only for decisions that are hard to reverse or likely to recur. Skip mechanical changes.
