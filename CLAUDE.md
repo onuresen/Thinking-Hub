@@ -21,7 +21,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
-| `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API |
+| `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API. Self-contained (reads `hub-settings-v1` directly), so any tool can load it — currently `index.html` and `focus-hub.html` |
 | `supabase-schema.sql` | Cloud DB schema |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
@@ -50,7 +50,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html only)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -108,6 +108,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 - **Default workflow: rank → group → execute → update.** When given a backlog or feature list, always propose a ranked plan grouped into 2–4 efficient batches before touching any code. Wait for approval, then implement one group at a time. Update CLAUDE.md at the end to mark items done and capture any new follow-up work.
 - **Checkpoint after each group.** Before starting the next group, confirm the previous one is working. For pure HTML/JS this means a quick sanity check on logic and storage keys; for compiled projects it means a clean build.
 - **Keep CLAUDE.md in sync.** Mark backlog items ✓ Done as soon as they ship. Add new decisions, conventions, or file-map entries in the same session they're introduced — don't defer.
+- **Record decisions, not just outcomes.** When a completed item involves a non-obvious choice (a tradeoff, a "why this approach over the alternative", a convention that future work should follow or avoid), add a **"Key decisions"** bullet list under that backlog entry — one line per decision, framed as *what was chosen* + *why* (not just what changed). Skip this for purely mechanical changes (typo fixes, simple wiring) where the "why" is self-evident. This is what lets future sessions reuse reasoning instead of re-litigating it.
 - **Search for existing bindings before adding shortcuts.** Grep for the key combo across all HTML files to avoid collisions.
 - **Always edit the main project files, never the worktree copies.** Worktrees live at `.claude/worktrees/*/` — these are isolated git branches for sandboxed work and changes there do NOT affect the real app. Always confirm you are editing `C:\Users\onure\Documents\GitHub\Thinking-Hub\*.html` (or equivalent), not a path containing `.claude/worktrees/`.
 
@@ -637,4 +638,31 @@ Three improvements to the Calendar view in `schedule.html`.
 - **Full-height grid** — `.cal-grid` now uses `grid-template-rows: repeat(var(--cal-rows, 6), minmax(0, 1fr))` + `height: 100%` + `min-height: 480px`; JS sets `--cal-rows` per render (`days.length / 7` for month view — 5 or 6 depending on the month, `1` for week view). Eliminates the gap below the grid and gives each day cell more room. `.cal-day-cell` switched from fixed `min-height: 88px` to `min-height: 0; overflow-y: auto`.
 - **Weekend styling** — `.cal-week-label.weekend` (Sat/Sun headers) uses `var(--accent2)`; `.cal-day-cell.weekend` / `:hover` use `var(--accent2-dim)` / `var(--accent2-glow)` — same secondary-identity tokens as the War Room weekend calendar (Priority 45), theme-aware across dark/light/ink.
 
+**Key decisions:**
+- **`--cal-rows` over a fixed `repeat(6, ...)`** — months render 5 or 6 week-rows depending on layout; computing the actual row count (`days.length / 7`) and feeding it into `grid-template-rows` via a CSS custom property lets every row stretch evenly to fill `.cal-grid-wrap`, whether the month has 5 or 6 rows, with no leftover gap.
+- **Token-based weekend color, not War Room's hardcoded hex** — War Room's calendar uses a fixed terracotta hex because War Room is intentionally non-theme-aware (always-dark). `schedule.html` IS theme-aware (dark/light/ink), so `--accent2` / `--accent2-dim` / `--accent2-glow` were used instead — same visual language, but correct across all three themes.
+- **Meetings get a distinct pill style (`.cal-pill.meeting`, `--node-blue`/`--border-blue`)** rather than reusing the per-item color system schedule items use — meetings don't carry a `color` field, and a fixed style makes them instantly distinguishable from project tasks/milestones at a glance.
+- **Meeting pills are prioritized first, then schedule items fill remaining slots** (combined `shownLimit = 4`, raised from the old `3` now that cells are taller) — meetings are fixed-time commitments and arguably more "calendar-native" than multi-day task bars, so they get visual priority when a day is crowded.
+- **Hardcoded `▣` icon instead of importing `MEETING_TYPES`** — `MEETING_TYPES` (per-type icons) is defined only in `meetings-hub.html`'s scope and isn't accessible from `schedule.html`. Rather than duplicating that map across files, reused the single glyph `index.html` already uses for the Meeting Hub tool itself — keeps the cross-tool icon vocabulary consistent without a second source of truth.
+
 **Files:** `schedule.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 47 — Time-block week grid + drag/resize + AI energy insights~~ ✓ Done `[group: time-grid-and-insights]`
+Inspired by external time-blocking tools (Sunsama/Akiflow-style). Four-part build: time fields on items/meetings, a real hourly week grid, drag/resize for blocks, and an AI panel correlating focus energy with daily mood.
+
+- **Time-of-day fields** — `schedule-v1` items gained optional `startTime`/`endTime` (HH:MM, `null`/`null` = all-day); `meetings-hub-v1` meetings gained `time` (HH:MM, `''` = no time) and `durationMins`. Drawer/detail forms expose `<input type="time" step="1800">` pairs; saving with only a start time defaults the end to `start + 30min` via new `timeToMinutes`/`minutesToTime`/`addMinutesToTime` helpers in `schedule.html`. ICS import and `confirmRepeatMeeting()` carry `time`/`durationMins` through; `syncToSchedule()` derives `endTime` from `time + durationMins`.
+- **Hourly week grid** — Calendar week view in `schedule.html` replaced with a 06:00–22:00 grid (30-min slots, `WG_START_MIN`/`WG_END_MIN`/`WG_SLOT_MIN`/`WG_PX_PER_MIN` constants). A sticky all-day row holds multi-day items, date-only items, and untimed meetings. Day columns show `WORK_PERIODS` bands (`08:30-12:00`, `13:00-17:30`, `var(--accent-dim)`) on weekdays and `--accent2-dim` weekend tint. Single-day timed items and timed meetings render as positioned `.wg-block`s via `layoutLanes()` (greedy overlap → side-by-side lanes). Clicking empty grid space (`handleGridClick`) opens the Add Item drawer with the clicked time pre-filled (`openDrawer(id, prefillDate, prefillTime)`).
+- **Drag & resize** — `.wg-block`s support drag-to-move (reassigns day + snaps time to 30 min, `wgBlockMouseDown`/`wgDragMove`/`wgDragEnd`) and drag-to-resize from a bottom-edge handle (`wgResizeMouseDown`, min 30-min duration). A <4px mouse movement is treated as a click (opens drawer / navigates to meeting) instead of a drag. Items persist via `saveState()`; meetings persist via `HubStorage.set('meetings-hub-v1', data)` (`moveItem`/`resizeItem`/`moveMeeting`/`resizeMeeting`).
+- **AI Energy Insights (Focus Hub)** — New "✦ Energy Insights" panel in `focus-hub.html`'s sidebar, manual-trigger (`↻` button, no auto token spend, mirrors War Room's Smart Priorities pattern). `generateInsights()` builds a 14-day digest of completed focus sessions (time of day, duration, energy, GTD context, task) joined with that day's mood (1-5) from `log-hub-v1.entries`, sends it to `HubAI.chat()` with a pattern-finding system prompt, and caches the 3-5 result lines in `focus-hub-v1.aiInsights {text, generatedAt}`.
+
+**Key decisions:**
+- **06:00-22:00 grid range with hardcoded `WORK_PERIODS`** — user explicitly wants 08:30-12:00 / 13:00-17:30 visualized as a fixed reference band (including as a soft check against their own overworking past 17:30), not a configurable setting — simplicity over flexibility here is intentional.
+- **Greedy global lane assignment, not per-cluster** — `layoutLanes()` assigns lanes per day-column across all blocks rather than computing independent overlap clusters; acceptable v1 simplification given typical low item density per day, avoids more complex interval-graph coloring.
+- **Drag preview reparents the live `.wg-block` node** (not a separate ghost element) — simplest way to get real-time visual feedback across day columns without duplicating render logic; lane position (left/width) is reset to full-width during drag and recomputed correctly on the post-drop `renderCalendar()`.
+- **Click vs. drag disambiguation via movement threshold** (4px), not a separate drag handle — blocks can be as short as one 30-min slot (24px), too small to carve out a dedicated handle area without hurting usability.
+- **`hub-ai.js` loaded directly in `focus-hub.html`** — previously "index.html only" by convention, but the module is self-contained (reads `hub-settings-v1` via plain `localStorage`, dynamically imports its own SDK) so it works identically inside any same-origin iframe. Loading it per-tool (rather than relaying through `index.html` via postMessage) keeps the `HubAI.chat()` call-site identical to the established War Room pattern. Convention updated: `hub-ai.js` may be loaded by index.html *and* any tool with its own manual AI feature.
+- **Insights are per-day digests, not raw session dumps** — grouping sessions by day and pairing each day's session list with that single day's mood keeps the prompt compact (≤14 lines) and gives the model an explicit unit of correlation (a "day"), rather than asking it to infer day boundaries from timestamps itself.
+
+**Files:** `schedule.html`, `meetings-hub.html`, `focus-hub.html`, `CLAUDE.md`

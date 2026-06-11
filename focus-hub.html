@@ -9,6 +9,7 @@
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="hub-ai.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
   <style>
@@ -137,6 +138,25 @@
     .hday { flex: 1; text-align: center; font-size: 9px; font-family: var(--font-mono); color: var(--text3); }
     .hday.today { color: var(--accent); }
 
+    /* ── AI Insights ── */
+    .insights-wrap { padding: 12px 12px 10px; border-top: 1px solid var(--border); flex-shrink: 0; max-height: 220px; overflow-y: auto; }
+    .insights-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .insights-label { font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+    .insights-refresh-btn {
+      width: 20px; height: 20px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 50%;
+      background: transparent; color: var(--text3); font-size: 11px; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+      transition: border-color 0.15s ease, color 0.15s ease, transform 0.3s ease; font-family: inherit;
+    }
+    .insights-refresh-btn:hover { border-color: var(--accent); color: var(--accent); transform: rotate(180deg); }
+    .insights-refresh-btn.is-loading { animation: insights-spin 0.8s linear infinite; pointer-events: none; opacity: 0.6; }
+    @keyframes insights-spin { to { transform: rotate(360deg); } }
+    .insights-empty { font-size: 11.5px; color: var(--text3); line-height: 1.5; }
+    .insights-empty a { color: var(--accent); }
+    .insights-item { font-size: 11.5px; color: var(--text2); line-height: 1.5; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .insights-item:last-child { border-bottom: none; }
+    .insights-time { font-size: 9.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 6px; }
+
     /* ── Done modal ── */
     .done-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
@@ -193,6 +213,13 @@
       <div class="histogram-label">This week (min)</div>
       <div class="histogram-bars" id="histogram-bars"></div>
       <div class="histogram-days" id="histogram-days"></div>
+    </div>
+    <div class="insights-wrap">
+      <div class="insights-header">
+        <span class="insights-label">✦ Energy Insights</span>
+        <button class="insights-refresh-btn" id="insights-refresh" onclick="generateInsights()" title="Find patterns between focus sessions and mood">↻</button>
+      </div>
+      <div id="insights-content"></div>
     </div>
   </aside>
 
@@ -531,12 +558,101 @@
       }).join('');
     }
 
+    // ── AI Insights (energy/context vs. daily mood) ──
+    let insightsLoading = false;
+
+    function loadInsights() { return data.aiInsights || null; }
+    function saveInsights(text) {
+      data.aiInsights = { text, generatedAt: new Date().toISOString() };
+      saveData();
+    }
+    function insightsTimeAgo(iso) {
+      const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      return Math.round(mins / 60) + 'h ago';
+    }
+
+    function renderInsights() {
+      const el = document.getElementById('insights-content');
+      const ins = loadInsights();
+      if (ins && ins.text) {
+        const lines = ins.text.split('\n').map(s => s.replace(/^[-•\d.)\s]+/, '').trim()).filter(Boolean);
+        el.innerHTML = lines.map(l => `<div class="insights-item">${esc(l)}</div>`).join('')
+          + `<div class="insights-time">Generated ${insightsTimeAgo(ins.generatedAt)}</div>`;
+      } else {
+        const hint = (typeof HubAI !== 'undefined' && HubAI.isConfigured())
+          ? 'Click ↻ to find patterns between your focus sessions and daily mood (logged in Journal Hub).'
+          : 'Add your Anthropic API key in Settings → Integrations (in the main app), then click ↻.';
+        el.innerHTML = `<div class="insights-empty">${hint}</div>`;
+      }
+    }
+
+    async function generateInsights() {
+      if (insightsLoading) return;
+      if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) { renderInsights(); return; }
+
+      const btn = document.getElementById('insights-refresh');
+      insightsLoading = true;
+      btn.classList.add('is-loading');
+      document.getElementById('insights-content').innerHTML = '<div class="insights-empty">Thinking…</div>';
+
+      let logData = {};
+      try { logData = HubStorage.get('log-hub-v1') || {}; } catch {}
+      const entries = logData.entries || {};
+
+      const sessionsByDay = {};
+      data.sessions.forEach(s => {
+        if (!s.startedAt || !s.completed) return;
+        const day = s.startedAt.slice(0, 10);
+        (sessionsByDay[day] = sessionsByDay[day] || []).push(s);
+      });
+
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+      const lines = Object.keys(sessionsByDay).filter(d => d >= cutoffStr).sort().map(day => {
+        const entry = entries[day];
+        const moodLabel = entry && entry.mood ? `${entry.mood}/5` : 'no mood logged';
+        const sessLines = sessionsByDay[day].map(s => {
+          const time = new Date(s.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          const energy = s.energy || 'unknown energy';
+          const ctx = s.context ? `, ${s.context}` : '';
+          const task = s.taskTitle || '(no task)';
+          return `${time} ${s.durationMin}m, energy=${energy}${ctx}, task="${task}"`;
+        }).join('; ');
+        return `${day} (mood ${moodLabel}): ${sessLines}`;
+      });
+
+      if (!lines.length) {
+        saveInsights('Not enough session/mood data yet. Log focus sessions with energy levels, and rate your daily mood in Journal Hub, to unlock insights.');
+        insightsLoading = false;
+        btn.classList.remove('is-loading');
+        renderInsights();
+        return;
+      }
+
+      const prompt = lines.join('\n');
+      const system = 'You are an analyst inside a personal focus-timer app. The user logs focus sessions (time of day, duration, energy level, GTD context tag, task) and a daily mood rating (1-5, from a separate journal). Given up to 14 days of this data, find 3-5 short, concrete patterns connecting WHEN/HOW the user works to their mood — e.g. which times of day, energy levels, contexts, or tasks correlate with higher mood, or warning signs (overwork, late sessions, low energy stacking) correlating with lower mood. Reply with one short line per insight, no numbering, no markdown, format: "<observation> — <suggestion, max 12 words>". If the data is too sparse for confident patterns, say so in one line instead.';
+
+      try {
+        const text = await HubAI.chat(prompt, system);
+        saveInsights(text || 'No response from AI.');
+      } catch (e) {
+        saveInsights('Could not reach AI: ' + (e?.message || 'unknown error'));
+      }
+      insightsLoading = false;
+      btn.classList.remove('is-loading');
+      renderInsights();
+    }
+
     // ── Init ──
     loadData();
     updateDisplay();
     renderTaskArea();
     renderSessionList();
     renderHistogram();
+    renderInsights();
     try { HubData.onChange(() => { if (!timerState.running && !timerState.paused) renderTaskArea(); }); } catch {}
   </script>
   <script>
