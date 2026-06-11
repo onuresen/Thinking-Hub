@@ -21,7 +21,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
-| `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API |
+| `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API. Self-contained (reads `hub-settings-v1` directly), so any tool can load it — currently `index.html` and `focus-hub.html` |
 | `supabase-schema.sql` | Cloud DB schema |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
@@ -50,7 +50,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html only)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -646,3 +646,23 @@ Three improvements to the Calendar view in `schedule.html`.
 - **Hardcoded `▣` icon instead of importing `MEETING_TYPES`** — `MEETING_TYPES` (per-type icons) is defined only in `meetings-hub.html`'s scope and isn't accessible from `schedule.html`. Rather than duplicating that map across files, reused the single glyph `index.html` already uses for the Meeting Hub tool itself — keeps the cross-tool icon vocabulary consistent without a second source of truth.
 
 **Files:** `schedule.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 47 — Time-block week grid + drag/resize + AI energy insights~~ ✓ Done `[group: time-grid-and-insights]`
+Inspired by external time-blocking tools (Sunsama/Akiflow-style). Four-part build: time fields on items/meetings, a real hourly week grid, drag/resize for blocks, and an AI panel correlating focus energy with daily mood.
+
+- **Time-of-day fields** — `schedule-v1` items gained optional `startTime`/`endTime` (HH:MM, `null`/`null` = all-day); `meetings-hub-v1` meetings gained `time` (HH:MM, `''` = no time) and `durationMins`. Drawer/detail forms expose `<input type="time" step="1800">` pairs; saving with only a start time defaults the end to `start + 30min` via new `timeToMinutes`/`minutesToTime`/`addMinutesToTime` helpers in `schedule.html`. ICS import and `confirmRepeatMeeting()` carry `time`/`durationMins` through; `syncToSchedule()` derives `endTime` from `time + durationMins`.
+- **Hourly week grid** — Calendar week view in `schedule.html` replaced with a 06:00–22:00 grid (30-min slots, `WG_START_MIN`/`WG_END_MIN`/`WG_SLOT_MIN`/`WG_PX_PER_MIN` constants). A sticky all-day row holds multi-day items, date-only items, and untimed meetings. Day columns show `WORK_PERIODS` bands (`08:30-12:00`, `13:00-17:30`, `var(--accent-dim)`) on weekdays and `--accent2-dim` weekend tint. Single-day timed items and timed meetings render as positioned `.wg-block`s via `layoutLanes()` (greedy overlap → side-by-side lanes). Clicking empty grid space (`handleGridClick`) opens the Add Item drawer with the clicked time pre-filled (`openDrawer(id, prefillDate, prefillTime)`).
+- **Drag & resize** — `.wg-block`s support drag-to-move (reassigns day + snaps time to 30 min, `wgBlockMouseDown`/`wgDragMove`/`wgDragEnd`) and drag-to-resize from a bottom-edge handle (`wgResizeMouseDown`, min 30-min duration). A <4px mouse movement is treated as a click (opens drawer / navigates to meeting) instead of a drag. Items persist via `saveState()`; meetings persist via `HubStorage.set('meetings-hub-v1', data)` (`moveItem`/`resizeItem`/`moveMeeting`/`resizeMeeting`).
+- **AI Energy Insights (Focus Hub)** — New "✦ Energy Insights" panel in `focus-hub.html`'s sidebar, manual-trigger (`↻` button, no auto token spend, mirrors War Room's Smart Priorities pattern). `generateInsights()` builds a 14-day digest of completed focus sessions (time of day, duration, energy, GTD context, task) joined with that day's mood (1-5) from `log-hub-v1.entries`, sends it to `HubAI.chat()` with a pattern-finding system prompt, and caches the 3-5 result lines in `focus-hub-v1.aiInsights {text, generatedAt}`.
+
+**Key decisions:**
+- **06:00-22:00 grid range with hardcoded `WORK_PERIODS`** — user explicitly wants 08:30-12:00 / 13:00-17:30 visualized as a fixed reference band (including as a soft check against their own overworking past 17:30), not a configurable setting — simplicity over flexibility here is intentional.
+- **Greedy global lane assignment, not per-cluster** — `layoutLanes()` assigns lanes per day-column across all blocks rather than computing independent overlap clusters; acceptable v1 simplification given typical low item density per day, avoids more complex interval-graph coloring.
+- **Drag preview reparents the live `.wg-block` node** (not a separate ghost element) — simplest way to get real-time visual feedback across day columns without duplicating render logic; lane position (left/width) is reset to full-width during drag and recomputed correctly on the post-drop `renderCalendar()`.
+- **Click vs. drag disambiguation via movement threshold** (4px), not a separate drag handle — blocks can be as short as one 30-min slot (24px), too small to carve out a dedicated handle area without hurting usability.
+- **`hub-ai.js` loaded directly in `focus-hub.html`** — previously "index.html only" by convention, but the module is self-contained (reads `hub-settings-v1` via plain `localStorage`, dynamically imports its own SDK) so it works identically inside any same-origin iframe. Loading it per-tool (rather than relaying through `index.html` via postMessage) keeps the `HubAI.chat()` call-site identical to the established War Room pattern. Convention updated: `hub-ai.js` may be loaded by index.html *and* any tool with its own manual AI feature.
+- **Insights are per-day digests, not raw session dumps** — grouping sessions by day and pairing each day's session list with that single day's mood keeps the prompt compact (≤14 lines) and gives the model an explicit unit of correlation (a "day"), rather than asking it to infer day boundaries from timestamps itself.
+
+**Files:** `schedule.html`, `meetings-hub.html`, `focus-hub.html`, `CLAUDE.md`
