@@ -31,7 +31,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
-| `scrum-hub.html` | Scrum Board — product backlog (MoSCoW), sprint planning, kanban, velocity chart, DoD |
+| `scrum-hub.html` | ⚠ Retired from sidebar (2026-06-11) — now a tab inside `frameworks-hub.html` (parked experiment, nested iframe). Data lives on in `scrum-hub-v1`. Scrum Board: backlog (MoSCoW), sprint planning, kanban, velocity, DoD |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
 | `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
@@ -47,7 +47,8 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
-| `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
+| `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg), V-Model, and a parked Scrum Board (nested iframe) |
+| `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -683,6 +684,17 @@ Three follow-up fixes from real-world use of Priority 47's time-block grid.
 - **Meeting time picker is a plain `<select>`, not a custom popup** — matches the existing `.type-select`/`.project-select` pattern already in the same toolbar row, needs no new CSS/JS widget, and browsers' native select search-by-typed-text still works for quick navigation.
 
 **Files:** `meetings-hub.html`, `schedule.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 49 — Declutter: retire Scrum Board into Frameworks~~ ✓ Done `[group: tool-consolidation]`
+Scrum Board removed from the sidebar (solo/strategy work doesn't run sprints — it was unused) and moved into `frameworks-hub.html` as a third tab alongside Blocked Depth and V-Model. Frameworks is now the explicit home for parked/experimental method tools.
+
+**Key decisions:**
+- **Move into Frameworks, don't delete** — keeps `scrum-hub.html` + `scrum-hub-v1` data intact and the tool reachable, just out of the main nav. *Why:* may be revisited; deletion is irreversible and the file is cheap to keep. *Alternative rejected:* delete the file (loses data and the option to return). *Confidence:* high.
+- **Nested iframe, lazy-loaded on first tab open** — *Why:* Scrum is a full tool, not an inline panel like Blocked Depth/V-Model; an iframe avoids re-implementing it, and lazy-load avoids loading Scrum every time Frameworks opens. *Tradeoff:* cross-tool links from inside the nested Scrum won't reach the shell (2-level nesting) — acceptable for a parked experiment.
+
+**Files:** `index.html` (removed APPS entry), `frameworks-hub.html` (Scrum tab + panel + lazy-load), `CLAUDE.md`
 
 ---
 
