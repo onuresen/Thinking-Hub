@@ -804,6 +804,130 @@
       font-family: var(--font-mono);
     }
 
+    /* ── Week hourly grid ─────────────────────────────────────────── */
+    .cal-week-header.week-mode {
+      grid-template-columns: 46px repeat(7, 1fr);
+    }
+
+    .cal-week-gutter {
+      flex-shrink: 0;
+    }
+
+    .cal-grid.week-grid {
+      display: block;
+      height: auto;
+      min-height: 0;
+    }
+
+    .wg-allday-row {
+      display: grid;
+      grid-template-columns: 46px repeat(7, 1fr);
+      gap: 3px;
+      position: sticky;
+      top: 0;
+      z-index: var(--z-sticky, 2);
+      background: var(--bg);
+      padding-bottom: 4px;
+    }
+
+    .wg-allday-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 3px;
+      min-height: 30px;
+      max-height: 84px;
+      overflow-y: auto;
+      cursor: pointer;
+    }
+
+    .wg-allday-col.weekend {
+      background: var(--accent2-dim);
+    }
+
+    .wg-allday-col.today {
+      border-color: var(--accent);
+    }
+
+    .wg-grid-body {
+      display: grid;
+      grid-template-columns: 46px repeat(7, 1fr);
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .wg-time-col {
+      position: relative;
+      height: var(--wg-grid-height);
+    }
+
+    .wg-time-label {
+      position: absolute;
+      right: 6px;
+      transform: translateY(-50%);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    .wg-day-col {
+      position: relative;
+      height: var(--wg-grid-height);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      background-image: repeating-linear-gradient(to bottom,
+        var(--border) 0, var(--border) 1px,
+        transparent 1px, transparent var(--wg-slot-height));
+    }
+
+    .wg-day-col.weekend {
+      background-color: var(--accent2-dim);
+    }
+
+    .wg-day-col.today {
+      border-color: var(--accent);
+    }
+
+    .wg-work-band {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: var(--accent-dim);
+      pointer-events: none;
+      border-radius: var(--r-sm);
+    }
+
+    .wg-block {
+      position: absolute;
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.3;
+      overflow: hidden;
+      cursor: pointer;
+      border: 1px solid;
+      transition: filter 0.1s;
+    }
+
+    .wg-block:hover {
+      filter: brightness(1.15);
+      z-index: 1;
+    }
+
+    .wg-block.done {
+      opacity: 0.45;
+    }
+
+    .wg-block.meeting {
+      background: var(--node-blue);
+      border-color: var(--border-blue);
+      color: var(--text2);
+    }
+
     /* ── Drawer ────────────────────────────────────────────────── */
     .sch-drawer {
       position: fixed;
@@ -1375,14 +1499,15 @@
           <button class="sch-toolbar-btn" id="cal-week-toggle" onclick="toggleCalWeek()">Week</button>
           <button class="sch-toolbar-today" onclick="calToday()">Today</button>
         </div>
-        <div class="cal-week-header">
-          <div class="cal-week-label">Mon</div>
-          <div class="cal-week-label">Tue</div>
-          <div class="cal-week-label">Wed</div>
-          <div class="cal-week-label">Thu</div>
-          <div class="cal-week-label">Fri</div>
-          <div class="cal-week-label weekend">Sat</div>
-          <div class="cal-week-label weekend">Sun</div>
+        <div class="cal-week-header" id="cal-week-header">
+          <div class="cal-week-gutter" id="cwl-gutter" style="display:none"></div>
+          <div class="cal-week-label" id="cwl-0">Mon</div>
+          <div class="cal-week-label" id="cwl-1">Tue</div>
+          <div class="cal-week-label" id="cwl-2">Wed</div>
+          <div class="cal-week-label" id="cwl-3">Thu</div>
+          <div class="cal-week-label" id="cwl-4">Fri</div>
+          <div class="cal-week-label weekend" id="cwl-5">Sat</div>
+          <div class="cal-week-label weekend" id="cwl-6">Sun</div>
         </div>
         <div class="cal-grid-wrap">
           <div class="cal-grid" id="cal-grid"></div>
@@ -1571,6 +1696,28 @@
     ];
 
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    // Week-grid layout constants
+    const WG_START_MIN = 6 * 60;   // 06:00
+    const WG_END_MIN = 22 * 60;    // 22:00
+    const WG_SLOT_MIN = 30;        // 30-minute slots
+    const WG_SLOT_PX = 24;         // px per slot
+    const WG_PX_PER_MIN = WG_SLOT_PX / WG_SLOT_MIN;
+    const WORK_PERIODS = [['08:30', '12:00'], ['13:00', '17:30']];
+
+    // Greedy lane assignment for overlapping blocks. Mutates each block
+    // with a `.lane` index and returns the total lane count.
+    function layoutLanes(blocks) {
+      blocks.sort((a, b) => a.startMin - b.startMin);
+      const laneEnds = [];
+      blocks.forEach(b => {
+        let lane = laneEnds.findIndex(end => end <= b.startMin);
+        if (lane === -1) { lane = laneEnds.length; laneEnds.push(0); }
+        laneEnds[lane] = b.endMin;
+        b.lane = lane;
+      });
+      return Math.max(1, laneEnds.length);
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // State
@@ -1855,7 +2002,22 @@
       const cur = new Date(gridStart);
       while (cur <= gridEnd) { days.push(dateToIso(cur)); cur.setDate(cur.getDate() + 1); }
 
-      document.getElementById('cal-grid').style.setProperty('--cal-rows', days.length / 7);
+      // Reset week-mode artifacts in case we're switching back from week view
+      const header = document.getElementById('cal-week-header');
+      header.classList.remove('week-mode');
+      document.getElementById('cwl-gutter').style.display = 'none';
+      const monthLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      for (let i = 0; i < 7; i++) {
+        const lbl = document.getElementById('cwl-' + i);
+        lbl.textContent = monthLabels[i];
+        lbl.classList.remove('today');
+      }
+      const grid = document.getElementById('cal-grid');
+      grid.classList.remove('week-grid');
+      grid.style.removeProperty('--wg-grid-height');
+      grid.style.removeProperty('--wg-slot-height');
+
+      grid.style.setProperty('--cal-rows', days.length / 7);
 
       document.getElementById('cal-grid').innerHTML = days.map(iso => {
         const d = isoToDate(iso);
@@ -1906,31 +2068,137 @@
         `${d0.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ` +
         `${d6.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-      document.getElementById('cal-grid').style.setProperty('--cal-rows', 1);
-
-      document.getElementById('cal-grid').innerHTML = days.map(iso => {
+      // Header: switch to week-mode (gutter + dated labels)
+      const header = document.getElementById('cal-week-header');
+      header.classList.add('week-mode');
+      document.getElementById('cwl-gutter').style.display = '';
+      for (let i = 0; i < 7; i++) {
+        const iso = days[i];
         const d = isoToDate(iso);
-        const isToday = iso === TODAY;
+        const lbl = document.getElementById('cwl-' + i);
+        lbl.textContent = `${DAY_NAMES[i]} ${d.getDate()}`;
+        lbl.classList.toggle('today', iso === TODAY);
+      }
+
+      const grid = document.getElementById('cal-grid');
+      grid.classList.add('week-grid');
+      grid.style.removeProperty('--cal-rows');
+
+      const totalMin = WG_END_MIN - WG_START_MIN;
+      const gridHeight = totalMin * WG_PX_PER_MIN;
+      const slotHeight = WG_SLOT_MIN * WG_PX_PER_MIN;
+      grid.style.setProperty('--wg-grid-height', gridHeight + 'px');
+      grid.style.setProperty('--wg-slot-height', slotHeight + 'px');
+
+      // ── All-day row: multi-day items, date-only items, untimed meetings ──
+      const alldayCols = days.map(iso => {
         const isWE = isWeekend(iso);
-        const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
-        const dayMeetings = meetingsByDate[iso] || [];
+        const isToday = iso === TODAY;
+        const dayMeetings = (meetingsByDate[iso] || []).filter(m => !m.time);
+        const dayItems = items.filter(it => {
+          if (it.start > iso || iso > it.end) return false;
+          if (it.start === it.end && it.start === iso && it.startTime) return false;
+          return true;
+        });
 
         const meetingPills = dayMeetings.map(meetingPillHtml).join('');
         const pills = dayItems.map(it => {
           const bg = it.color + '28';
           const bd = it.color + '88';
+          const cont = it.start !== it.end && it.end > iso ? ' →' : '';
           return `<span class="cal-pill${it.done ? ' done' : ''}"
-        style="background:${bg}; border:1px solid ${bd}; color:${it.color}; display:block; margin-bottom:3px"
-        onclick="event.stopPropagation(); selectAndEdit('${it.id}')">${esc(it.title || '(untitled)')}</span>`;
+        style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
+        onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
+        title="${esc(it.title)}">${esc((it.title || '').slice(0, 18))}${cont}</span>`;
         }).join('');
 
-        return `<div class="cal-day-cell${isToday ? ' today' : ''}${isWE ? ' weekend' : ''}"
-      onclick="openDrawer(null, '${iso}')">
-      <div class="cal-day-num">${DAY_NAMES[getDow(iso)]} ${d.getDate()}</div>
-      ${meetingPills}
-      ${pills}
-    </div>`;
+        return `<div class="wg-allday-col${isWE ? ' weekend' : ''}${isToday ? ' today' : ''}"
+      onclick="openDrawer(null, '${iso}')">${meetingPills}${pills}</div>`;
       }).join('');
+
+      // ── Time gutter labels (hourly) ──
+      const timeLabels = [];
+      for (let m = WG_START_MIN; m <= WG_END_MIN; m += 60) {
+        const top = (m - WG_START_MIN) * WG_PX_PER_MIN;
+        timeLabels.push(`<div class="wg-time-label" style="top:${top}px">${minutesToTime(m)}</div>`);
+      }
+
+      // ── Day columns: working-hours band + timed items/meetings as blocks ──
+      const dayCols = days.map(iso => {
+        const isWE = isWeekend(iso);
+        const isToday = iso === TODAY;
+
+        let bands = '';
+        if (!isWE) {
+          bands = WORK_PERIODS.map(([s, e]) => {
+            const top = (timeToMinutes(s) - WG_START_MIN) * WG_PX_PER_MIN;
+            const height = (timeToMinutes(e) - timeToMinutes(s)) * WG_PX_PER_MIN;
+            return `<div class="wg-work-band" style="top:${top}px; height:${height}px"></div>`;
+          }).join('');
+        }
+
+        const blocks = [];
+        items.forEach(it => {
+          if (it.start === it.end && it.start === iso && it.startTime) {
+            blocks.push({
+              startMin: timeToMinutes(it.startTime),
+              endMin: timeToMinutes(it.endTime || addMinutesToTime(it.startTime, 30)),
+              type: 'item', it
+            });
+          }
+        });
+        (meetingsByDate[iso] || []).forEach(m => {
+          if (m.time) {
+            const startMin = timeToMinutes(m.time);
+            blocks.push({ startMin, endMin: startMin + (m.durationMins || 30), type: 'meeting', m });
+          }
+        });
+
+        const laneCount = layoutLanes(blocks);
+        const laneW = 100 / laneCount;
+        const blockHtml = blocks.map(b => {
+          const top = Math.max(0, (b.startMin - WG_START_MIN) * WG_PX_PER_MIN);
+          const height = Math.max((b.endMin - b.startMin) * WG_PX_PER_MIN, 16);
+          const left = b.lane * laneW;
+          if (b.type === 'meeting') {
+            const m = b.m;
+            return `<div class="wg-block meeting" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%"
+        onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
+        title="${esc(m.title || 'Meeting')}">▣ ${esc(m.title || 'Meeting')}</div>`;
+          }
+          const it = b.it;
+          const bg = it.color + '28';
+          const bd = it.color + '88';
+          return `<div class="wg-block${it.done ? ' done' : ''}" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%; background:${bg}; border-color:${bd}; color:${it.color}"
+        onclick="event.stopPropagation(); selectAndEdit('${it.id}')" title="${esc(it.title)}">${esc(it.title || '(untitled)')}</div>`;
+        }).join('');
+
+        return `<div class="wg-day-col${isWE ? ' weekend' : ''}${isToday ? ' today' : ''}"
+      onclick="handleGridClick(event, '${iso}')">${bands}${blockHtml}</div>`;
+      }).join('');
+
+      grid.innerHTML = `
+    <div class="wg-allday-row">
+      <div class="cal-week-gutter"></div>
+      ${alldayCols}
+    </div>
+    <div class="wg-grid-body">
+      <div class="wg-time-col">${timeLabels.join('')}</div>
+      ${dayCols}
+    </div>`;
+    }
+
+    function handleGridClick(e, iso) {
+      const col = e.currentTarget;
+      const rect = col.getBoundingClientRect();
+      const offsetY = e.clientY - rect.top;
+      const totalMin = WG_END_MIN - WG_START_MIN;
+      const gridHeight = totalMin * WG_PX_PER_MIN;
+      const frac = Math.max(0, Math.min(1, offsetY / gridHeight));
+      let mins = WG_START_MIN + frac * totalMin;
+      mins = Math.round(mins / WG_SLOT_MIN) * WG_SLOT_MIN;
+      mins = Math.min(mins, WG_END_MIN - WG_SLOT_MIN);
+      openDrawer(null, iso, minutesToTime(mins));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2259,7 +2527,7 @@
       buildSwatches(c);
     }
 
-    function openDrawer(id, prefillDate) {
+    function openDrawer(id, prefillDate, prefillTime) {
       ui.drawerItemId = id;
       const item = id ? state.items.find(it => it.id === id) : null;
 
@@ -2272,7 +2540,7 @@
       document.getElementById('f-type').value = item ? (item.type || 'task') : 'task';
       document.getElementById('f-start').value = item ? (item.start || defaultDate) : defaultDate;
       document.getElementById('f-end').value = item ? (item.end || defaultDate) : defaultDate;
-      document.getElementById('f-start-time').value = item ? (item.startTime || '') : '';
+      document.getElementById('f-start-time').value = item ? (item.startTime || '') : (prefillTime || '');
       document.getElementById('f-end-time').value = item ? (item.endTime || '') : '';
       document.getElementById('f-project').value = item ? (item.projectId || '') : '';
       document.getElementById('f-notes').value = item ? (item.notes || '') : '';
