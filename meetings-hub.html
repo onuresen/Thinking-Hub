@@ -1792,6 +1792,14 @@
   document.getElementById('action-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveAction();
   });
+
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      const m = data.meetings.find(x => x.id === e.data.itemId);
+      if (m) openMeeting(m.id);
+    }
+  });
   document.getElementById('tpl-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('tpl-modal-overlay')) closeTplModal();
   });
