@@ -536,6 +536,8 @@
     if (!m.type)           m.type = 'custom';
     if (m.desiredOutcome === undefined) m.desiredOutcome = '';
     if (m.scheduleEventId === undefined) m.scheduleEventId = null;
+    if (m.time === undefined) m.time = '';
+    if (m.durationMins === undefined) m.durationMins = null;
     return m;
   }
 
@@ -1033,11 +1035,19 @@
     if (!sd.items) sd.items = [];
     const eventId = m.scheduleEventId || ('sev-' + uid());
     const existing = sd.items.findIndex(e => e.id === eventId);
+    let endTime = null;
+    if (m.time && m.durationMins) {
+      const [h, mi] = m.time.split(':').map(Number);
+      const total = ((h * 60 + mi + m.durationMins) % 1440 + 1440) % 1440;
+      endTime = String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+    }
     const evObj = {
       id: eventId, type: 'event', source: 'meeting',
       title: m.title || 'Meeting',
       start: m.date || new Date().toISOString().slice(0, 10),
       end: m.date || new Date().toISOString().slice(0, 10),
+      startTime: m.time || null,
+      endTime,
       notes: m.desiredOutcome || '',
       projectId: m.projectId || null, color: '#6366f1', done: false,
     };
@@ -1094,6 +1104,13 @@
       return { date: `${y}-${mo}-${d}`, allDay: false, time: `${h}:${mi}`, utc: !!z };
     }
     return { date: value, allDay: true };
+  }
+
+  function icsTimeDiffMinutes(startTime, endTime) {
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    return diff > 0 ? diff : null;
   }
 
   function parseRRULE(value) {
@@ -1291,10 +1308,15 @@
 
         const attendeesList = (ev.attendees || []).map(name => ({ name, role: 'contributor' }));
         const notesParts = [];
+        let time = '', durationMins = null;
         if (ev.dtstart.time) {
           let timeStr = ev.dtstart.time;
           if (ev.dtend && ev.dtend.time) timeStr += '–' + ev.dtend.time;
           notesParts.push(`🕐 ${timeStr}${ev.dtstart.utc ? ' UTC' : ''}`);
+          if (!ev.dtstart.utc) {
+            time = ev.dtstart.time;
+            if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
+          }
         }
         if (ev.location) notesParts.push(`📍 ${ev.location}`);
         if (ev.description) notesParts.push(ev.description);
@@ -1303,6 +1325,7 @@
           id: uid(),
           title: ev.summary || 'Imported meeting',
           date: dateStr,
+          time, durationMins,
           type: guessMeetingType(ev.summary),
           desiredOutcome: '',
           attendees: attendeesList.map(a => a.name).join(', '),
@@ -1387,6 +1410,11 @@
           <select class="type-select" id="dt-type" onchange="changeType(this)">${typeOpts}</select>
           <span class="meta-label">Date</span>
           <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
+          <span class="meta-label">Time</span>
+          <input class="meta-input meta-date" id="dt-time" type="time" step="1800" value="${esc(m.time || '')}" onchange="scheduleSave()">
+          <span class="meta-label">Duration</span>
+          <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
+            style="width:60px" placeholder="min" value="${m.durationMins || ''}" onchange="scheduleSave()">
           <span class="meta-label">Project</span>
           <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select>
         </div>
@@ -1511,6 +1539,8 @@
     const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
     if (v('dt-title')   !== null) m.title          = v('dt-title');
     if (v('dt-date')    !== null) m.date            = v('dt-date');
+    if (v('dt-time')    !== null) m.time            = v('dt-time');
+    if (v('dt-duration') !== null) m.durationMins   = parseInt(v('dt-duration'), 10) || null;
     if (v('dt-type')    !== null) m.type            = v('dt-type');
     if (v('dt-outcome') !== null) m.desiredOutcome  = v('dt-outcome');
     if (v('dt-agenda')  !== null) m.agenda          = v('dt-agenda');
@@ -1675,6 +1705,7 @@
     flushCurrentDetail();
     const copy = normalizeMeeting({
       id: uid(), title: m.title, date: newDate, type: m.type,
+      time: m.time || '', durationMins: m.durationMins || null,
       desiredOutcome: m.desiredOutcome || '',
       attendees: m.attendees || '', attendeesList: (m.attendeesList || []).map(a => ({ ...a })),
       projectId: m.projectId || null, projectName: m.projectName || null,

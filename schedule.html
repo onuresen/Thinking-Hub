@@ -1424,6 +1424,16 @@
           <input class="sch-input" id="f-end" type="date" />
         </div>
       </div>
+      <div class="sch-date-row">
+        <div class="sch-field">
+          <label class="sch-label">Start time <span style="opacity:.6">(optional)</span></label>
+          <input class="sch-input" id="f-start-time" type="time" step="1800" />
+        </div>
+        <div class="sch-field">
+          <label class="sch-label">End time</label>
+          <input class="sch-input" id="f-end-time" type="time" step="1800" />
+        </div>
+      </div>
       <div class="sch-field">
         <label class="sch-label">Color</label>
         <div class="sch-color-row" id="color-swatches"></div>
@@ -1496,6 +1506,22 @@
       const d = isoToDate(iso);
       d.setDate(d.getDate() + n);
       return dateToIso(d);
+    }
+
+    function timeToMinutes(t) {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function minutesToTime(mins) {
+      mins = ((mins % 1440) + 1440) % 1440;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    function addMinutesToTime(t, delta) {
+      return minutesToTime(timeToMinutes(t) + delta);
     }
 
     function getWeekStart(iso) {
@@ -2246,6 +2272,8 @@
       document.getElementById('f-type').value = item ? (item.type || 'task') : 'task';
       document.getElementById('f-start').value = item ? (item.start || defaultDate) : defaultDate;
       document.getElementById('f-end').value = item ? (item.end || defaultDate) : defaultDate;
+      document.getElementById('f-start-time').value = item ? (item.startTime || '') : '';
+      document.getElementById('f-end-time').value = item ? (item.endTime || '') : '';
       document.getElementById('f-project').value = item ? (item.projectId || '') : '';
       document.getElementById('f-notes').value = item ? (item.notes || '') : '';
       document.getElementById('f-done').checked = item ? !!item.done : false;
@@ -2270,10 +2298,16 @@
       let end = document.getElementById('f-end').value || start;
       if (end < start) end = start;
 
+      const startTime = document.getElementById('f-start-time').value;
+      let endTime = document.getElementById('f-end-time').value;
+      if (startTime && (!endTime || endTime <= startTime)) endTime = addMinutesToTime(startTime, 30);
+
       const patch = {
         title,
         type: document.getElementById('f-type').value,
         start, end,
+        startTime: startTime || null,
+        endTime: startTime ? endTime : null,
         color: _drawerColor,
         projectId: document.getElementById('f-project').value || null,
         projectRef: (() => {
