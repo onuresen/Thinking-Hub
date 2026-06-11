@@ -392,86 +392,6 @@
       overflow: hidden;
     }
 
-    .gantt-labels {
-      width: 220px;
-      min-width: 220px;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      background: var(--surface);
-      z-index: 3;
-      flex-shrink: 0;
-    }
-
-    .gantt-labels-header {
-      height: 44px;
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      font-size: 10px;
-      font-family: var(--font-mono);
-      color: var(--text3);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .gantt-labels-scroll {
-      flex: 1;
-      overflow-y: scroll;
-      scrollbar-width: none;
-    }
-
-    .gantt-labels-scroll::-webkit-scrollbar {
-      display: none;
-    }
-
-    .gantt-label-row {
-      height: 44px;
-      display: flex;
-      align-items: center;
-      padding: 0 12px 0 16px;
-      gap: 8px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-
-    .gantt-label-row:hover {
-      background: var(--surface2);
-    }
-
-    .gantt-label-row.selected {
-      background: var(--accent-dim);
-    }
-
-    .gantt-label-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .gantt-label-dot.ms-shape {
-      border-radius: 2px;
-      transform: rotate(45deg);
-    }
-
-    .gantt-label-name {
-      flex: 1;
-      font-size: 12.5px;
-      font-weight: 500;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .gantt-label-name.done {
-      opacity: 0.45;
-    }
-
     .gantt-scroll {
       flex: 1;
       overflow: auto;
@@ -1477,12 +1397,6 @@
       <!-- Timeline / Gantt -->
       <div id="view-timeline">
         <div class="gantt-wrap">
-          <div class="gantt-labels">
-            <div class="gantt-labels-header">Items</div>
-            <div class="gantt-labels-scroll" id="gantt-labels-scroll">
-              <div id="gantt-label-rows"></div>
-            </div>
-          </div>
           <div class="gantt-scroll" id="gantt-scroll">
             <div class="gantt-header" id="gantt-header"></div>
             <div class="gantt-body" id="gantt-body"></div>
@@ -1886,25 +1800,13 @@
 
       // ── Body ──
       const bodyEl = document.getElementById('gantt-body');
-      const labelsEl = document.getElementById('gantt-label-rows');
 
       if (!items.length) {
-        labelsEl.innerHTML = `<div class="gantt-empty"><div class="gantt-empty-icon">▦</div><div>No items to display</div></div>`;
-        bodyEl.innerHTML = '';
+        bodyEl.innerHTML = `<div class="gantt-empty"><div class="gantt-empty-icon">▦</div><div>No items to display</div></div>`;
         bodyEl.style.width = totalWidth + 'px';
         bodyEl.style.height = '200px';
         return;
       }
-
-      // Label rows
-      labelsEl.innerHTML = items.map(it => {
-        const msClass = it.type === 'milestone' ? ' ms-shape' : '';
-        return `<div class="gantt-label-row${it.id === ui.selectedId ? ' selected' : ''}"
-        data-id="${it.id}" onclick="selectItem('${it.id}')" ondblclick="openDrawer('${it.id}')">
-      <div class="gantt-label-dot${msClass}" style="background:${it.color}"></div>
-      <div class="gantt-label-name${it.done ? ' done' : ''}">${esc(it.title || '(untitled)')}</div>
-    </div>`;
-      }).join('');
 
       // Build body HTML
       const totalHeight = items.length * ROW_H;
@@ -2892,27 +2794,6 @@
       clearTimeout(_toastTimer);
       _toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Scroll sync: gantt labels ↔ gantt-scroll vertical
-    // ═══════════════════════════════════════════════════════════════
-    (function () {
-      const gScroll = document.getElementById('gantt-scroll');
-      const lScroll = document.getElementById('gantt-labels-scroll');
-      let syncing = false;
-      gScroll.addEventListener('scroll', () => {
-        if (syncing) return;
-        syncing = true;
-        lScroll.scrollTop = gScroll.scrollTop;
-        syncing = false;
-      });
-      lScroll.addEventListener('scroll', () => {
-        if (syncing) return;
-        syncing = true;
-        gScroll.scrollTop = lScroll.scrollTop;
-        syncing = false;
-      });
-    })();
 
     // ═══════════════════════════════════════════════════════════════
     // Keyboard shortcuts

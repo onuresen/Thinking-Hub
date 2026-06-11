@@ -1113,6 +1113,35 @@
     return diff > 0 ? diff : null;
   }
 
+  // 06:00–22:00 in 15-min steps, 24h format — mirrors Schedule's week-grid range
+  const MEETING_TIME_START_MIN = 6 * 60;
+  const MEETING_TIME_END_MIN = 22 * 60;
+  const MEETING_TIME_STEP_MIN = 15;
+
+  function meetingTimeOptions(current) {
+    const opts = ['<option value="">— no time —</option>'];
+    let hasCurrent = !current;
+    for (let mins = MEETING_TIME_START_MIN; mins <= MEETING_TIME_END_MIN; mins += MEETING_TIME_STEP_MIN) {
+      const val = `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+      if (val === current) hasCurrent = true;
+      opts.push(`<option value="${val}"${val === current ? ' selected' : ''}>${val}</option>`);
+    }
+    if (!hasCurrent) opts.push(`<option value="${esc(current)}" selected>${esc(current)}</option>`);
+    return opts.join('');
+  }
+
+  // Converts a UTC ICS date+time to the browser's local date+time
+  function icsUtcToLocal(dateStr, timeStr) {
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const [h, mi] = timeStr.split(':').map(Number);
+    const local = new Date(Date.UTC(y, mo - 1, d, h, mi));
+    const pad = n => String(n).padStart(2, '0');
+    return {
+      date: `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`,
+      time: `${pad(local.getHours())}:${pad(local.getMinutes())}`,
+    };
+  }
+
   function parseRRULE(value) {
     const rule = {};
     value.split(';').forEach(part => {
@@ -1309,14 +1338,20 @@
         const attendeesList = (ev.attendees || []).map(name => ({ name, role: 'contributor' }));
         const notesParts = [];
         let time = '', durationMins = null;
+        let meetingDate = dateStr;
         if (ev.dtstart.time) {
           let timeStr = ev.dtstart.time;
           if (ev.dtend && ev.dtend.time) timeStr += '–' + ev.dtend.time;
-          notesParts.push(`🕐 ${timeStr}${ev.dtstart.utc ? ' UTC' : ''}`);
-          if (!ev.dtstart.utc) {
+          if (ev.dtstart.utc) {
+            const local = icsUtcToLocal(dateStr, ev.dtstart.time);
+            time = local.time;
+            meetingDate = local.date;
+            notesParts.push(`🕐 ${timeStr} UTC`);
+          } else {
             time = ev.dtstart.time;
-            if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
+            notesParts.push(`🕐 ${timeStr}`);
           }
+          if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
         }
         if (ev.location) notesParts.push(`📍 ${ev.location}`);
         if (ev.description) notesParts.push(ev.description);
@@ -1324,7 +1359,7 @@
         const m = normalizeMeeting({
           id: uid(),
           title: ev.summary || 'Imported meeting',
-          date: dateStr,
+          date: meetingDate,
           time, durationMins,
           type: guessMeetingType(ev.summary),
           desiredOutcome: '',
@@ -1411,7 +1446,7 @@
           <span class="meta-label">Date</span>
           <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
           <span class="meta-label">Time</span>
-          <input class="meta-input meta-date" id="dt-time" type="time" step="1800" value="${esc(m.time || '')}" onchange="scheduleSave()">
+          <select class="meta-input meta-date" id="dt-time" onchange="scheduleSave()">${meetingTimeOptions(m.time || '')}</select>
           <span class="meta-label">Duration</span>
           <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
             style="width:60px" placeholder="min" value="${m.durationMins || ''}" onchange="scheduleSave()">

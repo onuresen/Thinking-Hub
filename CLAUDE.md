@@ -666,3 +666,20 @@ Inspired by external time-blocking tools (Sunsama/Akiflow-style). Four-part buil
 - **Insights are per-day digests, not raw session dumps** — grouping sessions by day and pairing each day's session list with that single day's mood keeps the prompt compact (≤14 lines) and gives the model an explicit unit of correlation (a "day"), rather than asking it to infer day boundaries from timestamps itself.
 
 **Files:** `schedule.html`, `meetings-hub.html`, `focus-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 48 — ICS UTC time fix, Timeline label dedup, Meeting Hub time picker~~ ✓ Done `[group: meetings-and-timeline-followups]`
+Three follow-up fixes from real-world use of Priority 47's time-block grid.
+
+- **ICS import dropped time for UTC events** — `parseICSDateValue` correctly parsed `Z`-suffixed (UTC) `DTSTART`/`DTEND` values, but `importICSText` only assigned `time`/`durationMins` when `!ev.dtstart.utc`, so any UTC-stamped event (the default for Outlook/Teams/Google exports) silently fell back to `time: ''` and rendered in the all-day row instead of its hour slot. New `icsUtcToLocal(dateStr, timeStr)` converts the UTC instant to the browser's local date+time via `Date.UTC(...)` + local getters; `importICSText` now uses the converted local time and shifts the meeting's `date` if the conversion crosses midnight (dedup `key`/`icsKey` still use the original UTC date, so re-import dedup is unaffected).
+- **Timeline view "ITEMS" label column removed** — the Gantt/Timeline view had item titles rendered in three places: the persistent left sidebar (`#item-list`), a frozen 220px "ITEMS" label column (`.gantt-labels`/`#gantt-label-rows`), and inline inside each `.gantt-bar`. Removed the `.gantt-labels` column entirely (HTML, CSS, the `gantt-labels-scroll` ↔ `gantt-scroll` vertical scroll-sync IIFE, and the label-row rendering in `renderTimeline()`) — the sidebar already provides the title+date list with click-to-select, and `.gantt-bar`/`.gantt-milestone` already get a `.selected` highlight independent of the label column. `.gantt-scroll` (flex:1) now fills the full width.
+- **Meeting Hub time picker redone** — `#dt-time` was a native `<input type="time" step="1800">` (locale AM/PM, 1-min spinner granularity). Replaced with a `<select>` populated by `meetingTimeOptions()`: 24h `HH:MM` values every 15 min from `06:00` to `22:00` (mirrors the Schedule week-grid's `WG_START_MIN`/`WG_END_MIN` range), plus a `— no time —` empty option. If a meeting's stored `time` doesn't fall on the 15-min grid (e.g. an odd ICS-imported time), an extra `<option>` preserves and selects that exact value so it isn't silently changed.
+
+**Key decisions:**
+- **UTC→local conversion shifts the date but keeps dedup keyed on the original UTC date** — `existingKeys`/`icsKey` are computed from `expandEventOccurrences`'s UTC-based `dateStr` *before* the local conversion, so re-importing the same ICS file still dedups correctly even though the displayed `m.date` may differ by ±1 day from that key.
+- **`;TZID=` (non-`Z`) ICS timestamps are left as-is** — only `Z`-suffixed UTC timestamps get converted; events with an explicit `TZID` parameter are rare in the exports this app targets (Teams/Outlook default to UTC) and would need an IANA timezone table to convert correctly, which is out of scope.
+- **Timeline dedup removes the column, not the inline bar label** — the frozen label column and the sidebar showed identical title lists; the inline bar label is the only one that's contextually useful while scanning the timeline (tells you what a bar is without looking away), so it stays.
+- **Meeting time picker is a plain `<select>`, not a custom popup** — matches the existing `.type-select`/`.project-select` pattern already in the same toolbar row, needs no new CSS/JS widget, and browsers' native select search-by-typed-text still works for quick navigation.
+
+**Files:** `meetings-hub.html`, `schedule.html`, `CLAUDE.md`
