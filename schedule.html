@@ -928,6 +928,22 @@
       color: var(--text2);
     }
 
+    .wg-block.dragging {
+      opacity: 0.85;
+      z-index: var(--z-popover, 5);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      cursor: grabbing;
+    }
+
+    .wg-resize-handle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 6px;
+      cursor: ns-resize;
+    }
+
     /* ── Drawer ────────────────────────────────────────────────── */
     .sch-drawer {
       position: fixed;
@@ -2163,17 +2179,21 @@
           if (b.type === 'meeting') {
             const m = b.m;
             return `<div class="wg-block meeting" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%"
-        onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
-        title="${esc(m.title || 'Meeting')}">▣ ${esc(m.title || 'Meeting')}</div>`;
+        data-iso="${iso}"
+        onmousedown="wgBlockMouseDown(event, 'meeting', '${m.id}', '${iso}', ${b.startMin}, ${b.endMin})"
+        title="${esc(m.title || 'Meeting')}">▣ ${esc(m.title || 'Meeting')}<div class="wg-resize-handle" onmousedown="wgResizeMouseDown(event, 'meeting', '${m.id}', '${iso}', ${b.startMin}, ${b.endMin})"></div></div>`;
           }
           const it = b.it;
           const bg = it.color + '28';
           const bd = it.color + '88';
           return `<div class="wg-block${it.done ? ' done' : ''}" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%; background:${bg}; border-color:${bd}; color:${it.color}"
-        onclick="event.stopPropagation(); selectAndEdit('${it.id}')" title="${esc(it.title)}">${esc(it.title || '(untitled)')}</div>`;
+        data-iso="${iso}"
+        onmousedown="wgBlockMouseDown(event, 'item', '${it.id}', '${iso}', ${b.startMin}, ${b.endMin})"
+        title="${esc(it.title)}">${esc(it.title || '(untitled)')}<div class="wg-resize-handle" onmousedown="wgResizeMouseDown(event, 'item', '${it.id}', '${iso}', ${b.startMin}, ${b.endMin})"></div></div>`;
         }).join('');
 
         return `<div class="wg-day-col${isWE ? ' weekend' : ''}${isToday ? ' today' : ''}"
+      data-iso="${iso}"
       onclick="handleGridClick(event, '${iso}')">${bands}${blockHtml}</div>`;
       }).join('');
 
@@ -2199,6 +2219,153 @@
       mins = Math.round(mins / WG_SLOT_MIN) * WG_SLOT_MIN;
       mins = Math.min(mins, WG_END_MIN - WG_SLOT_MIN);
       openDrawer(null, iso, minutesToTime(mins));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Week-grid drag & resize
+    // ═══════════════════════════════════════════════════════════════
+    let _wgDrag = null;
+
+    function wgBlockMouseDown(e, type, id, iso, startMin, endMin) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      _wgDrag = {
+        mode: 'move',
+        type, id,
+        origIso: iso,
+        origStartMin: startMin,
+        origEndMin: endMin,
+        duration: endMin - startMin,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+        blockEl: e.currentTarget,
+      };
+      document.addEventListener('mousemove', wgDragMove);
+      document.addEventListener('mouseup', wgDragEnd);
+    }
+
+    function wgResizeMouseDown(e, type, id, iso, startMin, endMin) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      _wgDrag = {
+        mode: 'resize',
+        type, id,
+        origIso: iso,
+        origStartMin: startMin,
+        origEndMin: endMin,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+        blockEl: e.currentTarget.parentElement,
+      };
+      document.addEventListener('mousemove', wgDragMove);
+      document.addEventListener('mouseup', wgDragEnd);
+    }
+
+    function wgDragMove(e) {
+      if (!_wgDrag) return;
+      const dx = e.clientX - _wgDrag.startX;
+      const dy = e.clientY - _wgDrag.startY;
+      if (!_wgDrag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      _wgDrag.moved = true;
+
+      const deltaMin = Math.round(dy / WG_PX_PER_MIN / WG_SLOT_MIN) * WG_SLOT_MIN;
+
+      if (_wgDrag.mode === 'resize') {
+        let newEndMin = _wgDrag.origEndMin + deltaMin;
+        newEndMin = Math.max(_wgDrag.origStartMin + WG_SLOT_MIN, Math.min(WG_END_MIN, newEndMin));
+        _wgDrag.previewEndMin = newEndMin;
+        const height = Math.max((newEndMin - _wgDrag.origStartMin) * WG_PX_PER_MIN, 16);
+        _wgDrag.blockEl.style.height = height + 'px';
+        _wgDrag.blockEl.classList.add('dragging');
+      } else {
+        let newStartMin = _wgDrag.origStartMin + deltaMin;
+        newStartMin = Math.max(WG_START_MIN, Math.min(WG_END_MIN - _wgDrag.duration, newStartMin));
+        _wgDrag.previewStartMin = newStartMin;
+
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const col = el ? el.closest('.wg-day-col') : null;
+        _wgDrag.previewIso = col ? col.dataset.iso : _wgDrag.origIso;
+
+        const top = Math.max(0, (newStartMin - WG_START_MIN) * WG_PX_PER_MIN);
+        _wgDrag.blockEl.style.top = top + 'px';
+        _wgDrag.blockEl.style.left = '0%';
+        _wgDrag.blockEl.style.width = '100%';
+        _wgDrag.blockEl.classList.add('dragging');
+
+        if (col && col !== _wgDrag.blockEl.parentElement) col.appendChild(_wgDrag.blockEl);
+      }
+    }
+
+    function wgDragEnd(e) {
+      document.removeEventListener('mousemove', wgDragMove);
+      document.removeEventListener('mouseup', wgDragEnd);
+      if (!_wgDrag) return;
+      const drag = _wgDrag;
+      _wgDrag = null;
+
+      if (!drag.moved) {
+        if (drag.type === 'meeting') {
+          parent.postMessage({ type: 'hub-navigate', tool: 'meetings-hub', itemId: drag.id }, window.location.origin || '*');
+        } else {
+          selectAndEdit(drag.id);
+        }
+        return;
+      }
+
+      if (drag.mode === 'resize') {
+        const newEndTime = minutesToTime(drag.previewEndMin);
+        if (drag.type === 'meeting') resizeMeeting(drag.id, drag.previewEndMin - drag.origStartMin);
+        else resizeItem(drag.id, newEndTime);
+      } else {
+        const newStartTime = minutesToTime(drag.previewStartMin);
+        const newEndTime = minutesToTime(drag.previewStartMin + drag.duration);
+        const newIso = drag.previewIso || drag.origIso;
+        if (drag.type === 'meeting') moveMeeting(drag.id, newIso, newStartTime);
+        else moveItem(drag.id, newIso, newStartTime, newEndTime);
+      }
+      renderCalendar();
+    }
+
+    function moveItem(id, newIso, newStartTime, newEndTime) {
+      const it = state.items.find(x => x.id === id);
+      if (!it) return;
+      it.start = newIso;
+      it.end = newIso;
+      it.startTime = newStartTime;
+      it.endTime = newEndTime;
+      saveState();
+      showToast(`Moved to ${fmtDate(newIso)} ${newStartTime}`);
+    }
+
+    function resizeItem(id, newEndTime) {
+      const it = state.items.find(x => x.id === id);
+      if (!it) return;
+      it.endTime = newEndTime;
+      saveState();
+    }
+
+    function moveMeeting(id, newIso, newTime) {
+      let data;
+      try { data = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { data = {}; }
+      const m = (data.meetings || []).find(x => x.id === id);
+      if (!m) return;
+      m.date = newIso;
+      m.time = newTime;
+      HubStorage.set('meetings-hub-v1', data);
+      showToast(`Moved to ${fmtDate(newIso)} ${newTime}`);
+    }
+
+    function resizeMeeting(id, newDurationMins) {
+      let data;
+      try { data = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { data = {}; }
+      const m = (data.meetings || []).find(x => x.id === id);
+      if (!m) return;
+      m.durationMins = newDurationMins;
+      HubStorage.set('meetings-hub-v1', data);
     }
 
     // ═══════════════════════════════════════════════════════════════
