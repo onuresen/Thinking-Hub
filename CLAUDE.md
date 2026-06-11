@@ -683,6 +683,8 @@ Three follow-up fixes from real-world use of Priority 47's time-block grid.
 - **Timeline dedup removes the column, not the inline bar label** — the frozen label column and the sidebar showed identical title lists; the inline bar label is the only one that's contextually useful while scanning the timeline (tells you what a bar is without looking away), so it stays.
 - **Meeting time picker is a plain `<select>`, not a custom popup** — matches the existing `.type-select`/`.project-select` pattern already in the same toolbar row, needs no new CSS/JS widget, and browsers' native select search-by-typed-text still works for quick navigation.
 
+**Follow-up — Meeting Hub `hub-highlight` listener ✓ Done:** clicking a meeting pill/block in `schedule.html` sends `hub-navigate` → `index.html` opens `meetings-hub.html` and posts `hub-highlight` with the `itemId`, but `meetings-hub.html` had no listener for it, so the first meeting in the list stayed selected regardless of which one was clicked. Added the same `hub-highlight` → `openMeeting(id)` pattern already used by `decision-hub.html`.
+
 **Files:** `meetings-hub.html`, `schedule.html`, `CLAUDE.md`
 
 ---
