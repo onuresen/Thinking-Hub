@@ -1287,6 +1287,11 @@
       color: var(--text2);
     }
 
+    .s-maintenance {
+      background: var(--node-purple);
+      color: var(--border-purple);
+    }
+
     .cat-chip {
       font-size: 9px;
       font-family: var(--font-mono);
@@ -1928,6 +1933,7 @@
             <option value="planning">Planning</option>
             <option value="active">Active</option>
             <option value="onhold">On Hold</option>
+            <option value="maintenance">Maintenance</option>
             <option value="done">Done</option>
           </select>
         </div>
@@ -2219,8 +2225,8 @@
 
     function avatarColors(colorStr) { const [bg, fg] = colorStr.split(','); return { bg, fg }; }
     function initials(name) { return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); }
-    function statusClass(s) { return { active: 's-active', planning: 's-planning', onhold: 's-onhold', done: 's-done' }[s] || 's-planning'; }
-    function statusLabel(s) { return { active: 'Active', planning: 'Planning', onhold: 'On Hold', done: 'Done' }[s] || s; }
+    function statusClass(s) { return { active: 's-active', planning: 's-planning', onhold: 's-onhold', done: 's-done', maintenance: 's-maintenance' }[s] || 's-planning'; }
+    function statusLabel(s) { return { active: 'Active', planning: 'Planning', onhold: 'On Hold', done: 'Done', maintenance: 'Maintenance' }[s] || s; }
     function taskStatusClass(s) { return { inprogress: 'ts-inprogress', blocked: 'ts-blocked', onhold: 'ts-onhold' }[s] || ''; }
     function taskStatusLabel(s) { return { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', onhold: 'On Hold', done: 'Done' }[s] || s; }
     function toggleBlockedReason(val) {
@@ -2657,7 +2663,7 @@
       // Status chips
       const statusWrap = document.createElement('div');
       statusWrap.className = 'ov-filter-chips';
-      [{ val: 'all', label: 'All' }, { val: 'active', label: 'Active' }, { val: 'planning', label: 'Planning' }, { val: 'onhold', label: 'On Hold' }, { val: 'done', label: 'Done' }].forEach(s => {
+      [{ val: 'all', label: 'All' }, { val: 'active', label: 'Active' }, { val: 'planning', label: 'Planning' }, { val: 'onhold', label: 'On Hold' }, { val: 'maintenance', label: 'Maintenance' }, { val: 'done', label: 'Done' }].forEach(s => {
         const chip = document.createElement('button');
         chip.className = 'ov-chip' + (of.status === s.val ? ' active' : '');
         chip.textContent = s.label;
@@ -2698,7 +2704,7 @@
       }
       if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
       else if (of.sort === 'status') {
-        const ord = { active: 0, planning: 1, onhold: 2, done: 3 };
+        const ord = { active: 0, planning: 1, onhold: 2, maintenance: 3, done: 4 };
         visible.sort((a, b) => (ord[a.status] ?? 9) - (ord[b.status] ?? 9));
       } else if (of.sort === 'tasks')
         visible.sort((a, b) => b.tasks.filter(t => !t.done).length - a.tasks.filter(t => !t.done).length);
@@ -3619,6 +3625,7 @@
               <option value="planning">Planning</option>
               <option value="active">Active</option>
               <option value="onhold">On Hold</option>
+              <option value="maintenance">Maintenance</option>
               <option value="done">Done</option>
             </select>
           </div>
