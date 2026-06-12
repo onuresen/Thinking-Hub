@@ -31,7 +31,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
-| `scrum-hub.html` | Scrum Board — product backlog (MoSCoW), sprint planning, kanban, velocity chart, DoD |
+| `scrum-hub.html` | ⚠ Retired from sidebar (2026-06-11) — now a tab inside `frameworks-hub.html` (parked experiment, nested iframe). Data lives on in `scrum-hub-v1`. Scrum Board: backlog (MoSCoW), sprint planning, kanban, velocity, DoD |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
 | `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
@@ -47,7 +47,8 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
-| `blocked-depth.html` | Blocked Depth — iceberg cascade view; shows every task, milestone, and person frozen downstream of a blocked task |
+| `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg), V-Model, and a parked Scrum Board (nested iframe) |
+| `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -702,3 +703,27 @@ Added `maintenance` as a project status, alongside `planning`/`active`/`onhold`/
 - **Dashboard "active projects" filters (`index.html`) were left unchanged** — they already use `status !== 'done' && status !== 'archived'`, so `maintenance` projects correctly count as active/ongoing without any edit.
 
 **Files:** `project-hub.html`, `CLAUDE.md`
+### ~~Priority 49 — Declutter: retire Scrum Board into Frameworks~~ ✓ Done `[group: tool-consolidation]`
+Scrum Board removed from the sidebar (solo/strategy work doesn't run sprints — it was unused) and moved into `frameworks-hub.html` as a third tab alongside Blocked Depth and V-Model. Frameworks is now the explicit home for parked/experimental method tools.
+
+**Key decisions:**
+- **Move into Frameworks, don't delete** — keeps `scrum-hub.html` + `scrum-hub-v1` data intact and the tool reachable, just out of the main nav. *Why:* may be revisited; deletion is irreversible and the file is cheap to keep. *Alternative rejected:* delete the file (loses data and the option to return). *Confidence:* high.
+- **Nested iframe, lazy-loaded on first tab open** — *Why:* Scrum is a full tool, not an inline panel like Blocked Depth/V-Model; an iframe avoids re-implementing it, and lazy-load avoids loading Scrum every time Frameworks opens. *Tradeoff:* cross-tool links from inside the nested Scrum won't reach the shell (2-level nesting) — acceptable for a parked experiment.
+
+**Files:** `index.html` (removed APPS entry), `frameworks-hub.html` (Scrum tab + panel + lazy-load), `CLAUDE.md`
+
+---
+
+## Decision Log Convention
+<!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
+Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
+above into a shared schema used across all repos. When a non-obvious choice is made
+(a tradeoff, "why this over that", a convention to follow or avoid), record it — as a
+"Key decisions" bullet under the backlog entry / in the Decision Hub — using:
+- **Decision:** what was chosen
+- **Why:** the reasoning (the cause behind the effect)
+- **Alternative:** what was rejected, and why
+- **Revisit when:** the condition that would reopen this *(optional)*
+- **Confidence:** low / med / high
+
+Only for decisions that are hard to reverse or likely to recur. Skip mechanical changes.

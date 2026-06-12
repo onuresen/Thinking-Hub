@@ -284,6 +284,7 @@
   <div class="fh-tabs">
     <button class="fh-tab active" data-panel="blocked" onclick="switchPanel('blocked')">Blocked Depth</button>
     <button class="fh-tab" data-panel="vmodel" onclick="switchPanel('vmodel')">V-Model</button>
+    <button class="fh-tab" data-panel="scrum" onclick="switchPanel('scrum')">Scrum Board</button>
   </div>
 </div>
 
@@ -356,6 +357,11 @@
 
 </div>
 
+<!-- ── SCRUM BOARD PANEL (parked experiment) ──────────────────── -->
+<div class="fh-panel" id="panel-scrum" style="padding:0;">
+  <iframe id="scrum-frame" title="Scrum Board" style="width:100%;height:calc(100vh - 130px);border:0;display:block;"></iframe>
+</div>
+
 <script>
   // ── Tab switching ──────────────────────────────────────────────
   function switchPanel(id) {
@@ -363,6 +369,7 @@
     document.querySelectorAll('.fh-tab').forEach(b => b.classList.toggle('active', b.dataset.panel === id));
     document.getElementById('panel-' + id).classList.add('active');
     if (id === 'vmodel') renderVModel();
+    if (id === 'scrum') { const fr = document.getElementById('scrum-frame'); if (fr && !fr.getAttribute('src')) fr.src = 'scrum-hub.html'; }
   }
 
   // ── BLOCKED DEPTH ──────────────────────────────────────────────
