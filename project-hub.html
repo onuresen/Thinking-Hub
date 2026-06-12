@@ -1934,6 +1934,7 @@
             <option value="active">Active</option>
             <option value="maintenance">Maintenance</option>
             <option value="onhold">On Hold</option>
+            <option value="maintenance">Maintenance</option>
             <option value="done">Done</option>
           </select>
         </div>
@@ -2663,6 +2664,7 @@
       // Status chips
       const statusWrap = document.createElement('div');
       statusWrap.className = 'ov-filter-chips';
+      [{ val: 'all', label: 'All' }, { val: 'active', label: 'Active' }, { val: 'planning', label: 'Planning' }, { val: 'onhold', label: 'On Hold' }, { val: 'maintenance', label: 'Maintenance' }, { val: 'done', label: 'Done' }].forEach(s => {
       [{ val: 'all', label: 'All' }, { val: 'active', label: 'Active' }, { val: 'planning', label: 'Planning' }, { val: 'maintenance', label: 'Maintenance' }, { val: 'onhold', label: 'On Hold' }, { val: 'done', label: 'Done' }].forEach(s => {
         const chip = document.createElement('button');
         chip.className = 'ov-chip' + (of.status === s.val ? ' active' : '');
@@ -2704,6 +2706,7 @@
       }
       if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
       else if (of.sort === 'status') {
+        const ord = { active: 0, planning: 1, onhold: 2, maintenance: 3, done: 4 };
         const ord = { active: 0, planning: 1, maintenance: 2, onhold: 3, done: 4 };
         visible.sort((a, b) => (ord[a.status] ?? 9) - (ord[b.status] ?? 9));
       } else if (of.sort === 'tasks')
@@ -3625,6 +3628,7 @@
               <option value="planning">Planning</option>
               <option value="active">Active</option>
               <option value="onhold">On Hold</option>
+              <option value="maintenance">Maintenance</option>
               <option value="done">Done</option>
             </select>
           </div>

@@ -689,6 +689,20 @@ Three follow-up fixes from real-world use of Priority 47's time-block grid.
 
 ---
 
+### ~~Priority 49 — Project Hub: "Maintenance" project status~~ ✓ Done `[group: project-ux]`
+Added `maintenance` as a project status, alongside `planning`/`active`/`onhold`/`done`. Previously only existed as an option in the new-project modal (`#proj-status`) — the existing-project Settings tab dropdown (`#ps-status`) was missing it, so projects already marked Maintenance couldn't be changed back via Settings and the status wasn't selectable for existing projects at all.
+
+- `.s-maintenance` badge CSS added (uses `--node-purple`/`--border-purple`, already defined in all 3 themes).
+- `statusClass()`/`statusLabel()` map `maintenance` → `'s-maintenance'` / `'Maintenance'`.
+- `<option value="maintenance">Maintenance</option>` added to both `#proj-status` (new project modal) and `#ps-status` (Settings tab), positioned between "On Hold" and "Done".
+- Overview filter chips gained a "Maintenance" chip; sort-by-status `ord` map gained `maintenance: 3` (between `onhold` and `done`, which shifted to `4`).
+
+**Key decisions:**
+- **`--node-purple`/`--border-purple` for the badge** — both tokens already exist in dark/light/ink themes, satisfying the "no new hex values" rule without adding new tokens.
+- **`tool-portfolio.html`'s project-status color map (`statusColor`) was left unchanged** — `maintenance` falls through its `|| 'var(--text3)'` default, the same as `done` already does; not worth a special color for a small inline checkbox-list label.
+- **Dashboard "active projects" filters (`index.html`) were left unchanged** — they already use `status !== 'done' && status !== 'archived'`, so `maintenance` projects correctly count as active/ongoing without any edit.
+
+**Files:** `project-hub.html`, `CLAUDE.md`
 ### ~~Priority 49 — Declutter: retire Scrum Board into Frameworks~~ ✓ Done `[group: tool-consolidation]`
 Scrum Board removed from the sidebar (solo/strategy work doesn't run sprints — it was unused) and moved into `frameworks-hub.html` as a third tab alongside Blocked Depth and V-Model. Frameworks is now the explicit home for parked/experimental method tools.
 
