@@ -46,7 +46,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `learning-hub.html` | Reading & learning log |
 | `stakeholder-hub.html` | Visual power/interest stakeholder grid |
 | `risk-hub.html` | Risk register with heat-map |
-| `achievements-hub.html` | Achievements & milestones tracker |
+| `achievements-hub.html` | Achievements & milestones tracker + **Profile** (identity header: name / role / who-is-me, edits `hub-settings-v1.profile`; P53) |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 | `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg) and V-Model. (Scrum Board tab removed 2026-06-13, Priority 50.) |
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
@@ -776,6 +776,33 @@ A structured-argument builder grounded in Barbara Minto's *The Pyramid Principle
 - **Why this passes the solo test ([[build-for-solo-not-team]]):** drafting an argument is solo work, and it serves the user's own real outputs (posts, management asks, decision write-ups). Unlike the deleted War Room/Scrum, it isn't team-cadence-shaped — and the user pull-requested it themselves while reading the source book, the strongest possible "would the solo user open this weekly?" signal.
 
 **Files:** `argument-hub.html` (new), `index.html`, `hub-links.js`, `hub-search.js`, `help-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 53 — Rename "Profile" → "Mode", and a real Profile (identity) page~~ ✓ Done `[group: profile]`
+Two-phase job triggered by a naming-correctness observation from the user: the app's "Profile" strip (Everything / Strategy / Project / Core) is **not** a profile — it's a tool-filter — and the conventional meaning of "Profile" (user identity) was the more correct claim. So we fixed the misnomer first, then built the real thing.
+
+**Phase 0 — rename the tool-filter `Profile → Mode` (`index.html` only):**
+- `PROFILES → MODES`, `_activeProfile → _activeMode`, `buildProfileStrip → buildModeStrip`, `.profile-chip/.profile-strip → .mode-chip/.mode-strip`, `selectWelcomeProfile → selectWelcomeMode`, `_welcomeProfile → _welcomeMode`, `data-profile → data-mode`, the welcome-modal "role cards" copy, and the onboarding string.
+- **Backward-compatible storage migration:** the session field moved `profile → mode`, but `loadSession()` reads `mode ?? profile ?? 'everything'` and `saveSession` writes `mode`, so any existing user's saved selection survives untouched. Verified: a seeded legacy `{profile:'dx'}` resolved to Strategy mode; clicking a chip wrote the new `mode` field; filtering correct across all modes (Project=10, Everything=21, Core=8 tools).
+- Done with **literal `.Replace()`** (never regex `-replace`, per the file-safety rule) for the unique identifiers, then hand-fixed the bare-`profile` stragglers (session field, two local vars, comments, onboarding copy).
+
+**Phase 1 — Profile page, folded into Achievements (`achievements-hub.html`):**
+- The Achievements hero already had an avatar + username + level (a GitHub-profile-shaped surface). Added an identity layer on top: **name, role, and "this is me"** (a dropdown of People Hub members), edited via an **"✎ Edit profile"** modal.
+- Identity persists in **`hub-settings-v1.profile = { name, role, selfMemberId }`** (backed up + synced). The hero reads it with a fallback chain `profile.name → selfMember.name → sessionName → 'Thinking Hub'`; avatar tints to the linked member's color.
+- **`selfMemberId` stays canonical in `hub-session-v1`** (where People Hub's "Me View" and the home "My Work" widget already read it) — the Profile page writes *both* session (for those readers) and `settings.profile.selfMemberId` (for backup). A `_healSelfMemberId()` on load restores session from settings if a backup-restore wiped the ephemeral session. Verified end-to-end incl. the restore case.
+
+**Key decisions:**
+- **Decision:** Rename the tool-filter to **Mode**, not Workspace/Layout/View. **Why:** "Mode" accurately names a *working state you switch into* (which is what filtering tools by context does); "Layout" implies spatial rearrangement that doesn't happen, "View" collides with the dashboard views, "Role" collides with People Hub member roles, "Workspace" was the user's second choice but they picked Mode. **Confidence:** high.
+- **Decision:** Fix the misnomer *before* building Profile, rather than calling the new page "Me" to dodge the collision. **Why:** the user's point — incumbency isn't correctness; if the existing usage is wrong, free the right word for the right meaning. **Confidence:** high.
+- **Decision:** Fold Profile into Achievements rather than a new tool or the ⚙️ modal. **Why:** the achievements heatmap already reads like a GitHub contribution graph, so identity-on-top is the natural GitHub-profile pattern; a new tool fails the solo "don't add surfaces" test ([[build-for-solo-not-team]]). **Alternative rejected:** moving *all* settings (backup, cloud, API keys) there too — that's utility plumbing, not identity; it would clutter a personal page. Those stay in the ⚙️ modal. **Confidence:** high.
+- **Decision:** Keep `selfMemberId` canonical in `hub-session-v1` and dual-write to settings, rather than moving it wholesale. **Why:** avoids touching every existing reader (People Hub, My Work widget) while still surviving backup via the settings mirror + self-heal. **Confidence:** med.
+
+**Phase 2 — relabel the tool `Achievements → Profile`** (user chose "Profile"): updated the sidebar label + icon (`🏅 → 👤`) and `desc` in `index.html` APPS, the `help-hub.html` tool card (label/icon/whenToUse/features) + the Systems-Thinking framework `tools:` list, the `<title>` in `achievements-hub.html`, the Project Hub detail-panel button title, and `README.md`. The id (`achievements-hub`), filename, and all internal code (`_allAchievements`, `hub-activity-v1`, etc.) stay unchanged for stability — only user-facing strings moved.
+
+**Still open (minor):** People Hub also exposes a who-is-me setter (harmless — same canonical `selfMemberId` key, stays in sync); could later become a read-only link to Profile.
+
+**Files:** `index.html`, `achievements-hub.html`, `help-hub.html`, `project-hub.html`, `README.md`, `CLAUDE.md`
 
 ---
 

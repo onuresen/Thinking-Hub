@@ -394,13 +394,13 @@ const TOOLS = [
     sample: 'Designing a new feature. Place "User Problem" in the center. Branch out: "Root Causes," "Existing Solutions," "Our Constraint." Connect feedback loops with arrows. After 20 minutes you have a system map that makes the real design decision obvious — before you wrote a single line of spec or code.'
   },
   {
-    id: 'achievements-hub', label: 'Achievements', icon: '🏅', group: 'Tools & Focus', wg: 'Tools & Focus',
+    id: 'achievements-hub', label: 'Profile', icon: '👤', group: 'Tools & Focus', wg: 'Tools & Focus',
     file: 'achievements-hub.html',
-    desc: 'Your productivity profile — badges, streaks, and activity heatmap.',
+    desc: 'Your profile — name, role, who-is-me — plus badges, streaks, and an activity heatmap.',
     frameworks: ['Systems Thinking'],
     fwIds: ['Systems-Thinking'],
-    whenToUse: 'Whenever you ship something meaningful, hit a milestone, or want to recognize progress. The reinforcing loop: achievement → recognition → motivation → more achievement. Break the loop and momentum stalls.',
-    features: ['Achievement cards with date, category, and project link', 'Activity heatmap (GitHub-style contribution graph)', 'Streak tracking across Daily Log and tools', 'Badge system for milestones', 'Cross-links to Project Hub projects and Goals'],
+    whenToUse: 'Set up once: your name, role, and which person in People Hub is "you" (drives "My Work" on the home dashboard). Then return whenever you ship something meaningful or want to see your progress. The reinforcing loop: achievement → recognition → motivation → more achievement.',
+    features: ['Identity header: name, role, and "this is me" (People Hub link)', 'Achievement cards with date, category, and project link', 'Activity heatmap (GitHub-style contribution graph)', 'Streak tracking across Daily Log and tools', 'Badge system for milestones'],
     sample: 'You ship the redesigned onboarding flow. Log it: "Launched new onboarding — activation rate up 18%." Category: Product. Link to "Site Redesign Q3." The heatmap shows a 23-day active streak. The reinforcing loop is running: visible progress fuels the next sprint of work.'
   },
 ];
@@ -447,7 +447,7 @@ const FRAMEWORKS = [
   { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub'] },
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
-  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Achievements', 'Focus Timer', 'Spatial Canvas', 'Frameworks'] },
+  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Focus Timer', 'Spatial Canvas', 'Frameworks'] },
   { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: ['Argument Hub'] },
   { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: ['Argument Hub'] },
   { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: ['Argument Hub'] },

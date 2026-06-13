@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Achievements</title>
+  <title>Profile</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -113,6 +113,40 @@
       line-height: 1; text-shadow: 0 0 16px var(--_ach-star-glow);
     }
     .ach-unlocked-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+    /* ── Identity / profile ── */
+    .ach-role { font-size: 12.5px; color: var(--text2); margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ach-role:empty { display: none; }
+    .ach-edit-btn {
+      position: absolute; top: 14px; right: 18px; z-index: 2;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border2);
+      color: var(--text2); font-family: var(--font-body); font-size: 11px;
+      padding: 5px 11px; border-radius: var(--r-sm); cursor: pointer; transition: all .12s;
+    }
+    .ach-edit-btn:hover { background: rgba(255,255,255,0.16); color: var(--text); }
+    [data-theme="light"] .ach-edit-btn { background: rgba(0,0,0,0.05); }
+    [data-theme="light"] .ach-edit-btn:hover { background: rgba(0,0,0,0.1); }
+
+    /* ── Profile edit modal ── */
+    .pf-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: var(--z-modal, 9000);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .pf-modal {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r);
+      width: 100%; max-width: 420px; padding: 22px 24px;
+    }
+    .pf-modal h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .pf-modal .pf-sub { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+    .pf-field { margin-bottom: 14px; }
+    .pf-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); margin-bottom: 5px; }
+    .pf-field input, .pf-field select {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 14px; padding: 9px 11px;
+    }
+    .pf-field input:focus, .pf-field select:focus { outline: none; border-color: var(--accent); }
+    .pf-field .pf-hint { font-size: 11px; color: var(--text3); margin-top: 5px; line-height: 1.4; }
+    .pf-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 
     /* ── Stats row ── */
     .ach-stats {
@@ -253,9 +287,11 @@
 
   <!-- Hero -->
   <div class="ach-hero">
+    <button class="ach-edit-btn" onclick="openProfileEdit()" title="Edit your profile">✎ Edit profile</button>
     <div class="ach-avatar" id="ach-avatar">TH</div>
     <div class="ach-identity">
       <div class="ach-username" id="ach-username">Thinking Hub</div>
+      <div class="ach-role" id="ach-role"></div>
       <div class="ach-level-row">
         <span class="ach-level-badge" id="ach-level-badge">LVL 1</span>
         <span class="ach-level-title" id="ach-level-title">Newcomer</span>
@@ -323,6 +359,31 @@
 
 <!-- Confetti -->
 <canvas id="ach-confetti" aria-hidden="true"></canvas>
+
+<!-- Profile edit modal -->
+<div class="pf-overlay" id="profile-modal" onclick="if(event.target===this)closeProfileEdit()">
+  <div class="pf-modal">
+    <h3>Your profile</h3>
+    <div class="pf-sub">Who you are, in one place. Used across the app — like “My Work” on the home dashboard.</div>
+    <div class="pf-field">
+      <label for="pf-name">Name</label>
+      <input id="pf-name" type="text" placeholder="Your name" autocomplete="off">
+    </div>
+    <div class="pf-field">
+      <label for="pf-role">Role / title</label>
+      <input id="pf-role" type="text" placeholder="e.g. Digitalization Engineer" autocomplete="off">
+    </div>
+    <div class="pf-field">
+      <label for="pf-self">This is me</label>
+      <select id="pf-self"></select>
+      <div class="pf-hint">Links you to a person in People Hub, so the app knows which tasks and work are yours. (Moved here from People Hub.)</div>
+    </div>
+    <div class="pf-actions">
+      <button class="btn btn-ghost" onclick="closeProfileEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfileEdit()">Save</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -608,11 +669,24 @@
     const unlocked = achievements.filter(a => a.unlocked).length;
 
     const session  = HubStorage.get('hub-session-v1') || {};
-    const name     = session.sessionName || 'Thinking Hub';
+    const settings = HubStorage.get('hub-settings-v1') || {};
+    const profile  = settings.profile || {};
+    const selfMember = (typeof HubData !== 'undefined' && HubData.getSelfMember) ? HubData.getSelfMember() : null;
+    const name     = (profile.name || '').trim() || (selfMember && selfMember.name) || session.sessionName || 'Thinking Hub';
+    const role     = (profile.role || '').trim() || (selfMember && selfMember.role) || '';
     const initials = name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'TH';
 
-    document.getElementById('ach-avatar').textContent    = initials;
+    const avatarEl = document.getElementById('ach-avatar');
+    avatarEl.textContent = initials;
+    if (selfMember && selfMember.color) {
+      avatarEl.style.background = selfMember.color;
+      avatarEl.style.color = '#fff';
+    } else {
+      avatarEl.style.background = '';
+      avatarEl.style.color = '';
+    }
     document.getElementById('ach-username').textContent  = name;
+    document.getElementById('ach-role').textContent      = role;
     document.getElementById('ach-level-badge').textContent = `LVL ${lvl.level}`;
     document.getElementById('ach-level-title').textContent = lvl.label;
     document.getElementById('ach-xp-label').textContent  =
@@ -814,7 +888,53 @@
 
   // ── Main init ─────────────────────────────────────────────────────────────
 
+  // ── Profile (identity + who-is-me) ───────────────────────────────────────
+  const _pfEsc = s => (window.HubUtils ? HubUtils.esc(s) : String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'));
+
+  window.openProfileEdit = function () {
+    const profile = (HubStorage.get('hub-settings-v1') || {}).profile || {};
+    const selfId  = (HubStorage.get('hub-session-v1') || {}).selfMemberId || profile.selfMemberId || '';
+    document.getElementById('pf-name').value = profile.name || '';
+    document.getElementById('pf-role').value = profile.role || '';
+    const members = (typeof HubData !== 'undefined' && HubData.getMembers) ? HubData.getMembers() : [];
+    document.getElementById('pf-self').innerHTML =
+      '<option value="">— not set —</option>' +
+      members.map(m => `<option value="${_pfEsc(m.id)}" ${m.id === selfId ? 'selected' : ''}>${_pfEsc(m.name)}</option>`).join('');
+    document.getElementById('profile-modal').style.display = 'flex';
+  };
+  window.closeProfileEdit = function () {
+    document.getElementById('profile-modal').style.display = 'none';
+  };
+  window.saveProfileEdit = function () {
+    const settings = HubStorage.get('hub-settings-v1') || {};
+    const profile  = settings.profile || {};
+    profile.name = document.getElementById('pf-name').value.trim();
+    profile.role = document.getElementById('pf-role').value.trim();
+    const selfId = document.getElementById('pf-self').value;
+    profile.selfMemberId = selfId || '';
+    settings.profile = profile;
+    HubStorage.set('hub-settings-v1', settings);
+    // Mirror selfMemberId to session — the canonical key existing readers use (People Hub, home "My Work")
+    const session = HubStorage.get('hub-session-v1') || {};
+    if (selfId) session.selfMemberId = selfId; else delete session.selfMemberId;
+    HubStorage.set('hub-session-v1', session);
+    closeProfileEdit();
+    renderHero(_allAchievements || []);
+  };
+
+  // Self-heal: if a backup restore wiped the (ephemeral) session but settings still
+  // remembers who you are, put selfMemberId back so "My Work" keeps working.
+  function _healSelfMemberId() {
+    const session  = HubStorage.get('hub-session-v1') || {};
+    const profile  = (HubStorage.get('hub-settings-v1') || {}).profile || {};
+    if (!session.selfMemberId && profile.selfMemberId) {
+      session.selfMemberId = profile.selfMemberId;
+      HubStorage.set('hub-session-v1', session);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    _healSelfMemberId();
     const ctx          = buildCtx();
     const evaluated    = ACHIEVEMENTS.map(ach => {
       const res = ach.evaluate(ctx);

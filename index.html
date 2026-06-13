@@ -124,7 +124,7 @@
       padding: 10px 8px;
     }
 
-    .profile-strip {
+    .mode-strip {
       display: flex;
       gap: 4px;
       flex-wrap: wrap;
@@ -132,7 +132,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .profile-chip {
+    .mode-chip {
       font-size: 9px;
       font-family: var(--font-mono);
       letter-spacing: 0.05em;
@@ -146,12 +146,12 @@
       white-space: nowrap;
     }
 
-    .profile-chip:hover {
+    .mode-chip:hover {
       color: var(--text);
       border-color: var(--border);
     }
 
-    .profile-chip.active {
+    .mode-chip.active {
       background: var(--accent-dim);
       color: var(--accent);
       border-color: var(--accent-glow);
@@ -1760,8 +1760,8 @@
         width: 18px;
       }
 
-      /* Profile chips: slightly larger */
-      .profile-chip {
+      /* Mode chips: slightly larger */
+      .mode-chip {
         font-size: 10.5px;
         padding: 5px 10px;
       }
@@ -1888,7 +1888,7 @@
       <div class="sidebar-logo-text">Thinking Hub</div>
     </div>
 
-    <div class="profile-strip" id="profile-strip"></div>
+    <div class="mode-strip" id="mode-strip"></div>
 
     <div class="sidebar-nav" id="sidebar-nav"></div>
 
@@ -2144,11 +2144,11 @@
       { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg and V-Model process map' },
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Focus Timer', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◉', file: 'focus-hub.html', desc: 'Start a Pomodoro session tied to a task — stay in flow and track where your time goes' },
-      { id: 'achievements-hub', label: 'Achievements', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏅', file: 'achievements-hub.html', desc: 'See your productivity history — badges earned, streaks and an activity heatmap' },
+      { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
       { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
     ];
 
-    const PROFILES = {
+    const MODES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
       dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
       bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
@@ -2161,13 +2161,13 @@
 
     function loadSession() {
       try {
-        return JSON.parse(localStorage.getItem(SESSION_KEY)) || { sessionName: '', recentApps: [], profile: 'everything' };
+        return JSON.parse(localStorage.getItem(SESSION_KEY)) || { sessionName: '', recentApps: [], mode: 'everything' };
       } catch {
-        return { sessionName: '', recentApps: [], profile: 'everything' };
+        return { sessionName: '', recentApps: [], mode: 'everything' };
       }
     }
 
-    let _activeProfile = loadSession().profile || 'everything';
+    let _activeMode = loadSession().mode ?? loadSession().profile ?? 'everything';
 
     function saveSession(patch) {
       const s = loadSession();
@@ -2191,16 +2191,16 @@
 
     // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-    function buildProfileStrip() {
-      const strip = document.getElementById('profile-strip');
+    function buildModeStrip() {
+      const strip = document.getElementById('mode-strip');
       if (!strip) return;
       strip.innerHTML = '';
-      Object.entries(PROFILES).forEach(([key, prof]) => {
+      Object.entries(MODES).forEach(([key, prof]) => {
         const btn = document.createElement('button');
-        btn.className = 'profile-chip' + (_activeProfile === key ? ' active' : '');
+        btn.className = 'mode-chip' + (_activeMode === key ? ' active' : '');
         btn.title = prof.label;
         btn.textContent = prof.label;
-        btn.onclick = () => { _activeProfile = key; saveSession({ profile: key }); buildProfileStrip(); buildSidebar(); buildHomeDashboard(); buildStatusWidgets(); };
+        btn.onclick = () => { _activeMode = key; saveSession({ mode: key }); buildModeStrip(); buildSidebar(); buildHomeDashboard(); buildStatusWidgets(); };
         strip.appendChild(btn);
       });
     }
@@ -2211,8 +2211,8 @@
       const nav = document.getElementById('sidebar-nav');
       nav.innerHTML = '';
 
-      const profile = PROFILES[_activeProfile] || PROFILES.everything;
-      const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
+      const mode = MODES[_activeMode] || MODES.everything;
+      const visibleApps = mode.tools ? APPS.filter(a => mode.tools.includes(a.id)) : APPS;
 
       const groups = [...new Set(APPS.map(a => a.wg))];
       groups.forEach(group => {
@@ -2282,7 +2282,7 @@
       const banner = document.getElementById('start-banner');
       if (!banner) return;
       if (loadSession().startBannerDismissed) { banner.style.display = 'none'; return; }
-      const steps = START_STEPS[_activeProfile] || START_STEPS.everything;
+      const steps = START_STEPS[_activeMode] || START_STEPS.everything;
       const stepsEl = banner.querySelector('.start-steps');
       if (stepsEl) stepsEl.innerHTML = steps.map((s, i) => `
         <div class="start-step" onclick="openApp('${s.tool}')">
@@ -2306,8 +2306,8 @@
       buildStartBanner();
       const grid = document.getElementById('app-grid');
       grid.innerHTML = '';
-      const profile = PROFILES[_activeProfile] || PROFILES.everything;
-      const visibleApps = profile.tools ? APPS.filter(a => profile.tools.includes(a.id)) : APPS;
+      const mode = MODES[_activeMode] || MODES.everything;
+      const visibleApps = mode.tools ? APPS.filter(a => mode.tools.includes(a.id)) : APPS;
       visibleApps.forEach((app, i) => {
         const card = document.createElement('div');
         card.className = 'app-card' + (i === 0 ? ' app-card--hero' : '');
@@ -2860,9 +2860,9 @@
         }
       } catch { }
 
-      // ── Filter by active profile ───────────────────────────────────────────
-      const _profile = PROFILES[_activeProfile] || PROFILES.everything;
-      const _visibleWidgets = _profile.tools ? widgets.filter(w => _profile.tools.includes(w.id)) : widgets;
+      // ── Filter by active mode ───────────────────────────────────────────
+      const _mode = MODES[_activeMode] || MODES.everything;
+      const _visibleWidgets = _mode.tools ? widgets.filter(w => _mode.tools.includes(w.id)) : widgets;
 
       if (!_visibleWidgets.length) { section.style.display = 'none'; return; }
 
@@ -4711,7 +4711,7 @@
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
-    buildProfileStrip();
+    buildModeStrip();
     buildSidebar();
     buildHomeDashboard();
     switchDashView(loadSession().dashView || 'today');
@@ -4735,23 +4735,23 @@
       return true;
     })();
 
-    let _welcomeProfile = 'everything';
+    let _welcomeMode = 'everything';
 
-    function selectWelcomeProfile(key) {
-      _welcomeProfile = key;
+    function selectWelcomeMode(key) {
+      _welcomeMode = key;
       document.querySelectorAll('.wlc-role-card').forEach(c => {
-        const sel = c.dataset.profile === key;
+        const sel = c.dataset.mode === key;
         c.style.borderColor  = sel ? 'var(--accent)'     : 'var(--border)';
         c.style.background   = sel ? 'var(--accent-dim)' : 'var(--surface)';
         c.style.color        = sel ? 'var(--text)'       : 'var(--text2)';
       });
     }
 
-    function _applyWelcomeProfile() {
-      if (_welcomeProfile && _welcomeProfile !== _activeProfile) {
-        _activeProfile = _welcomeProfile;
-        saveSession({ profile: _welcomeProfile });
-        buildProfileStrip();
+    function _applyWelcomeMode() {
+      if (_welcomeMode && _welcomeMode !== _activeMode) {
+        _activeMode = _welcomeMode;
+        saveSession({ mode: _welcomeMode });
+        buildModeStrip();
         buildSidebar();
         buildHomeDashboard();
       }
@@ -4761,7 +4761,7 @@
       document.getElementById('welcome-overlay').style.display = 'none';
       if (window.HubStarter) HubStarter.seed();
       HubStorage.set('tutorial-seen-v1', true);
-      _applyWelcomeProfile();
+      _applyWelcomeMode();
       switchDashView(loadSession().dashView || 'today');
       setTimeout(startTour, 300);
     }
@@ -4769,7 +4769,7 @@
     function welcomeStartFresh() {
       document.getElementById('welcome-overlay').style.display = 'none';
       HubStorage.set('tutorial-seen-v1', true);
-      _applyWelcomeProfile();
+      _applyWelcomeMode();
       setTimeout(startTour, 300);
     }
   </script>
@@ -4921,25 +4921,25 @@
       <!-- Role selection -->
       <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.65rem">What best describes your work?</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.4rem">
-        <button class="wlc-role-card" data-profile="dx" onclick="selectWelcomeProfile('dx')"
+        <button class="wlc-role-card" data-mode="dx" onclick="selectWelcomeMode('dx')"
           style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
           <div style="font-size:1.1rem;margin-bottom:4px">◈</div>
           <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Strategy / DX</div>
           <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Goals, decisions, OKRs, stakeholder management</div>
         </button>
-        <button class="wlc-role-card" data-profile="bim" onclick="selectWelcomeProfile('bim')"
+        <button class="wlc-role-card" data-mode="bim" onclick="selectWelcomeMode('bim')"
           style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
           <div style="font-size:1.1rem;margin-bottom:4px">⬡</div>
           <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Project / BIM</div>
           <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Projects, schedules, meetings, risk, team coordination</div>
         </button>
-        <button class="wlc-role-card" data-profile="dev" onclick="selectWelcomeProfile('dev')"
+        <button class="wlc-role-card" data-mode="dev" onclick="selectWelcomeMode('dev')"
           style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
           <div style="font-size:1.1rem;margin-bottom:4px">⌥</div>
           <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Engineering / IT</div>
           <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Tasks, dependencies, journals, development workflow</div>
         </button>
-        <button class="wlc-role-card" data-profile="everything" onclick="selectWelcomeProfile('everything')"
+        <button class="wlc-role-card" data-mode="everything" onclick="selectWelcomeMode('everything')"
           style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent-dim);cursor:pointer;transition:all .15s;color:var(--text)">
           <div style="font-size:1.1rem;margin-bottom:4px">⊞</div>
           <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Show everything</div>
@@ -4959,7 +4959,7 @@
           Start with empty workspace
         </button>
       </div>
-      <p style="font-size:.7rem;color:var(--text3);margin:0;text-align:center">Sample data can be cleared anytime from ⚙ Settings → Data &amp; Backup · You can change your profile at any time</p>
+      <p style="font-size:.7rem;color:var(--text3);margin:0;text-align:center">Sample data can be cleared anytime from ⚙ Settings → Data &amp; Backup · You can change your mode at any time</p>
     </div>
   </div>
   <!-- AI Floating Chat Panel -->

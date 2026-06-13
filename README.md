@@ -61,7 +61,7 @@ Tools are grouped by the phase of work they support.
 | **Retrospective** | Async team retro: Went Well / Improve / Actions |
 | **Daily Log** | Private captain's log with mood heatmap, Bullet Journal mode chips, and Feynman learning prompts |
 | **Focus Hub** | Pomodoro timer with GTD energy levels, context tags, and session history |
-| **Achievements** | Milestones and achievements tracker — what shipped, when, with what impact |
+| **Profile** | Your identity (name, role, who-is-me) plus milestones, badges, streaks, and an activity heatmap |
 
 ### AI Assistant
 
@@ -230,7 +230,7 @@ meetings-hub.html       # Meeting notes + action items
 learning-hub.html       # Reading & learning log
 stakeholder-hub.html    # Stakeholder power/interest grid
 risk-hub.html           # Risk register
-achievements-hub.html   # Milestones & achievements
+achievements-hub.html   # Profile (identity) + milestones & achievements
 tool-portfolio.html     # Tool/vendor directory (Technology Radar)
 help-hub.html           # Help, framework reference, workflow guides
 ```
