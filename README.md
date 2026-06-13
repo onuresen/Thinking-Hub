@@ -47,7 +47,6 @@ Tools are grouped by the phase of work they support.
 | Tool | What it does |
 |------|-------------|
 | **Project Hub** | Projects + tasks with member roles, WIP-limited kanban, priority matrix view, and cross-tool badges |
-| **Scrum Board** | Full PSPO-aligned scrum: MoSCoW backlog, sprint kanban with WIP limits, burndown, velocity chart, Definition of Done |
 | **Schedule** | Calendar / timeline view that auto-syncs due dates from Project Hub |
 | **Graph Hub** | Task dependency graph powered by vis-network — trace paths, filter orphans, annotate edges |
 | **Risk Register** | Heat-map risk register with treatment plans, owners, and review dates |
@@ -143,7 +142,6 @@ Each tool is mapped to one or more established frameworks:
 
 | Framework | Tools |
 |-----------|-------|
-| Scrum / PSPO | Scrum Board |
 | Cynefin | Decision Hub |
 | OKR | Goals Hub |
 | GTD | Focus Hub |
@@ -153,7 +151,7 @@ Each tool is mapped to one or more established frameworks:
 | TOGAF | Tool Portfolio |
 | PMBOK Stakeholder Engagement | Stakeholder Map |
 | Feynman Technique | Learning Log, Daily Log |
-| Kanban WIP limits | Scrum Board, Project Hub |
+| Kanban WIP limits | Project Hub |
 | Bullet Journal | Daily Log |
 
 Full framework reference (37 frameworks) is available inside **Help & Guide**.
@@ -221,7 +219,6 @@ kmqt-board.html         # Known / Messy / Questions / Thinking board
 decision-hub.html       # Decision log + assumptions + alignment matrix
 canvas-hub.html         # Infinite spatial canvas
 graph-hub.html          # Task dependency graph (vis-network)
-scrum-hub.html          # Scrum Board (backlog, sprint, burndown)
 focus-hub.html          # Pomodoro focus timer + GTD context
 log-hub.html            # Daily captain's log
 retro-hub.html          # Async retrospective board

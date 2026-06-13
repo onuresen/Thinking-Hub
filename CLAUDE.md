@@ -31,7 +31,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
-| `scrum-hub.html` | ⚠ Retired from sidebar (2026-06-11) — now a tab inside `frameworks-hub.html` (parked experiment, nested iframe). Data lives on in `scrum-hub-v1`. Scrum Board: backlog (MoSCoW), sprint planning, kanban, velocity, DoD |
+| ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
 | `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
@@ -47,7 +47,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
-| `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg), V-Model, and a parked Scrum Board (nested iframe) |
+| `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg) and V-Model. (Scrum Board tab removed 2026-06-13, Priority 50.) |
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
 
 ## Script load order (required)
@@ -71,7 +71,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1`, `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1`
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained)
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -711,6 +711,23 @@ Scrum Board removed from the sidebar (solo/strategy work doesn't run sprints —
 - **Nested iframe, lazy-loaded on first tab open** — *Why:* Scrum is a full tool, not an inline panel like Blocked Depth/V-Model; an iframe avoids re-implementing it, and lazy-load avoids loading Scrum every time Frameworks opens. *Tradeoff:* cross-tool links from inside the nested Scrum won't reach the shell (2-level nesting) — acceptable for a parked experiment.
 
 **Files:** `index.html` (removed APPS entry), `frameworks-hub.html` (Scrum tab + panel + lazy-load), `CLAUDE.md`
+
+---
+
+### ~~Priority 50 — Delete War Room + Scrum Board~~ ✓ Done `[group: declutter]`
+Removed two tools the user confirmed they don't use. This is the **follow-through on Priority 49's reasoning** — P49 retired Scrum from the sidebar but kept it parked "in case it's revisited"; one month of non-use (and the same logic now applied to War Room) converted "park it" into "delete it." The 🎯 "Today's Focus" picker — which only ever fed War Room — went with it.
+
+**What was removed:**
+- **War Room** (lived entirely in `index.html`): CSS (`#war-room` + all `.wr-*`, ~192 lines), the `⚔` session-bar button, the `W`/`Esc` keyboard handlers, the whole JS module (`toggleWarRoom`, `_buildWarRoom`, `_wr*` helpers, `_wrTodayWebGraph`, AI Smart Priorities briefing — ~414 lines), and the 6-panel HTML overlay (~49 lines). Plus the dependent **🎯 Today's Focus picker** in `project-hub.html` (button, `toggleWarRoomFocus`/`buildWarroomFocusSet`, `.warroom` CSS) and the "Today's Focus" section in `index.html`'s `buildTodayView()`.
+- **Scrum Board**: deleted `scrum-hub.html`; removed the Frameworks tab/panel/lazy-load (`frameworks-hub.html`); the `add_backlog_item` AI action + system-prompt line + context digest (`index.html`, `hub-ai.js`); the graph node/color/label/resolver entries (`graph-hub.html`); the Cmd+K resolver + search entry (`hub-links.js`, `hub-search.js`); the starter seed (`hub-starter-data.js`); the tool card + workflow step + framework `tools:` references (`help-hub.html`); and doc rows (`README.md`).
+
+**Key decisions:**
+- **Decision:** Delete both tools outright rather than retire-into-Frameworks again. **Why:** P49 already proved "retire but keep" just produces dead weight nobody returns to; the user explicitly confirmed non-use of both. **Alternative rejected:** another sidebar-hide (P49's approach) — it leaves the maintenance + cognitive cost without the upside. **Confidence:** high.
+- **Decision:** Do NOT purge `scrum-hub-v1` / `hub-warroom-v1` from localStorage; keep both in the Full Backup + MCP-sync key lists. **Why:** code deletion is reversible via git, but silently dropping a user's historical data from backups is not — preserving the keys keeps any existing data recoverable while the tools are gone. **Alternative rejected:** strip the keys everywhere for a "clean" removal — fails the safety principle of never destroying data the user didn't ask to delete. **Confidence:** high. **Revisit when:** the user explicitly asks to wipe the orphaned data.
+- **Decision:** Keep the abstract Scrum / Kanban / MoSCoW / Agile-Retrospectives **framework reference entries** in `help-hub.html`, only repointing their `tools:` lists off the deleted Scrum Board. **Why:** they're methodology education, valid independent of whether a Scrum *tool* ships. **Alternative rejected:** delete the framework entries too — loses reference value for no benefit. **Confidence:** med.
+- **Lesson for future tool-building:** both deleted tools were team/sprint-shaped (War Room "glanceable command center", Scrum sprints) in what is actually a **solo strategy/thinking app**. The recurring failure mode is building for an imagined team cadence rather than the single user's real workflow. Weight new-tool proposals against *"would the solo user open this weekly?"* before building. Focus Timer was kept precisely because it passes that test (it's load-bearing for Project Hub time badges, Weekly Review, and AI Energy Insights).
+
+**Files:** `index.html`, `project-hub.html`, `frameworks-hub.html`, `graph-hub.html`, `help-hub.html`, `hub-ai.js`, `hub-links.js`, `hub-search.js`, `hub-starter-data.js`, `README.md`, `CLAUDE.md` · **Deleted:** `scrum-hub.html`
 
 ---
 

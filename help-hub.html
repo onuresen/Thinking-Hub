@@ -324,16 +324,6 @@ const TOOLS = [
     sample: 'Your team uses 12 tools. Add them all. Figma → Adopt / Application. A new AI writing tool just evaluated → Trial / Application. An old analytics platform nobody uses → Hold. At a glance you see your Application layer has 4 Adopt tools — that\'s your core stack. One Hold tool is a candidate for retirement.'
   },
   {
-    id: 'scrum-hub', label: 'Scrum Board', icon: '⚡', group: 'Reflection & Methods', wg: 'Reflection & Methods',
-    file: 'scrum-hub.html',
-    desc: 'Product backlog, sprint planning, velocity tracking, and Definition of Done.',
-    frameworks: ['Scrum', 'MoSCoW', 'Kanban', 'Agile Retrospectives'],
-    fwIds: ['Scrum', 'MoSCoW', 'Kanban', 'Agile-Retrospectives'],
-    whenToUse: 'When your team works in iterative cycles — software, content, product roadmaps. Sprints bring focus; the board shows flow; the retro closes the learning loop. Works equally well solo.',
-    features: ['Product backlog with MoSCoW priority and story point estimation', 'Sprint planning with Sprint Goal (the team\'s "why")', 'Kanban board with WIP limits per column', 'Burndown progress bar and days-remaining', 'Velocity chart across past sprints', 'Definition of Done checklist (categorized)'],
-    sample: 'Sprint 7 goal: "Enable notification preferences." 12 story points committed. Day 4: 5 points done, 7 in progress. WIP limit on "In Progress" is 3 — currently hit. Team rule: swarm on something in-progress before pulling new work. Burndown is on track. Close sprint Friday with a 15-min retro.'
-  },
-  {
     id: 'reflection-hub', label: 'Reflection Board', icon: '⟲', group: 'Reflection & Methods', wg: 'Reflection & Methods',
     file: 'reflection-hub.html',
     desc: 'Four-column board for team reflection — signals, friction, questions, and actions.',
@@ -414,11 +404,11 @@ const FRAMEWORKS = [
   { id: 'PERT', label: 'PERT', domain: 'Project & Task', color: 'blue', what: "Program Evaluation and Review Technique. Uses three-point estimates (optimistic / most likely / pessimistic) to calculate expected task duration under uncertainty. Developed by the US Navy in the 1950s.", certs: ['PMP'], tools: ['Schedule', 'Dependency Graph'] },
   { id: 'RACI-DACI', label: 'RACI / DACI', domain: 'Project & Task', color: 'blue', what: "Responsibility assignment matrix. RACI = Responsible / Accountable / Consulted / Informed. DACI = Driver / Approver / Contributor / Informed. Eliminates role ambiguity before it becomes conflict.", certs: [], tools: ['Project Hub', 'Meeting Notes', 'Stakeholder Map'] },
   // Agile & Lean
-  { id: 'MoSCoW', label: 'MoSCoW', domain: 'Agile & Lean', color: 'green', what: "Must have / Should have / Could have / Won't have prioritization from Dai Clegg (DSDM). Forces explicit trade-off conversations before they become last-minute scope cuts during delivery.", certs: ['AgilePM'], tools: ['Scrum Board'] },
-  { id: 'Scrum', label: 'Scrum', domain: 'Agile & Lean', color: 'green', what: "Agile framework by Ken Schwaber & Jeff Sutherland. Work in fixed sprints (1–4 weeks) with a Sprint Goal, daily standups, Sprint Review, and Retrospective — all four events inside every cycle.", certs: ['CSM', 'PSM', 'PSPO'], tools: ['Scrum Board', 'Retro Board'] },
-  { id: 'Kanban', label: 'Kanban', domain: 'Agile & Lean', color: 'green', what: "Visual workflow management from Toyota's production system. The core principle: limit Work in Progress (WIP) to expose bottlenecks and improve flow. Pull, don't push work through the system.", certs: ['KMP — Kanban Management Professional'], tools: ['Project Hub', 'Scrum Board'] },
+  { id: 'MoSCoW', label: 'MoSCoW', domain: 'Agile & Lean', color: 'green', what: "Must have / Should have / Could have / Won't have prioritization from Dai Clegg (DSDM). Forces explicit trade-off conversations before they become last-minute scope cuts during delivery.", certs: ['AgilePM'], tools: ['Project Hub'] },
+  { id: 'Scrum', label: 'Scrum', domain: 'Agile & Lean', color: 'green', what: "Agile framework by Ken Schwaber & Jeff Sutherland. Work in fixed sprints (1–4 weeks) with a Sprint Goal, daily standups, Sprint Review, and Retrospective — all four events inside every cycle.", certs: ['CSM', 'PSM', 'PSPO'], tools: ['Reflection Board'] },
+  { id: 'Kanban', label: 'Kanban', domain: 'Agile & Lean', color: 'green', what: "Visual workflow management from Toyota's production system. The core principle: limit Work in Progress (WIP) to expose bottlenecks and improve flow. Pull, don't push work through the system.", certs: ['KMP — Kanban Management Professional'], tools: ['Project Hub'] },
   { id: 'Kaizen', label: 'Kaizen', domain: 'Agile & Lean', color: 'green', what: "Continuous improvement philosophy from Toyota. Small, incremental changes made regularly compound into transformational improvements over time. 'Change for better' — everyone, every day.", certs: ['Lean Six Sigma Green Belt', 'Lean Six Sigma Black Belt'], tools: ['Reflection Board'] },
-  { id: 'Agile-Retrospectives', label: 'Agile Retrospectives', domain: 'Agile & Lean', color: 'green', what: "Structured team reflection events from Diana Larsen & Esther Derby's book. One of Scrum's four ceremonies. The purpose: inspect the process, not the product, and adapt before the next cycle.", certs: ['CSM', 'PSM'], tools: ['Scrum Board', 'Reflection Board'] },
+  { id: 'Agile-Retrospectives', label: 'Agile Retrospectives', domain: 'Agile & Lean', color: 'green', what: "Structured team reflection events from Diana Larsen & Esther Derby's book. One of Scrum's four ceremonies. The purpose: inspect the process, not the product, and adapt before the next cycle.", certs: ['CSM', 'PSM'], tools: ['Reflection Board'] },
   // Goal-Setting
   { id: 'OKR', label: 'OKR', domain: 'Goal-Setting', color: 'yellow', what: "Objectives & Key Results — created by Andy Grove at Intel, popularized by Google. Qualitative Objectives answer 'where are we going?' Key Results answer 'how will we know we got there?' A 0.7 score is healthy; 1.0 means you aimed too low.", certs: [], tools: ['Goals Hub'] },
   { id: 'SMART-Goals', label: 'SMART Goals', domain: 'Goal-Setting', color: 'yellow', what: "Specific / Measurable / Achievable / Relevant / Time-bound. The checklist that turns a vague intention into a commitment. Run any goal through SMART — gaps become immediately obvious.", certs: [], tools: ['Goals Hub'] },
@@ -503,7 +493,7 @@ const WORKFLOWS = [
       { tool: 'Idea Swiper', action: 'Triage the idea: Like / Super / Nope — no overthinking' },
       { tool: 'Spatial Canvas', action: 'Explore: map the system, connections, and constraints spatially' },
       { tool: 'Decision Hub', action: 'Log the build vs. alternative decision with full reasoning' },
-      { tool: 'Scrum Board', action: 'Break into backlog, plan a sprint, track daily progress' },
+      { tool: 'Project Hub', action: 'Break into tasks, set priorities and due dates, track progress on the board' },
       { tool: 'Reflection Board', action: 'After delivery: what worked, what to improve, one committed action' },
     ]
   },

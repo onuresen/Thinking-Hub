@@ -132,13 +132,6 @@ const HubAI = (() => {
       });
     } catch {}
 
-    // Scrum backlog
-    try {
-      const scrum = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{}');
-      const backlog = (scrum.backlogs || []).filter(i => i.status === 'backlog');
-      if (backlog.length) lines.push(`\nScrum backlog: ${backlog.length} items`);
-    } catch {}
-
     // Existing links (with IDs for remove_link)
     try {
       const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
@@ -276,9 +269,6 @@ create_goal — add an objective to Goals Hub:
 add_kmqt_item — add an item to the KMQT board:
   { "type":"add_kmqt_item", "column":"K|M|Q|T", "text":"item text", "reason":"why this column" }
   (K=Known facts, M=MoyaMoya/unclear, Q=Questions, T=Try/ideas)
-
-add_backlog_item — add a story to the Scrum backlog:
-  { "type":"add_backlog_item", "title":"story title", "description":"optional", "itemType":"story|bug|task|spike", "priority":"must|should|could|wont", "points":0 }
 
 create_schedule_event — add an event to Schedule:
   { "type":"create_schedule_event", "title":"event title", "eventType":"task|event|milestone", "start":"YYYY-MM-DD", "end":"YYYY-MM-DD (optional)", "projectId":"id (optional)", "notes":"optional" }

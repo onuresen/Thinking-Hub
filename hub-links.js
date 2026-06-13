@@ -35,7 +35,6 @@ window.HubLinks = (() => {
     'retro-hub': 'Retrospective',
     'reflection-hub': 'Reflection Board',
     'stakeholder-hub': 'Stakeholders',
-    'scrum-hub': 'Scrum Board',
     'tool-portfolio': 'Tool Portfolio',
   };
 
@@ -216,16 +215,6 @@ window.HubLinks = (() => {
           id: sh.id,
           label: sh.name || '(unnamed)',
           subtitle: sh.role || 'stakeholder'
-        }));
-      }
-
-      if (toolId === 'scrum-hub') {
-        const data = HubStorage.get('scrum-hub-v1');
-        if (!data) return [];
-        return (data.backlogs || []).map(it => ({
-          id: it.id,
-          label: it.title || '(untitled story)',
-          subtitle: it.priority || 'backlog'
         }));
       }
 

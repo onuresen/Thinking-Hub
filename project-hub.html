@@ -1592,8 +1592,7 @@
       flex-shrink: 0;
     }
 
-    .task-item:hover .task-item-actions,
-    .task-item:has(.task-action-btn.warroom.active) .task-item-actions {
+    .task-item:hover .task-item-actions {
       display: flex;
     }
 
@@ -1628,13 +1627,6 @@
       color: var(--text2);
     }
 
-    .task-action-btn.warroom:hover {
-      background: var(--surface3);
-      color: var(--accent-like);
-    }
-    .task-action-btn.warroom.active {
-      color: var(--accent-like);
-    }
 
     .obsidian-badge {
       display: inline-flex;
@@ -2557,7 +2549,6 @@
     // ─── RENDER CONTENT ───────────────────────────────────────────────────────────
     function renderContent() {
       buildFocusMap();
-      buildWarroomFocusSet();
       const c = document.getElementById('main-content');
       c.innerHTML = '';
       updateBadges();
@@ -3113,7 +3104,6 @@
       </div>
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
-        <button class="task-action-btn warroom${_warroomFocusSet.has((task.projectId || '') + '::' + task.id) ? ' active' : ''}" title="${_warroomFocusSet.has((task.projectId || '') + '::' + task.id) ? 'Remove from Today\'s Focus (War Room)' : 'Pin to Today\'s Focus (War Room)'}" onclick="toggleWarRoomFocus(event,'${task.id}','${task.projectId || ''}')">🎯</button>
         <button class="task-action-btn obsidian" title="Link Obsidian note" onclick="promptObsidianNote(event,'${task.id}','${task.projectId || ''}')">⟡</button>
         <button class="task-action-btn edit" title="Edit" onclick="openEditTask('${task.id}','${task.projectId || ''}')">✎</button>
         <button class="task-action-btn" title="${task.archived ? 'Restore task' : 'Archive task'}" onclick="archiveTask(event,'${task.id}','${task.projectId || ''}')">📦</button>
@@ -3862,38 +3852,6 @@
           }
         });
       } catch { _focusMap = {}; }
-    }
-
-    let _warroomFocusSet = new Set();
-
-    function buildWarroomFocusSet() {
-      try {
-        const wr = HubStorage.get('hub-warroom-v1') || {};
-        const todayStr = new Date().toISOString().slice(0, 10);
-        _warroomFocusSet = new Set(wr.date === todayStr ? (wr.focusIds || []) : []);
-      } catch { _warroomFocusSet = new Set(); }
-    }
-
-    function toggleWarRoomFocus(e, taskId, projectId) {
-      e.stopPropagation();
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const wr = HubStorage.get('hub-warroom-v1') || {};
-      const focus = wr.date === todayStr
-        ? { date: wr.date, focusIds: (wr.focusIds || []).slice() }
-        : { date: todayStr, focusIds: [] };
-      const key = projectId + '::' + taskId;
-      const idx = focus.focusIds.indexOf(key);
-      if (idx >= 0) {
-        focus.focusIds.splice(idx, 1);
-        showToast('Removed from Today\'s Focus');
-      } else {
-        if (focus.focusIds.length >= 8) { showToast('Today\'s Focus is full (max 8)'); return; }
-        focus.focusIds.push(key);
-        showToast('Pinned to Today\'s Focus 🎯');
-      }
-      HubStorage.set('hub-warroom-v1', focus);
-      buildWarroomFocusSet();
-      renderContent();
     }
 
     function toggleTeamView() {

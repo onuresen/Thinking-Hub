@@ -40,12 +40,6 @@ window.HubStarter = (() => {
     tool1:   'tool-starter1',
     tool2:   'tool-starter2',
     tool3:   'tool-starter3',
-    // Scrum
-    sprint1: 'sp-starter1',
-    story1:  'st-starter1',
-    story2:  'st-starter2',
-    story3:  'st-starter3',
-    story4:  'st-starter4',
     // Retro
     retro1:  'retro-starter1',
   };
@@ -455,65 +449,6 @@ window.HubStarter = (() => {
     HubStorage.set('log-hub-v1', data);
   }
 
-  function seedScrumHub() {
-    const sprint = {
-      id: IDS.sprint1,
-      name: 'Sprint 1 — Website Core',
-      goal: 'Ship the homepage and about page in Webflow, ready for stakeholder review.',
-      startDate: daysFromNow(-7),
-      endDate: daysFromNow(7),
-      status: 'active',
-      velocity: 0,
-      reviewNotes: '', retroWell: '', retroImprove: '', retroActions: '',
-    };
-    const backlogs = [
-      {
-        id: IDS.story1, title: 'Homepage hero section',
-        description: 'Build the hero with headline, subheading, CTA button, and background image.',
-        acceptanceCriteria: 'Renders correctly on mobile (375px) and desktop (1440px). CTA links to contact page.',
-        type: 'feature', priority: 'must',
-        points: 3, projectId: IDS.website,
-        status: 'backlog', sprintId: IDS.sprint1, sprintStatus: 'inprogress',
-        createdAt: NOW,
-      },
-      {
-        id: IDS.story2, title: 'Navigation menu — mobile responsive',
-        description: 'Hamburger menu on mobile, horizontal nav on desktop. Links to all main pages.',
-        acceptanceCriteria: 'Passes WCAG 2.1 AA contrast. Works on iOS Safari and Chrome Android.',
-        type: 'feature', priority: 'must',
-        points: 2, projectId: IDS.website,
-        status: 'backlog', sprintId: IDS.sprint1, sprintStatus: 'todo',
-        createdAt: NOW,
-      },
-      {
-        id: IDS.story3, title: 'About page — team section',
-        description: 'Display team members with photo, name, and role.',
-        acceptanceCriteria: 'Content managed via Webflow CMS. Images are WebP format.',
-        type: 'feature', priority: 'should',
-        points: 2, projectId: IDS.website,
-        status: 'backlog', sprintId: null, sprintStatus: 'todo',
-        createdAt: NOW,
-      },
-      {
-        id: IDS.story4, title: 'Site-wide accessibility audit',
-        description: 'Run axe-core against all pages and fix critical issues.',
-        acceptanceCriteria: 'Zero critical violations in axe-core report.',
-        type: 'chore', priority: 'could',
-        points: 3, projectId: IDS.website,
-        status: 'backlog', sprintId: null, sprintStatus: 'todo',
-        createdAt: NOW,
-      },
-    ];
-    const state = {
-      backlogs,
-      sprints: [sprint],
-      settings: { linkedProjectId: IDS.website },
-      wipLimits: { todo: 0, inprogress: 3, done: 0 },
-      dod: [],
-    };
-    HubStorage.set('scrum-hub-v1', JSON.stringify(state));
-  }
-
   function seedIdeaSwiper() {
     // Two past sessions of swiped ideas — website-focused and renovation-focused
     const ts7 = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
@@ -600,7 +535,6 @@ window.HubStarter = (() => {
     seedKmqt();
     seedRetroHub();
     seedLogHub();
-    seedScrumHub();
     seedSchedule();
     seedIdeaSwiper();
   }

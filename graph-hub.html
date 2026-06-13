@@ -462,7 +462,6 @@
       'meetings-hub':   { bg: '#152838', border: '#2868a8' },
       'tool-portfolio': { bg: '#1a2e1a', border: '#3a8040' },
       'learning-hub':   { bg: '#1a2a40', border: '#2860a8' },
-      'scrum-hub':      { bg: '#1a2e28', border: '#2a6e48' },
       'stakeholder-hub':{ bg: '#2a1e38', border: '#5c30a0' },
     };
     const TOOL_COLORS_LIGHT = {
@@ -477,7 +476,6 @@
       'meetings-hub':   { bg: '#b8d4f0', border: '#3060a8' },
       'tool-portfolio': { bg: '#c8ecc8', border: '#3a9040' },
       'learning-hub':   { bg: '#c0d8f5', border: '#3060b8' },
-      'scrum-hub':      { bg: '#bce8c8', border: '#2a7040' },
       'stakeholder-hub':{ bg: '#ddc8f8', border: '#6030b0' },
     };
 
@@ -493,7 +491,6 @@
       'meetings-hub':   'Meetings',
       'tool-portfolio': 'Tool Portfolio',
       'learning-hub':   'Learning Log',
-      'scrum-hub':      'Scrum Board',
       'stakeholder-hub':'Stakeholder Map',
     };
 
@@ -700,16 +697,6 @@
             if (nodes.has(`project-hub::${projId}`))
               addAutoEdge(tId, `project-hub::${projId}`, 'tool → project');
           });
-        });
-      } catch {}
-
-      // Scrum backlog → project
-      try {
-        const sc = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{}');
-        (sc.backlogs || []).forEach(item => {
-          const iId = addNode('scrum-hub', item.id, item.title || 'Story');
-          if (item.projectId && nodes.has(`project-hub::${item.projectId}`))
-            addAutoEdge(iId, `project-hub::${item.projectId}`, 'story → project');
         });
       } catch {}
 
@@ -1190,15 +1177,6 @@
             { k: 'Status', v: it.status || '—' },
           ];
         }
-        if (tool === 'scrum-hub') {
-          const data = HubStorage.get('scrum-hub-v1') || {};
-          const it = (data.backlogs || []).find(it => it.id === itemId);
-          if (it) return [
-            { k: 'Priority', v: it.priority || '—' },
-            { k: 'Status',   v: it.status || '—' },
-            { k: 'Points',   v: it.points != null ? String(it.points) : '—' },
-          ];
-        }
         if (tool === 'stakeholder-hub') {
           const data = HubStorage.get('stakeholder-hub-v1') || {};
           const sh = (data.stakeholders || []).find(sh => sh.id === itemId);
@@ -1422,7 +1400,7 @@
 
     buildGraph();
     ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1',
-     'learning-hub-v1','scrum-hub-v1','stakeholder-hub-v1']
+     'learning-hub-v1','stakeholder-hub-v1']
       .forEach(k => HubStorage.subscribe(k, buildGraph));
     window.__hl_onLinkChange = buildGraph;
 

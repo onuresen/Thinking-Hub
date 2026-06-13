@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -762,198 +762,6 @@
 
     /* ── Executive View ───────────────────────────── */
     #exec-view { padding-bottom: 40px; }
-
-    /* ── War Room Mode ────────────────────────────── */
-    #war-room {
-      position: fixed; inset: 0; z-index: 9999;
-      background: #080c10; color: #c8ddf0;
-      font-family: 'JetBrains Mono', monospace;
-      display: none; flex-direction: column; overflow: hidden;
-    }
-    #war-room.wr-active { display: flex; animation: wr-enter 0.18s ease; }
-    @keyframes wr-enter { from { opacity:0; transform:scale(0.98); } to { opacity:1; transform:scale(1); } }
-
-    #war-room > .wr-atmo {
-      position: absolute; inset: -25%; z-index: 0; pointer-events: none;
-      background:
-        radial-gradient(circle at 22% 26%, rgba(59,130,246,0.55), transparent 45%),
-        radial-gradient(circle at 78% 60%, rgba(167,139,250,0.46), transparent 48%),
-        radial-gradient(circle at 48% 92%, rgba(239,68,68,0.32), transparent 42%),
-        radial-gradient(circle at 88% 12%, rgba(34,197,94,0.28), transparent 40%);
-      filter: blur(35px);
-      animation: wr-atmo-drift 32s ease-in-out infinite alternate;
-    }
-    @keyframes wr-atmo-drift {
-      0%   { transform: translate(-5%, -3%) scale(1); }
-      50%  { transform: translate(6%, 4%) scale(1.22); }
-      100% { transform: translate(-3%, 6%) scale(1.05); }
-    }
-
-    #war-room > .wr-scanlines {
-      position: absolute; inset: 0; pointer-events: none; z-index: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
-    }
-    #war-room > * { position: relative; z-index: 1; }
-
-    .wr-header {
-      display: flex; align-items: center; gap: 1.25rem;
-      padding: 9px 20px; border-bottom: 1px solid #1a2235;
-      background: rgba(6,10,14,0.3); flex-shrink: 0;
-    }
-    .wr-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #e8f4ff; }
-    .wr-live { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; letter-spacing: 0.1em; color: #ef4444; }
-    .wr-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: wr-pulse 2s ease-in-out infinite; }
-    @keyframes wr-pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
-    .wr-clock { font-size: 0.85rem; color: #b8d0e8; letter-spacing: 0.08em; }
-    .wr-date  { font-size: 0.74rem; color: #7a98b8; }
-    .wr-exit-hint { margin-left: auto; font-size: 0.7rem; color: #7a98b8; }
-    .wr-exit-hint kbd { display:inline-block; padding:1px 6px; border:1px solid #2a3a50; border-radius:3px; color:#b8d0e8; }
-
-    .wr-body {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 1px; flex: 1; overflow: hidden; background: rgba(17,24,32,0.2);
-    }
-    .wr-panel {
-      background: rgba(8,13,20,0.46); display: flex; flex-direction: column;
-      overflow: hidden; position: relative;
-      animation: wr-panel-enter 0.45s ease backwards;
-    }
-    .wr-panel:nth-child(1) { animation-delay: 0.02s; }
-    .wr-panel:nth-child(2) { animation-delay: 0.07s; }
-    .wr-panel:nth-child(3) { animation-delay: 0.12s; }
-    .wr-panel:nth-child(4) { animation-delay: 0.17s; }
-    .wr-panel:nth-child(5) { animation-delay: 0.22s; }
-    .wr-panel:nth-child(6) { animation-delay: 0.27s; }
-    @keyframes wr-panel-enter {
-      from { opacity: 0; transform: translateY(10px) scale(0.98); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .wr-panel::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: var(--_wra, #1e2e40);
-    }
-    .wr-panel-head { padding: 10px 14px 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .wr-panel-label { font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: #3a5a78; font-weight: 600; }
-
-    .wr-panel-list {
-      flex: 1; overflow-y: auto; padding: 0 10px 10px;
-      display: flex; flex-direction: column; gap: 3px;
-    }
-    .wr-panel-list::-webkit-scrollbar { width: 3px; }
-    .wr-panel-list::-webkit-scrollbar-thumb { background: #1e2e40; border-radius: 2px; }
-    .wr-panel-list.wr-refreshing { animation: wr-refresh-flash 0.5s ease; }
-    @keyframes wr-refresh-flash {
-      from { opacity: 0.35; }
-      to   { opacity: 1; }
-    }
-
-    .wr-item {
-      padding: 6px 8px; background: #0c1520; border-radius: 3px;
-      border-left: 2px solid var(--_wric, #1e2e40);
-    }
-    .wr-item-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-    .wr-item-text { font-size: 0.8rem; color: #b8d0e8; line-height: 1.35; word-break: break-word; }
-    .wr-item-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 2px; letter-spacing: 0.03em; }
-
-    .wr-stat-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-    .wr-stat-chip { flex: 1; padding: 8px 6px; background: #0c1520; border-radius: 3px; border: 1px solid #1a2a3a; text-align: center; min-width: 60px; }
-    .wr-stat-chip-val { font-size: 1.55rem; font-weight: 700; color: #e8f4ff; line-height: 1; }
-    .wr-stat-chip-lbl { font-size: 0.63rem; color: #3a5a78; letter-spacing: 0.06em; margin-top: 3px; text-transform: uppercase; }
-
-    .wr-focus-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; background: #0c1a28; border-radius: 3px; border-left: 2px solid #3b82f6; margin-bottom: 8px; }
-    .wr-focus-pdot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; animation: wr-pulse 1.5s ease-in-out infinite; }
-    .wr-focus-task { font-size: 0.8rem; color: #e8f4ff; }
-    .wr-focus-time { font-size: 0.68rem; color: #3a5a78; margin-top: 2px; }
-
-    .wr-empty { font-size: 0.74rem; color: #1e3050; padding: 8px 4px; font-style: italic; }
-
-    /* ── Today's Focus picker ── */
-    .wr-pick-section-label { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #2a3a50; margin: 10px 0 5px; }
-    .wr-pick-section-label:first-child { margin-top: 0; }
-    .wr-pick-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #0c1520; border-radius: 3px; margin-bottom: 3px; }
-    .wr-pick-item.is-pinned { border-left: 2px solid #22c55e; }
-    .wr-pick-text { flex: 1; font-size: 0.8rem; color: #e8f4ff; line-height: 1.3; word-break: break-word; }
-    .wr-pick-item.is-pinned .wr-pick-text { color: #b8d0e8; }
-    .wr-pick-meta { font-size: 0.62rem; color: #3a5a78; flex-shrink: 0; }
-    .wr-pick-check, .wr-pick-remove {
-      width: 18px; height: 18px; flex-shrink: 0; border: 1px solid #1e2e40; border-radius: 50%;
-      background: transparent; color: #3a5a78; font-size: 0.74rem; line-height: 1; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; padding: 0;
-      transition: all 0.15s ease; font-family: inherit;
-    }
-    .wr-pick-check:hover { border-color: #22c55e; color: #22c55e; }
-    .wr-pick-remove:hover { border-color: #ef4444; color: #ef4444; }
-
-    /* ── AI Smart Priorities ── */
-    .wr-refresh-btn {
-      width: 20px; height: 20px; flex-shrink: 0; border: 1px solid #1e2e40; border-radius: 50%;
-      background: transparent; color: #5a7a98; font-size: 0.78rem; line-height: 1; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; padding: 0;
-      transition: border-color 0.15s ease, color 0.15s ease, transform 0.3s ease; font-family: inherit;
-    }
-    .wr-refresh-btn:hover { border-color: #a78bfa; color: #a78bfa; transform: rotate(180deg); }
-    .wr-refresh-btn.is-loading { animation: wr-spin 0.8s linear infinite; pointer-events: none; opacity: 0.6; }
-    @keyframes wr-spin { to { transform: rotate(360deg); } }
-    .wr-briefing-time { font-size: 0.62rem; color: #3a5a78; padding: 4px 4px 0; letter-spacing: 0.04em; }
-
-    /* ── Project cards ── */
-    .wr-proj-card { padding: 8px 10px; background: #0c1520; border-radius: 3px; margin-bottom: 6px; }
-    .wr-proj-head { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-    .wr-proj-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .wr-proj-name { font-size: 0.8rem; color: #e8f4ff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .wr-proj-pct { font-size: 0.68rem; color: #3a5a78; font-weight: 600; flex-shrink: 0; }
-    .wr-proj-bar { height: 4px; background: #1a2a3a; border-radius: 2px; overflow: hidden; }
-    .wr-proj-fill {
-      height: 100%; border-radius: 2px; transition: width 0.6s ease;
-      background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
-      background-size: 200% 100%; animation: wr-shimmer 2.8s linear infinite;
-    }
-    @keyframes wr-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .wr-proj-meta { font-size: 0.66rem; color: #3a5a78; margin-top: 4px; letter-spacing: 0.03em; }
-
-    /* ── This Month calendar ── */
-    .wr-cal-month-label { font-size: 0.8rem; color: #b8d0e8; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; flex-shrink: 0; }
-    .wr-cal-grid {
-      flex: 1; display: grid; grid-template-columns: repeat(7, 1fr);
-      grid-template-rows: auto repeat(6, 1fr); gap: 4px; min-height: 0;
-    }
-    .wr-cal-dow { font-size: 0.62rem; color: #3a5a78; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; padding-bottom: 3px; }
-    .wr-cal-dow.is-weekend { color: #d97757; }
-    .wr-cal-day {
-      position: relative; background: #0c1520; border-radius: 4px; border: 1px solid #1a2a3a;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.84rem; color: #5a7a98;
-    }
-    .wr-cal-day.is-weekend { background: rgba(217,119,87,0.07); border-color: rgba(217,119,87,0.22); color: #d99a85; }
-    .wr-cal-day.is-today { border-color: #3b82f6; background: #0c1a28; color: #e8f4ff; font-weight: 700; }
-    .wr-cal-day.is-other-month { opacity: 0.3; }
-    .wr-cal-dot { position: absolute; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: #a78bfa; }
-
-    /* ── Today's Web (unified radial graph) ── */
-    .wr-graph-web { width: 100%; height: 100%; display: block; }
-    .wr-graph-hub { fill: #16222e; stroke: #2a3a50; stroke-width: 1.5; animation: wr-graph-pulse 3s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-    .wr-graph-hub-label { fill: #5a7a98; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
-    .wr-graph-node { animation: wr-graph-pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-    .wr-graph-node-glyph { fill: #0a0f16; font-size: 12px; font-family: 'JetBrains Mono', monospace; pointer-events: none; }
-    .wr-graph-node-label { fill: #b8d0e8; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
-    .wr-graph-line { stroke: #2a3a50; stroke-width: 1.5; stroke-dasharray: 4 4; animation: wr-graph-flow 2s linear infinite; }
-    .wr-graph-line-2 { stroke: #1e2e40; stroke-width: 1; stroke-dasharray: 2 3; }
-    .wr-graph-sat circle { fill: #0c1520; stroke: #2a3a50; stroke-width: 1; }
-    .wr-graph-sat text { fill: #7a98b8; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
-    @keyframes wr-graph-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.8; } }
-    @keyframes wr-graph-flow { to { stroke-dashoffset: -12; } }
-
-    /* ── Empty / all-clear state ── */
-    .wr-empty-fill { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 8px; gap: 8px; height: 100%; }
-    .wr-empty-fill-dot { width: 14px; height: 14px; border-radius: 50%; background: #22c55e; animation: wr-pulse 2s ease-in-out infinite; }
-    .wr-empty-fill-text { font-size: 0.74rem; color: #3a5a78; }
-
-    .wr-footer {
-      padding: 5px 20px; background: #060a0e; border-top: 1px solid #111820;
-      font-size: 0.66rem; color: #5a7a98; display: flex;
-      align-items: center; justify-content: space-between; flex-shrink: 0; letter-spacing: 0.05em;
-    }
 
     /* ── Analytics View ───────────────────────────── */
     #analytics-view { padding-bottom: 40px; }
@@ -2108,9 +1916,6 @@
       <button class="mob-tour-hide"
         style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:10px;font-family:var(--font-mono);"
         onclick="startTour()" title="Interactive Tour" aria-label="Interactive Tour">?</button>
-      <button class="mob-tour-hide"
-        style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;margin-right:10px;font-family:var(--font-mono);"
-        onclick="toggleWarRoom()" title="War Room (W)" aria-label="Open War Room">⚔</button>
       <button id="theme-toggle-btn" style="
     background:transparent;
     border:none;
@@ -2335,7 +2140,7 @@
       { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
       // ── Reflection & Methods ──────────────────────────────────────────
       { id: 'reflection-hub', label: 'Reflection Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⟲', file: 'reflection-hub.html', desc: 'Collect signals, friction points, open questions and actions — great for team retrospectives' },
-      { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg, V-Model process map, and a parked Scrum board' },
+      { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg and V-Model process map' },
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Focus Timer', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◉', file: 'focus-hub.html', desc: 'Start a Pomodoro session tied to a task — stay in flow and track where your time goes' },
       { id: 'achievements-hub', label: 'Achievements', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏅', file: 'achievements-hub.html', desc: 'See your productivity history — badges earned, streaks and an activity heatmap' },
@@ -3099,20 +2904,6 @@
       const sections = [];
 
       try {
-        const wr = HubStorage.get('hub-warroom-v1') || {};
-        if (wr.date === todayStr && (wr.focusIds || []).length) {
-          const phf = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
-          const pinned = wr.focusIds.map(key => {
-            const [projId, taskId] = key.split('::');
-            const proj = (phf.projects || []).find(p => p.id === projId);
-            const task = proj && (proj.tasks || []).find(t => t.id === taskId);
-            return task && !task.done ? { task, proj, key } : null;
-          }).filter(Boolean);
-          if (pinned.length) sections.push({ type: 'focus', items: pinned });
-        }
-      } catch { }
-
-      try {
         const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
         const allTasks = (ph.projects || []).flatMap(p =>
           (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color }))
@@ -3157,17 +2948,7 @@
         let icon, title, urgent = false;
         let rows = '';
 
-        if (type === 'focus') {
-          icon = '🎯'; title = "Today's Focus";
-          rows = items.slice(0, 5).map(({ task, proj, key }) => {
-            const [projId, taskId] = key.split('::');
-            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(task.id || '')}">
-              <button class="today-focus-check" onclick="event.stopPropagation();_wrToggleDone('${projId}','${taskId}')" title="Mark done">○</button>
-              <div class="stat-item-text">${_esc(task.title)}</div>
-              <div class="stat-item-meta">${_esc(proj.name || '')}</div>
-            </div>`;
-          }).join('');
-        } else if (type === 'due-today') {
+        if (type === 'due-today') {
           icon = '📅'; title = 'Due Today';
           if (!items.length) {
             rows = `<div style="color:var(--text3);font-size:12px;padding:4px 0">Nothing due today — clear schedule ✓</div>`;
@@ -3983,7 +3764,6 @@
       'kmqt-board.html': ['kmqt_current_v2'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
-      'scrum-hub.html': ['scrum-hub-v1'],
       'focus-hub.html': ['focus-hub-v1'],
       'journal-hub.html': ['log-hub-v1', 'review-hub-v1'],
       'log-hub.html': ['log-hub-v1'],
@@ -4385,7 +4165,7 @@
         update_task_status: '✅', update_task_priority: '⬆', update_task_due: '📅', assign_task: '👤',
         create_project: '◈', create_task: '📋', create_milestone: '◆',
         create_risk: '⚠', create_decision: '⊕', create_goal: '◎',
-        add_kmqt_item: '⊞', add_backlog_item: '⚡', create_schedule_event: '▦'
+        add_kmqt_item: '⊞', create_schedule_event: '▦'
       };
       const actionLabels = {
         create_link: 'Create link', remove_link: 'Remove link',
@@ -4393,7 +4173,7 @@
         update_task_due: 'Set due date', assign_task: 'Assign task',
         create_project: 'New project', create_task: 'New task', create_milestone: 'New milestone',
         create_risk: 'New risk', create_decision: 'New decision', create_goal: 'New goal',
-        add_kmqt_item: 'Add to KMQT', add_backlog_item: 'Add to backlog', create_schedule_event: 'Schedule event'
+        add_kmqt_item: 'Add to KMQT', create_schedule_event: 'Schedule event'
       };
 
       html += `<div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">${actions.length} proposed action${actions.length > 1 ? 's' : ''}</div>`;
@@ -4429,8 +4209,6 @@
         } else if (a.type === 'add_kmqt_item') {
           const colNames = { K: 'Known', M: 'MoyaMoya', Q: 'Question', T: 'Try' };
           desc = `[${colNames[a.column] || a.column}] ${HubUtils.esc(a.text)}`;
-        } else if (a.type === 'add_backlog_item') {
-          desc = `"${HubUtils.esc(a.title)}" (${a.priority || 'should'})`;
         } else if (a.type === 'create_schedule_event') {
           desc = `"${HubUtils.esc(a.title)}" · ${a.start}`;
         }
@@ -4649,20 +4427,6 @@
           return true;
         }
 
-        if (action.type === 'add_backlog_item') {
-          const raw = JSON.parse(localStorage.getItem('scrum-hub-v1') || '{"backlogs":[],"sprints":[],"dod":[],"settings":{}}');
-          raw.backlogs = raw.backlogs || [];
-          raw.backlogs.push({
-            id: 'story-' + Date.now(), title: action.title,
-            description: action.description || '', type: action.itemType || 'story',
-            priority: action.priority || 'should', points: action.points || 0,
-            projectId: action.projectId || null, status: 'backlog', sprintId: null,
-            sprintStatus: 'todo', createdAt: new Date().toISOString()
-          });
-          localStorage.setItem('scrum-hub-v1', JSON.stringify(raw));
-          return true;
-        }
-
         if (action.type === 'create_schedule_event') {
           const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{"items":[]}');
           raw.items = raw.items || [];
@@ -4809,420 +4573,6 @@
       });
     });
 
-    // ── War Room Mode ─────────────────────────────────────────────────────────────
-
-    let _wrActive = false;
-    let _wrRefreshTimer = null;
-    let _wrClockTimer   = null;
-
-    function toggleWarRoom(forceClose) {
-      _wrActive = forceClose ? false : !_wrActive;
-      const el = document.getElementById('war-room');
-      if (!el) return;
-      if (_wrActive) {
-        el.classList.add('wr-active');
-        _buildWarRoom();
-        _wrRefreshTimer = setInterval(_buildWarRoom, 60000);
-        _wrClockTimer   = setInterval(_wrTickClock, 1000);
-      } else {
-        el.classList.remove('wr-active');
-        clearInterval(_wrRefreshTimer);
-        clearInterval(_wrClockTimer);
-      }
-    }
-
-    function _wrTickClock() {
-      const now = new Date();
-      const c = document.getElementById('wr-clock');
-      if (c) c.textContent = now.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-
-    function _buildWarRoom() {
-      const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-
-      // Update header
-      const dateEl = document.getElementById('wr-date');
-      if (dateEl) dateEl.textContent = now.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
-      _wrTickClock();
-
-      let ph = {}, riskData = {}, decArr = [], goals = {}, focusData = {}, sc = {}, session = {};
-      try { ph        = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
-      try { riskData  = JSON.parse(localStorage.getItem('risk-hub-v1')     || '{}'); } catch {}
-      try { const d   = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
-            decArr    = Array.isArray(d) ? d : []; } catch {}
-      try { goals     = JSON.parse(localStorage.getItem('goals-hub-v1')    || '{}'); } catch {}
-      try { focusData = JSON.parse(localStorage.getItem('focus-hub-v1')    || '{}'); } catch {}
-      try { sc        = JSON.parse(localStorage.getItem('schedule-v1')     || '{}'); } catch {}
-      try { session   = JSON.parse(localStorage.getItem('hub-session-v1')  || '{}'); } catch {}
-
-      const projects  = ph.projects || [];
-      const allTasks  = projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _proj: p.name || '', _projId: p.id })));
-      const blocked   = allTasks.filter(t => !t.done && t.status === 'blocked');
-      const dueToday  = allTasks.filter(t => !t.done && t.due === todayStr);
-      const overdue   = allTasks.filter(t => !t.done && t.due && t.due < todayStr);
-      const risks     = (riskData.risks || []).filter(r => r.status !== 'resolved' && r.status !== 'closed');
-      const openDecs  = decArr.filter(d => !d.status || ['pending','considering','revisiting'].includes(d.status));
-      const sessions  = focusData.sessions || [];
-      const todaySess = sessions.filter(s => s.completed && (s.startedAt || '').slice(0, 10) === todayStr);
-      const todayMins = todaySess.reduce((sum, s) => sum + (s.durationMin || 0), 0);
-      const hrs       = (todayMins / 60).toFixed(1);
-      const scItems   = sc.items || [];
-
-      // ── Panel 1: Today's Focus ────────────────────────────────────────
-      const focusBit = todayMins > 0
-        ? `<div class="wr-focus-row">
-            <div class="wr-focus-pdot"></div>
-            <div>
-              <div class="wr-focus-task">${todaySess.length} session${todaySess.length !== 1 ? 's' : ''} today</div>
-              <div class="wr-focus-time">${hrs}h · ${todayMins}min total focus</div>
-            </div>
-          </div>`
-        : `<div class="wr-empty" style="margin-bottom:8px">No focus sessions today</div>`;
-
-      const focus      = _wrLoadFocus();
-      const focusIds   = focus.focusIds;
-      const pinned     = focusIds.map(key => {
-        const [projId, taskId] = key.split('::');
-        const proj = projects.find(p => p.id === projId);
-        const task = proj && (proj.tasks || []).find(t => t.id === taskId);
-        return task ? { task, proj, key } : null;
-      }).filter(Boolean);
-      const pinnedKeySet = new Set(pinned.map(x => x.key));
-
-      let todayHtml = '<div class="wr-pick-section-label">🎯 Focus</div>';
-      todayHtml += pinned.length
-        ? pinned.map(({ task, proj, key }) =>
-            `<div class="wr-pick-item is-pinned">
-              <button class="wr-pick-check" onclick="_wrToggleDone('${proj.id}','${task.id}')" title="Mark done">○</button>
-              <div class="wr-pick-text">${_esc(task.title)}</div>
-              <div class="wr-pick-meta">${_esc(proj.name)}</div>
-              <button class="wr-pick-remove" onclick="_wrRemoveFocus('${key}')" title="Remove from focus">×</button>
-            </div>`).join('')
-        : '<div class="wr-empty">Pin tasks from Project Hub (🎯 button) to focus on today</div>';
-      todayHtml += focusBit;
-      _wrSetPanel('wr-today', todayHtml);
-
-      // ── Panel 2: My Active Projects ──────────────────────────────────
-      const selfId = session.selfMemberId || null;
-      const memberIds = p => (p.members || []).map(m => typeof m === 'string' ? m : m.memberId);
-      let myProjects = projects.filter(p => p.status !== 'done' && p.status !== 'archived');
-      if (selfId) {
-        const mine = myProjects.filter(p => memberIds(p).includes(selfId));
-        if (mine.length) myProjects = mine;
-      }
-      const projRows = myProjects
-        .map(p => {
-          const tasks = p.tasks || [];
-          const open  = tasks.filter(t => !t.done).length;
-          const done  = tasks.filter(t => t.done).length;
-          const pct   = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-          const myOpen = selfId ? tasks.filter(t => !t.done && t.assigneeId === selfId).length : 0;
-          return { p, open, pct, myOpen, total: tasks.length };
-        })
-        .sort((a, b) => b.open - a.open);
-      _wrSetPanel('wr-projects', projRows.length
-        ? projRows.map(({ p, open, pct, myOpen, total }) =>
-            `<div class="wr-proj-card">
-              <div class="wr-proj-head">
-                <span class="wr-proj-dot" style="background:${p.color || '#3a5a78'}"></span>
-                <span class="wr-proj-name">${_esc(p.name)}</span>
-                <span class="wr-proj-pct">${pct}%</span>
-              </div>
-              <div class="wr-proj-bar"><div class="wr-proj-fill" style="width:${pct}%;background:${p.color || '#3b82f6'}"></div></div>
-              <div class="wr-proj-meta">${open} open${total ? ` / ${total}` : ''}${selfId && myOpen ? ` · ${myOpen} mine` : ''}</div>
-            </div>`).join('')
-        : '<div class="wr-empty">No active projects</div>');
-
-      // ── Panel 3: This Month ───────────────────────────────────────────
-      const calYear = now.getFullYear(), calMonth = now.getMonth();
-      const startOffset = new Date(calYear, calMonth, 1).getDay();
-      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-      const calCells = [];
-      for (let i = 0; i < startOffset; i++) calCells.push({ d: new Date(calYear, calMonth, 1 - (startOffset - i)), otherMonth: true });
-      for (let day = 1; day <= daysInMonth; day++) calCells.push({ d: new Date(calYear, calMonth, day), otherMonth: false });
-      while (calCells.length % 7 !== 0) {
-        const last = calCells[calCells.length - 1].d;
-        calCells.push({ d: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), otherMonth: true });
-      }
-      const dowLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-      const calGrid = `<div class="wr-cal-grid">
-        ${dowLabels.map((l, i) => `<div class="wr-cal-dow${i === 0 || i === 6 ? ' is-weekend' : ''}">${l}</div>`).join('')}
-        ${calCells.map(({ d, otherMonth }, i) => {
-          const dStr = d.toISOString().slice(0, 10);
-          const count = scItems.filter(it => !it.done && (it.start || '').slice(0, 10) === dStr).length;
-          const isToday = dStr === todayStr;
-          const isWeekend = i % 7 === 0 || i % 7 === 6;
-          return `<div class="wr-cal-day${isToday ? ' is-today' : ''}${otherMonth ? ' is-other-month' : ''}${isWeekend ? ' is-weekend' : ''}">${d.getDate()}${count ? '<div class="wr-cal-dot"></div>' : ''}</div>`;
-        }).join('')}
-      </div>`;
-      const monthLabel = now.toLocaleDateString('en', { month: 'long', year: 'numeric' });
-      _wrSetPanel('wr-week', `<div class="wr-cal-month-label">${monthLabel}</div>` + calGrid);
-
-      // ── Panel 4: Today's Web (unified radial graph) ───────────────────
-      let meetingsData = {};
-      try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
-      const meetingsToday = (meetingsData.meetings || []).filter(m => m.date === todayStr);
-
-      const coreItems = [];
-      pinned.forEach(({ task, proj }) => {
-        if (!coreItems.some(c => c.tool === 'project-hub' && c.itemId === task.id))
-          coreItems.push({ tool: 'project-hub', itemId: task.id, title: task.title, sub: proj.name, col: '#22c55e' });
-      });
-      dueToday.forEach(t => {
-        if (!coreItems.some(c => c.tool === 'project-hub' && c.itemId === t.id))
-          coreItems.push({ tool: 'project-hub', itemId: t.id, title: t.title, sub: t._proj, col: '#3b82f6' });
-      });
-      meetingsToday.forEach(m =>
-        coreItems.push({ tool: 'meetings-hub', itemId: m.id, title: m.title || '(untitled meeting)', sub: 'Meeting', col: '#a78bfa' }));
-
-      const webItems = coreItems.slice(0, 5).map(c => {
-        let links = [];
-        try { links = window.HubLinks ? HubLinks.getLinksFor(c.tool, c.itemId) : []; } catch {}
-        return { ...c, links };
-      });
-
-      _wrSetPanel('wr-agenda', webItems.length
-        ? _wrTodayWebGraph(webItems, now.getDate())
-        : '<div class="wr-empty-fill"><div class="wr-empty-fill-dot"></div><div class="wr-empty-fill-text">Nothing on the agenda today</div></div>');
-
-      // ── Panel 5: Key Metrics ─────────────────────────────────────────
-      const totalTasks = allTasks.length;
-      const openTasks  = allTasks.filter(t => !t.done).length;
-      const activeQtrs = (goals.quarters || []).filter(q => !q.archived);
-      const latestQtr  = activeQtrs[activeQtrs.length - 1];
-      const objectives = latestQtr ? (latestQtr.objectives || []) : [];
-      const okrPct = objectives.length
-        ? Math.round(objectives.reduce((sum, obj) => {
-            const krs = obj.keyResults || [];
-            const avg = krs.length ? krs.reduce((s, kr) => s + (parseFloat(kr.score) || 0), 0) / krs.length : 0;
-            return sum + avg;
-          }, 0) / objectives.length * 100)
-        : null;
-      const teamSize = (ph.members || []).length;
-      const next7 = new Date(now); next7.setDate(next7.getDate() + 7);
-      const next7Str = next7.toISOString().slice(0, 10);
-      const meetingsWeek = (meetingsData.meetings || []).filter(m => m.date >= todayStr && m.date <= next7Str).length;
-      const last7 = new Date(now); last7.setDate(last7.getDate() - 7);
-      const last7Str = last7.toISOString().slice(0, 10);
-      const doneThisWeek = allTasks.filter(t => t.done && t.completedAt && t.completedAt.slice(0, 10) >= last7Str).length;
-
-      _wrSetPanel('wr-metrics', `
-        <div class="wr-stat-row">
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${openTasks}</div><div class="wr-stat-chip-lbl">Open Tasks</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${blocked.length ? '#ef4444' : '#22c55e'}">${blocked.length}</div><div class="wr-stat-chip-lbl">Blocked</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${overdue.length ? '#f59e0b' : '#22c55e'}">${overdue.length}</div><div class="wr-stat-chip-lbl">Overdue</div></div>
-        </div>
-        <div class="wr-stat-row">
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${openDecs.length}</div><div class="wr-stat-chip-lbl">Decisions</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val" style="color:${risks.length > 2 ? '#f59e0b' : 'inherit'}">${risks.length}</div><div class="wr-stat-chip-lbl">Risks</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${okrPct === null ? '—' : okrPct + '%'}</div><div class="wr-stat-chip-lbl">OKR Avg</div></div>
-        </div>
-        <div class="wr-stat-row">
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${totalTasks ? Math.round((totalTasks - openTasks) / totalTasks * 100) : 0}%</div><div class="wr-stat-chip-lbl">Tasks Done</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${hrs}h</div><div class="wr-stat-chip-lbl">Focus Today</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${projects.length}</div><div class="wr-stat-chip-lbl">Projects</div></div>
-        </div>
-        <div class="wr-stat-row">
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${teamSize}</div><div class="wr-stat-chip-lbl">Team Members</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${meetingsWeek}</div><div class="wr-stat-chip-lbl">Meetings (7d)</div></div>
-          <div class="wr-stat-chip"><div class="wr-stat-chip-val">${doneThisWeek}</div><div class="wr-stat-chip-lbl">Done This Week</div></div>
-        </div>`);
-
-      // ── Panel 6: Smart Priorities (AI) ──────────────────────────────────
-      _wrLastSnapshot = { blocked, overdue, dueToday, risks };
-      _wrRenderBriefing();
-
-      // Footer timestamp
-      const ft = document.getElementById('wr-footer-ts');
-      if (ft) ft.textContent = 'Updated ' + new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-      // Refresh-cycle flash
-      document.querySelectorAll('.wr-panel-list').forEach(el => {
-        el.classList.remove('wr-refreshing');
-        void el.offsetWidth;
-        el.classList.add('wr-refreshing');
-      });
-    }
-
-    function _wrSetPanel(id, html) {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = html;
-    }
-
-    // ── War Room: Today's Focus persistence ────────────────────────────────
-    const WARROOM_KEY = 'hub-warroom-v1';
-
-    function _wrLoadState() {
-      const data = HubStorage.get(WARROOM_KEY) || {};
-      const todayStr = new Date().toISOString().slice(0, 10);
-      if (data.date !== todayStr) return { date: todayStr, focusIds: [], aiBriefing: null };
-      return { date: data.date, focusIds: data.focusIds || [], aiBriefing: data.aiBriefing || null };
-    }
-
-    function _wrLoadFocus() {
-      const state = _wrLoadState();
-      return { date: state.date, focusIds: state.focusIds };
-    }
-
-    function _wrRemoveFocus(key) {
-      const state = _wrLoadState();
-      state.focusIds = state.focusIds.filter(k => k !== key);
-      HubStorage.set(WARROOM_KEY, state);
-      _buildWarRoom();
-      buildTodayView();
-    }
-
-    function _wrToggleDone(projId, taskId) {
-      const ph = HubStorage.get('project-hub-v1') || {};
-      const proj = (ph.projects || []).find(p => p.id === projId);
-      const task = proj && (proj.tasks || []).find(t => t.id === taskId);
-      if (!task) return;
-      task.done = !task.done;
-      if (task.done) task.completedAt = new Date().toISOString();
-      HubStorage.set('project-hub-v1', ph);
-      if (task.done) _wrRemoveFocus(projId + '::' + taskId);
-      else { _buildWarRoom(); buildTodayView(); }
-    }
-
-    // ── War Room: Smart Priorities (AI Briefing) ────────────────────────────
-    let _wrLastSnapshot = null;
-    let _wrBriefingLoading = false;
-
-    function _wrLoadBriefing() {
-      return _wrLoadState().aiBriefing;
-    }
-
-    function _wrSaveBriefing(text) {
-      const state = _wrLoadState();
-      state.aiBriefing = { text, generatedAt: new Date().toISOString() };
-      HubStorage.set(WARROOM_KEY, state);
-    }
-
-    function _wrTimeAgo(iso) {
-      const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-      if (mins < 1) return 'just now';
-      if (mins < 60) return mins + 'm ago';
-      return Math.round(mins / 60) + 'h ago';
-    }
-
-    function _wrRenderBriefing() {
-      const briefing = _wrLoadBriefing();
-      if (briefing && briefing.text) {
-        const lines = briefing.text.split('\n').map(s => s.replace(/^[-•\d.)\s]+/, '').trim()).filter(Boolean);
-        _wrSetPanel('wr-attention', lines.map(l =>
-          `<div class="wr-item" style="--_wric:#a78bfa"><div class="wr-item-text">${_esc(l)}</div></div>`
-        ).join('') + `<div class="wr-briefing-time">Generated ${_wrTimeAgo(briefing.generatedAt)}</div>`);
-      } else {
-        const hint = (typeof HubAI !== 'undefined' && HubAI.isConfigured())
-          ? 'Click ↻ to generate today’s priorities'
-          : 'Add your Anthropic API key in <a href="#" onclick="openDataModal(\'integrations\');return false;" style="color:#a78bfa">Settings → Integrations</a>, then click ↻';
-        _wrSetPanel('wr-attention', `<div class="wr-empty">${hint}</div>`);
-      }
-    }
-
-    async function _wrGenerateBriefing() {
-      if (_wrBriefingLoading || !_wrLastSnapshot) return;
-      if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) { _wrRenderBriefing(); return; }
-
-      const btn = document.getElementById('wr-briefing-refresh');
-      _wrBriefingLoading = true;
-      if (btn) btn.classList.add('is-loading');
-      _wrSetPanel('wr-attention', '<div class="wr-empty">Thinking…</div>');
-
-      const { blocked, overdue, dueToday, risks } = _wrLastSnapshot;
-      const fmt = (arr, label) => arr.slice(0, 8).map(t => `- [${label}] ${t.title} (${t._proj || ''})`).join('\n');
-      const riskLines = risks.slice(0, 5).map(r => `- [RISK] ${r.title || r.name || ''} (severity: ${r.severity || r.impact || 'n/a'})`).join('\n');
-      const prompt = [fmt(blocked, 'BLOCKED'), fmt(overdue, 'OVERDUE'), fmt(dueToday, 'DUE TODAY'), riskLines]
-        .filter(Boolean).join('\n') || '(nothing blocked, overdue, due today, or at risk)';
-
-      const system = 'You are a terse prioritization assistant inside a War Room dashboard. Given a list of blocked/overdue/due-today tasks and open risks, pick the 3-5 items the user should tackle FIRST today, ranked by urgency and impact. Reply with one short line per item, no numbering, no markdown, format: "<item> — <reason, max 10 words>". If the list says nothing is flagged, reply with one short reassuring line instead.';
-
-      try {
-        const text = await HubAI.chat(prompt, system);
-        _wrSaveBriefing(text || 'No response from AI.');
-      } catch (e) {
-        _wrSaveBriefing('Could not reach AI: ' + (e?.message || 'unknown error'));
-      }
-      _wrBriefingLoading = false;
-      if (btn) btn.classList.remove('is-loading');
-      _wrRenderBriefing();
-    }
-
-    // ── War Room: cross-tool link badges ────────────────────────────────────
-    const WR_TOOL_GLYPH = {
-      'project-hub': '◈', 'schedule': '▦', 'decision-hub': '◎', 'learning-hub': '▥',
-      'risk-hub': '⚠', 'meetings-hub': '☰', 'goals-hub': '◆', 'scrum-hub': '▤',
-      'stakeholder-hub': '◷', 'retro-hub': '↺', 'reflection-hub': '▣', 'kmqt-board': '▧',
-      'idea-swiper': '◇', 'tool-portfolio': '⬡'
-    };
-    const WR_TOOL_NAME = {
-      'project-hub': 'Project Hub', 'schedule': 'Schedule', 'decision-hub': 'Decision Hub',
-      'learning-hub': 'Learning Log', 'risk-hub': 'Risk Register', 'meetings-hub': 'Meetings',
-      'goals-hub': 'Goals', 'scrum-hub': 'Scrum Board', 'stakeholder-hub': 'Stakeholders',
-      'retro-hub': 'Retrospective', 'reflection-hub': 'Reflection Board', 'kmqt-board': 'KMQT Board',
-      'idea-swiper': 'Idea Swiper', 'tool-portfolio': 'Tool Portfolio'
-    };
-    // Truncates a string to n chars, appending an ellipsis if shortened
-    function _wrTruncate(str, n) {
-      return str.length > n ? str.slice(0, n - 1) + '…' : str;
-    }
-
-    // Renders a unified radial graph: hub (today) -> first ring (today's items) -> second ring (linked items)
-    function _wrTodayWebGraph(items, hubLabel) {
-      const W = 400, H = 260, hub = { x: 200, y: 132 }, r1 = 92;
-      const n = items.length;
-      let lines1 = '', lines2 = '', nodes1 = '', nodes2 = '';
-      items.forEach((c, i) => {
-        const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
-        c._x = hub.x + Math.cos(angle) * r1;
-        c._y = hub.y + Math.sin(angle) * r1 * 0.85;
-        c._angle = angle;
-        lines1 += `<line class="wr-graph-line" x1="${hub.x}" y1="${hub.y}" x2="${c._x.toFixed(1)}" y2="${c._y.toFixed(1)}"/>`;
-      });
-      items.forEach(c => {
-        const links = (c.links || []).slice(0, 2);
-        const m = links.length;
-        links.forEach((l, j) => {
-          const spread = m > 1 ? (j - (m - 1) / 2) * 0.6 : 0;
-          const a2 = c._angle + spread;
-          const r2 = 36;
-          const x2 = c._x + Math.cos(a2) * r2;
-          const y2 = c._y + Math.sin(a2) * r2 * 0.85;
-          const other = l.a.tool === c.tool && l.a.itemId === c.itemId ? l.b : l.a;
-          const glyph = WR_TOOL_GLYPH[other.tool] || '○';
-          const name = WR_TOOL_NAME[other.tool] || other.tool;
-          lines2 += `<line class="wr-graph-line wr-graph-line-2" x1="${c._x.toFixed(1)}" y1="${c._y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
-          nodes2 += `<g class="wr-graph-sat"><title>${_esc(name)}: ${_esc(other.label || '')}</title><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="9"/><text x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" dy="0.32em" text-anchor="middle">${glyph}</text></g>`;
-        });
-      });
-      items.forEach(c => {
-        const labelY = c._y + (c._y > hub.y ? -20 : 24);
-        const anchor = c._x < hub.x - 10 ? 'end' : c._x > hub.x + 10 ? 'start' : 'middle';
-        const lx = c._x + (anchor === 'end' ? -16 : anchor === 'start' ? 16 : 0);
-        nodes1 += `<circle class="wr-graph-node" cx="${c._x.toFixed(1)}" cy="${c._y.toFixed(1)}" r="13" fill="${c.col}"/>`;
-        nodes1 += `<text x="${c._x.toFixed(1)}" y="${c._y.toFixed(1)}" dy="0.32em" text-anchor="middle" class="wr-graph-node-glyph">${WR_TOOL_GLYPH[c.tool] || '○'}</text>`;
-        nodes1 += `<text x="${lx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" class="wr-graph-node-label">${_esc(_wrTruncate(c.title, 16))}</text>`;
-      });
-      const hubSvg = `<circle class="wr-graph-hub" cx="${hub.x}" cy="${hub.y}" r="18"/><text x="${hub.x}" y="${hub.y}" dy="0.32em" text-anchor="middle" class="wr-graph-hub-label">${hubLabel}</text>`;
-      return `<svg class="wr-graph-web" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${lines1}${lines2}${hubSvg}${nodes1}${nodes2}</svg>`;
-    }
-
-    // W key toggle — skip when typing in inputs
-    document.addEventListener('keydown', e => {
-      if (e.key !== 'w' && e.key !== 'W') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const tag = (document.activeElement?.tagName || '').toUpperCase();
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-      if (document.activeElement?.isContentEditable) return;
-      e.preventDefault();
-      toggleWarRoom();
-    });
-
-    // Escape also exits war room (shell-level, complement to hub-bootstrap.js handler in tools)
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && _wrActive) { e.preventDefault(); toggleWarRoom(true); }
-    });
 
     // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -5524,55 +4874,6 @@
     </div>
   </div>
 
-  <!-- ── War Room Mode overlay ─────────────────────────────────────────── -->
-  <div id="war-room">
-    <div class="wr-atmo"></div>
-    <div class="wr-scanlines"></div>
-
-    <div class="wr-header">
-      <span class="wr-title">⚔ War Room</span>
-      <div class="wr-live"><div class="wr-live-dot"></div>LIVE</div>
-      <div class="wr-clock" id="wr-clock"></div>
-      <div class="wr-date" id="wr-date"></div>
-      <div class="wr-exit-hint">Press <kbd>W</kbd> or <kbd>Esc</kbd> to exit</div>
-    </div>
-
-    <div class="wr-body">
-      <div class="wr-panel" style="--_wra:#22c55e">
-        <div class="wr-panel-head"><div class="wr-panel-label">Today's Focus</div></div>
-        <div class="wr-panel-list" id="wr-today"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#22c55e">
-        <div class="wr-panel-head"><div class="wr-panel-label">My Active Projects</div></div>
-        <div class="wr-panel-list" id="wr-projects"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#a78bfa">
-        <div class="wr-panel-head"><div class="wr-panel-label">This Month</div></div>
-        <div class="wr-panel-list" id="wr-week"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#3b82f6">
-        <div class="wr-panel-head"><div class="wr-panel-label">Today's Web</div></div>
-        <div class="wr-panel-list" id="wr-agenda"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#f59e0b">
-        <div class="wr-panel-head"><div class="wr-panel-label">Key Metrics</div></div>
-        <div class="wr-panel-list" id="wr-metrics"></div>
-      </div>
-      <div class="wr-panel" style="--_wra:#a78bfa">
-        <div class="wr-panel-head">
-          <div class="wr-panel-label">✦ Smart Priorities</div>
-          <button class="wr-refresh-btn" id="wr-briefing-refresh" onclick="_wrGenerateBriefing()" title="Generate AI priorities">↻</button>
-        </div>
-        <div class="wr-panel-list" id="wr-attention"></div>
-      </div>
-    </div>
-
-    <div class="wr-footer">
-      <span>⚔ WAR ROOM · Thinking Hub</span>
-      <span id="wr-footer-ts"></span>
-      <span>W / Esc to exit</span>
-    </div>
-  </div>
 
 </body>
 
