@@ -284,6 +284,16 @@ const TOOLS = [
     sample: 'Launching a mobile app with a new payment provider. Risk: "Integration delays launch by 2+ weeks" (High × High → red). Treatment: Reduce — start integration 3 weeks early. Owner: Tech Lead. Review date: March 15. When March 15 arrives, status changes to Monitoring.'
   },
   {
+    id: 'argument-hub', label: 'Argument Hub', icon: '△', group: 'Strategy & Decisions', wg: 'Strategy & Decisions',
+    file: 'argument-hub.html',
+    desc: 'Structure a persuasive case top-down using Barbara Minto\'s Pyramid Principle.',
+    frameworks: ['Pyramid Principle', 'SCQA', 'MECE'],
+    fwIds: ['Pyramid-Principle', 'SCQA', 'MECE'],
+    whenToUse: 'Before writing anything meant to persuade — a proposal, a management ask, a LinkedIn post, a decision rationale. Structure the argument first so the reader gets the point in the opening lines, not on page three.',
+    features: ['SCQA introduction (Situation / Complication / Question)', 'Governing thought — the single answer at the apex', 'Recursive supporting pyramid with grouping (inductive) vs argument (deductive) logic', 'Ordering principle per group: time / structure / degree', 'Live MECE checks — no single-child groups, ordering set, summary prompt', 'Export to a Markdown outline in document order'],
+    sample: 'Arguing "We should adopt a structured-writing standard." Situation: we write dozens of memos a quarter. Complication: reviewers keep asking "what\'s the point?" Question: how do we make documents land first time? Answer (governing thought): adopt the Pyramid Principle — supported by three MECE reasons, each with its own sub-points. Export the outline straight into the memo.'
+  },
+  {
     id: 'graph-hub', label: 'Dependency Graph', icon: '🕸️', group: 'People & Network', wg: 'People & Network',
     file: 'graph-hub.html',
     desc: 'Visual map of your tasks, decisions, and ideas as a linked graph.',
@@ -438,6 +448,9 @@ const FRAMEWORKS = [
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
   { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Achievements', 'Focus Timer', 'Spatial Canvas', 'Frameworks'] },
+  { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: ['Argument Hub'] },
+  { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: ['Argument Hub'] },
+  { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: ['Argument Hub'] },
   // Design & Ideation
   { id: 'Design-Thinking', label: 'Design Thinking', domain: 'Design & Ideation', color: 'purple', what: "IDEO / Stanford d.school's human-centered innovation process: Empathize → Define → Ideate → Prototype → Test. The Ideate phase is designed for divergent thinking — generating many options before converging on one.", certs: ['IDEO U — Foundations in Design Thinking'], tools: ['Idea Swiper', 'Spatial Canvas'] },
   { id: 'Mind-Mapping', label: 'Mind Mapping', domain: 'Design & Ideation', color: 'purple', what: "Tony Buzan's radial visual organization technique. A central concept branches into related topics, then sub-topics. Externalizes non-linear thinking into a structure you can navigate — and share.", certs: [], tools: ['Idea Swiper', 'Spatial Canvas'] },

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argument Hub</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; }
+
+    /* ── Sidebar (argument list) ── */
+    .sidebar {
+      width: 248px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; height: 100vh;
+    }
+    .sidebar-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+    .sidebar-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .sidebar-sub { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: var(--font-mono); letter-spacing: .04em; }
+    .btn-new { width: 100%; margin-top: 12px; }
+    .arg-list { flex: 1; overflow-y: auto; padding: 8px; }
+    .arg-item {
+      padding: 10px 11px; border-radius: var(--r-sm); cursor: pointer; margin-bottom: 4px;
+      border: 1px solid transparent; transition: background .12s, border-color .12s;
+    }
+    .arg-item:hover { background: var(--surface2); }
+    .arg-item.active { background: var(--accent-dim); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+    .arg-item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .arg-item-meta { font-size: 10px; color: var(--text3); margin-top: 3px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .05em; }
+    .arg-empty-list { padding: 24px 14px; text-align: center; color: var(--text3); font-size: 12px; }
+
+    /* ── Main ── */
+    .main { flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px; padding: 12px 22px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--bg); z-index: var(--z-sticky); flex-shrink: 0;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .content { padding: 22px; max-width: 960px; width: 100%; margin: 0 auto; }
+
+    .sec-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .sec-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text3); font-size: 11px; }
+
+    .field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font-family: var(--font-body); font-size: 14px; padding: 9px 11px; }
+    .field:focus { outline: none; border-color: var(--accent); }
+    textarea.field { resize: vertical; line-height: 1.5; }
+
+    .scqa-grid { display: grid; gap: 10px; }
+    .scqa-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: start; }
+    .scqa-tag { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--text2); padding-top: 9px; }
+    .scqa-tag small { display: block; color: var(--text3); font-weight: 400; font-size: 10px; margin-top: 2px; line-height: 1.3; }
+
+    .apex {
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); border-radius: var(--r);
+      background: var(--accent-dim); padding: 14px 16px; margin: 20px 0 8px;
+    }
+    .apex .sec-label { color: var(--accent); }
+
+    /* ── Pyramid tree ── */
+    .pyramid { margin-top: 6px; }
+    .pnode { margin: 6px 0; }
+    .pnode-row { display: flex; align-items: flex-start; gap: 8px; }
+    .pnode-text { flex: 1; }
+    .pnode-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; flex-shrink: 0; padding-top: 4px; }
+    .pnode-row:hover .pnode-actions, .pnode-row:focus-within .pnode-actions { opacity: 1; }
+    .pn-btn {
+      width: 24px; height: 26px; border: none; background: transparent; color: var(--text3); cursor: pointer;
+      border-radius: 5px; font-size: 12px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono);
+    }
+    .pn-btn:hover { background: var(--surface3); color: var(--text); }
+    .pn-btn.del:hover { background: color-mix(in srgb, var(--accent-nope) 14%, transparent); color: var(--accent-nope); }
+    .pnode-children { margin-left: 18px; padding-left: 14px; border-left: 2px solid var(--border2); }
+
+    .group-meta { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px 2px; flex-wrap: wrap; }
+    .gm-chip {
+      font-size: 10px; font-family: var(--font-mono); border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text2); border-radius: var(--r-chip); padding: 2px 7px; cursor: pointer;
+    }
+    .gm-chip select { background: transparent; border: none; color: inherit; font: inherit; cursor: pointer; outline: none; }
+    .gm-label { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+
+    /* ── Checks ── */
+    .checks { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .check-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; padding: 5px 0; line-height: 1.45; }
+    .check-ok .check-mark { color: var(--accent-like); }
+    .check-warn .check-mark { color: var(--accent-super); }
+    .check-mark { flex-shrink: 0; font-weight: 700; }
+
+    .empty-state-main { padding: 60px 24px; text-align: center; max-width: 460px; margin: 40px auto; }
+    .empty-state-main .es-icon { font-size: 46px; opacity: .8; }
+    .empty-state-main .es-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin: 14px 0 8px; }
+    .empty-state-main .es-sub { color: var(--text2); font-size: 14px; line-height: 1.6; margin-bottom: 22px; }
+
+    /* ── Export modal ── */
+    .ui-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: var(--z-modal); padding: 20px; }
+    .ui-modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); width: 100%; max-width: 640px; max-height: 86vh; overflow-y: auto; padding: 20px 22px; }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .modal-head .mh-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+    .export-pre {
+      white-space: pre-wrap; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 14px; color: var(--text); max-height: 48vh; overflow-y: auto;
+    }
+    .mob-nav-btn { display: none; }
+    @media (max-width: 820px) {
+      .sidebar { position: fixed; left: 0; top: 0; z-index: var(--z-overlay); transform: translateX(-100%); transition: transform .2s; }
+      .sidebar.open { transform: translateX(0); }
+      .mob-nav-btn { display: inline-flex; background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; }
+      .scqa-row { grid-template-columns: 1fr; gap: 4px; }
+      .scqa-tag { padding-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">△ Argument Hub</div>
+      <div class="sidebar-sub">Pyramid Principle</div>
+      <button class="btn btn-primary btn-new" onclick="createArg()">+ New Argument</button>
+    </div>
+    <div class="arg-list" id="arg-list"></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="mob-nav-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="topbar-title" id="topbar-title">Argument Hub</div>
+      <button class="btn btn-ghost" id="btn-example" onclick="loadExample()" title="See a worked Minto-style argument">Load example</button>
+      <button class="btn btn-ghost" id="btn-export" style="display:none" onclick="openExport()">↗ Export</button>
+      <button class="btn btn-danger" id="btn-delete" style="display:none" onclick="deleteArg()">Delete</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+
+  <div class="ui-modal-overlay" id="export-overlay" onclick="if(event.target===this)closeExport()">
+    <div class="ui-modal">
+      <div class="modal-head">
+        <div class="mh-title">↗ Export — document order</div>
+        <button class="btn btn-ghost" onclick="closeExport()">✕</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">
+        Minto's rule: lead the reader with the <strong>introduction (S→C→Q)</strong>, state the <strong>answer</strong>, then deliver the supporting points top-down. Drop this into a post, a one-pager, or a decision's reasoning.
+      </div>
+      <pre class="export-pre" id="export-pre"></pre>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="downloadExport()">⤓ Download .md</button>
+        <button class="btn btn-primary" onclick="copyExport()">⧉ Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'argument-hub-v1';
+    let data = { arguments: [] };
+    let currentId = null;
+
+    const esc = s => (window.HubUtils ? HubUtils.esc(s) : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+    const PURPOSES = [
+      ['post', 'Post / article'],
+      ['memo', 'Memo / one-pager'],
+      ['decision', 'Decision rationale'],
+      ['presentation', 'Presentation'],
+      ['email', 'Email'],
+      ['other', 'Other'],
+    ];
+    const ORDERS = [
+      ['', '— ordering —'],
+      ['time', 'Time (steps)'],
+      ['structure', 'Structure (parts)'],
+      ['degree', 'Degree (ranked)'],
+    ];
+
+    function load() {
+      data = HubStorage.get(STORAGE_KEY) || { arguments: [] };
+      if (!Array.isArray(data.arguments)) data.arguments = [];
+    }
+    function save() { HubStorage.set(STORAGE_KEY, data); }
+
+    function newNode(text) { return { id: uid(), text: text || '', logic: 'inductive', order: '', children: [] }; }
+
+    function createArg() {
+      const a = {
+        id: uid(),
+        title: 'Untitled argument',
+        purpose: 'post',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        scqa: { situation: '', complication: '', question: '' },
+        root: { id: 'root', text: '', logic: 'inductive', order: '', children: [newNode(''), newNode('')] },
+      };
+      data.arguments.unshift(a);
+      save();
+      openArg(a.id);
+      renderSidebar();
+    }
+
+    function deleteArg() {
+      if (!currentId) return;
+      const a = getArg(currentId);
+      if (!a) return;
+      if (!confirm(`Delete "${a.title || 'this argument'}"? This cannot be undone.`)) return;
+      data.arguments = data.arguments.filter(x => x.id !== currentId);
+      save();
+      currentId = null;
+      renderSidebar();
+      renderMain();
+    }
+
+    function getArg(id) { return data.arguments.find(a => a.id === id); }
+    function openArg(id) {
+      currentId = id;
+      document.getElementById('sidebar').classList.remove('open');
+      renderSidebar();
+      renderMain();
+    }
+
+    function touch() { const a = getArg(currentId); if (a) a.updatedAt = new Date().toISOString(); }
+
+    // ── Field setters (no re-render → keep focus) ──
+    function setArgField(field, val) { const a = getArg(currentId); if (!a) return; a[field] = val; touch(); save(); }
+    function setScqa(field, val) { const a = getArg(currentId); if (!a) return; a.scqa[field] = val; touch(); save(); }
+    function setApexText(val) { const a = getArg(currentId); if (!a) return; a.root.text = val; touch(); save(); }
+    function setNodeText(id, val) { const n = findNode(id); if (!n) return; n.text = val; touch(); save(); }
+    function setNodeProp(id, prop, val) { const n = findNode(id); if (!n) return; n[prop] = val; touch(); save(); renderChecks(); }
+
+    // ── Tree ops ──
+    function findNode(id, node) {
+      const a = getArg(currentId); if (!a) return null;
+      node = node || a.root;
+      if (node.id === id) return node;
+      for (const c of node.children || []) { const f = findNode(id, c); if (f) return f; }
+      return null;
+    }
+    function findParent(id, node) {
+      const a = getArg(currentId); if (!a) return null;
+      node = node || a.root;
+      for (const c of node.children || []) { if (c.id === id) return node; const f = findParent(id, c); if (f) return f; }
+      return null;
+    }
+    function addChild(parentId) { const p = findNode(parentId); if (!p) return; p.children = p.children || []; p.children.push(newNode('')); touch(); save(); renderMain(); }
+    function addSibling(id) { const p = findParent(id); if (!p) return; const i = p.children.findIndex(c => c.id === id); p.children.splice(i + 1, 0, newNode('')); touch(); save(); renderMain(); }
+    function deleteNode(id) {
+      const n = findNode(id);
+      if (n && (n.children || []).length && !confirm('Delete this point and all its sub-points?')) return;
+      const p = findParent(id); if (!p) return;
+      p.children = p.children.filter(c => c.id !== id);
+      touch(); save(); renderMain();
+    }
+    function moveNode(id, dir) {
+      const p = findParent(id); if (!p) return;
+      const i = p.children.findIndex(c => c.id === id);
+      const j = i + dir;
+      if (j < 0 || j >= p.children.length) return;
+      [p.children[i], p.children[j]] = [p.children[j], p.children[i]];
+      touch(); save(); renderMain();
+    }
+
+    // ── Sidebar ──
+    function renderSidebar() {
+      const list = document.getElementById('arg-list');
+      if (!data.arguments.length) {
+        list.innerHTML = `<div class="arg-empty-list">No arguments yet.<br>Build your first pyramid.</div>`;
+        return;
+      }
+      list.innerHTML = data.arguments.map(a => {
+        const purpose = (PURPOSES.find(p => p[0] === a.purpose) || ['', ''])[1];
+        const pts = countPoints(a.root);
+        return `<div class="arg-item ${a.id === currentId ? 'active' : ''}" onclick="openArg('${a.id}')">
+          <div class="arg-item-title">${esc(a.title || 'Untitled')}</div>
+          <div class="arg-item-meta">${esc(purpose)} · ${pts} point${pts !== 1 ? 's' : ''}</div>
+        </div>`;
+      }).join('');
+    }
+    function countPoints(node) { return (node.children || []).reduce((s, c) => s + 1 + countPoints(c), 0); }
+
+    // ── Main render ──
+    function renderMain() {
+      const c = document.getElementById('content');
+      const a = getArg(currentId);
+      document.getElementById('btn-export').style.display = a ? '' : 'none';
+      document.getElementById('btn-delete').style.display = a ? '' : 'none';
+      document.getElementById('topbar-title').textContent = a ? (a.title || 'Untitled') : 'Argument Hub';
+
+      if (!a) {
+        c.innerHTML = `<div class="empty-state-main">
+          <div class="es-icon">△</div>
+          <div class="es-title">Build the argument top-down</div>
+          <div class="es-sub">Barbara Minto's Pyramid Principle: open with the <strong>situation</strong>, name the <strong>complication</strong>, answer the <strong>question</strong> it raises — then support that answer with grouped, MECE points. Each point exists to answer the "why?" or "how?" of the one above it.</div>
+          <button class="btn btn-primary" onclick="createArg()">+ New Argument</button>
+          <button class="btn btn-ghost" onclick="loadExample()" style="margin-left:8px">See a worked example</button>
+        </div>`;
+        return;
+      }
+
+      const purposeOpts = PURPOSES.map(p => `<option value="${p[0]}" ${a.purpose === p[0] ? 'selected' : ''}>${p[1]}</option>`).join('');
+
+      c.innerHTML = `
+        <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:22px">
+          <div style="flex:1">
+            <div class="sec-label">Title</div>
+            <input class="field" value="${esc(a.title)}" oninput="setArgField('title', this.value)" onchange="renderSidebar()" placeholder="What are you arguing?">
+          </div>
+          <div style="width:190px">
+            <div class="sec-label">Purpose</div>
+            <select class="field" onchange="setArgField('purpose', this.value); renderSidebar()">${purposeOpts}</select>
+          </div>
+        </div>
+
+        <div class="sec-label">① Introduction <span class="sec-hint">— tell it as a story the reader already agrees with, leading to the question</span></div>
+        <div class="scqa-grid" style="margin-bottom:6px">
+          <div class="scqa-row">
+            <div class="scqa-tag">Situation<small>The stable context the reader accepts</small></div>
+            <textarea class="field" rows="2" oninput="setScqa('situation', this.value)" placeholder="The way things are / the agreed starting point…">${esc(a.scqa.situation)}</textarea>
+          </div>
+          <div class="scqa-row">
+            <div class="scqa-tag">Complication<small>What changed / the tension</small></div>
+            <textarea class="field" rows="2" oninput="setScqa('complication', this.value)" placeholder="But something happened that demands a response…">${esc(a.scqa.complication)}</textarea>
+          </div>
+          <div class="scqa-row">
+            <div class="scqa-tag">Question<small>What the reader now asks</small></div>
+            <textarea class="field" rows="2" oninput="setScqa('question', this.value)" onchange="renderChecks()" placeholder="So… what should we do? / why? / how?">${esc(a.scqa.question)}</textarea>
+          </div>
+        </div>
+
+        <div class="apex">
+          <div class="sec-label">② Governing thought <span class="sec-hint">— the single answer to that question; everything below supports it</span></div>
+          <textarea class="field" rows="2" style="font-size:15px;font-weight:600" oninput="setApexText(this.value)" onchange="renderChecks()" placeholder="State your one main point as a full assertion…">${esc(a.root.text)}</textarea>
+          ${groupMetaHtml(a.root, 'the key-line points below')}
+        </div>
+
+        <div class="sec-label" style="margin-top:18px">③ Supporting pyramid <span class="sec-hint">— each group MECE: same kind, no overlap, nothing missing</span></div>
+        <div class="pyramid" id="pyramid">${(a.root.children || []).map(n => nodeHtml(n)).join('') || `<div style="color:var(--text3);font-size:13px;padding:8px 0">No points yet. <a href="#" onclick="addChild('root');return false" style="color:var(--accent)">Add the first supporting point ↓</a></div>`}</div>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="addChild('root')">+ Add key-line point</button>
+
+        <div class="checks" id="checks"></div>
+      `;
+      renderChecks();
+    }
+
+    function groupMetaHtml(node, childLabel) {
+      const n = (node.children || []).length;
+      if (n < 1) return '';
+      const orderOpts = ORDERS.map(o => `<option value="${o[0]}" ${node.order === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('');
+      return `<div class="group-meta">
+        <span class="gm-label">${n} ${childLabel ? esc(childLabel) : 'sub-points'} relate by:</span>
+        <span class="gm-chip" onclick="setNodeProp('${node.id}','logic','${node.logic === 'deductive' ? 'inductive' : 'deductive'}')" title="Click to toggle. Inductive = a set of like reasons. Deductive = premise→premise→therefore.">${node.logic === 'deductive' ? '→ Argument (deductive)' : '◦ Grouping (inductive)'}</span>
+        <span class="gm-chip"><select onchange="setNodeProp('${node.id}','order',this.value)">${orderOpts}</select></span>
+      </div>`;
+    }
+
+    function nodeHtml(node) {
+      const kids = node.children || [];
+      return `<div class="pnode">
+        <div class="pnode-row">
+          <div class="pnode-text">
+            <textarea class="field" rows="1" style="min-height:38px" oninput="setNodeText('${node.id}', this.value); autoGrow(this)" placeholder="State this point as a full sentence…">${esc(node.text)}</textarea>
+          </div>
+          <div class="pnode-actions">
+            <button class="pn-btn" title="Add sub-point" onclick="addChild('${node.id}')">＋</button>
+            <button class="pn-btn" title="Move up" onclick="moveNode('${node.id}',-1)">↑</button>
+            <button class="pn-btn" title="Move down" onclick="moveNode('${node.id}',1)">↓</button>
+            <button class="pn-btn del" title="Delete" onclick="deleteNode('${node.id}')">✕</button>
+          </div>
+        </div>
+        ${kids.length ? `${groupMetaHtml(node, '')}<div class="pnode-children">${kids.map(k => nodeHtml(k)).join('')}</div>` : ''}
+      </div>`;
+    }
+
+    function autoGrow(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight) + 'px'; }
+
+    // ── Checks (Minto-faithful, only what's truly checkable) ──
+    function renderChecks() {
+      const box = document.getElementById('checks');
+      if (!box) return;
+      const a = getArg(currentId); if (!a) return;
+      const items = [];
+      const ok = (t) => items.push({ ok: true, t });
+      const warn = (t) => items.push({ ok: false, t });
+
+      // SCQA complete
+      const sc = a.scqa;
+      if (sc.situation && sc.complication && sc.question) ok('Introduction is complete (Situation → Complication → Question).');
+      else warn('Finish the introduction — a missing Situation, Complication, or Question leaves the reader without the question your argument answers.');
+
+      // Governing thought
+      if ((a.root.text || '').trim().length > 0) ok('Governing thought is stated — the apex of the pyramid.');
+      else warn('State the governing thought: the single answer to your Question.');
+
+      // Single-child groups (Minto: you can never have just one subordinate point)
+      const singles = [];
+      (function walk(node, label) {
+        const kids = node.children || [];
+        if (kids.length === 1) singles.push(label);
+        kids.forEach((k, i) => walk(k, truncate(k.text, 28) || `point ${i + 1}`));
+      })(a.root, 'the governing thought');
+      if (singles.length) warn(`Single sub-point under: ${singles.map(esc).join(', ')}. A point can't have one sub-point — either merge it up, or add at least one sibling.`);
+      else if (countPoints(a.root) > 0) ok('No orphan groups — every grouping has two or more points.');
+
+      // Groups missing an ordering principle
+      const unordered = [];
+      (function walk(node, label) {
+        const kids = node.children || [];
+        if (kids.length >= 2 && !node.order) unordered.push(label);
+        kids.forEach(k => walk(k, truncate(k.text, 28)));
+      })(a.root, 'the key line');
+      if (unordered.filter(Boolean).length) warn(`No ordering set for: ${unordered.filter(Boolean).map(esc).join(', ')}. Group points by time, structure, or degree so the sequence is deliberate.`);
+
+      // Breadth nudge (Minto: 7±2; ideally ≤ 4–5 per group)
+      let tooWide = false;
+      (function walk(node) { if ((node.children || []).length > 5) tooWide = true; (node.children || []).forEach(walk); })(a.root);
+      if (tooWide) warn('A group has more than five points — consider grouping them one level deeper (the mind holds ~4 at once).');
+
+      // Summary prompt — can't auto-verify, so always remind once there's structure
+      if (countPoints(a.root) >= 2) items.push({ ok: 'note', t: 'Self-check: does each point <em>summarise</em> the ones beneath it (an insight), rather than just label them (a topic)?' });
+
+      box.innerHTML = `<div class="sec-label">Pyramid checks</div>` + items.map(it => {
+        const cls = it.ok === true ? 'check-ok' : it.ok === 'note' ? 'check-note' : 'check-warn';
+        const mark = it.ok === true ? '✓' : it.ok === 'note' ? '◦' : '!';
+        return `<div class="check-item ${cls}"><span class="check-mark">${mark}</span><span>${it.t}</span></div>`;
+      }).join('');
+    }
+    function truncate(s, n) { s = (s || '').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+    // ── Export ──
+    function buildMarkdown() {
+      const a = getArg(currentId); if (!a) return '';
+      const L = [];
+      L.push(`# ${a.title || 'Untitled argument'}`, '');
+      const intro = [a.scqa.situation, a.scqa.complication, a.scqa.question].map(s => (s || '').trim()).filter(Boolean).join(' ');
+      if (intro) L.push(intro, '');
+      if ((a.root.text || '').trim()) L.push(`**${a.root.text.trim()}**`, '');
+      const numbered = (a.root.children || []);
+      numbered.forEach((n, i) => emit(n, 0, `${i + 1}.`));
+      function emit(node, depth, marker) {
+        const indent = '   '.repeat(depth);
+        const m = depth === 0 ? marker : '-';
+        if ((node.text || '').trim()) L.push(`${indent}${m} ${node.text.trim()}`);
+        (node.children || []).forEach((c, i) => emit(c, depth + 1, `${i + 1}.`));
+      }
+      return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    }
+    function openExport() { document.getElementById('export-pre').textContent = buildMarkdown(); document.getElementById('export-overlay').style.display = 'flex'; }
+    function closeExport() { document.getElementById('export-overlay').style.display = 'none'; }
+    function copyExport() {
+      const t = buildMarkdown();
+      navigator.clipboard.writeText(t).then(() => HubToast && HubToast.show ? HubToast.show('Copied to clipboard') : null).catch(() => {});
+    }
+    function downloadExport() {
+      const a = getArg(currentId); if (!a) return;
+      const blob = new Blob([buildMarkdown()], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = (a.title || 'argument').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.md';
+      link.click(); URL.revokeObjectURL(url);
+    }
+
+    // ── Worked example ──
+    function loadExample() {
+      const k = (text, order, kids) => ({ id: uid(), text, logic: 'inductive', order: order || '', children: kids || [] });
+      const a = {
+        id: uid(),
+        title: 'We should adopt a structured-writing standard',
+        purpose: 'memo',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        scqa: {
+          situation: 'Our team produces dozens of proposals, reports, and decision memos every quarter.',
+          complication: 'Reviewers keep asking "what\'s the point?" and rewrites eat days — the reasoning is buried, not led.',
+          question: 'How do we make our documents land the first time?',
+        },
+        root: {
+          id: 'root', text: 'Adopt the Pyramid Principle as our default writing standard.', logic: 'inductive', order: 'degree',
+          children: [
+            k('It cuts review cycles because the main point comes first.', 'time', [
+              k('Reviewers see the answer in the first lines, not after three pages.'),
+              k('Disagreements surface on the conclusion, not on buried details.'),
+            ]),
+            k('It forces clearer thinking before writing.', 'structure', [
+              k('Grouping points MECE exposes gaps and overlaps early.'),
+              k('Every point must answer a real reader question, or it gets cut.'),
+            ]),
+            k('It is cheap to adopt — a method, not a tool.', '', [
+              k('One workshop plus a one-page checklist covers the team.'),
+              k('It composes with the templates we already use.'),
+            ]),
+          ],
+        },
+      };
+      data.arguments.unshift(a);
+      save();
+      openArg(a.id);
+      renderSidebar();
+      if (window.HubToast && HubToast.show) HubToast.show('Loaded a worked example');
+    }
+
+    // ── Cross-tool highlight (Cmd+K / links) ──
+    window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin && e.origin !== 'null') return;
+      const d = e.data || {};
+      if (d.type === 'hub-highlight' && d.itemId) {
+        if (getArg(d.itemId)) openArg(d.itemId);
+      }
+    });
+
+    // ── Boot ──
+    document.addEventListener('DOMContentLoaded', () => {
+      load();
+      renderSidebar();
+      if (data.arguments.length) openArg(data.arguments[0].id);
+      else renderMain();
+      HubBootstrap.start('argument-hub');
+    });
+  </script>
+</body>
+</html>

@@ -35,6 +35,7 @@ window.HubLinks = (() => {
     'retro-hub': 'Retrospective',
     'reflection-hub': 'Reflection Board',
     'stakeholder-hub': 'Stakeholders',
+    'argument-hub': 'Argument Hub',
     'tool-portfolio': 'Tool Portfolio',
   };
 
@@ -215,6 +216,16 @@ window.HubLinks = (() => {
           id: sh.id,
           label: sh.name || '(unnamed)',
           subtitle: sh.role || 'stakeholder'
+        }));
+      }
+
+      if (toolId === 'argument-hub') {
+        const data = HubStorage.get('argument-hub-v1');
+        if (!data) return [];
+        return (data.arguments || []).map(a => ({
+          id: a.id,
+          label: a.title || '(untitled argument)',
+          subtitle: (a.root && a.root.text) ? a.root.text.slice(0, 60) : 'pyramid'
         }));
       }
 

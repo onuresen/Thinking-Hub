@@ -2138,6 +2138,7 @@
       { id: 'decision-hub', label: 'Decision Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
       { id: 'goals-hub', label: 'Goals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
       { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
+      { id: 'argument-hub', label: 'Argument Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '△', file: 'argument-hub.html', desc: 'Build a case top-down with the Pyramid Principle — SCQA intro, governing thought, MECE supporting points' },
       // ── Reflection & Methods ──────────────────────────────────────────
       { id: 'reflection-hub', label: 'Reflection Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⟲', file: 'reflection-hub.html', desc: 'Collect signals, friction points, open questions and actions — great for team retrospectives' },
       { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg and V-Model process map' },
@@ -2149,7 +2150,7 @@
 
     const PROFILES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
       bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
       dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
@@ -2897,6 +2898,133 @@
 
     // ── Today dashboard ───────────────────────────────────────────────────────────
 
+    // ── Resurface engine ───────────────────────────────────────────────────────────
+    // Capture is worthless without resurfacing. Pulls past items back to attention:
+    // decisions due to revisit, on-this-day learnings, stale testing assumptions.
+    const RESURFACE_KEY = 'hub-resurface-v1';
+    function _resurfaceStore() {
+      const s = HubStorage.get(RESURFACE_KEY) || {};
+      if (!s.dismissed) s.dismissed = {};
+      return s;
+    }
+    function _resurfaceDismissed(key) {
+      const dat = _resurfaceStore().dismissed[key];
+      if (!dat) return false;
+      return (Date.now() - new Date(dat).getTime()) < 30 * 86400000; // hidden 30 days
+    }
+    function resurfaceDismiss(key) {
+      const s = _resurfaceStore();
+      s.dismissed[key] = new Date().toISOString();
+      HubStorage.set(RESURFACE_KEY, s);
+      buildTodayView();
+    }
+
+    function buildResurfaceItems() {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const out = [];
+
+      // 1 — Decisions whose revisit date has arrived and aren't scored yet
+      try {
+        const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const decs = Array.isArray(dl) ? dl : (dl.entries || []);
+        decs.filter(d => !d.archived && d.revisitDate && d.revisitDate <= todayStr && !d.outcome)
+          .sort((a, b) => (a.revisitDate || '').localeCompare(b.revisitDate || ''))
+          .slice(0, 3)
+          .forEach(d => {
+            const key = 'dec:' + d.id;
+            if (_resurfaceDismissed(key)) return;
+            out.push({
+              key, tool: 'decision-hub', id: d.id, icon: '◎',
+              dot: 'var(--accent-super)',
+              text: d.title || '(untitled decision)',
+              meta: d.revisitWhen ? `revisit: ${d.revisitWhen}` : 'revisit due — did it hold?'
+            });
+          });
+      } catch { }
+
+      // 2 — Stale assumptions still in "testing" (untouched 14+ days)
+      try {
+        const ah = HubStorage.get('assumptions-hub-v1') || {};
+        (ah.assumptions || []).filter(a => a.status === 'testing')
+          .map(a => ({ a, age: Math.floor((Date.now() - new Date(a.updatedAt || a.createdAt || Date.now()).getTime()) / 86400000) }))
+          .filter(x => x.age >= 14)
+          .sort((x, y) => y.age - x.age)
+          .slice(0, 2)
+          .forEach(({ a, age }) => {
+            const key = 'asm:' + a.id;
+            if (_resurfaceDismissed(key)) return;
+            out.push({
+              key, tool: 'decision-hub', id: a.linkedDecision || a.id, icon: '🎯',
+              dot: 'var(--accent-nope)',
+              text: a.statement || '(assumption)',
+              meta: `still "testing" — ${age}d untouched`
+            });
+          });
+      } catch { }
+
+      // 3 — On-this-day learning: a finished item's insight from 30/90/180/365 days ago
+      try {
+        const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
+        const milestones = [30, 90, 180, 365];
+        (lh.items || []).filter(it => !it.archived && it.status === 'done' && it.completedAt)
+          .map(it => {
+            const days = Math.floor((Date.now() - new Date(it.completedAt).getTime()) / 86400000);
+            const hit = milestones.find(m => Math.abs(days - m) <= 3);
+            return hit ? { it, days: hit } : null;
+          })
+          .filter(Boolean)
+          .slice(0, 2)
+          .forEach(({ it, days }) => {
+            const key = 'learn:' + it.id + ':' + days;
+            if (_resurfaceDismissed(key)) return;
+            const insight = (it.keyInsight || '').trim() || (it.highlights && it.highlights[0] && it.highlights[0].text) || it.title || '';
+            out.push({
+              key, tool: 'learning-hub', id: it.id, icon: '◑',
+              dot: 'var(--accent-like)',
+              text: insight,
+              meta: `learned ${days === 365 ? '1 year' : days + ' days'} ago — ${_esc(it.title || '')}`
+            });
+          });
+      } catch { }
+
+      return out.slice(0, 5);
+    }
+
+    function buildResurfaceCard(items) {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.style.borderColor = 'color-mix(in srgb, var(--accent) 35%, var(--border))';
+      const rows = items.map(it => `
+        <div class="stat-item" data-tool="${it.tool}" data-item-id="${_esc(it.id || '')}" style="align-items:flex-start">
+          <div class="stat-item-dot" style="background:${it.dot};margin-top:5px"></div>
+          <div style="flex:1;min-width:0">
+            <div class="stat-item-text" style="white-space:normal">${it.icon} ${_esc(it.text)}</div>
+            <div class="stat-item-meta" style="margin:2px 0 0;opacity:.85">${_esc(it.meta)}</div>
+          </div>
+          <button title="Dismiss for 30 days" onclick="event.stopPropagation();resurfaceDismiss('${it.key}')"
+            style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;flex-shrink:0">✕</button>
+        </div>`).join('');
+      card.innerHTML = `
+        <div class="stat-card-header">
+          <span class="stat-card-icon">↻</span>
+          <span class="stat-card-title">Resurface</span>
+          <span class="stat-count">${items.length} to review</span>
+        </div>
+        <div class="stat-card-body">${rows}</div>
+        <div class="stat-card-footer">
+          <span>brought back to your attention</span>
+          <span></span>
+        </div>`;
+      card.addEventListener('click', e => {
+        const item = e.target.closest('.stat-item[data-item-id]');
+        if (item && item.dataset.itemId) {
+          _pendingHighlight = item.dataset.itemId;
+          openApp(item.dataset.tool);
+        }
+      });
+      return card;
+    }
+
     function buildTodayView() {
       const container = document.getElementById('today-view');
       if (!container) return;
@@ -2928,7 +3056,8 @@
         if (open.length) sections.push({ type: 'decisions', items: open });
       } catch { }
 
-      const hasContent = sections.some(s => s.items.length > 0);
+      const resurface = buildResurfaceItems();
+      const hasContent = sections.some(s => s.items.length > 0) || resurface.length;
       if (!hasContent) {
         container.innerHTML = `<div class="today-all-clear">
           <div class="today-all-clear-icon">✓</div>
@@ -2940,6 +3069,8 @@
 
       const grid = document.createElement('div');
       grid.className = 'status-grid';
+
+      if (resurface.length) grid.appendChild(buildResurfaceCard(resurface));
 
       sections.forEach(sec => {
         const { type, items } = sec;
@@ -3513,6 +3644,7 @@
       'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
       'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1',
       'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
+      'argument-hub-v1',
     ];
 
     async function pickMcpFolder() {
@@ -3754,6 +3886,7 @@
       'hub-activity-v1': 'activity_log',
       'hub-settings-v1': 'settings',
       'tool-portfolio-v1': 'tool_portfolio',
+      'argument-hub-v1': 'arguments',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -3764,6 +3897,7 @@
       'kmqt-board.html': ['kmqt_current_v2'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
+      'argument-hub.html': ['argument-hub-v1'],
       'focus-hub.html': ['focus-hub-v1'],
       'journal-hub.html': ['log-hub-v1', 'review-hub-v1'],
       'log-hub.html': ['log-hub-v1'],
@@ -3796,7 +3930,7 @@
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
         'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
-        'tool-portfolio-v1',
+        'tool-portfolio-v1', 'argument-hub-v1',
       ],
     };
 

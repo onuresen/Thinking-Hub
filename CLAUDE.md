@@ -27,7 +27,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `schedule.html` | Calendar / timeline |
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | `kmqt-board.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import KMQT" button |
-| `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`) |
+| `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
 | `canvas-hub.html` | Infinite spatial canvas |
 | `graph-hub.html` | Task dependency graph (vis-network) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
@@ -41,6 +41,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `journal-hub.html` | Journal Hub — Daily Log + Weekly Review under one tab bar; day chips link weekly → daily; data stays in `log-hub-v1` + `review-hub-v1` |
 | `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
 | `meetings-hub.html` | Meeting Hub — structured meetings with type templates, RACI-lite attendee roles, decision register, schedule sync, recurring templates, dependency graph links, and .ics calendar import (Outlook/Teams) |
+| `argument-hub.html` | Argument Hub — structure a case top-down with the Pyramid Principle (Barbara Minto): SCQA intro, governing thought, recursive MECE supporting pyramid (inductive/deductive logic + time/structure/degree ordering per group), live structure checks, Markdown export. Storage `argument-hub-v1` |
 | `goals-hub.html` | OKR / quarterly goals hub |
 | `learning-hub.html` | Reading & learning log |
 | `stakeholder-hub.html` | Visual power/interest stakeholder grid |
@@ -71,7 +72,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys)
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -728,6 +729,53 @@ Removed two tools the user confirmed they don't use. This is the **follow-throug
 - **Lesson for future tool-building:** both deleted tools were team/sprint-shaped (War Room "glanceable command center", Scrum sprints) in what is actually a **solo strategy/thinking app**. The recurring failure mode is building for an imagined team cadence rather than the single user's real workflow. Weight new-tool proposals against *"would the solo user open this weekly?"* before building. Focus Timer was kept precisely because it passes that test (it's load-bearing for Project Hub time badges, Weekly Review, and AI Energy Insights).
 
 **Files:** `index.html`, `project-hub.html`, `frameworks-hub.html`, `graph-hub.html`, `help-hub.html`, `hub-ai.js`, `hub-links.js`, `hub-search.js`, `hub-starter-data.js`, `README.md`, `CLAUDE.md` · **Deleted:** `scrum-hub.html`
+
+---
+
+### ~~Priority 51 — Resurface loop + Decision calibration~~ ✓ Done `[group: decision-loop]`
+Two paired features built together because they share the revisit-date plumbing. Origin: a vault-audit observation — **Thinking Hub is all *capture*, almost no *resurface*.** Every tool is a write surface; nothing brings the past back. The esen-vault roadmap independently flagged the same disease from the other side (decisions never calibrated, ~44/45 missing confidence, orphaned drafts, learnings logged but never revisited). The fix is the Readwise/Anki bet: capture is worthless until something resurfaces it at the right moment.
+
+**Phase B — Decision Hub canonical-schema parity + calibration (`decision-hub.html`):**
+- Decision object gained `alternative`, `revisitWhen` (condition text), `revisitDate` (optional date — drives resurfacing), `outcome` `{result, note, scoredAt}`, and `createdAt` (new decisions). All graceful for existing records.
+- Log "More fields" collapse now has *Alternative considered*, a *Revisit when* row (condition + date), and an *Outcome* block (held / partly / didn't / too-early + note) that flags "↻ revisit due" when the date has passed. This completes the canonical **Decision / Why / Alternative / Revisit-when / Confidence** schema the vault uses.
+- `⚖ Calibration` topbar button → modal: hit-rate per confidence band (held=1, partly=½, didn't=0), an overconfidence read ("high-confidence calls hold ~half the time → widen options"), and a count of decisions past their revisit date waiting to be scored. Makes the never-run monthly calibration ritual trivial.
+- Sidebar nav-items show a `↻` when a decision's revisit date has passed and it's unscored.
+
+**Phase A — Resurface widget (`index.html`):**
+- New `↻ Resurface` card at the top of the **Today** dashboard (the default landing), pulling three high-signal sources via `buildResurfaceItems()`: (1) decisions due for revisit (`revisitDate ≤ today`, no outcome) — the keystone bridge to Phase B; (2) stale assumptions in "testing" untouched 14+ days; (3) on-this-day learning — a finished Learning item's `keyInsight`/first highlight from 30/90/180/365 days ago (±3d).
+- Each row opens the item (`hub-highlight` via `_pendingHighlight` + `openApp`); a `✕` dismisses it for 30 days via new `hub-resurface-v1` store (`{ dismissed: { key: ISO } }`). Recording a decision's Outcome removes it from the queue → the loop closes.
+
+**Key decisions:**
+- **Decision:** Build #1 (resurface) + #2 (calibration) as one group. **Why:** both hinge on `revisitDate` — the resurface card's #1 source *is* the calibration trigger; splitting them would build the same date-plumbing twice and ship a resurface card with nothing to surface. **Alternative rejected:** ship calibration first, resurface later — leaves Phase B's revisit dates with no surfacing, so users would never notice a decision came due. **Confidence:** high.
+- **Decision:** Put the Resurface card on the **Today** view, not the Overview status grid. **Why:** Today is the default landing and a daily ritual surface; resurfacing is a daily habit (Readwise's whole model). Overview is opt-in. **Alternative rejected:** the status-widget grid (original plan) — lower visibility, profile-filtered. **Confidence:** med. **Revisit when:** if Today gets too crowded, demote to a collapsible strip.
+- **Decision:** `hub-resurface-v1` is ephemeral — excluded from Full Backup + MCP sync (like `tutorial-seen-v1`). **Why:** it's just dismiss-timing state that regenerates naturally; backing it up would resurrect stale dismissals on restore. **Confidence:** high.
+- **Decision:** Calibration weights partly=½ and *excludes* "too-early" from the denominator. **Why:** a not-yet-resolved decision shouldn't count against (or for) calibration; only resolved outcomes measure whether confidence was right. **Confidence:** med.
+- **Why this passes the solo test ([[build-for-solo-not-team]]):** resurfacing past insights and scoring your own past calls are pure solo-metacognition rituals — the opposite of the team-cadence tools deleted in P50. They make the *existing* write-only tools (Decision Hub, Learning Log, Assumptions) pay off instead of adding a new surface.
+
+**Files:** `decision-hub.html`, `index.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 52 — New tool: Argument Hub (Pyramid Principle)~~ ✓ Done `[group: new-tools-solo]`
+A structured-argument builder grounded in Barbara Minto's *The Pyramid Principle* — chosen by the user *while reading the book*, and justified by real recurring uses (the dormant Publishing pipeline of orphaned LinkedIn drafts, SBS management asks currently written as ad-hoc decks, and decision rationales). Fills a genuine gap: Thinking Hub had **no writing/structuring surface** at all.
+
+**What it does (`argument-hub.html`, storage `argument-hub-v1`):**
+- **SCQA introduction** — Situation / Complication / Question fields with inline guidance; the *Answer* is explicitly the governing thought (Minto's intro-as-story leading the reader to the question).
+- **Governing thought** — the single apex assertion; everything below supports it.
+- **Recursive supporting pyramid** — each grouping node carries a **logic type** (Grouping=inductive / Argument=deductive) and an **ordering principle** (time / structure / degree). Inline editing (text edits don't re-render → focus preserved; structural ops do).
+- **Live structure checks** — only the Minto rules that are *truly* checkable: SCQA complete; governing thought stated; **no single-child groups** ("a point can't have one sub-point"); ordering set on each group; >5-per-group breadth nudge; plus a non-automatable "does each box *summarise* the ones below (insight, not topic)?" prompt.
+- **Markdown export** in document order (intro → answer → points top-down) — copy or download `.md`, drops into a post/memo/decision.
+- **"Load worked example"** (a complete Minto-style argument) so the method is obvious on first open.
+
+**Wiring:** APPS entry (Strategy & Decisions group, icon `△`); `dx`/Strategy profile; backup + MCP-sync + EXPORT_KEY_LABELS + APP_FILE_STORAGE_KEYS; Cmd+K resolver (`hub-links.js`) + label + `hub-search.js` TOOLS; `hub-highlight` listener; help-hub tool card + three framework reference entries (Pyramid-Principle, SCQA, MECE under Knowledge & Learning).
+
+**Key decisions:**
+- **Decision:** Build a *new tool*, not a panel inside Decision Hub. **Why:** structuring a persuasive case is a distinct activity from logging a decision (Decision Hub records *what* you chose; Argument Hub structures *how you make the case*); they're complementary and would crowd each other. **Alternative rejected:** a "structure" tab in Decision Hub — overloads an already 4-tab tool. **Confidence:** med.
+- **Decision:** Only automate checks that are genuinely verifiable (single-child groups, missing ordering, breadth), and make MECE/summary *prompts* rather than fake validations. **Why:** MECE ("no overlaps, no gaps") and "does this summarise?" are semantic judgments a heuristic can't honestly verify; a false ✓ would be worse than a prompt. **Confidence:** high.
+- **Decision:** Model the governing thought as the tree *root node* (`root.text`), with `root.logic`/`root.order` describing the key line. **Why:** makes the pyramid uniformly recursive (apex and every sub-group share one node shape and one render fn) instead of special-casing the top level. **Confidence:** high.
+- **Why this passes the solo test ([[build-for-solo-not-team]]):** drafting an argument is solo work, and it serves the user's own real outputs (posts, management asks, decision write-ups). Unlike the deleted War Room/Scrum, it isn't team-cadence-shaped — and the user pull-requested it themselves while reading the source book, the strongest possible "would the solo user open this weekly?" signal.
+
+**Files:** `argument-hub.html` (new), `index.html`, `hub-links.js`, `hub-search.js`, `help-hub.html`, `CLAUDE.md`
 
 ---
 

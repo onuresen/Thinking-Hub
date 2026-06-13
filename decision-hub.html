@@ -579,9 +579,21 @@
         <button class="view-toggle-btn" id="tab-assumptions" onclick="switchTab('assumptions')">Assumptions</button>
       </div>
 
+      <button class="btn-ghost" id="btn-calibration" onclick="openCalibration()" title="How well-calibrated are your past decisions?">⚖ Calibration</button>
       <button class="btn-ghost" id="btn-save" style="display:none" onclick="saveCurrent()">Save Changes</button>
       <button class="btn-ghost" id="btn-archive" style="display:none" onclick="archiveCurrent()">📦 Archive</button>
       <button class="btn-danger" id="btn-delete" style="display:none" onclick="deleteCurrent()">Delete</button>
+    </div>
+
+    <div class="ui-modal-overlay" id="calibration-overlay" style="display:none" onclick="if(event.target===this)closeCalibration()">
+      <div class="ui-modal" style="max-width:560px">
+        <div class="ui-section-header">
+          <div class="ui-section-title">⚖ Decision Calibration</div>
+          <button class="btn-ghost" onclick="closeCalibration()" style="padding:4px 10px">✕</button>
+        </div>
+        <div class="ui-section-line"></div>
+        <div id="calibration-body" style="margin-top:14px"></div>
+      </div>
     </div>
 
     <div class="content" id="main-content">
@@ -677,7 +689,9 @@
           if (d.type === 'risk') icon = '⚠';
           if (d.type === 'open') icon = '？';
 
-          item.innerHTML = `<span class="nav-icon">${icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${HubUtils.esc(d.title || 'Untitled')}</span>`;
+          const revisitDue = d.revisitDate && d.revisitDate <= new Date().toISOString().slice(0, 10) && !d.outcome;
+          const dueDot = revisitDue ? ` <span title="Revisit due" style="color:var(--accent-super);font-size:10px;flex-shrink:0">↻</span>` : '';
+          item.innerHTML = `<span class="nav-icon">${icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${HubUtils.esc(d.title || 'Untitled')}</span>${dueDot}`;
           item.onclick = () => openDecision(d.id);
           group.appendChild(item);
         });
@@ -701,9 +715,14 @@
         confidence: 'medium',
         summary: '',
         reason: '',
+        alternative: '',
+        revisitWhen: '',
+        revisitDate: '',
+        outcome: null,
         tags: '',
         links: '',
         obsidianNote: '',
+        createdAt: new Date().toISOString(),
         problemLens: {},
         decisionCanvas: {},
         optionMap: [],
@@ -806,8 +825,23 @@
         dec.cynefin = document.getElementById('i-cynefin').value;
         dec.summary = document.getElementById('i-summary').value;
         dec.reason = document.getElementById('i-reason').value;
+        dec.alternative = document.getElementById('i-alternative')?.value || '';
+        dec.revisitWhen = document.getElementById('i-revisit-when')?.value || '';
+        dec.revisitDate = document.getElementById('i-revisit-date')?.value || '';
         dec.tags = document.getElementById('i-tags').value;
         dec.obsidianNote = (document.getElementById('i-obsidian')?.value || '').trim();
+
+        // Outcome (scored when the decision comes due)
+        const oResult = document.getElementById('i-outcome-result')?.value || '';
+        if (oResult) {
+          dec.outcome = {
+            result: oResult,
+            note: document.getElementById('i-outcome-note')?.value || '',
+            scoredAt: (dec.outcome && dec.outcome.scoredAt) || new Date().toISOString()
+          };
+        } else {
+          dec.outcome = null;
+        }
       }
       else if (currentTab === 'workspace') {
         PROBLEM_FIELDS.forEach(f => {
@@ -825,6 +859,76 @@
       document.getElementById('topbar-title').innerText = dec.title || 'Untitled';
     }
 
+    // ─── CALIBRATION ─────────────────────────────────────────────────────────────
+    // Scores how well past confidence levels matched real outcomes (Tetlock-style).
+    function openCalibration() {
+      const body = document.getElementById('calibration-body');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const decs = decisions.filter(d => d.type === 'decision' && !d.archived);
+      const scored = decs.filter(d => d.outcome && d.outcome.result && d.outcome.result !== 'tooearly');
+      const dueUnscored = decs.filter(d => d.revisitDate && d.revisitDate <= todayStr && !d.outcome);
+
+      // weight: held=1, partly=0.5, didn't=0
+      const wt = r => r === 'held' ? 1 : r === 'partly' ? 0.5 : 0;
+      const bands = [
+        { key: 'high', label: 'High' },
+        { key: 'medium', label: 'Medium' },
+        { key: 'low', label: 'Low' }
+      ];
+      let rows = '', highRate = null;
+      bands.forEach(b => {
+        const inBand = scored.filter(d => (d.confidence || 'medium') === b.key);
+        if (!inBand.length) {
+          rows += `<tr><td style="padding:7px 6px">${b.label}</td><td colspan="2" style="padding:7px 6px;color:var(--text3)">no scored decisions</td></tr>`;
+          return;
+        }
+        const rate = Math.round(100 * inBand.reduce((s, d) => s + wt(d.outcome.result), 0) / inBand.length);
+        if (b.key === 'high') highRate = rate;
+        const held = inBand.filter(d => d.outcome.result === 'held').length;
+        const partly = inBand.filter(d => d.outcome.result === 'partly').length;
+        const didnt = inBand.filter(d => d.outcome.result === 'didnt').length;
+        const barColor = rate >= 70 ? 'var(--accent-like)' : rate >= 40 ? 'var(--accent-super)' : 'var(--accent-nope)';
+        rows += `<tr>
+          <td style="padding:7px 6px;font-weight:600">${b.label}</td>
+          <td style="padding:7px 6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:7px;background:var(--surface3);border-radius:4px;overflow:hidden"><div style="width:${rate}%;height:100%;background:${barColor}"></div></div>
+              <span style="font-family:var(--font-mono);font-size:12px;min-width:34px;text-align:right">${rate}%</span>
+            </div>
+          </td>
+          <td style="padding:7px 6px;color:var(--text3);font-size:11px;white-space:nowrap">${held}✓ ${partly}~ ${didnt}✗</td>
+        </tr>`;
+      });
+
+      let insight = '';
+      if (scored.length >= 3 && highRate !== null) {
+        if (highRate >= 75) insight = 'Your high-confidence calls are holding — well calibrated. Trust them.';
+        else if (highRate >= 50) insight = 'High-confidence calls hold about half the time — mild overconfidence. Widen options before committing.';
+        else insight = 'High-confidence calls often don\'t hold — a strong overconfidence signal. Reality-test assumptions and pre-mortem before deciding.';
+      }
+
+      body.innerHTML = !scored.length
+        ? `<div style="text-align:center;color:var(--text3);padding:20px 8px;font-size:13px">
+             No decisions scored yet.<br><br>
+             Set a <strong>Revisit Date</strong> on a decision; when it comes due it resurfaces on Home, and you record whether the call <em>held</em>. After a few, this panel shows whether your confidence is calibrated.
+             ${dueUnscored.length ? `<br><br><strong style="color:var(--accent-super)">${dueUnscored.length} decision${dueUnscored.length !== 1 ? 's' : ''} due to score now.</strong>` : ''}
+           </div>`
+        : `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Of decisions you marked at each confidence level, how many actually held? (held=1, partly=½, didn't=0 · ${scored.length} scored)</div>
+           <table style="width:100%;border-collapse:collapse;font-size:13px">
+             <thead><tr style="border-bottom:1px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.05em">
+               <th style="text-align:left;padding:6px">Confidence</th><th style="text-align:left;padding:6px">Hit rate</th><th style="text-align:left;padding:6px">Mix</th>
+             </tr></thead>
+             <tbody>${rows}</tbody>
+           </table>
+           ${insight ? `<div style="margin-top:14px;padding:11px 13px;background:var(--surface3);border-radius:var(--r-sm);border-left:3px solid var(--accent);font-size:12.5px;line-height:1.5">💡 ${insight}</div>` : ''}
+           ${dueUnscored.length ? `<div style="margin-top:10px;font-size:12px;color:var(--accent-super)">↻ ${dueUnscored.length} more decision${dueUnscored.length !== 1 ? 's' : ''} past its revisit date, waiting to be scored.</div>` : ''}`;
+
+      document.getElementById('calibration-overlay').style.display = 'flex';
+    }
+    function closeCalibration() {
+      document.getElementById('calibration-overlay').style.display = 'none';
+    }
+
     // ─── RENDERING CONTENT ───────────────────────────────────────────────────────
     function renderContent() {
       const dec = decisions.find(d => d.id === currentId);
@@ -837,7 +941,7 @@
       if (currentTab === 'log') {
         const projOpts = HubData.getProjects().map(p => `<option value="${p.id}" ${dec.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
-        const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote || dec.cynefin);
+        const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote || dec.cynefin || dec.alternative || dec.revisitWhen || dec.revisitDate || dec.outcome);
         const obsidianLink = (() => { const v = (HubStorage.get('hub-settings-v1') || {}).obsidianVault || ''; return (dec.obsidianNote && v) ? `<a href="obsidian://open?vault=${encodeURIComponent(v)}&file=${encodeURIComponent(dec.obsidianNote)}" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;transition:background 0.12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface3)'">⟡ Open</a>` : ''; })();
         c.innerHTML = `
           <div class="card">
@@ -898,9 +1002,50 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Reasoning & Evidence</label>
+                <label class="form-label">Reasoning & Evidence <span style="color:var(--text3);font-size:11px;font-weight:400">(why — the cause behind the effect)</span></label>
                 <textarea class="form-textarea" id="i-reason" style="min-height:100px">${dec.reason || ''}</textarea>
               </div>
+
+              <div class="form-group">
+                <label class="form-label">Alternative Considered <span style="color:var(--text3);font-size:11px;font-weight:400">(what was rejected, and why)</span></label>
+                <textarea class="form-textarea" id="i-alternative" style="min-height:70px" placeholder="The option not taken — and the reason it lost">${dec.alternative || ''}</textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" style="flex:2">
+                  <label class="form-label">Revisit When <span style="color:var(--text3);font-size:11px;font-weight:400">(the condition that would reopen this)</span></label>
+                  <input class="form-input" id="i-revisit-when" value="${(dec.revisitWhen || '').replace(/"/g, '&quot;')}" placeholder='e.g. "if adoption stays flat after the pilot"'>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Revisit Date <span style="color:var(--text3);font-size:11px;font-weight:400">(resurfaces on Home)</span></label>
+                  <input class="form-input" type="date" id="i-revisit-date" value="${dec.revisitDate || ''}">
+                </div>
+              </div>
+
+              ${(() => {
+                const due = dec.revisitDate && dec.revisitDate <= new Date().toISOString().slice(0, 10);
+                const o = dec.outcome || {};
+                const showOutcome = !!(dec.outcome || due);
+                return `
+              <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+                <label class="form-label" style="display:flex;align-items:center;gap:8px">
+                  Outcome ${due && !dec.outcome ? '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-super);background:color-mix(in srgb,var(--accent-super) 15%,transparent);padding:2px 7px;border-radius:999px">↻ revisit due</span>' : ''}
+                  <span style="color:var(--text3);font-size:11px;font-weight:400">(calibration: did the call hold?)</span>
+                </label>
+                <div class="form-row">
+                  <div class="form-group" style="flex:1">
+                    <select class="form-select" id="i-outcome-result">
+                      <option value="" ${!o.result ? 'selected' : ''}>— not scored yet —</option>
+                      <option value="held"    ${o.result === 'held'    ? 'selected' : ''}>✓ Held — right call</option>
+                      <option value="partly"  ${o.result === 'partly'  ? 'selected' : ''}>~ Partly — mixed</option>
+                      <option value="didnt"   ${o.result === 'didnt'   ? 'selected' : ''}>✗ Didn't hold — wrong call</option>
+                      <option value="tooearly"${o.result === 'tooearly'? 'selected' : ''}>… Too early to tell</option>
+                    </select>
+                  </div>
+                </div>
+                <textarea class="form-textarea" id="i-outcome-note" style="min-height:60px${showOutcome ? '' : ';opacity:.6'}" placeholder="What actually happened? (vs. your confidence at the time)">${o.note || ''}</textarea>
+              </div>`;
+              })()}
 
               <div class="form-group" style="display:flex;gap:10px;align-items:flex-end">
                 <div style="flex:1">

@@ -38,7 +38,8 @@ Tools are grouped by the phase of work they support.
 |------|-------------|
 | **Idea Swiper** | Rapid triage — swipe ideas into Like / Super / Nope piles, send survivors straight to Project Hub |
 | **KMQT Board** | Four-lane board: Known / Messy / Questions / Thinking — the messy middle of any complex problem |
-| **Decision Hub** | Structured decision log with Cynefin domain tags, confidence scores, Assumption tracker, and an alignment matrix |
+| **Decision Hub** | Structured decision log with Cynefin domain tags, confidence scores, Assumption tracker, alignment matrix, revisit dates + outcome calibration |
+| **Argument Hub** | Build a case top-down with the Pyramid Principle — SCQA intro, governing thought, MECE supporting pyramid, Markdown export |
 | **Canvas Hub** | Infinite spatial canvas for freeform notes, diagrams, and sticky thoughts |
 | **Assumption Tracker** | Assumption-Based Planning lanes (Assumed → Testing → Validated → Invalidated), accessible via Decision Hub |
 
@@ -216,7 +217,8 @@ project-hub.html        # Project + task tracking
 schedule.html           # Calendar / timeline
 idea-swiper.html        # Rapid idea triage (swipe)
 kmqt-board.html         # Known / Messy / Questions / Thinking board
-decision-hub.html       # Decision log + assumptions + alignment matrix
+decision-hub.html       # Decision log + assumptions + alignment matrix + calibration
+argument-hub.html       # Pyramid Principle argument builder (SCQA, MECE, export)
 canvas-hub.html         # Infinite spatial canvas
 graph-hub.html          # Task dependency graph (vis-network)
 focus-hub.html          # Pomodoro focus timer + GTD context
