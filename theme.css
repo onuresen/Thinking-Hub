@@ -24,6 +24,7 @@
   --accent: #b8f033;
   --accent-dim: rgba(184, 240, 51, 0.1);
   --accent-glow: rgba(184, 240, 51, 0.25);
+  --on-accent: #111;  /* text on accent fills (canonical ui-system alias) */
 
   /* Secondary identity — warm coral, used sparingly for atmosphere & dual-tone accents */
   --accent2: #ff8a5c;
@@ -53,10 +54,13 @@
   --border-purple: #5c3a70;
   --border-red: #6b3333;
 
-  /* Radius */
+  /* Radius (--r-md/-lg/-pill = canonical ui-system aliases) */
   --r: 12px;
   --r-sm: 8px;
   --r-chip: 5px;
+  --r-md: var(--r);
+  --r-lg: 16px;
+  --r-pill: 999px;
 
   /* Z-index scale */
   --z-base:    1;
@@ -92,6 +96,7 @@
   --accent: #6fb400;
   --accent-dim: rgba(111, 180, 0, 0.12);
   --accent-glow: rgba(111, 180, 0, 0.25);
+  --on-accent: #111;
 
   --accent2: #e0603a;
   --accent2-dim: rgba(224, 96, 58, 0.1);
@@ -140,6 +145,7 @@
   --accent: #b3402f;
   --accent-dim: rgba(179, 64, 47, 0.1);
   --accent-glow: rgba(179, 64, 47, 0.22);
+  --on-accent: #fff;  /* terracotta accent needs light text */
 
   /* Secondary — ink indigo */
   --accent2: #2e4a78;
@@ -546,7 +552,8 @@ body {
 .session-row,
 .assumption-card,
 .asm-card,
-.lh-entry-item {
+.lh-entry-item,
+.ui-row {
   position: relative;
 }
 
@@ -559,7 +566,8 @@ body {
 .session-row::after,
 .assumption-card::after,
 .asm-card::after,
-.lh-entry-item::after {
+.lh-entry-item::after,
+.ui-row::after {
   content: '';
   position: absolute;
   left: 0;
@@ -583,7 +591,8 @@ body {
 .session-row:hover::after,
 .assumption-card:hover::after,
 .asm-card:hover::after,
-.lh-entry-item:hover::after {
+.lh-entry-item:hover::after,
+.ui-row:hover::after {
   opacity: 1;
   transform: translateX(0);
 }
