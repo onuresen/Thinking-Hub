@@ -380,10 +380,20 @@ window.HubLinks = (() => {
       .hl-tool-tabs {
         display: flex;
         gap: 4px;
-        padding: 10px 14px 0;
+        padding: 10px 14px 10px;
         overflow-x: auto;
         flex-shrink: 0;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.25) transparent;
       }
+      .hl-tool-tabs::-webkit-scrollbar { height: 5px; }
+      .hl-tool-tabs::-webkit-scrollbar-track { background: transparent; }
+      .hl-tool-tabs::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.25);
+        border-radius: 3px;
+      }
+      .hl-tool-tabs::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
       .hl-tool-tab {
         border: 1px solid rgba(255,255,255,0.1);
         background: transparent;
@@ -588,6 +598,16 @@ window.HubLinks = (() => {
     document.getElementById('hl-modal-close-btn').onclick = _closePickerModal;
     document.getElementById('hl-btn-cancel').onclick = _closePickerModal;
     document.getElementById('hl-btn-confirm').onclick = _confirmLink;
+
+    // Allow a normal mouse wheel (vertical scroll) to scroll the tool tabs
+    // horizontally, since the tab strip has no vertical overflow of its own.
+    const tabsEl = document.getElementById('hl-tool-tabs');
+    tabsEl.addEventListener('wheel', e => {
+      if (e.deltaY !== 0 && tabsEl.scrollWidth > tabsEl.clientWidth) {
+        e.preventDefault();
+        tabsEl.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
   }
 
   // ── Modal state ────────────────────────────────────────────────────────────
@@ -623,9 +643,11 @@ window.HubLinks = (() => {
     document.getElementById('hl-btn-confirm').disabled = true;
     document.getElementById('hl-selected-hint').textContent = 'Select an item above';
 
-    document.querySelectorAll('.hl-tool-tab').forEach(t =>
-      t.classList.toggle('active', t.dataset.tool === toolId)
-    );
+    document.querySelectorAll('.hl-tool-tab').forEach(t => {
+      const active = t.dataset.tool === toolId;
+      t.classList.toggle('active', active);
+      if (active) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
 
     const items = resolveItems(toolId);
     const list = document.getElementById('hl-items-list');
