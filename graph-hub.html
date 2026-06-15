@@ -730,6 +730,7 @@
       const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const nodeFontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const edgeColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.60)';
+      const autoEdgeColor = isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.25)';
       const _gcss = getComputedStyle(document.documentElement);
       const accentColor = _gcss.getPropertyValue('--accent').trim() || '#b8f033';
       const edgeHover = _gcss.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.45)';
@@ -744,24 +745,47 @@
       const links = HubLinks.getAll();
       function nodeId(tool, itemId) { return `${tool}::${itemId}`; }
 
+      // Linked tasks get a dashed "hosted by" edge to their parent project node
+      const taskProjectMap = new Map();
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => taskProjectMap.set(t.id, p.id)));
+      } catch {}
+      const taskHostEdgeAdded = new Set();
+
       links.forEach(link => {
         [link.a, link.b].forEach(side => {
           const id = nodeId(side.tool, side.itemId);
-          if (nodesMap.has(id)) return;
-          const c = TC[side.tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
-          nodesMap.set(id, {
-            id,
-            label: (side.label || 'Untitled').slice(0, 40),
-            tool: side.tool, itemId: side.itemId,
-            title: `<b>${TOOL_LABELS[side.tool] || side.tool}</b><br>${side.label || 'Untitled'}`,
-            hidden: hiddenTools.has(side.tool),
-            color: { background: c.bg, border: c.border,
-              highlight: { background: c.bg, border: accentColor },
-              hover: { background: c.bg, border: c.border } },
-            font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
-            shape: 'box', borderWidth: 1,
-            margin: { top: 8, bottom: 8, left: 10, right: 10 }
-          });
+          if (!nodesMap.has(id)) {
+            const c = TC[side.tool] || (isDark ? { bg: '#2a2a30', border: '#555' } : { bg: '#e4e4ea', border: '#8888a0' });
+            nodesMap.set(id, {
+              id,
+              label: (side.label || 'Untitled').slice(0, 40),
+              tool: side.tool, itemId: side.itemId,
+              title: `<b>${TOOL_LABELS[side.tool] || side.tool}</b><br>${side.label || 'Untitled'}`,
+              hidden: hiddenTools.has(side.tool),
+              color: { background: c.bg, border: c.border,
+                highlight: { background: c.bg, border: accentColor },
+                hover: { background: c.bg, border: c.border } },
+              font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
+              shape: 'box', borderWidth: 1,
+              margin: { top: 8, bottom: 8, left: 10, right: 10 }
+            });
+          }
+          if (side.tool === 'project-hub' && taskProjectMap.has(side.itemId) && !taskHostEdgeAdded.has(side.itemId)) {
+            const projNodeId = nodeId('project-hub', taskProjectMap.get(side.itemId));
+            if (nodesMap.has(projNodeId) && projNodeId !== id) {
+              taskHostEdgeAdded.add(side.itemId);
+              edges.push({
+                id: `auto::${id}__${projNodeId}`, from: id, to: projNodeId,
+                _auto: true, title: 'task → project',
+                color: { color: autoEdgeColor, highlight: accentColor, hover: autoEdgeColor },
+                width: 1, dashes: [5, 5],
+                arrows: { to: { enabled: true, scaleFactor: 0.45 } },
+                smooth: { type: 'continuous' }, selectionWidth: 1.5
+              });
+            }
+          }
         });
         const et = EDGE_TYPE_CONFIG[link.relType] || EDGE_TYPE_CONFIG['relates'];
         const edgeTitle = link.note ? `📝 ${link.note}` : undefined;
