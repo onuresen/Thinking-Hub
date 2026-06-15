@@ -925,6 +925,17 @@ The "Enabled Projects" checklist in a tool's detail panel was listed in raw `pro
 
 ---
 
+### ~~Priority 59 — Tags Hub: alphabetical sort + filters~~ ✓ Done `[group: tags-hub]`
+Tags Hub's list previously inherited `HubTags.scanUsage()`'s default order (usage count desc). Added a **Sort** chip group (A–Z / Most used, default A–Z) and a **Used in** chip group (All / one chip per `TAG_SOURCES` tool / Unused) above the tag list. Filtering and sorting are applied client-side over `scanUsage()`'s result in `load()`; the search box still narrows further within the active filter. The true "no tags exist anywhere" empty state is now checked against the *unfiltered* `scanUsage()` so an active filter with zero matches shows "No tags match this filter" instead of the onboarding empty-state.
+
+**Key decisions:**
+- **Decision:** Default sort changed to alphabetical (A–Z), not usage. **Why:** that was the explicit ask — usage-desc made the list reorder as counts changed, which is harder to scan when looking for a specific tag to rename/manage. **Confidence:** high.
+- **Decision:** Filter/sort state is session-only (module-level vars, not persisted). **Why:** Tags Hub is a quick management screen, not a place users return to mid-task; persisting would add a new `localStorage` write path for a low-value convenience. **Confidence:** med.
+
+**Files:** `tags-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
