@@ -38,6 +38,21 @@
     .add-row { display: flex; gap: 8px; margin-bottom: 20px; }
     .add-row .field { flex: 1; }
 
+    .tg-filters { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+    .tg-filter-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .tg-filter-group > div { display: flex; gap: 4px; flex-wrap: wrap; }
+    .tg-filter-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text3); margin-right: 2px;
+    }
+    .tg-chip {
+      cursor: pointer; padding: 4px 10px; border-radius: 999px; background: var(--surface2);
+      border: 1px solid transparent; font-size: 12px; font-family: var(--font-body); color: var(--text2);
+      white-space: nowrap; transition: background .12s, border-color .12s, color .12s;
+    }
+    .tg-chip:hover { background: var(--surface3); }
+    .tg-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
     .tag-list-head {
       display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3);
@@ -106,21 +121,66 @@
       <button class="btn btn-primary" onclick="addTopic()">+ Add</button>
     </div>
 
+    <div class="tg-filters">
+      <div class="tg-filter-group">
+        <span class="tg-filter-label">Sort</span>
+        <div id="sort-chips"></div>
+      </div>
+      <div class="tg-filter-group">
+        <span class="tg-filter-label">Used in</span>
+        <div id="source-chips"></div>
+      </div>
+    </div>
+
     <div id="tag-list-wrap"></div>
   </div>
 
   <script>
+    let sortMode = 'name';      // 'name' | 'usage'
+    let sourceFilter = 'all';   // 'all' | TAG_SOURCES id | 'unused'
+
+    function buildFilterChips() {
+      document.getElementById('sort-chips').innerHTML = `
+        <button class="tg-chip active" data-sort="name" onclick="setSort('name')">A–Z</button>
+        <button class="tg-chip" data-sort="usage" onclick="setSort('usage')">Most used</button>
+      `;
+      const chips = [`<button class="tg-chip active" data-source="all" onclick="setSourceFilter('all')">All</button>`];
+      HubTags.TAG_SOURCES.forEach(s => {
+        chips.push(`<button class="tg-chip" data-source="${HubUtils.esc(s.id)}" onclick="setSourceFilter('${s.id}')">${HubUtils.esc(s.label)}</button>`);
+      });
+      chips.push(`<button class="tg-chip" data-source="unused" onclick="setSourceFilter('unused')">Unused</button>`);
+      document.getElementById('source-chips').innerHTML = chips.join('');
+    }
+
+    function setSort(mode) {
+      sortMode = mode;
+      document.querySelectorAll('#sort-chips .tg-chip').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+      renderList();
+    }
+
+    function setSourceFilter(src) {
+      sourceFilter = src;
+      document.querySelectorAll('#source-chips .tg-chip').forEach(b => b.classList.toggle('active', b.dataset.source === src));
+      renderList();
+    }
+
     function load() {
-      return HubTags.scanUsage();
+      let all = HubTags.scanUsage();
+      if (sourceFilter === 'unused') {
+        all = all.filter(t => t.count === 0);
+      } else if (sourceFilter !== 'all') {
+        all = all.filter(t => t.sources.some(s => s.id === sourceFilter));
+      }
+      if (sortMode === 'name') {
+        all = all.slice().sort((a, b) => a.name.localeCompare(b.name));
+      }
+      return all;
     }
 
     function renderList() {
       const wrap = document.getElementById('tag-list-wrap');
-      const all = load();
-      const q = (document.getElementById('tag-search').value || '').trim().toLowerCase();
-      const filtered = q ? all.filter(t => t.name.toLowerCase().includes(q)) : all;
 
-      if (all.length === 0) {
+      if (HubTags.scanUsage().length === 0) {
         wrap.innerHTML = `
           <div class="empty-state-main">
             <div class="es-icon">🏷</div>
@@ -131,8 +191,12 @@
         return;
       }
 
+      const all = load();
+      const q = (document.getElementById('tag-search').value || '').trim().toLowerCase();
+      const filtered = q ? all.filter(t => t.name.toLowerCase().includes(q)) : all;
+
       if (filtered.length === 0) {
-        wrap.innerHTML = `<div class="no-results">No tags match "${HubUtils.esc(q)}"</div>`;
+        wrap.innerHTML = `<div class="no-results">No tags match${q ? ` "${HubUtils.esc(q)}"` : ' this filter'}</div>`;
         return;
       }
 
@@ -257,6 +321,7 @@
 
     // ── Boot ──
     document.addEventListener('DOMContentLoaded', () => {
+      buildFilterChips();
       renderList();
       HubBootstrap.start('tags-hub');
     });
