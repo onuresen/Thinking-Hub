@@ -37,6 +37,7 @@ window.HubLinks = (() => {
     'stakeholder-hub': 'Stakeholders',
     'argument-hub': 'Argument Hub',
     'tool-portfolio': 'Tool Portfolio',
+    'tags-hub': 'Tags',
   };
 
   let _currentTool = null;
@@ -254,6 +255,16 @@ window.HubLinks = (() => {
           id: t.id,
           label: t.name || '(untitled)',
           subtitle: normCat(t.category)
+        }));
+      }
+
+      if (toolId === 'tags-hub') {
+        const data = HubStorage.get('hub-tags-v1');
+        if (!data || !Array.isArray(data.tags)) return [];
+        return data.tags.map(t => ({
+          id: t.name,
+          label: t.name,
+          subtitle: 'Topic'
         }));
       }
     } catch { }

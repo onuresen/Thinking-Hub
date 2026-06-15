@@ -16,6 +16,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
+| `hub-tags.js` | Centralized tag/topic registry: `HubTags.getRegistry/ensure/findCanonical/removeFromRegistry/scanUsage/rename/attachAutocomplete` — `scanUsage`/`rename` operate across all `TAG_SOURCES` (every tool with a `tags` field) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
 | `hub-search.js` | Global Cmd+K search, injected into index.html only |
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
@@ -50,9 +51,10 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 | `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg) and V-Model. (Scrum Board tab removed 2026-06-13, Priority 50.) |
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
+| `tags-hub.html` | Tags — central tag/topic registry; rename/merge duplicates and add topic-only tags, applies everywhere via `hub-tags.js` |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -72,7 +74,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57)
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -844,6 +846,24 @@ Cross-tool links to Project Hub previously only resolved to individual **tasks**
 **Follow-up — linked tasks auto-host to their project ✓ Done:** with both tasks and projects now appearing as graph nodes, a linked task floated with no visual tie to its project — unlike decisions/risks/goals/meetings/stakeholders, which all get an auto dashed edge to their project via `projectId`. `buildGraph()`'s manual-link overlay now builds a `taskProjectMap` (task id → parent project id) from `project-hub-v1`, and for any linked task adds the same dashed "hosted by" auto-edge to its parent project node (deduped via `taskHostEdgeAdded`, only when the project node already exists — i.e. Auto Links is on). No new nodes — just one edge per linked task, keeping the project hierarchy visible without crowding.
 
 **Files:** `hub-links.js`, `graph-hub.html`, `project-hub.html`, `CLAUDE.md`
+
+---
+
+### Priority 57 — Tags Hub: centralized tag/topic registry (Group 1 of 3) `[group: tags-hub]`
+Tags exist scattered across ~5 tools (Learning Log, Reflection Board, KMQT Board, Meeting Hub, Decision Hub) with no shared registry — duplicates like "BIM" / "bim" / "Bim" accumulate and nothing lets a tag stand alone as a "topic" (e.g. for future Dependency Graph topic nodes). Group 1 builds the foundation: a shared registry module + management UI.
+
+- **`hub-tags.js`** (new) — `HubTags` singleton, storage `hub-tags-v1` (`{tags:[{name, createdAt}]}`). `TAG_SOURCES` is a uniform `{id, label, storageKey, collect(data) → [{get(), set(arr)}]}` list covering all 5 tag locations — including `decision-hub-v1`'s comma-separated-string tags via a `get`/`set` adapter that splits/joins, so `scanUsage()` and `rename()` treat array-tags and CSV-tags identically. `scanUsage()` returns per-tag usage counts + per-source breakdown (case-insensitive grouping); `rename(old, new)` rewrites every matching tag across all sources (deduping on merge) and updates the registry; `ensure()`/`findCanonical()`/`removeFromRegistry()` manage standalone "topic" entries; `attachAutocomplete()` wires a `<datalist>` from registry + live usage.
+- **`tags-hub.html`** (new) — lists every tag (registry + in-use, including zero-use "topics") with usage counts and per-tool source chips; inline rename-with-merge (✎), delete-from-registry (✕), add new topic-only tags, search filter. `hub-highlight` listener flashes the matching row.
+- **Wiring** — APPS entry (Tools & Focus group, 🏷, `dx`/Strategy mode), `hub-links.js` `TOOL_NAMES` + `resolveItems('tags-hub')` (reads `hub-tags-v1` directly via `HubStorage`, no `hub-tags.js` dependency needed in other tools), `hub-search.js` `TOOLS` array (Cmd+K), `EXPORT_KEY_LABELS`/`APP_FILE_STORAGE_KEYS`/`SCOPE_KEYS.full`/`MCP_SYNC_KEYS` in `index.html`.
+
+**Bug found + fixed while verifying Cmd+K:** `hub-search.js` declared `const HubSearch = (() => {...})()` instead of `window.HubSearch = ...`. Top-level `const`/`let` in a non-module `<script>` does NOT become a `window` property, so `hub-bootstrap.js`'s `if (window.HubSearch) HubSearch.init()` was always false — **the Cmd+K overlay was never injected and the shortcut never worked, for any tool, since Priority 16/37**. One-line fix (`window.HubSearch = ...`); verified end-to-end with Playwright (overlay opens, "BIM" tag found under "🏷 Tags" group, click navigates to Tags Hub and flashes the row).
+
+**Key decisions:**
+- **Decision:** Unify array-tags (most tools) and CSV-string-tags (`decision-hub-v1`) behind a `{get(), set(arr)}` accessor per `TAG_SOURCES` entry. **Why:** lets `scanUsage`/`rename` be written once with no per-source special-casing. **Confidence:** high.
+- **Decision:** `resolveItems('tags-hub')` reads `hub-tags-v1` directly via `HubStorage`, not through `HubTags`. **Why:** keeps the cross-tool link/search picker working in any tool without forcing `hub-tags.js` as a new dependency everywhere — same pattern `hub-links.js` already uses for every other tool's storage key. **Confidence:** high.
+- **Decision:** `rename()` handles both pure renames and merges in one function (dedupes if the target name already exists on an item). **Why:** from the UI these are the same user action ("change this tag's name to X") — splitting them would need the UI to predict which case applies. **Confidence:** high.
+
+**Files:** `hub-tags.js` (new), `tags-hub.html` (new), `hub-links.js`, `hub-search.js`, `index.html`, `CLAUDE.md`
 
 ---
 
