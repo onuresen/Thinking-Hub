@@ -918,6 +918,13 @@ User report: "when I add a tag in Tags Hub, nothing happens. no list of tags or 
 
 ---
 
+### ~~Priority 58 — Tool Portfolio: "Enabled Projects" list ordering~~ ✓ Done `[group: solo-quick]`
+The "Enabled Projects" checklist in a tool's detail panel was listed in raw `project-hub-v1` storage order (effectively creation order). `_renderProjectLinksHTML()` now groups projects by `proj.group`, ordered per Project Hub's saved `groupOrder` (same order as its Groupings view, unseen groups appended alphabetically), with ungrouped projects last; projects are sorted alphabetically within each group. A small uppercase group-name heading is shown above each group's rows — only when more than one group exists (a single implicit "no groups" bucket renders as a flat alphabetical list, unchanged from before except for the new alphabetical sort).
+
+**Files:** `tool-portfolio.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
