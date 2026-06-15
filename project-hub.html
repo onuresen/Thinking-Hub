@@ -661,6 +661,56 @@
       width: 110px;
     }
 
+    /* ── Groupings view ── */
+    .groupings-wrap { max-width: 640px; }
+    .grouping-hint {
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+    .grouping-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      cursor: grab;
+      transition: border-color 0.12s, box-shadow 0.12s, opacity 0.12s;
+    }
+    .grouping-row:active { cursor: grabbing; }
+    .grouping-row-ungrouped { cursor: default; opacity: 0.7; }
+    .grouping-row.drag-src { opacity: 0.4; }
+    .grouping-row.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+    .grouping-drag-handle {
+      color: var(--text3);
+      font-size: 12px;
+      flex-shrink: 0;
+      width: 12px;
+      text-align: center;
+    }
+    .grouping-accent { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .grouping-main { flex: 1; min-width: 0; }
+    .grouping-name {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .grouping-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
     .project-card-stripe {
       position: absolute;
       top: 0;
@@ -1821,6 +1871,10 @@
           <span class="nav-icon">▦</span> Overview
           <span class="nav-badge" id="badge-overview">0</span>
         </div>
+        <div class="nav-item" onclick="setView('groupings')">
+          <span class="nav-icon">▤</span> Groupings
+          <span class="nav-badge" id="badge-groupings">0</span>
+        </div>
         <div class="nav-item" onclick="setView('tasks')">
           <span class="nav-icon">✓</span> All Tasks
           <span class="nav-badge" id="badge-tasks">0</span>
@@ -2169,7 +2223,7 @@
     }
 
     function saveState() {
-      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, kanbanWip: state.kanbanWip, concepts: state.concepts });
+      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, kanbanWip: state.kanbanWip, concepts: state.concepts, groupOrder: state.groupOrder });
     }
 
     function setKanbanWip(colId, val) {
@@ -2184,6 +2238,7 @@
     let state = {
       ...persisted,
       concepts: persisted.concepts || [],
+      groupOrder: persisted.groupOrder || [],
       selectedProject: null,
       overviewFilter: { members: [], status: 'all', search: '', sort: 'manual' },
       allTasksFilter: { members: [], status: 'all', priority: 'all' },
@@ -2229,6 +2284,14 @@
     function projectProgress(proj) {
       if (!proj.tasks.length) return 0;
       return Math.round((proj.tasks.filter(t => t.done).length / proj.tasks.length) * 100);
+    }
+    // Resolves the user's saved drag-and-drop order for group names (state.groupOrder),
+    // appending any newly-seen groups alphabetically at the end. Shared by the Overview
+    // grouping and the Groupings view so both stay in sync.
+    function getGroupOrder(names) {
+      const known = (state.groupOrder || []).filter(g => names.includes(g));
+      const extra = names.filter(g => !known.includes(g)).sort((a, b) => a.localeCompare(b));
+      return [...known, ...extra];
     }
     function isOverdue(d) { return d ? new Date(d) < new Date() : false; }
     function formatDate(d) {
@@ -2495,6 +2558,8 @@
         document.getElementById('badge-matrix').textContent = (mxd.items || []).filter(i => !i.done).length;
       } catch { document.getElementById('badge-matrix').textContent = '0'; }
       document.getElementById('badge-concepts').textContent = (state.concepts || []).length;
+      const groupNames = new Set(state.projects.map(p => (p.group || '').trim()).filter(Boolean));
+      document.getElementById('badge-groupings').textContent = groupNames.size;
     }
 
     // ─── Mobile sidebar ───────────────────────────────────────────────────────────
@@ -2517,10 +2582,11 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix', concepts: 'Concept Matrix' };
+      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix', concepts: 'Concept Matrix' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
       const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept' };
-      document.getElementById('main-action-btn').textContent = btnLabels[view];
+      document.getElementById('main-action-btn').textContent = btnLabels[view] || '+ Task';
+      document.getElementById('main-action-btn').style.display = view === 'groupings' ? 'none' : '';
       document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
       renderContent();
     }
@@ -2561,6 +2627,7 @@
       else if (state.currentView === 'goals') renderAllGoals(c);
       else if (state.currentView === 'matrix') renderMxView(c);
       else if (state.currentView === 'concepts') renderConceptMatrix(c);
+      else if (state.currentView === 'groupings') renderGroupings(c);
     }
 
     // ─── OVERVIEW ────────────────────────────────────────────────────────────────
@@ -2720,14 +2787,15 @@
         }
       }
 
-      // Group projects: named groups first (sorted by name), then ungrouped
+      // Group projects: named groups first (in the user's saved order, see Groupings view), then ungrouped
       const groupMap = new Map();
       visible.forEach(proj => {
         const key = (proj.group || '').trim();
         if (!groupMap.has(key)) groupMap.set(key, []);
         groupMap.get(key).push(proj);
       });
-      const namedGroups = [...groupMap.entries()].filter(([k]) => k).sort((a, b) => a[0].localeCompare(b[0]));
+      const orderedGroupNames = getGroupOrder([...groupMap.keys()].filter(k => k));
+      const namedGroups = orderedGroupNames.map(name => [name, groupMap.get(name)]).filter(([, projs]) => projs && projs.length);
       const ungrouped = groupMap.get('') || [];
       const renderOrder = [...namedGroups, ...(ungrouped.length ? [['', ungrouped]] : [])];
 
@@ -2859,6 +2927,110 @@
         });
       });
       container.appendChild(grid);
+    }
+
+    // ─── GROUPINGS ───────────────────────────────────────────────────────────────
+    function renderGroupings(container) {
+      const wrap = document.createElement('div'); wrap.className = 'animate-in groupings-wrap';
+
+      const groupMap = new Map();
+      state.projects.forEach(proj => {
+        const key = (proj.group || '').trim();
+        if (!groupMap.has(key)) groupMap.set(key, []);
+        groupMap.get(key).push(proj);
+      });
+      const namedKeys = [...groupMap.keys()].filter(k => k);
+      const ungrouped = groupMap.get('') || [];
+
+      if (!namedKeys.length) {
+        wrap.innerHTML = `<div class="empty-state"><div class="e-icon">▤</div><div class="e-title">No groups yet</div><div class="e-sub" style="max-width:320px;margin:0 auto">Click "＋ group" on a project card in Overview to tag it. Groups will show up here, ordered and with stats — drag to reorder.</div></div>`;
+        container.appendChild(wrap);
+        return;
+      }
+
+      const orderedNames = getGroupOrder(namedKeys);
+
+      const hint = document.createElement('div');
+      hint.className = 'grouping-hint';
+      hint.textContent = 'Drag a group to reorder — the Overview reflects this order.';
+      wrap.appendChild(hint);
+
+      let dragSrc = null;
+
+      function statsFor(projects) {
+        const openTasks = projects.reduce((s, p) => s + p.tasks.filter(t => !t.done).length, 0);
+        const avgProgress = Math.round(projects.reduce((s, p) => s + projectProgress(p), 0) / projects.length);
+        const goalProgresses = projects.flatMap(p => p.goals.map(g => g.progress));
+        const avgGoal = goalProgresses.length
+          ? Math.round(goalProgresses.reduce((a, b) => a + b, 0) / goalProgresses.length)
+          : null;
+        return { openTasks, avgProgress, avgGoal };
+      }
+
+      function buildRow(name, projects, isUngrouped) {
+        const { openTasks, avgProgress, avgGoal } = statsFor(projects);
+        const accentColor = isUngrouped ? 'var(--text3)' : (projects[0]?.color || 'var(--text3)');
+
+        const row = document.createElement('div');
+        row.className = 'grouping-row' + (isUngrouped ? ' grouping-row-ungrouped' : '');
+        row.draggable = !isUngrouped;
+        row.dataset.groupName = name;
+        row.innerHTML = `
+          <span class="grouping-drag-handle">${isUngrouped ? '' : '⠿'}</span>
+          <div class="grouping-accent" style="background:${accentColor}"></div>
+          <div class="grouping-main">
+            <div class="grouping-name">${isUngrouped ? 'Ungrouped' : HubUtils.esc(name)}</div>
+            <div class="grouping-stats">
+              <span>${projects.length} project${projects.length !== 1 ? 's' : ''}</span>
+              <span>${openTasks} open task${openTasks !== 1 ? 's' : ''}</span>
+              <span>avg progress ${avgProgress}%</span>
+              ${avgGoal !== null ? `<span>avg goal ${avgGoal}%</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        if (!isUngrouped) {
+          row.addEventListener('dragstart', e => {
+            dragSrc = name;
+            row.classList.add('drag-src');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          row.addEventListener('dragend', () => {
+            row.classList.remove('drag-src');
+            dragSrc = null;
+            wrap.querySelectorAll('.grouping-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+          });
+          row.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (dragSrc && dragSrc !== name) row.classList.add('drag-over');
+          });
+          row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+          row.addEventListener('drop', e => {
+            e.preventDefault();
+            row.classList.remove('drag-over');
+            if (!dragSrc || dragSrc === name) return;
+            const order = [...orderedNames];
+            const fromIdx = order.indexOf(dragSrc);
+            const toIdx = order.indexOf(name);
+            if (fromIdx === -1 || toIdx === -1) return;
+            const [moved] = order.splice(fromIdx, 1);
+            order.splice(toIdx, 0, moved);
+            state.groupOrder = order;
+            dragSrc = null;
+            saveState();
+            renderContent();
+            showToast('Group order updated');
+          });
+        }
+
+        return row;
+      }
+
+      orderedNames.forEach(name => wrap.appendChild(buildRow(name, groupMap.get(name), false)));
+      if (ungrouped.length) wrap.appendChild(buildRow('', ungrouped, true));
+
+      container.appendChild(wrap);
     }
 
     // ─── ALL TASKS (LIST) ─────────────────────────────────────────────────────────
