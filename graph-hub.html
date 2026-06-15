@@ -1126,6 +1126,15 @@
               { k: 'Priority',v: t.priority || '—' },
             ];
           }
+          const proj = (data.projects || []).find(p => p.id === itemId);
+          if (proj) {
+            const open = (proj.tasks || []).filter(t => !t.done).length;
+            return [
+              { k: 'Type',   v: 'Project' },
+              { k: 'Status', v: proj.status || '—' },
+              { k: 'Open tasks', v: String(open) },
+            ];
+          }
         }
         if (tool === 'decision-hub') {
           const data = HubStorage.get('decision-hub-v1') || [];
