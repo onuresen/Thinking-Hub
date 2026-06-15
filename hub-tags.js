@@ -104,11 +104,16 @@ window.HubTags = (() => {
     return (name || '').trim();
   }
 
+  // Case-insensitive lookup against the registry, falling back to any
+  // already-in-use tag (so typing "bim" when "BIM" is used in Learning Log
+  // but not yet registered doesn't create a duplicate-casing entry).
   function findCanonical(name) {
     const key = normalize(name).toLowerCase();
     if (!key) return null;
-    const found = getRegistry().find(t => t.name.toLowerCase() === key);
-    return found ? found.name : null;
+    const reg = getRegistry().find(t => t.name.toLowerCase() === key);
+    if (reg) return reg.name;
+    const used = scanUsage().find(u => u.name.toLowerCase() === key && u.count > 0);
+    return used ? used.name : null;
   }
 
   // Ensure a tag exists in the registry (case-insensitive). Returns the

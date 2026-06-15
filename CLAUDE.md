@@ -867,6 +867,24 @@ Tags exist scattered across ~5 tools (Learning Log, Reflection Board, KMQT Board
 
 ---
 
+### ~~Priority 57 follow-up — Group 2: retrofit existing tag inputs~~ ✓ Done `[group: tags-hub]`
+Group 1 built the registry; Group 2 wires it into the tag-entry UIs that already existed so new tags get canonical casing + autocomplete suggestions automatically.
+
+- **`learning-hub.html`** — loads `hub-tags.js`; `renderDetail()` calls `HubTags.attachAutocomplete(#tag-input)`; `handleTagKey()` runs the typed tag through `HubTags.ensure()` before adding it to `item.tags`.
+- **`decision-hub.html`** — loads `hub-tags.js`; new `normalizeTags(raw)` helper splits the CSV `#i-tags` value, runs each part through `HubTags.ensure()`, dedupes case-insensitively, and rejoins — called from `saveCurrent()`. `renderContent()`'s Log tab attaches `HubTags.attachAutocomplete(#i-tags)`.
+- **`kmqt-board.html`** — loads `hub-tags.js`; `openEdit()` attaches autocomplete to `#edit-tags`; `saveEdit()` runs each parsed tag through `HubTags.ensure()` with the same dedup pattern before assigning `item.tags`.
+- **`hub-tags.js` — `findCanonical()` enhanced**: previously only matched against registry entries; now also falls back to any tag already in use (`scanUsage()`) with a matching lowercase name. Fixes a duplicate-casing bug where typing `"bim"` when `"BIM"` was already used somewhere (but not yet in the registry) would register `"bim"` as a second, separate tag instead of normalizing to the existing `"BIM"`.
+
+**Verified** (Playwright, local static server): all three tools — typing a lowercase/duplicate variant of an existing tag normalizes to the canonical casing, dedupes, registers in `hub-tags-v1`, and the input gets a working `<datalist>` (`list="..."` attribute populated with registry + in-use tag names). No console errors in any of the three tools.
+
+**Key decisions:**
+- **Decision:** Skip `reflection-hub.html` and `meetings-hub.html` — no retrofit. **Why:** neither tool has an actual tag-*input* UI to retrofit; reflection-hub's tags are display/copy-only and meetings-hub never sets a `tags` field anywhere in its UI. Adding new tag-entry UI to either tool would be a feature addition beyond Group 2's retrofit scope. **Alternative rejected:** build new tag-input UI for both — out of scope, not requested, and not addressing an existing pain point. **Confidence:** high. **Revisit when:** either tool gains a tag-entry field for other reasons — retrofit it then.
+- **Decision:** `findCanonical()` now checks live usage (`scanUsage()`) in addition to the registry. **Why:** the registry only contains tags explicitly `ensure()`'d or added as topics; many tags already exist on items from before Tags Hub existed and were never registered. Without this fallback, `ensure("bim")` when `"BIM"` is already used (but unregistered) would create a second `"bim"` registry entry instead of normalizing to the existing casing. **Confidence:** high.
+
+**Files:** `hub-tags.js`, `learning-hub.html`, `decision-hub.html`, `kmqt-board.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

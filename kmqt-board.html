@@ -7,6 +7,7 @@
   <title>KMQT Board (Standalone)</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-tags.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -1673,7 +1674,10 @@
       state.editingId = itemId;
       el.editText.value = item.text;
       const tagsInput = document.getElementById('edit-tags');
-      if (tagsInput) tagsInput.value = (item.tags || []).join(', ');
+      if (tagsInput) {
+        tagsInput.value = (item.tags || []).join(', ');
+        if (typeof HubTags !== 'undefined') HubTags.attachAutocomplete(tagsInput);
+      }
       el.modal.style.display = 'flex';
       setTimeout(() => el.editText.focus(), 30);
     }
@@ -1700,7 +1704,17 @@
       }
       item.text = t.slice(0, 240);
       const tagsRaw = (document.getElementById('edit-tags')?.value || '').trim();
-      item.tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+      let tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+      if (typeof HubTags !== 'undefined') {
+        const seen = new Set();
+        tags = tags.map(t => HubTags.ensure(t)).filter(t => {
+          const key = t.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+      item.tags = tags;
       closeEdit();
       autosave();
       renderAll();
