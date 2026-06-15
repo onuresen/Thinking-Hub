@@ -54,20 +54,6 @@ window.HubTags = (() => {
       }
     },
     {
-      id: 'kmqt-board', label: 'KMQT Board',
-      storageKey: 'kmqt_current_v2',
-      collect(data) {
-        const out = [];
-        ['K', 'M', 'Q', 'T'].forEach(col => {
-          ((data.columns && data.columns[col]) || []).forEach(it => out.push({
-            get: () => it.tags || [],
-            set: arr => { it.tags = arr; },
-          }));
-        });
-        return out;
-      }
-    },
-    {
       id: 'meetings-hub', label: 'Meeting Hub',
       storageKey: 'meetings-hub-v1',
       collect(data) {
@@ -138,6 +124,37 @@ window.HubTags = (() => {
   function removeFromRegistry(name) {
     const key = normalize(name).toLowerCase();
     saveRegistry(getRegistry().filter(t => t.name.toLowerCase() !== key));
+  }
+
+  // Removes a tag everywhere: strips it (case-insensitive) from every item
+  // across all TAG_SOURCES and drops it from the registry. Returns the
+  // number of items it was removed from.
+  function removeTag(name) {
+    const key = normalize(name).toLowerCase();
+    if (!key) return 0;
+    let itemCount = 0;
+
+    for (const src of TAG_SOURCES) {
+      const data = HubStorage.get(src.storageKey);
+      if (!data) continue;
+      let entries;
+      try { entries = src.collect(data) || []; } catch { continue; }
+      let changed = false;
+      for (const entry of entries) {
+        const arr = entry.get() || [];
+        if (!arr.length) continue;
+        const out = arr.filter(t => t.toLowerCase() !== key);
+        if (out.length !== arr.length) {
+          entry.set(out);
+          changed = true;
+          itemCount++;
+        }
+      }
+      if (changed) HubStorage.set(src.storageKey, data);
+    }
+
+    removeFromRegistry(name);
+    return itemCount;
   }
 
   // ── Usage scan ───────────────────────────────────────────────────────────
@@ -262,7 +279,7 @@ window.HubTags = (() => {
     STORAGE_KEY,
     TAG_SOURCES,
     getRegistry, saveRegistry,
-    ensure, findCanonical, removeFromRegistry,
+    ensure, findCanonical, removeFromRegistry, removeTag,
     scanUsage, rename,
     attachAutocomplete,
   };
