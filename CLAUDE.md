@@ -942,6 +942,20 @@ User-reported screenshot showed large empty left/right margins (`.content { max-
 **Key decisions:**
 - **Decision:** Split max-widths — `.content` at 1100px, `.intro` paragraph at 760px. **Why:** the tag list benefits from the extra horizontal room (more space for source chips before wrapping), but a 1100px-wide paragraph of body text would hurt readability. **Confidence:** high.
 
+---
+
+### ~~Priority 61 — Tags Hub: drop retired KMQT Board source + cascading tag delete~~ ✓ Done `[group: tags-hub]`
+Two bug fixes from real use.
+
+- **Stale "KMQT Board" source** — `hub-tags.js`'s `TAG_SOURCES` had a `kmqt-board` entry reading `kmqt_current_v2`, the pre-Reflection-Board tool's leftover localStorage. KMQT Board was retired long ago (its data is now only a one-time "Import KMQT" source inside Reflection Board, read directly via `HubStorage` — not through `HubTags`), but Tags Hub kept surfacing its old tags as a live "KMQT Board" source/filter chip even though Reflection Board itself was empty. Removed the `kmqt-board` entry entirely — its tags no longer appear in `scanUsage()`, the "Used in" filter, or the Dependency Graph's tag nodes. `kmqt_current_v2` itself is untouched, so "Import KMQT" in Reflection Board still works.
+- **"Delete" did nothing for in-use tags** — `deleteTopic()` only ever called `HubTags.removeFromRegistry()`, which deletes the registry entry but leaves the tag on every item that has it. For a tag still in use, `scanUsage()` (which also includes any tag still attached to an item, registered or not) would still return it on the next render, so the row reappeared unchanged — looking like the click did nothing. New `HubTags.removeTag(name)` strips the tag (case-insensitive) from every item across all `TAG_SOURCES` *and* the registry, returning the affected-item count; `deleteTopic()` now calls this, with a confirm dialog and toast reflecting the cascading delete ("used on N items — delete it everywhere?").
+
+**Key decisions:**
+- **Decision:** Remove the `kmqt-board` `TAG_SOURCES` entry outright rather than special-casing it (e.g. hiding it only when Reflection Board is empty). **Why:** the tool is permanently retired and its data is a one-shot import source, not a live tag surface — there's no future state where treating `kmqt_current_v2` as an active `TAG_SOURCES` entry would be correct again. **Alternative rejected:** conditionally hide based on Reflection Board's contents — adds runtime branching for a source that should never have stayed registered post-retirement. **Confidence:** high.
+- **Decision:** `removeTag()` cascades to *every* source unconditionally — no "remove from registry only" option remains. **Why:** that was the explicit ask ("no need to have orphaned tags in tools when the tag is deleted from Tag Hub"), and a registry-only removal is exactly the behavior that looked broken (tag reappears because it's still in use). **Confidence:** high.
+
+**Files:** `hub-tags.js`, `tags-hub.html`, `CLAUDE.md`
+
 **Files:** `tags-hub.html`, `CLAUDE.md`
 
 ---

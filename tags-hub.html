@@ -220,7 +220,7 @@
           <div class="tag-sources">${sourcesHtml}</div>
           <div class="tag-actions">
             <button class="tag-act" title="Rename / merge" onclick="startRename('${jsStr(t.name)}')">✎</button>
-            <button class="tag-act danger" title="${t.count > 0 ? 'Remove from registry (still used elsewhere)' : 'Remove'}" onclick="deleteTopic('${jsStr(t.name)}')">✕</button>
+            <button class="tag-act danger" title="${t.count > 0 ? 'Delete tag everywhere' : 'Remove'}" onclick="deleteTopic('${jsStr(t.name)}')">✕</button>
           </div>
         </div>`;
     }
@@ -283,13 +283,13 @@
       const usage = HubTags.scanUsage().find(t => t.name.toLowerCase() === name.toLowerCase());
       const count = usage ? usage.count : 0;
       if (count > 0) {
-        if (!confirm(`"${name}" is still used ${count} time${count === 1 ? '' : 's'}. Remove it from the registry anyway? (existing tags on items are kept, just won't be suggested)`)) return;
+        if (!confirm(`"${name}" is used on ${count} item${count === 1 ? '' : 's'}. Delete it everywhere — removing it from ${count === 1 ? 'that item' : 'all of those items'} too?`)) return;
       } else {
         if (!confirm(`Remove "${name}" from the tag registry?`)) return;
       }
-      HubTags.removeFromRegistry(name);
+      const removedFrom = HubTags.removeTag(name);
       renderList();
-      showToastSafe(`Removed "${name}"`, 'success');
+      showToastSafe(`Deleted "${name}"${removedFrom > 0 ? ` from ${removedFrom} item${removedFrom === 1 ? '' : 's'}` : ''}`, 'success');
     }
 
     function flashRow(name) {
