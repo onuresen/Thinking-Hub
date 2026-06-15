@@ -885,6 +885,26 @@ Group 1 built the registry; Group 2 wires it into the tag-entry UIs that already
 
 ---
 
+### ~~Priority 57 follow-up — Group 3: Dependency Graph Tag nodes~~ ✓ Done `[group: tags-hub]`
+Final Tags Hub group — every tag from the central registry now appears as a node in `graph-hub.html`, linkable like any other tool via the existing "+ New Link" modal.
+
+- **`graph-hub.html`** loads `hub-tags.js`. `loadAutoNodes()` now creates one `tags-hub::<name>` node per `HubTags.scanUsage()` entry (registry tags including zero-use "topics", plus any tag already in use anywhere but not yet registered) — built *before* the per-tool sections so item nodes can reference them. New `addTagEdges(itemId, tags)` adds a dotted (`[2,3]`) auto-edge from a node to each of its tag nodes, titled `tagged: <name>`; wired into the three auto-node sections whose source tools are also `TAG_SOURCES` and already have graph nodes — decisions (`d.tags` CSV split), meetings (`m.tags` array), learning items (`item.tags` array). `addAutoEdge()` gained an optional 4th `dashStyle` param (defaults to the existing `[5,5]` "hosted by"/"belongs to" dash) so tag edges get a visually distinct dotted style.
+- **`TOOL_LABELS`/`TOOL_COLORS_DARK`/`TOOL_COLORS_LIGHT`** gained a `tags-hub` entry — label "Tags", colors reuse the existing `--node-gray`/`--border-gray` token hex values (`#2a2a30`/`#444` dark, `#e4e4ea`/`#8888a0` light) since gray was the only one of the 6 node-color tokens not yet claimed by another tool, and it suits tags' role as neutral cross-cutting connectors.
+- **`fetchNodeMeta()`** gained a `tags-hub` case showing "Used in: N item(s)" + "Sources: ..." (or "— not yet used —" for zero-use topics) via `HubTags.scanUsage()`.
+- Subscribed to `hub-tags-v1` so the graph rebuilds live when tags are renamed/added/removed via Tags Hub.
+- **`hub-links.js`** `resolveItems('tags-hub')` subtitle changed `'Topic'` → `'Tag'` (the user flagged that introducing "Topic"/"Theme" terminology in the graph would drift from the "Tags" name used everywhere else — Tags Hub, sidebar, Cmd+K). Also enhanced: when `HubTags` is loaded (now true in `graph-hub.html`), `resolveItems('tags-hub')` returns `HubTags.scanUsage()` results (registry + any in-use-but-unregistered tags) instead of registry-only — otherwise an in-use tag like "Shop drawing" would render as a graph node (via `scanUsage()`) but be unselectable in the "+ New Link" picker and fail to preselect via right-click "Add link from here". Tools without `hub-tags.js` loaded keep the old registry-only fallback.
+
+**Verified** (Playwright): seeded `hub-tags-v1` (BIM + zero-use "unused-topic"), a decision with CSV tags "BIM, Shop drawing", a meeting tagged "Shop drawing", a learning item tagged "BIM". After load, `nodesMap` contained `tags-hub::BIM`, `tags-hub::Shop drawing` (in-use but unregistered), and `tags-hub::unused-topic`, plus the three item nodes. `fetchNodeMeta('tags-hub','BIM')` → "Used in: 2 item(s)" / "Sources: Learning Log, Decision Hub"; `fetchNodeMeta('tags-hub','unused-topic')` → "— not yet used —". "+ New Link" modal lists "Tags" as a tool with all three tags selectable; right-click-style preselect of the unregistered "Shop drawing" tag correctly populates the picker. (vis-network itself couldn't render in the sandbox — CDN blocked — but all graph-data-layer logic, which is independent of vis, was verified directly.)
+
+**Key decisions:**
+- **Decision:** Only wire `addTagEdges` for decision-hub, meetings-hub, and learning-hub items. **Why:** these are the only `TAG_SOURCES` whose items already have auto-generated nodes in `loadAutoNodes()`; kmqt-board and reflection-hub items have no graph nodes at all (out of scope — would be a much larger addition of new node types). Tag *nodes* themselves still appear for every tag regardless of source, so kmqt/reflection tags are visible as standalone nodes, just without an edge back to their (non-existent) item node. **Alternative rejected:** add new auto-node types for kmqt/reflection items — substantial scope creep beyond "tags as graph nodes". **Confidence:** high. **Revisit when:** kmqt-board/reflection-hub items get auto-nodes in the graph for other reasons.
+- **Decision:** Dotted (`[2,3]`) dash style for tag edges vs. the existing `[5,5]` dash for "belongs to project" edges. **Why:** both are auto-generated dashed edges but represent different relationships (hierarchy vs. categorization); a finer dot distinguishes them on hover/zoom without adding a legend entry or new color. **Confidence:** med.
+- **Decision:** `resolveItems('tags-hub')` conditionally uses `HubTags.scanUsage()` when available, falling back to registry-only `hub-tags-v1.tags` otherwise — rather than always requiring `hub-tags.js`. **Why:** preserves Group 1's "no new dependency for every tool" decision for tools that don't need the richer view, while fixing the graph's specific need (in-use-but-unregistered tags must be link-targetable since they're already visible as nodes). **Confidence:** high.
+
+**Files:** `graph-hub.html`, `hub-links.js`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

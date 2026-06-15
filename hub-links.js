@@ -259,12 +259,19 @@ window.HubLinks = (() => {
       }
 
       if (toolId === 'tags-hub') {
+        // Prefer HubTags.scanUsage() when loaded — includes tags already in
+        // use but not yet in the registry (e.g. graph nodes for them exist
+        // before they've been ensure()'d). Falls back to the registry alone
+        // for tools that don't load hub-tags.js.
+        if (typeof HubTags !== 'undefined') {
+          return HubTags.scanUsage().map(u => ({ id: u.name, label: u.name, subtitle: 'Tag' }));
+        }
         const data = HubStorage.get('hub-tags-v1');
         if (!data || !Array.isArray(data.tags)) return [];
         return data.tags.map(t => ({
           id: t.name,
           label: t.name,
-          subtitle: 'Topic'
+          subtitle: 'Tag'
         }));
       }
     } catch { }
