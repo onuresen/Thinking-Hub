@@ -936,6 +936,16 @@ Tags Hub's list previously inherited `HubTags.scanUsage()`'s default order (usag
 
 ---
 
+### ~~Priority 60 — Tags Hub: layout space-efficiency pass~~ ✓ Done `[group: tags-hub]`
+User-reported screenshot showed large empty left/right margins (`.content { max-width: 760px }`, centered) on the Tags Hub list, which doesn't need a narrow reading column. Widened `.content` to `max-width: 1100px` (full-width within that bound), kept `.intro` paragraph at `max-width: 760px` so the prose stays readable. Converted `.tag-list-head`/`.tag-row` from flex to a shared CSS grid (`grid-template-columns: 220px 90px 1fr auto`) so the name/count/source-chip/action columns align cleanly across rows at the wider width; `.tag-name-input` (rename mode) switched from `min-width: 140px` to `width: 100%` to fill its grid cell.
+
+**Key decisions:**
+- **Decision:** Split max-widths — `.content` at 1100px, `.intro` paragraph at 760px. **Why:** the tag list benefits from the extra horizontal room (more space for source chips before wrapping), but a 1100px-wide paragraph of body text would hurt readability. **Confidence:** high.
+
+**Files:** `tags-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

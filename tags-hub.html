@@ -25,7 +25,7 @@
     .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
     .topbar .field { flex: 1; max-width: 280px; margin-left: auto; }
 
-    .content { padding: 22px; max-width: 760px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
+    .content { padding: 22px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
 
     .field {
       width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
@@ -33,7 +33,7 @@
     }
     .field:focus { outline: none; border-color: var(--accent); }
 
-    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 18px; max-width: 760px; }
 
     .add-row { display: flex; gap: 8px; margin-bottom: 20px; }
     .add-row .field { flex: 1; }
@@ -54,36 +54,38 @@
     .tg-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
     .tag-list-head {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+      display: grid; grid-template-columns: 220px 90px 1fr auto; align-items: center; gap: 14px; margin-bottom: 10px; padding: 0 14px;
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3);
     }
+    .tag-list-head span:last-child { grid-column: -1; text-align: right; }
 
     .tag-row {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
-      border-radius: var(--r-sm); background: var(--surface); margin-bottom: 6px; transition: border-color .12s;
+      display: grid; grid-template-columns: 220px 90px 1fr auto; align-items: center; gap: 14px; padding: 11px 14px;
+      border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); margin-bottom: 6px; transition: border-color .12s, background .12s;
     }
+    .tag-row:hover { background: var(--surface2); }
     .tag-row.flash { border-color: var(--accent); }
 
-    .tag-name { font-weight: 600; font-size: 13.5px; min-width: 110px; flex-shrink: 0; word-break: break-word; }
+    .tag-name { font-weight: 600; font-size: 13.5px; word-break: break-word; }
     .tag-name-input {
       font: inherit; font-weight: 600; font-size: 13.5px; background: var(--surface2); border: 1px solid var(--accent);
-      border-radius: var(--r-sm); color: var(--text); padding: 4px 7px; min-width: 140px;
+      border-radius: var(--r-sm); color: var(--text); padding: 4px 7px; width: 100%;
     }
     .tag-name-input:focus { outline: none; }
 
     .tag-count {
       font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); background: var(--surface2);
-      border-radius: var(--r-chip); padding: 2px 8px; flex-shrink: 0; white-space: nowrap;
+      border-radius: var(--r-chip); padding: 2px 8px; white-space: nowrap; text-align: center; justify-self: start;
     }
     .tag-count.unused { color: var(--text3); font-style: italic; }
 
-    .tag-sources { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+    .tag-sources { display: flex; gap: 5px; flex-wrap: wrap; }
     .tag-source-chip {
       font-size: 10px; font-family: var(--font-mono); color: var(--text2); background: var(--surface2);
       border: 1px solid var(--border); border-radius: var(--r-chip); padding: 2px 7px; white-space: nowrap;
     }
 
-    .tag-actions { display: flex; gap: 2px; flex-shrink: 0; margin-left: auto; }
+    .tag-actions { display: flex; gap: 2px; }
     .tag-act {
       width: 26px; height: 26px; border: none; background: transparent; color: var(--text3); cursor: pointer;
       border-radius: 5px; font-size: 12px; display: flex; align-items: center; justify-content: center;
