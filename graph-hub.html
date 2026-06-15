@@ -189,93 +189,373 @@
       line-height: 1.5;
     }
 
-    .legend-toggle { font-size: 9px; color: var(--text3); }
-    .legend.collapsed .legend-body { display: none; }
-    .legend-body { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+    .legend-toggle {
+      font-size: 9px;
+      color: var(--text3);
+    }
+
+    .legend.collapsed .legend-body {
+      display: none;
+    }
+
+    .legend-body {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 6px;
+    }
 
     /* ── New Link modal ─────────────────────────────────────── */
     .gh-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      z-index: 500; display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: opacity 0.18s;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
     }
-    .gh-overlay.open { opacity: 1; pointer-events: all; }
+
+    .gh-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
     .gh-modal {
-      background: var(--surface); border: 1px solid var(--border2);
-      border-radius: var(--r); width: 520px; max-width: 95vw;
-      padding: 24px; display: flex; flex-direction: column; gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      width: 800px;
+      max-width: 95vw;
+      min-height: 700px;
+      max-height: 90vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
-    .gh-modal-title { font-family: var(--font-display); font-size: 15px; font-weight: 800; }
-    .gh-modal-sides { display: grid; grid-template-columns: 1fr 28px 1fr; gap: 8px; align-items: start; }
-    .gh-arrow { display: flex; align-items: center; justify-content: center; padding-top: 26px; color: var(--text3); font-size: 16px; }
-    .gh-side-label { font-size: 11px; font-weight: 600; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+
+    .gh-modal-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .gh-modal-sides {
+      display: grid;
+      grid-template-columns: 1fr 28px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .gh-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 26px;
+      color: var(--text3);
+      font-size: 16px;
+    }
+
+    .gh-side-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+
     .gh-select {
-      width: 100%; padding: 7px 10px; background: var(--surface2);
-      border: 1px solid var(--border); border-radius: var(--r-sm);
-      color: var(--text); font-family: var(--font-body); font-size: 12.5px;
-      margin-bottom: 6px; cursor: pointer;
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      margin-bottom: 6px;
+      cursor: pointer;
     }
-    .gh-select:focus { outline: 1px solid var(--accent); }
-    .gh-modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .gh-select:focus {
+      outline: 1px solid var(--accent);
+    }
+
+    .gh-modal-footer {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
     .gh-btn {
-      padding: 8px 14px; border-radius: var(--r-sm); font-family: var(--font-body);
-      font-size: 12.5px; font-weight: 600; cursor: pointer;
-      border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: all 0.12s;
+      padding: 8px 14px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      transition: all 0.12s;
     }
-    .gh-btn:hover { border-color: var(--border2); }
-    .gh-btn-primary { background: var(--accent); border-color: var(--accent); color: #111; }
-    .gh-btn-primary:hover { opacity: 0.85; }
-    .gh-btn-danger { color: var(--accent-nope); }
-    .gh-btn-danger:hover { border-color: var(--accent-nope); }
+
+    .gh-btn:hover {
+      border-color: var(--border2);
+    }
+
+    .gh-btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #111;
+    }
+
+    .gh-btn-primary:hover {
+      opacity: 0.85;
+    }
+
+    .gh-btn-danger {
+      color: var(--accent-nope);
+    }
+
+    .gh-btn-danger:hover {
+      border-color: var(--accent-nope);
+    }
 
     /* ── Edge info panel ─────────────────────────────────────── */
     .edge-panel {
-      position: absolute; bottom: 20px; right: 20px; width: 276px;
-      background: var(--surface); border: 1px solid var(--border2);
-      border-radius: var(--r); padding: 14px 16px; z-index: 100;
-      display: none; flex-direction: column; gap: 10px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 276px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
     }
-    .edge-panel.visible { display: flex; }
-    .edge-panel-title { font-size: 11px; font-weight: 600; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.5px; }
-    .edge-endpoint-tag { display: inline-block; background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 10.5px; color: var(--text3); margin-bottom: 2px; }
-    .edge-endpoints { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+    .edge-panel.visible {
+      display: flex;
+    }
+
+    .edge-panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .edge-endpoint-tag {
+      display: inline-block;
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10.5px;
+      color: var(--text3);
+      margin-bottom: 2px;
+    }
+
+    .edge-endpoints {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+
     .edge-note-input {
-      width: 100%; padding: 6px 8px; background: var(--surface2);
-      border: 1px solid var(--border); border-radius: var(--r-sm);
-      color: var(--text); font-family: var(--font-body); font-size: 12px;
-      resize: none; min-height: 52px; box-sizing: border-box;
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12px;
+      resize: none;
+      min-height: 52px;
+      box-sizing: border-box;
     }
-    .edge-note-input:focus { outline: 1px solid var(--accent); }
-    .edge-panel-actions { display: flex; gap: 6px; }
+
+    .edge-note-input:focus {
+      outline: 1px solid var(--accent);
+    }
+
+    .edge-panel-actions {
+      display: flex;
+      gap: 6px;
+    }
 
     /* ── Node info panel ─────────────────────────────────────── */
-    #node-panel { right: 20px; bottom: 20px; }
-    .np-tool-tag { display:inline-block; background:var(--surface2); border-radius:4px; padding:2px 7px; font-size:10.5px; color:var(--text3); font-family:var(--font-mono); margin-bottom:3px; }
-    .np-meta-row { font-size:11.5px; color:var(--text2); line-height:1.75; }
-    .np-meta-key { color:var(--text3); }
+    #node-panel {
+      right: 20px;
+      bottom: 20px;
+    }
+
+    .np-tool-tag {
+      display: inline-block;
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 10.5px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      margin-bottom: 3px;
+    }
+
+    .np-meta-row {
+      font-size: 11.5px;
+      color: var(--text2);
+      line-height: 1.75;
+    }
+
+    .np-meta-key {
+      color: var(--text3);
+    }
 
     /* ── Link modal: picker upgrades ───────────────────────── */
-    .gh-modal { max-height: 90vh; overflow-y: auto; }
-    .gh-select[size] { height:auto; min-height:110px; max-height:170px; overflow-y:auto; margin-bottom:0; }
-    .gh-seg-toggle { display:flex; border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden; margin-bottom:5px; }
-    .gh-seg-btn { flex:1; padding:4px 0; background:var(--surface2); border:none; color:var(--text3); font-family:var(--font-body); font-size:11px; font-weight:600; cursor:pointer; transition:all 0.1s; }
-    .gh-seg-btn:hover { color:var(--text); }
-    .gh-seg-btn.active { background:var(--accent-dim); color:var(--accent); }
-    .gh-search-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-    .gh-search-input { flex:1; padding:5px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); color:var(--text); font-family:var(--font-body); font-size:12px; }
-    .gh-search-input:focus { outline:1px solid var(--accent); }
-    .gh-item-count { font-size:10px; color:var(--text3); font-family:var(--font-mono); white-space:nowrap; }
+    .gh-modal {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .gh-select[size] {
+      height: auto;
+      min-height: 420px;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-bottom: 0;
+    }
+
+    .gh-seg-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+
+    .gh-seg-btn {
+      flex: 1;
+      padding: 4px 0;
+      background: var(--surface2);
+      border: none;
+      color: var(--text3);
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .gh-seg-btn:hover {
+      color: var(--text);
+    }
+
+    .gh-seg-btn.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .gh-search-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .gh-search-input {
+      flex: 1;
+      padding: 5px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12px;
+    }
+
+    .gh-search-input:focus {
+      outline: 1px solid var(--accent);
+    }
+
+    .gh-item-count {
+      font-size: 10px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
 
     /* ── Right-click context menu ───────────────────────────── */
-    #graph-ctx-menu { position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:4px 0; min-width:172px; z-index:600; box-shadow:0 8px 24px rgba(0,0,0,0.45); }
-    .ctx-item { display:block; width:100%; padding:7px 14px; background:none; border:none; color:var(--text2); font-family:var(--font-body); font-size:12.5px; text-align:left; cursor:pointer; transition:background 0.1s, color 0.1s; }
-    .ctx-item:hover { background:var(--accent-dim); color:var(--accent); }
-    .ctx-sep { height:1px; background:var(--border); margin:3px 0; }
+    #graph-ctx-menu {
+      position: fixed;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 4px 0;
+      min-width: 172px;
+      z-index: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .ctx-item {
+      display: block;
+      width: 100%;
+      padding: 7px 14px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .ctx-item:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .ctx-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 3px 0;
+    }
 
     /* ── Drag-to-connect banner ─────────────────────────────── */
-    #drag-link-banner { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:400; display:none; align-items:center; gap:10px; padding:10px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:0 6px 20px rgba(0,0,0,0.40); font-size:12px; white-space:nowrap; }
-    #drag-link-banner.visible { display:flex; }
+    #drag-link-banner {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 400;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.40);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    #drag-link-banner.visible {
+      display: flex;
+    }
 
     /* ── Empty state ────────────────────────────────────────── */
     .empty-state {
@@ -314,7 +594,6 @@
       max-width: 280px;
       line-height: 1.6;
     }
-
   </style>
 </head>
 
@@ -324,8 +603,10 @@
     <div class="header-row">
       <div class="header-title">Dependency Graph</div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
-        <input type="text" id="graph-search" class="gh-search-input" placeholder="Search nodes… (/)" oninput="searchNodes(this.value)" style="width:160px;font-size:11.5px;padding:4px 9px">
-        <button id="graph-search-clear" class="gh-btn" style="display:none;padding:3px 8px;font-size:11px" onclick="clearNodeSearch()">✕</button>
+        <input type="text" id="graph-search" class="gh-search-input" placeholder="Search nodes… (/)"
+          oninput="searchNodes(this.value)" style="width:160px;font-size:11.5px;padding:4px 9px">
+        <button id="graph-search-clear" class="gh-btn" style="display:none;padding:3px 8px;font-size:11px"
+          onclick="clearNodeSearch()">✕</button>
         <div class="header-subtitle" id="stats">0 nodes · 0 links</div>
       </div>
     </div>
@@ -344,20 +625,23 @@
   <div class="legend" id="legend"></div>
 
   <div id="empty" class="empty-state">
-    <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px;opacity:0.55">
-      <circle cx="14" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="60" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="82" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="36" r="5" fill="currentColor" opacity="0.3"/>
-      <line x1="22" y1="32" x2="40" y2="17" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="22" y1="40" x2="40" y2="55" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="56" y1="17" x2="74" y2="31" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="56" y1="55" x2="74" y2="41" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="48" y1="20" x2="48" y2="52" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.4"/>
+    <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg"
+      style="margin-bottom:4px;opacity:0.55">
+      <circle cx="14" cy="36" r="8" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="48" cy="12" r="8" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="48" cy="60" r="8" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="82" cy="36" r="8" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="48" cy="36" r="5" fill="currentColor" opacity="0.3" />
+      <line x1="22" y1="32" x2="40" y2="17" stroke="currentColor" stroke-width="1.2" opacity="0.6" />
+      <line x1="22" y1="40" x2="40" y2="55" stroke="currentColor" stroke-width="1.2" opacity="0.6" />
+      <line x1="56" y1="17" x2="74" y2="31" stroke="currentColor" stroke-width="1.2" opacity="0.6" />
+      <line x1="56" y1="55" x2="74" y2="41" stroke="currentColor" stroke-width="1.2" opacity="0.6" />
+      <line x1="48" y1="20" x2="48" y2="52" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"
+        opacity="0.4" />
     </svg>
     <div class="empty-title">No relationships yet</div>
-    <div class="empty-text">Start linking your tasks, ideas, and decisions across the Thinking Hub — they'll appear here as a live graph.</div>
+    <div class="empty-text">Start linking your tasks, ideas, and decisions across the Thinking Hub — they'll appear here
+      as a live graph.</div>
   </div>
 
   <div id="mynetwork"></div>
@@ -366,7 +650,8 @@
   <div class="edge-panel" id="edge-panel">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <div class="edge-panel-title">Link</div>
-      <select class="gh-select" id="edge-rel-type" style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
+      <select class="gh-select" id="edge-rel-type"
+        style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
         <option value="relates">↔ Relates</option>
         <option value="depends-on">→ Depends on</option>
         <option value="blocks">→ Blocks</option>
@@ -414,7 +699,8 @@
             <button class="gh-seg-btn" onclick="setPickerMode('a','projects')">Projects</button>
           </div>
           <div class="gh-search-row">
-            <input type="text" class="gh-search-input" id="nl-search-a" placeholder="Filter…" oninput="filterItems('a')">
+            <input type="text" class="gh-search-input" id="nl-search-a" placeholder="Filter…"
+              oninput="filterItems('a')">
             <span class="gh-item-count" id="nl-count-a"></span>
           </div>
           <select class="gh-select" id="nl-item-a" size="6"></select>
@@ -428,7 +714,8 @@
             <button class="gh-seg-btn" onclick="setPickerMode('b','projects')">Projects</button>
           </div>
           <div class="gh-search-row">
-            <input type="text" class="gh-search-input" id="nl-search-b" placeholder="Filter…" oninput="filterItems('b')">
+            <input type="text" class="gh-search-input" id="nl-search-b" placeholder="Filter…"
+              oninput="filterItems('b')">
             <span class="gh-item-count" id="nl-count-b"></span>
           </div>
           <select class="gh-select" id="nl-item-b" size="6"></select>
@@ -452,57 +739,57 @@
 
   <script>
     const TOOL_COLORS_DARK = {
-      'project-hub':  { bg: '#1c2d47', border: '#3a5f96' },
+      'project-hub': { bg: '#1c2d47', border: '#3a5f96' },
       'decision-hub': { bg: '#3a1e1e', border: '#7a3535' },
-      'kmqt-board':   { bg: '#2b1e3a', border: '#5e3a7a' },
-      'idea-swiper':  { bg: '#1e3828', border: '#3a7a52' },
-      'schedule':     { bg: '#38321c', border: '#7a6a30' },
-      'canvas-hub':   { bg: '#1c3838', border: '#30787a' },
-      'risk-hub':     { bg: '#3a1516', border: '#be3030' },
-      'goals-hub':    { bg: '#332e14', border: '#a08020' },
-      'meetings-hub':   { bg: '#152838', border: '#2868a8' },
+      'kmqt-board': { bg: '#2b1e3a', border: '#5e3a7a' },
+      'idea-swiper': { bg: '#1e3828', border: '#3a7a52' },
+      'schedule': { bg: '#38321c', border: '#7a6a30' },
+      'canvas-hub': { bg: '#1c3838', border: '#30787a' },
+      'risk-hub': { bg: '#3a1516', border: '#be3030' },
+      'goals-hub': { bg: '#332e14', border: '#a08020' },
+      'meetings-hub': { bg: '#152838', border: '#2868a8' },
       'tool-portfolio': { bg: '#1a2e1a', border: '#3a8040' },
-      'learning-hub':   { bg: '#1a2a40', border: '#2860a8' },
-      'stakeholder-hub':{ bg: '#2a1e38', border: '#5c30a0' },
-      'tags-hub':       { bg: '#2a2a30', border: '#444' },
+      'learning-hub': { bg: '#1a2a40', border: '#2860a8' },
+      'stakeholder-hub': { bg: '#2a1e38', border: '#5c30a0' },
+      'tags-hub': { bg: '#2a2a30', border: '#444' },
     };
     const TOOL_COLORS_LIGHT = {
-      'project-hub':    { bg: '#bed8f5', border: '#4a90c8' },
-      'decision-hub':   { bg: '#f5c0c0', border: '#c04040' },
-      'kmqt-board':     { bg: '#e0c8f8', border: '#7a40b0' },
-      'idea-swiper':    { bg: '#b8ecd4', border: '#2aaa6a' },
-      'schedule':       { bg: '#fae0a0', border: '#b88020' },
-      'canvas-hub':     { bg: '#b8ecd4', border: '#2aaa6a' },
-      'risk-hub':       { bg: '#fcd0d0', border: '#c83030' },
-      'goals-hub':      { bg: '#faeab0', border: '#a07820' },
-      'meetings-hub':   { bg: '#b8d4f0', border: '#3060a8' },
+      'project-hub': { bg: '#bed8f5', border: '#4a90c8' },
+      'decision-hub': { bg: '#f5c0c0', border: '#c04040' },
+      'kmqt-board': { bg: '#e0c8f8', border: '#7a40b0' },
+      'idea-swiper': { bg: '#b8ecd4', border: '#2aaa6a' },
+      'schedule': { bg: '#fae0a0', border: '#b88020' },
+      'canvas-hub': { bg: '#b8ecd4', border: '#2aaa6a' },
+      'risk-hub': { bg: '#fcd0d0', border: '#c83030' },
+      'goals-hub': { bg: '#faeab0', border: '#a07820' },
+      'meetings-hub': { bg: '#b8d4f0', border: '#3060a8' },
       'tool-portfolio': { bg: '#c8ecc8', border: '#3a9040' },
-      'learning-hub':   { bg: '#c0d8f5', border: '#3060b8' },
-      'stakeholder-hub':{ bg: '#ddc8f8', border: '#6030b0' },
-      'tags-hub':       { bg: '#e4e4ea', border: '#8888a0' },
+      'learning-hub': { bg: '#c0d8f5', border: '#3060b8' },
+      'stakeholder-hub': { bg: '#ddc8f8', border: '#6030b0' },
+      'tags-hub': { bg: '#e4e4ea', border: '#8888a0' },
     };
 
     const TOOL_LABELS = {
-      'project-hub':    'Project Hub',
-      'decision-hub':   'Decision Hub',
-      'kmqt-board':     'KMQT Board',
-      'idea-swiper':    'Idea Swiper',
-      'schedule':       'Schedule',
-      'canvas-hub':     'Canvas',
-      'risk-hub':       'Risk Register',
-      'goals-hub':      'Goals Hub',
-      'meetings-hub':   'Meetings',
+      'project-hub': 'Project Hub',
+      'decision-hub': 'Decision Hub',
+      'kmqt-board': 'KMQT Board',
+      'idea-swiper': 'Idea Swiper',
+      'schedule': 'Schedule',
+      'canvas-hub': 'Canvas',
+      'risk-hub': 'Risk Register',
+      'goals-hub': 'Goals Hub',
+      'meetings-hub': 'Meetings',
       'tool-portfolio': 'Tool Portfolio',
-      'learning-hub':   'Learning Log',
-      'stakeholder-hub':'Stakeholder Map',
-      'tags-hub':       'Tags',
+      'learning-hub': 'Learning Log',
+      'stakeholder-hub': 'Stakeholder Map',
+      'tags-hub': 'Tags',
     };
 
     const EDGE_TYPE_CONFIG = {
-      'relates':    { label: '',          arrowTo: false, arrowFrom: false, hue: null },
-      'depends-on': { label: 'depends on', arrowTo: true,  arrowFrom: false, hue: '#5580cc' },
-      'blocks':     { label: 'blocks',     arrowTo: true,  arrowFrom: false, hue: '#cc4444' },
-      'leads-to':   { label: 'leads to',   arrowTo: true,  arrowFrom: false, hue: '#44aa66' },
+      'relates': { label: '', arrowTo: false, arrowFrom: false, hue: null },
+      'depends-on': { label: 'depends on', arrowTo: true, arrowFrom: false, hue: '#5580cc' },
+      'blocks': { label: 'blocks', arrowTo: true, arrowFrom: false, hue: '#cc4444' },
+      'leads-to': { label: 'leads to', arrowTo: true, arrowFrom: false, hue: '#44aa66' },
     };
 
     let network = null;
@@ -622,9 +909,11 @@
           id, label: (label || 'Untitled').slice(0, 40), tool, itemId,
           title: `<b>${TOOL_LABELS[tool] || tool}</b><br>${label || 'Untitled'}`,
           hidden: hiddenTools.has(tool),
-          color: { background: c.bg, border: c.border,
+          color: {
+            background: c.bg, border: c.border,
             highlight: { background: c.bg, border: accentColor },
-            hover: { background: c.bg, border: c.border } },
+            hover: { background: c.bg, border: c.border }
+          },
           font: { color: fontColor, size: 12, face: 'DM Sans, sans-serif' },
           shape: 'box', borderWidth: 1,
           margin: { top: 8, bottom: 8, left: 10, right: 10 }
@@ -653,7 +942,7 @@
             tagNodeIds.set(u.name.toLowerCase(), tId);
           });
         }
-      } catch {}
+      } catch { }
 
       function addTagEdges(itemId, tags) {
         (tags || []).forEach(tag => {
@@ -666,7 +955,7 @@
       try {
         const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
         (ph.projects || []).forEach(p => addNode('project-hub', p.id, p.name));
-      } catch {}
+      } catch { }
 
       // Decisions → project
       try {
@@ -678,7 +967,7 @@
             addAutoEdge(dId, `project-hub::${d.projectId}`, 'decision → project');
           addTagEdges(dId, (d.tags || '').split(',').map(s => s.trim()).filter(Boolean));
         });
-      } catch {}
+      } catch { }
 
       // Risks → project
       try {
@@ -688,7 +977,7 @@
           if (r.projectId && nodes.has(`project-hub::${r.projectId}`))
             addAutoEdge(rId, `project-hub::${r.projectId}`, 'risk → project');
         });
-      } catch {}
+      } catch { }
 
       // Goals (objectives) → project
       try {
@@ -700,7 +989,7 @@
               addAutoEdge(oId, `project-hub::${o.projectId}`, 'goal → project');
           })
         );
-      } catch {}
+      } catch { }
 
       // Meetings → project
       try {
@@ -711,7 +1000,7 @@
             addAutoEdge(mId, `project-hub::${m.projectId}`, 'meeting → project');
           addTagEdges(mId, m.tags);
         });
-      } catch {}
+      } catch { }
 
       // Tool Portfolio → linked projects
       try {
@@ -723,7 +1012,7 @@
               addAutoEdge(tId, `project-hub::${projId}`, 'tool → project');
           });
         });
-      } catch {}
+      } catch { }
 
       // Learning items (standalone nodes)
       try {
@@ -732,7 +1021,7 @@
           const lId = addNode('learning-hub', item.id, item.title || 'Learning');
           addTagEdges(lId, item.tags);
         });
-      } catch {}
+      } catch { }
 
       // Stakeholders → projects
       try {
@@ -744,7 +1033,7 @@
               addAutoEdge(sId, `project-hub::${projId}`, 'stakeholder → project');
           });
         });
-      } catch {}
+      } catch { }
 
       return { nodes: Array.from(nodes.values()), edges };
     }
@@ -776,7 +1065,7 @@
       try {
         const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
         (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => taskProjectMap.set(t.id, p.id)));
-      } catch {}
+      } catch { }
       const taskHostEdgeAdded = new Set();
 
       links.forEach(link => {
@@ -790,9 +1079,11 @@
               tool: side.tool, itemId: side.itemId,
               title: `<b>${TOOL_LABELS[side.tool] || side.tool}</b><br>${side.label || 'Untitled'}`,
               hidden: hiddenTools.has(side.tool),
-              color: { background: c.bg, border: c.border,
+              color: {
+                background: c.bg, border: c.border,
                 highlight: { background: c.bg, border: accentColor },
-                hover: { background: c.bg, border: c.border } },
+                hover: { background: c.bg, border: c.border }
+              },
               font: { color: nodeFontColor, size: 12, face: 'DM Sans, sans-serif' },
               shape: 'box', borderWidth: 1,
               margin: { top: 8, bottom: 8, left: 10, right: 10 }
@@ -824,7 +1115,7 @@
           font: et.label ? { size: 9, color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)', face: 'DM Sans, sans-serif', background: 'none' } : undefined,
           color: { color: et.hue ? et.hue + (isDark ? '99' : 'bb') : edgeColor, highlight: accentColor, hover: edgeHover },
           arrows: {
-            to:   { enabled: et.arrowTo,   scaleFactor: 0.55 },
+            to: { enabled: et.arrowTo, scaleFactor: 0.55 },
             from: { enabled: et.arrowFrom, scaleFactor: 0.55 },
           },
           width: link.note ? 2.5 : 1.5,
@@ -1090,7 +1381,7 @@
           const data = HubStorage.get('project-hub-v1') || {};
           const projects = data.projects || [];
           itemSel.innerHTML = projects.length
-            ? projects.map(p => `<option value="${p.id}" data-label="${(p.name || '').replace(/"/g,'&quot;')}">${(p.name || '(untitled)').slice(0, 50)}</option>`).join('')
+            ? projects.map(p => `<option value="${p.id}" data-label="${(p.name || '').replace(/"/g, '&quot;')}">${(p.name || '(untitled)').slice(0, 50)}</option>`).join('')
             : '<option value="">— no projects —</option>';
         } else if (tool === 'project-hub') {
           // Tasks grouped by project
@@ -1104,15 +1395,14 @@
             itemSel.innerHTML = '<option value="">— no tasks found —</option>';
           } else {
             itemSel.innerHTML = groups.map(g =>
-              `<optgroup label="${(g.proj || 'Project').replace(/"/g,'&quot;')}">${
-                g.tasks.map(t => `<option value="${t.id}" data-label="${(t.title || '').replace(/"/g,'&quot;')}">${(t.title || '(untitled)').slice(0, 50)}</option>`).join('')
+              `<optgroup label="${(g.proj || 'Project').replace(/"/g, '&quot;')}">${g.tasks.map(t => `<option value="${t.id}" data-label="${(t.title || '').replace(/"/g, '&quot;')}">${(t.title || '(untitled)').slice(0, 50)}</option>`).join('')
               }</optgroup>`
             ).join('');
           }
         } else {
           const items = HubLinks.resolveItems(tool);
           itemSel.innerHTML = items.length
-            ? items.map(it => `<option value="${it.id}" data-label="${(it.label || '').replace(/"/g,'&quot;')}">${(it.label || '(untitled)').slice(0, 50)}</option>`).join('')
+            ? items.map(it => `<option value="${it.id}" data-label="${(it.label || '').replace(/"/g, '&quot;')}">${(it.label || '(untitled)').slice(0, 50)}</option>`).join('')
             : '<option value="">— no items found —</option>';
         }
       } catch {
@@ -1145,9 +1435,9 @@
 
     function confirmNewLink() {
       const toolA = document.getElementById('nl-tool-a').value;
-      const selA  = document.getElementById('nl-item-a');
+      const selA = document.getElementById('nl-item-a');
       const toolB = document.getElementById('nl-tool-b').value;
-      const selB  = document.getElementById('nl-item-b');
+      const selB = document.getElementById('nl-item-b');
       if (!selA.value || !selB.value) { alert('Please select items on both sides.'); return; }
       if (toolA === toolB && selA.value === selB.value) { alert('Cannot link an item to itself.'); return; }
       const labelA = selA.options[selA.selectedIndex]?.dataset.label || selA.options[selA.selectedIndex]?.text || '';
@@ -1172,15 +1462,15 @@
             const t = (p.tasks || []).find(t => t.id === itemId);
             if (t) return [
               { k: 'Project', v: p.name || '—' },
-              { k: 'Status',  v: t.status || '—' },
-              { k: 'Priority',v: t.priority || '—' },
+              { k: 'Status', v: t.status || '—' },
+              { k: 'Priority', v: t.priority || '—' },
             ];
           }
           const proj = (data.projects || []).find(p => p.id === itemId);
           if (proj) {
             const open = (proj.tasks || []).filter(t => !t.done).length;
             return [
-              { k: 'Type',   v: 'Project' },
+              { k: 'Type', v: 'Project' },
               { k: 'Status', v: proj.status || '—' },
               { k: 'Open tasks', v: String(open) },
             ];
@@ -1190,9 +1480,9 @@
           const data = HubStorage.get('decision-hub-v1') || [];
           const d = data.find(d => d.id === itemId);
           if (d) return [
-            { k: 'Type',       v: d.type || '—' },
+            { k: 'Type', v: d.type || '—' },
             { k: 'Confidence', v: d.confidence != null ? d.confidence + '%' : '—' },
-            { k: 'Status',     v: d.status || '—' },
+            { k: 'Status', v: d.status || '—' },
           ];
         }
         if (tool === 'goals-hub') {
@@ -1207,15 +1497,15 @@
           const r = (data.risks || []).find(r => r.id === itemId);
           if (r) return [
             { k: 'Category', v: r.category || '—' },
-            { k: 'Status',   v: r.status || '—' },
+            { k: 'Status', v: r.status || '—' },
           ];
         }
         if (tool === 'tool-portfolio') {
           const data = HubStorage.get('tool-portfolio-v1') || [];
           const t = data.find(t => t.id === itemId);
           if (t) return [
-            { k: 'Ring',     v: t.ring || '—' },
-            { k: 'Status',   v: t.status || '—' },
+            { k: 'Ring', v: t.ring || '—' },
+            { k: 'Status', v: t.status || '—' },
             { k: 'Category', v: t.category || '—' },
           ];
         }
@@ -1223,8 +1513,8 @@
           const data = HubStorage.get('meetings-hub-v1') || {};
           const m = (data.meetings || []).find(m => m.id === itemId);
           if (m) return [
-            { k: 'Type',   v: m.type || '—' },
-            { k: 'Date',   v: m.date || '—' },
+            { k: 'Type', v: m.type || '—' },
+            { k: 'Date', v: m.date || '—' },
             { k: 'Status', v: m.status || '—' },
           ];
         }
@@ -1232,7 +1522,7 @@
           const data = HubStorage.get('learning-hub-v1') || {};
           const it = (data.items || []).find(it => it.id === itemId);
           if (it) return [
-            { k: 'Type',   v: it.type || '—' },
+            { k: 'Type', v: it.type || '—' },
             { k: 'Status', v: it.status || '—' },
           ];
         }
@@ -1240,7 +1530,7 @@
           const data = HubStorage.get('stakeholder-hub-v1') || {};
           const sh = (data.stakeholders || []).find(sh => sh.id === itemId);
           if (sh) return [
-            { k: 'Role',       v: sh.role || '—' },
+            { k: 'Role', v: sh.role || '—' },
             { k: 'Engagement', v: sh.engagement || '—' },
           ];
         }
@@ -1251,7 +1541,7 @@
             { k: 'Sources', v: u.sources.length ? u.sources.map(s => s.label).join(', ') : '—' },
           ];
         }
-      } catch {}
+      } catch { }
       return [];
     }
 
@@ -1342,7 +1632,7 @@
       const x = clientX + 172 > W ? W - 176 : clientX + 2;
       const y = clientY + 140 > H ? H - 144 : clientY + 2;
       m.style.left = x + 'px';
-      m.style.top  = y + 'px';
+      m.style.top = y + 'px';
       m.style.display = 'block';
 
       document.addEventListener('mousedown', dismissContextMenu, { once: true });
@@ -1376,9 +1666,9 @@
       _hideDragBanner();
       const banner = document.getElementById('drag-link-banner');
       document.getElementById('dlb-text').textContent =
-        `Link "${nA.label.slice(0,22)}" ↔ "${nB.label.slice(0,22)}"?`;
+        `Link "${nA.label.slice(0, 22)}" ↔ "${nB.label.slice(0, 22)}"?`;
       document.getElementById('dlb-yes').onclick = () => { _hideDragBanner(); _confirmDragLink(idA, idB); };
-      document.getElementById('dlb-no').onclick  = _hideDragBanner;
+      document.getElementById('dlb-no').onclick = _hideDragBanner;
       banner.classList.add('visible');
       _dlbTimer = setTimeout(_hideDragBanner, 6000);
     }
@@ -1430,7 +1720,7 @@
       const neighbors = new Set([nodeId]);
       edgesDS.forEach(e => {
         if (e.from === nodeId) neighbors.add(e.to);
-        if (e.to === nodeId)   neighbors.add(e.from);
+        if (e.to === nodeId) neighbors.add(e.from);
       });
       const updates = [];
       nodesMap.forEach((_, id) => updates.push({ id, opacity: neighbors.has(id) ? 1 : 0.12 }));
@@ -1465,8 +1755,8 @@
     });
 
     buildGraph();
-    ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1',
-     'learning-hub-v1','stakeholder-hub-v1','hub-tags-v1']
+    ['hub-links-v1', 'project-hub-v1', 'decision-hub-v1', 'risk-hub-v1', 'goals-hub-v1', 'meetings-hub-v1',
+      'learning-hub-v1', 'stakeholder-hub-v1', 'hub-tags-v1']
       .forEach(k => HubStorage.subscribe(k, buildGraph));
     window.__hl_onLinkChange = buildGraph;
 
