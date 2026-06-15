@@ -7,6 +7,7 @@
   <title>Decision Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-tags.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -812,6 +813,24 @@
       renderSidebar();
     }
 
+    // Normalizes a comma-separated tags string against the central registry —
+    // resolves each tag to its canonical casing (registering new tags) and
+    // rejoins, deduping case-insensitively.
+    function normalizeTags(raw) {
+      const parts = (raw || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (typeof HubTags === 'undefined') return parts.join(', ');
+      const seen = new Set();
+      const out = [];
+      for (const t of parts) {
+        const canonical = HubTags.ensure(t);
+        const key = canonical.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(canonical);
+      }
+      return out.join(', ');
+    }
+
     function saveCurrent() {
       if (!currentId) return;
       const dec = decisions.find(d => d.id === currentId);
@@ -828,7 +847,7 @@
         dec.alternative = document.getElementById('i-alternative')?.value || '';
         dec.revisitWhen = document.getElementById('i-revisit-when')?.value || '';
         dec.revisitDate = document.getElementById('i-revisit-date')?.value || '';
-        dec.tags = document.getElementById('i-tags').value;
+        dec.tags = normalizeTags(document.getElementById('i-tags').value);
         dec.obsidianNote = (document.getElementById('i-obsidian')?.value || '').trim();
 
         // Outcome (scored when the decision comes due)
@@ -1060,6 +1079,10 @@
         if (typeof HubObsidian !== 'undefined') {
           const obsEl = document.getElementById('i-obsidian');
           if (obsEl) HubObsidian.attachAutocomplete(obsEl);
+        }
+        if (typeof HubTags !== 'undefined') {
+          const tagsEl = document.getElementById('i-tags');
+          if (tagsEl) HubTags.attachAutocomplete(tagsEl);
         }
       }
       else if (currentTab === 'workspace') {

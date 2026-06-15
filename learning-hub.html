@@ -6,6 +6,7 @@
   <title>Learning Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-tags.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-toast.js"></script>
@@ -633,6 +634,8 @@
             onblur="saveKeyInsight()">${_esc(item.keyInsight||'')}</textarea>
         </div>
       </div>`;
+
+    if (typeof HubTags !== 'undefined') HubTags.attachAutocomplete(document.getElementById('tag-input'));
   }
 
   function updateStatus(val) {
@@ -692,10 +695,11 @@
   function handleTagKey(e) {
     if (e.key !== 'Enter') return;
     const inp = document.getElementById('tag-input');
-    const tag = inp.value.trim();
+    let tag = inp.value.trim();
     if (!tag) return;
     const item = data.items.find(it => it.id === activeId);
     if (!item) return;
+    if (typeof HubTags !== 'undefined') tag = HubTags.ensure(tag);
     if (!item.tags) item.tags = [];
     if (!item.tags.includes(tag)) { item.tags.push(tag); save(); renderDetail(); }
     inp.value = '';

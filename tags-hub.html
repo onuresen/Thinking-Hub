@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tags</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-tags.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+    body { display: flex; flex-direction: column; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--bg); z-index: var(--z-sticky); flex-shrink: 0;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
+    .topbar .field { flex: 1; max-width: 280px; margin-left: auto; }
+
+    .content { padding: 22px; max-width: 760px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
+
+    .field {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font-family: var(--font-body); font-size: 13px; padding: 9px 11px;
+    }
+    .field:focus { outline: none; border-color: var(--accent); }
+
+    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+
+    .add-row { display: flex; gap: 8px; margin-bottom: 20px; }
+    .add-row .field { flex: 1; }
+
+    .tag-list-head {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3);
+    }
+
+    .tag-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: var(--r-sm); background: var(--surface); margin-bottom: 6px; transition: border-color .12s;
+    }
+    .tag-row.flash { border-color: var(--accent); }
+
+    .tag-name { font-weight: 600; font-size: 13.5px; min-width: 110px; flex-shrink: 0; word-break: break-word; }
+    .tag-name-input {
+      font: inherit; font-weight: 600; font-size: 13.5px; background: var(--surface2); border: 1px solid var(--accent);
+      border-radius: var(--r-sm); color: var(--text); padding: 4px 7px; min-width: 140px;
+    }
+    .tag-name-input:focus { outline: none; }
+
+    .tag-count {
+      font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); background: var(--surface2);
+      border-radius: var(--r-chip); padding: 2px 8px; flex-shrink: 0; white-space: nowrap;
+    }
+    .tag-count.unused { color: var(--text3); font-style: italic; }
+
+    .tag-sources { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+    .tag-source-chip {
+      font-size: 10px; font-family: var(--font-mono); color: var(--text2); background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--r-chip); padding: 2px 7px; white-space: nowrap;
+    }
+
+    .tag-actions { display: flex; gap: 2px; flex-shrink: 0; margin-left: auto; }
+    .tag-act {
+      width: 26px; height: 26px; border: none; background: transparent; color: var(--text3); cursor: pointer;
+      border-radius: 5px; font-size: 12px; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+    }
+    .tag-act:hover { background: var(--surface3); color: var(--text); }
+    .tag-act.danger:hover { background: color-mix(in srgb, var(--accent-nope) 14%, transparent); color: var(--accent-nope); }
+    .tag-act:disabled { opacity: .25; cursor: default; }
+    .tag-act:disabled:hover { background: transparent; color: var(--text3); }
+
+    .empty-state-main { padding: 60px 24px; text-align: center; max-width: 460px; margin: 40px auto; }
+    .empty-state-main .es-icon { font-size: 46px; opacity: .8; }
+    .empty-state-main .es-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin: 14px 0 8px; }
+    .empty-state-main .es-sub { color: var(--text2); font-size: 14px; line-height: 1.6; }
+
+    .no-results { text-align: center; color: var(--text3); font-size: 13px; padding: 30px 0; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-title">🏷 Tags <span class="topbar-sub">CENTRAL REGISTRY</span></div>
+    <input class="field" id="tag-search" placeholder="Search tags…" oninput="renderList()">
+  </div>
+
+  <div class="content">
+    <div class="intro">
+      One place for every tag/topic used across the hub — rename or merge duplicates here and
+      the change applies everywhere they're used. Add a topic that doesn't exist yet (e.g.
+      <em>BIM</em>, <em>Self Study</em>) to register it for later use, including as a node in the
+      Dependency Graph.
+    </div>
+
+    <div class="add-row">
+      <input class="field" id="new-tag-input" placeholder="Add a new tag / topic…" onkeydown="if(event.key==='Enter'){event.preventDefault();addTopic();}">
+      <button class="btn btn-primary" onclick="addTopic()">+ Add</button>
+    </div>
+
+    <div id="tag-list-wrap"></div>
+  </div>
+
+  <script>
+    function load() {
+      return HubTags.scanUsage();
+    }
+
+    function renderList() {
+      const wrap = document.getElementById('tag-list-wrap');
+      const all = load();
+      const q = (document.getElementById('tag-search').value || '').trim().toLowerCase();
+      const filtered = q ? all.filter(t => t.name.toLowerCase().includes(q)) : all;
+
+      if (all.length === 0) {
+        wrap.innerHTML = `
+          <div class="empty-state-main">
+            <div class="es-icon">🏷</div>
+            <div class="es-title">No tags yet</div>
+            <div class="es-sub">Tags added in Learning Log, Decision Hub, Meetings, Reflection Board and KMQT will show up here —
+            or add a topic above to get started.</div>
+          </div>`;
+        return;
+      }
+
+      if (filtered.length === 0) {
+        wrap.innerHTML = `<div class="no-results">No tags match "${HubUtils.esc(q)}"</div>`;
+        return;
+      }
+
+      wrap.innerHTML = `
+        <div class="tag-list-head"><span>Tag</span><span>${filtered.length} of ${all.length}</span></div>
+        ${filtered.map(t => renderRow(t)).join('')}
+      `;
+    }
+
+    function renderRow(t) {
+      const sourcesHtml = t.sources.length
+        ? t.sources.map(s => `<span class="tag-source-chip">${HubUtils.esc(s.label)} ×${s.count}</span>`).join('')
+        : `<span class="tag-source-chip">unused</span>`;
+      const countLabel = t.count > 0 ? `${t.count}` : '0';
+      return `
+        <div class="tag-row" data-tag="${HubUtils.esc(t.name)}">
+          <div class="tag-name" id="tn-${rowId(t.name)}">${HubUtils.esc(t.name)}</div>
+          <div class="tag-count ${t.count === 0 ? 'unused' : ''}">${countLabel} use${t.count === 1 ? '' : 's'}</div>
+          <div class="tag-sources">${sourcesHtml}</div>
+          <div class="tag-actions">
+            <button class="tag-act" title="Rename / merge" onclick="startRename('${jsStr(t.name)}')">✎</button>
+            <button class="tag-act danger" title="${t.count > 0 ? 'Remove from registry (still used elsewhere)' : 'Remove'}" onclick="deleteTopic('${jsStr(t.name)}')">✕</button>
+          </div>
+        </div>`;
+    }
+
+    function rowId(name) {
+      return name.replace(/[^a-zA-Z0-9]/g, '_');
+    }
+    function jsStr(s) {
+      return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function addTopic() {
+      const input = document.getElementById('new-tag-input');
+      const name = (input.value || '').trim();
+      if (!name) return;
+      const existing = HubTags.findCanonical(name);
+      const canonical = HubTags.ensure(name);
+      input.value = '';
+      renderList();
+      if (existing) {
+        showToastSafe(`"${existing}" already exists`, 'info');
+        flashRow(canonical);
+      } else {
+        showToastSafe(`Added "${canonical}"`, 'success');
+        flashRow(canonical);
+      }
+    }
+
+    function startRename(name) {
+      const el = document.getElementById('tn-' + rowId(name));
+      if (!el) return;
+      const input = document.createElement('input');
+      input.className = 'tag-name-input';
+      input.value = name;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); confirmRename(name, input.value); }
+        if (e.key === 'Escape') { e.preventDefault(); renderList(); }
+      };
+      input.onblur = () => confirmRename(name, input.value);
+      el.replaceWith(input);
+      input.focus();
+      input.select();
+    }
+
+    function confirmRename(oldName, newValue) {
+      const newName = (newValue || '').trim();
+      if (!newName || newName === oldName) { renderList(); return; }
+      const willMerge = HubTags.findCanonical(newName) && HubTags.findCanonical(newName).toLowerCase() !== oldName.toLowerCase();
+      HubTags.rename(oldName, newName);
+      renderList();
+      if (willMerge) {
+        showToastSafe(`Merged "${oldName}" into "${newName}" everywhere`, 'success');
+      } else {
+        showToastSafe(`Renamed "${oldName}" → "${newName}" everywhere`, 'success');
+      }
+      flashRow(newName);
+    }
+
+    function deleteTopic(name) {
+      const usage = HubTags.scanUsage().find(t => t.name.toLowerCase() === name.toLowerCase());
+      const count = usage ? usage.count : 0;
+      if (count > 0) {
+        if (!confirm(`"${name}" is still used ${count} time${count === 1 ? '' : 's'}. Remove it from the registry anyway? (existing tags on items are kept, just won't be suggested)`)) return;
+      } else {
+        if (!confirm(`Remove "${name}" from the tag registry?`)) return;
+      }
+      HubTags.removeFromRegistry(name);
+      renderList();
+      showToastSafe(`Removed "${name}"`, 'success');
+    }
+
+    function flashRow(name) {
+      requestAnimationFrame(() => {
+        const row = document.querySelector(`.tag-row[data-tag="${cssEsc(name)}"]`);
+        if (row) {
+          row.classList.add('flash');
+          row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          setTimeout(() => row.classList.remove('flash'), 1200);
+        }
+      });
+    }
+    function cssEsc(s) {
+      return String(s).replace(/["\\]/g, '\\$&');
+    }
+
+    function showToastSafe(msg, type) {
+      if (typeof HubToast !== 'undefined' && HubToast.show) HubToast.show(msg, type);
+    }
+
+    // ── Cross-tool highlight (Cmd+K / links) ──
+    window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin && e.origin !== 'null') return;
+      const d = e.data || {};
+      if (d.type === 'hub-highlight' && d.itemId) {
+        const search = document.getElementById('tag-search');
+        if (search.value) { search.value = ''; renderList(); }
+        flashRow(d.itemId);
+      }
+    });
+
+    // ── Boot ──
+    document.addEventListener('DOMContentLoaded', () => {
+      renderList();
+      HubBootstrap.start('tags-hub');
+    });
+  </script>
+</body>
+</html>

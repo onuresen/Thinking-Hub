@@ -4,11 +4,12 @@
  * Includes the Cmd+K UI overlay and the cross-tool search logic.
  */
 
-const HubSearch = (() => {
+window.HubSearch = (() => {
 
   const TOOLS = [
     'project-hub', 'schedule', 'idea-swiper', 'kmqt-board', 'decision-hub', 'canvas-hub',
-    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub', 'argument-hub'
+    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub', 'argument-hub',
+    'tags-hub'
   ];
 
   function init() {

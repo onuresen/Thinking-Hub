@@ -2145,12 +2145,13 @@
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Focus Timer', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◉', file: 'focus-hub.html', desc: 'Start a Pomodoro session tied to a task — stay in flow and track where your time goes' },
       { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
+      { id: 'tags-hub', label: 'Tags', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏷', file: 'tags-hub.html', desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere' },
       { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
     ];
 
     const MODES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub'] },
       bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
       dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
@@ -3644,7 +3645,7 @@
       'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
       'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1',
       'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
-      'argument-hub-v1',
+      'argument-hub-v1', 'hub-tags-v1',
     ];
 
     async function pickMcpFolder() {
@@ -3887,6 +3888,7 @@
       'hub-settings-v1': 'settings',
       'tool-portfolio-v1': 'tool_portfolio',
       'argument-hub-v1': 'arguments',
+      'hub-tags-v1': 'tag_registry',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -3912,6 +3914,7 @@
       'risk-hub.html': ['risk-hub-v1'],
       'achievements-hub.html': ['hub-activity-v1'],
       'tool-portfolio.html': ['tool-portfolio-v1'],
+      'tags-hub.html': ['hub-tags-v1'],
     };
 
     // Storage keys included in each scope
@@ -3930,7 +3933,7 @@
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
         'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
-        'tool-portfolio-v1', 'argument-hub-v1',
+        'tool-portfolio-v1', 'argument-hub-v1', 'hub-tags-v1',
       ],
     };
 
