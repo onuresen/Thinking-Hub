@@ -39,6 +39,18 @@
       --_ach-heat-3:       rgba(67,56,202,0.9);
       --_ach-heatmap-bg:   rgba(240,244,255,0.7);
     }
+    /* ── Paper & oxblood palette ── */
+    [data-theme="ink"] {
+      --_ach-hero-bg:      linear-gradient(160deg, #f7f1e6 0%, #f1ebde 55%, #ece1cd 100%);
+      --_ach-star-gold:    #b08828;
+      --_ach-star-glow:    rgba(176, 136, 40, 0.3);
+      --_ach-star-dim:     rgba(176, 136, 40, 0.12);
+      --_ach-heat-0:       rgba(60, 44, 24, 0.06);
+      --_ach-heat-1:       rgba(46, 74, 120, 0.18);
+      --_ach-heat-2:       rgba(46, 74, 120, 0.45);
+      --_ach-heat-3:       rgba(46, 74, 120, 0.85);
+      --_ach-heatmap-bg:   rgba(236, 228, 211, 0.6);
+    }
 
     /* ── Page shell ── */
     .ach-page { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -71,7 +83,7 @@
         radial-gradient(circle 1.5px at  4% 60%, rgba(255,255,255,0.6) 0%, transparent 2px),
         radial-gradient(circle  1px at 95% 12%, rgba(255,208,96,0.5) 0%, transparent 2px);
     }
-    [data-theme="light"] .ach-hero::before { display: none; }
+    [data-theme="light"] .ach-hero::before, [data-theme="ink"] .ach-hero::before { display: none; }
     .ach-avatar {
       width: 56px; height: 56px; border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--accent-like));
@@ -124,8 +136,8 @@
       padding: 5px 11px; border-radius: var(--r-sm); cursor: pointer; transition: all .12s;
     }
     .ach-edit-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
-    [data-theme="light"] .ach-edit-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: var(--text2); }
-    [data-theme="light"] .ach-edit-btn:hover { background: rgba(0,0,0,0.12); color: var(--text); }
+    [data-theme="light"] .ach-edit-btn, [data-theme="ink"] .ach-edit-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: var(--text2); }
+    [data-theme="light"] .ach-edit-btn:hover, [data-theme="ink"] .ach-edit-btn:hover { background: rgba(0,0,0,0.12); color: var(--text); }
 
     /* ── Profile edit modal ── */
     .pf-overlay {
@@ -471,7 +483,7 @@
     const assump    = (HubStorage.get('assumptions-hub-v1') || {}).assumptions || [];
     const risks     = (HubStorage.get('risk-hub-v1') || {}).risks || [];
     const goals     = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []);
-    const canvas    = (HubStorage.get('canvas-v1') || {}).items || [];
+    const canvas    = (HubStorage.get('canvas-v1') || {}).nodes || [];
 
     const uniqueAppIds = new Set(log.map(e => e.appId));
     const superLikes   = ideas.filter(i => i.vote === 'super').length;
@@ -936,8 +948,15 @@
   document.addEventListener('DOMContentLoaded', () => {
     _healSelfMemberId();
     const ctx          = buildCtx();
+    const seen         = new Set(ctx.activity.seenAchievements || []);
     const evaluated    = ACHIEVEMENTS.map(ach => {
       const res = ach.evaluate(ctx);
+      // Achievements are permanent once earned — don't re-lock e.g. streak
+      // badges (Hub Fanatic, Week Warrior) just because the streak broke.
+      if (!res.unlocked && seen.has(ach.id)) {
+        res.unlocked = true;
+        res.progress = res.total;
+      }
       return { ...ach, ...res };
     });
 
