@@ -1935,7 +1935,9 @@
       <div class="panel-header-info">
         <div class="panel-project-name" id="panel-project-name"></div>
         <div class="panel-project-desc" id="panel-project-desc"></div>
+        <div id="panel-project-links"></div>
       </div>
+      <button class="panel-close" id="panel-link-btn" title="Link to another tool" style="font-size:13px">🔗</button>
       <button class="panel-close" title="View Profile &amp; Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},window.location.origin||'*')" style="font-size:14px">🏅</button>
       <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
@@ -3530,6 +3532,13 @@
       const bar = document.getElementById('panel-color-bar');
       if (bar) bar.style.background = proj.color;
 
+      const linkBtn = document.getElementById('panel-link-btn');
+      linkBtn.onclick = () => HubLinks.openModal('project-hub', proj.id, proj.name || '');
+      const linkCount = typeof HubLinks !== 'undefined' ? HubLinks.getLinksFor('project-hub', proj.id).length : 0;
+      document.getElementById('panel-project-links').innerHTML = linkCount > 0
+        ? `<button class="hl-badge" style="margin-top:5px" onclick="event.stopPropagation();HubLinks.showLinksPopover('project-hub','${proj.id}',this)">🔗 ${linkCount}</button>`
+        : '';
+
       const body = document.getElementById('panel-body');
       body.innerHTML = '';
 
@@ -4727,6 +4736,16 @@
     // ─── INIT ─────────────────────────────────────────────────────────────────────
     renderSidebarUsers();
     renderContent();
+
+    // Link-change hook to refresh link badges (task list + project panel header)
+    if (typeof HubLinks !== 'undefined') {
+      const prevLinkHook = window.__hl_onLinkChange;
+      window.__hl_onLinkChange = function () {
+        if (prevLinkHook) prevLinkHook();
+        renderContent();
+        if (state.selectedProject) renderPanel(state.selectedProject);
+      };
+    }
   </script>
 
   <!-- Priority Matrix modals -->

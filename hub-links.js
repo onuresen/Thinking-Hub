@@ -87,6 +87,7 @@ window.HubLinks = (() => {
         if (!data) return [];
         const items = [];
         for (const p of (data.projects || [])) {
+          items.push({ id: p.id, label: p.name || '(untitled project)', subtitle: 'Project' });
           for (const t of (p.tasks || [])) {
             items.push({ id: t.id, label: t.title || '(untitled)', subtitle: p.name });
           }

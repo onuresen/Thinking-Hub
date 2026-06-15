@@ -830,6 +830,21 @@ Project cards can be tagged with a free-text `proj.group`, and the Overview grou
 
 ---
 
+### ~~Priority 56 — Dependency Graph: make Projects linkable, not just Tasks~~ ✓ Done `[group: graph-links]`
+Cross-tool links to Project Hub previously only resolved to individual **tasks**, but some dependencies genuinely belong at the project level (a whole project blocks/relates to a decision, risk, etc.) or relate to multiple tasks at once. Rather than replacing task-linking, projects are now a parallel linkable item type — both remain available.
+
+- **`hub-links.js`** — `resolveItems('project-hub')` now also returns one entry per project (`{id: p.id, label: p.name, subtitle: 'Project'}`) ahead of that project's tasks, so any tool's "Link to another tool" picker can target a project itself, distinguished from tasks by the "Project" subtitle.
+- **`graph-hub.html`** — `fetchNodeMeta('project-hub', itemId)` now falls back to a project lookup (`Type: Project`, `Status`, `Open tasks`) when `itemId` doesn't match any task. The "+ New Link" modal's existing Projects/Tasks toggle already produced project-id links pointing at the project's auto-loaded parent node — only the node-panel metadata was missing.
+- **`project-hub.html`** — the project detail panel header gained a `🔗` link button (`HubLinks.openModal('project-hub', proj.id, proj.name)`) and a link-count badge below the title (`HubLinks.showLinksPopover(...)`), mirroring the existing per-task link button/badge. Also added a `window.__hl_onLinkChange` hook (chained, like `canvas-hub.html`'s) so both the new project badge and the existing task badges refresh immediately after creating a link, instead of waiting for the next unrelated re-render.
+
+**Key decisions:**
+- **Decision:** Add projects as an additional linkable type, don't replace task-linking. **Why:** task-level links still carry precise "this specific task is blocked by X" info (feeds Blocked Depth's cascade view); project-level links cover the cases where the dependency isn't about one task. Users pick the right altitude per link. **Confidence:** high.
+- **Decision:** No ID prefixing (e.g. `proj:<id>`) to disambiguate project vs. task link endpoints — project and task ids share the same `itemId` namespace. **Why:** `graph-hub.html`'s existing "+ New Link" Projects/Tasks toggle already created project-id links this way (itemId = raw project id, same format as `uid()` task ids), and `project-hub.html`'s `hub-highlight` listener already tries task-id-then-project-id. Introducing a prefix now would create two incompatible link formats for the same tool. Collision risk between a 7-char base36 task id and project id is negligible for a personal app. **Confidence:** high.
+
+**Files:** `hub-links.js`, `graph-hub.html`, `project-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
