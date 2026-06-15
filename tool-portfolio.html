@@ -1050,20 +1050,44 @@
         // ── Enabled-projects helpers ──────────────────────────────────────────
 
         function _renderProjectLinksHTML(t) {
-            const projects = (HubStorage.get('project-hub-v1') || {}).projects || [];
+            const raw = HubStorage.get('project-hub-v1') || {};
+            const projects = raw.projects || [];
             if (!projects.length) {
                 return '<div class="field-hint" style="padding:4px 0">No projects found in Project Hub yet.</div>';
             }
             const linked = t.projectIds || [];
-            return projects.map(p => {
-                const checked = linked.includes(p.id);
-                const statusColor = { active:'var(--accent)', planning:'#38bdf8', onhold:'var(--accent-super)', done:'var(--text3)' };
-                const col = statusColor[p.status] || 'var(--text3)';
-                return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">
-                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleProjectLink('${p.id}')" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0">
-                    <span style="flex:1;font-weight:${checked?'600':'400'}">${escapeHtml(p.name)}</span>
-                    <span style="font-size:10px;color:${col};font-family:var(--font-mono);text-transform:uppercase">${p.status || 'active'}</span>
-                </label>`;
+            const statusColor = { active:'var(--accent)', planning:'#38bdf8', onhold:'var(--accent-super)', done:'var(--text3)' };
+
+            // Group by proj.group, using Project Hub's saved group order (same as its
+            // Groupings view) with unseen groups appended alphabetically; ungrouped last.
+            const groupMap = new Map();
+            projects.forEach(p => {
+                const key = (p.group || '').trim();
+                if (!groupMap.has(key)) groupMap.set(key, []);
+                groupMap.get(key).push(p);
+            });
+            const namedKeys = [...groupMap.keys()].filter(k => k);
+            const savedOrder = raw.groupOrder || [];
+            const known = savedOrder.filter(g => namedKeys.includes(g));
+            const extra = namedKeys.filter(g => !known.includes(g)).sort((a, b) => a.localeCompare(b));
+            const orderedGroups = [...known, ...extra];
+            if (groupMap.has('')) orderedGroups.push('');
+
+            return orderedGroups.map(groupName => {
+                const groupProjects = groupMap.get(groupName).slice().sort((a, b) => a.name.localeCompare(b.name));
+                const heading = (groupName || orderedGroups.length > 1)
+                    ? `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:8px 0 4px">${escapeHtml(groupName || 'Ungrouped')}</div>`
+                    : '';
+                const rows = groupProjects.map(p => {
+                    const checked = linked.includes(p.id);
+                    const col = statusColor[p.status] || 'var(--text3)';
+                    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">
+                        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleProjectLink('${p.id}')" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0">
+                        <span style="flex:1;font-weight:${checked?'600':'400'}">${escapeHtml(p.name)}</span>
+                        <span style="font-size:10px;color:${col};font-family:var(--font-mono);text-transform:uppercase">${p.status || 'active'}</span>
+                    </label>`;
+                }).join('');
+                return heading + rows;
             }).join('');
         }
 
