@@ -806,6 +806,30 @@ Two-phase job triggered by a naming-correctness observation from the user: the a
 
 ---
 
+### ~~Priority 54 — Profile/Achievements bug fixes + Link-modal scroll fix~~ ✓ Done `[group: bugfix]`
+Two small bug-fix passes found via real use.
+
+- **Sticky streak badges** (`achievements-hub.html`) — "Hub Fanatic" and "Week Warrior" (login-streak achievements) re-locked every time the streak broke, even after being earned once. `evaluate()` re-runs from live data on every load with no memory of past unlocks. Fix: on load, any achievement whose id is in `hub-activity-v1.seenAchievements` is forced to `unlocked: true` / `progress = total` regardless of what `evaluate()` returns — achievements are now permanent once earned.
+- **Canvas Painter fix** (`achievements-hub.html`) — never unlocked because the evaluator read `canvas-v1.items`, but `canvas-hub.html` actually stores nodes under `canvas-v1.nodes`. Fixed the key.
+- **Ink theme hero** (`achievements-hub.html`) — the hero/"Top badger" block had no `[data-theme="ink"]` overrides for its local `--_ach-*` vars, so it inherited the dark theme's near-black "night sky" palette on the paper-themed `ink` UI. Added an ink-appropriate palette (warm paper gradient, amber star tones, indigo heatmap tints) plus extended the existing light-theme `.ach-hero::before` / `.ach-edit-btn` overrides to also apply under `ink`.
+- **Link-to-another-tool modal horizontal scroll** (`hub-links.js`) — the `.hl-tool-tabs` row (Schedule, Idea Swiper, ... Tool Portfolio) was technically `overflow-x: auto` but had no usable scroll affordance, so tabs past "Goal..." were unreachable. Added a visible custom scrollbar (themed via `rgba` overlay, not hardcoded against `theme.css` tokens since it's an overlay), a wheel→horizontal-scroll handler, and `scrollIntoView({inline:'nearest'})` when a tab is selected/activated.
+
+**Files:** `achievements-hub.html`, `hub-links.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 55 — Project Hub: "Groupings" view (custom group ordering)~~ ✓ Done `[group: project-ux]`
+Project cards can be tagged with a free-text `proj.group`, and the Overview groups cards under these labels — but group order was always alphabetical with no way to customize it. Added a dedicated **Groupings** view (Views sidebar, badge = number of named groups) showing one **compact row per group**: drag handle (`⠿`), color accent dot, group name, and a stats line (project count, open tasks, avg progress %, and avg goal % if any project in the group has goals). A trailing non-draggable "Ungrouped" row appears if any projects have no group. Dragging rows reorders `state.groupOrder` (persisted to `project-hub-v1`), and the Overview's group order now reads from the same `groupOrder` via a shared `getGroupOrder(names)` helper (known groups in saved order, any newly-discovered groups appended alphabetically — no migration needed). Empty state shown when no projects have a group set.
+
+**Key decisions:**
+- **Decision:** Compact one-row-per-group layout (not draggable Overview section headers). **Why:** the user pointed out that with 5+ projects per group, Overview group sections already fill the screen — dragging a header far enough to reorder against another group would require scrolling while dragging. A dedicated view where every group fits in a few lines keeps all drop targets visible at once. **Alternative rejected:** making Overview's existing group headers draggable in place — same ordering data, but unusable once groups have any real size. **Confidence:** high.
+- **Decision:** Single shared `getGroupOrder(names)` helper feeding both the new Groupings view and Overview's group rendering, with graceful alphabetical fallback for groups not yet in `state.groupOrder`. **Why:** one ordering source avoids drift between the two views and needs no backfill/migration — any project's group that isn't yet in `groupOrder` just sorts to the end alphabetically until the user drags it. **Confidence:** high.
+- **Decision:** "avg goal %" only shown when at least one project in the group has goals; "avg progress %" always shown (based on task completion). **Why:** most groups won't have OKR-style goals set, so an always-present "avg goal 0%" would be noise; task-based progress is universal. **Confidence:** med.
+
+**Files:** `project-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
