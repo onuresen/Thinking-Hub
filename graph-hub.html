@@ -11,6 +11,7 @@
   <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-tags.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -463,6 +464,7 @@
       'tool-portfolio': { bg: '#1a2e1a', border: '#3a8040' },
       'learning-hub':   { bg: '#1a2a40', border: '#2860a8' },
       'stakeholder-hub':{ bg: '#2a1e38', border: '#5c30a0' },
+      'tags-hub':       { bg: '#2a2a30', border: '#444' },
     };
     const TOOL_COLORS_LIGHT = {
       'project-hub':    { bg: '#bed8f5', border: '#4a90c8' },
@@ -477,6 +479,7 @@
       'tool-portfolio': { bg: '#c8ecc8', border: '#3a9040' },
       'learning-hub':   { bg: '#c0d8f5', border: '#3060b8' },
       'stakeholder-hub':{ bg: '#ddc8f8', border: '#6030b0' },
+      'tags-hub':       { bg: '#e4e4ea', border: '#8888a0' },
     };
 
     const TOOL_LABELS = {
@@ -492,6 +495,7 @@
       'tool-portfolio': 'Tool Portfolio',
       'learning-hub':   'Learning Log',
       'stakeholder-hub':'Stakeholder Map',
+      'tags-hub':       'Tags',
     };
 
     const EDGE_TYPE_CONFIG = {
@@ -628,14 +632,33 @@
         return id;
       }
 
-      function addAutoEdge(fromId, toId, label) {
+      function addAutoEdge(fromId, toId, label, dashStyle) {
         edges.push({
           id: `auto::${fromId}__${toId}`, from: fromId, to: toId,
           _auto: true, title: label,
           color: { color: autoEdgeColor, highlight: accentColor, hover: autoEdgeColor },
-          width: 1, dashes: [5, 5],
+          width: 1, dashes: dashStyle || [5, 5],
           arrows: { to: { enabled: true, scaleFactor: 0.45 } },
           smooth: { type: 'continuous' }, selectionWidth: 1.5
+        });
+      }
+
+      // Tags (from the central registry — every registered/in-use tag becomes
+      // a standalone node; tagged items below get a dotted edge to it)
+      const tagNodeIds = new Map(); // lowercase tag name -> node id
+      try {
+        if (typeof HubTags !== 'undefined') {
+          HubTags.scanUsage().forEach(u => {
+            const tId = addNode('tags-hub', u.name, u.name);
+            tagNodeIds.set(u.name.toLowerCase(), tId);
+          });
+        }
+      } catch {}
+
+      function addTagEdges(itemId, tags) {
+        (tags || []).forEach(tag => {
+          const tId = tagNodeIds.get((tag || '').toLowerCase());
+          if (tId) addAutoEdge(itemId, tId, `tagged: ${tag}`, [2, 3]);
         });
       }
 
@@ -653,6 +676,7 @@
           const dId = addNode('decision-hub', d.id, d.title || 'Decision');
           if (d.projectId && nodes.has(`project-hub::${d.projectId}`))
             addAutoEdge(dId, `project-hub::${d.projectId}`, 'decision → project');
+          addTagEdges(dId, (d.tags || '').split(',').map(s => s.trim()).filter(Boolean));
         });
       } catch {}
 
@@ -685,6 +709,7 @@
           const mId = addNode('meetings-hub', m.id, m.title || 'Meeting');
           if (m.projectId && nodes.has(`project-hub::${m.projectId}`))
             addAutoEdge(mId, `project-hub::${m.projectId}`, 'meeting → project');
+          addTagEdges(mId, m.tags);
         });
       } catch {}
 
@@ -704,7 +729,8 @@
       try {
         const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
         (lh.items || []).forEach(item => {
-          addNode('learning-hub', item.id, item.title || 'Learning');
+          const lId = addNode('learning-hub', item.id, item.title || 'Learning');
+          addTagEdges(lId, item.tags);
         });
       } catch {}
 
@@ -1218,6 +1244,13 @@
             { k: 'Engagement', v: sh.engagement || '—' },
           ];
         }
+        if (tool === 'tags-hub' && typeof HubTags !== 'undefined') {
+          const u = HubTags.scanUsage().find(u => u.name.toLowerCase() === itemId.toLowerCase());
+          if (u) return [
+            { k: 'Used in', v: u.count ? `${u.count} item(s)` : '— not yet used —' },
+            { k: 'Sources', v: u.sources.length ? u.sources.map(s => s.label).join(', ') : '—' },
+          ];
+        }
       } catch {}
       return [];
     }
@@ -1433,7 +1466,7 @@
 
     buildGraph();
     ['hub-links-v1','project-hub-v1','decision-hub-v1','risk-hub-v1','goals-hub-v1','meetings-hub-v1',
-     'learning-hub-v1','stakeholder-hub-v1']
+     'learning-hub-v1','stakeholder-hub-v1','hub-tags-v1']
       .forEach(k => HubStorage.subscribe(k, buildGraph));
     window.__hl_onLinkChange = buildGraph;
 
