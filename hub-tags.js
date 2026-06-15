@@ -81,8 +81,14 @@ window.HubTags = (() => {
       id: 'decision-hub', label: 'Decision Hub',
       storageKey: 'decision-hub-v1',
       collect(data) {
+        // decision-hub-v1 stores tags as a CSV string, but several other
+        // tools (capture-hub, journal-hub, review-hub, meetings-hub,
+        // log-hub) push new decisions with `tags: []` — normalize both
+        // shapes on read; writes always go back out as CSV.
         return (Array.isArray(data) ? data : []).map(d => ({
-          get: () => (d.tags || '').split(',').map(s => s.trim()).filter(Boolean),
+          get: () => Array.isArray(d.tags)
+            ? d.tags.filter(Boolean)
+            : (d.tags || '').split(',').map(s => s.trim()).filter(Boolean),
           set: arr => { d.tags = arr.join(', '); },
         }));
       }

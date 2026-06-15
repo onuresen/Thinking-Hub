@@ -905,6 +905,19 @@ Final Tags Hub group — every tag from the central registry now appears as a no
 
 ---
 
+### ~~Priority 57 follow-up — Bugfix: Tags Hub "+ Add" did nothing~~ ✓ Done `[group: tags-hub]`
+User report: "when I add a tag in Tags Hub, nothing happens. no list of tags or new tag etc." Root cause: `hub-tags.js`'s `decision-hub` `TAG_SOURCES` accessor assumed `d.tags` is always a CSV string (`(d.tags || '').split(',')`), but **six other tools push new `decision-hub-v1` entries with `tags: []` (an array literal)** — `capture-hub.html`, `journal-hub.html` (×2), `review-hub.html`, `meetings-hub.html` (×2), `log-hub.html`. The instant any such decision exists, `[].split` throws `TypeError` **uncaught** inside `scanUsage()`, which both `renderList()` and `addTopic()` (via `findCanonical`→`ensure`) call directly with no try/catch around `entry.get()` — so the whole script dies before `tag-list-wrap.innerHTML` is ever set (empty list) and before `addTopic()` reaches `renderList()`/`input.value = ''` (the "+ Add" click visibly does nothing).
+
+**Fix:** `hub-tags.js`'s `decision-hub` accessor now normalizes on read — `Array.isArray(d.tags) ? d.tags.filter(Boolean) : (d.tags || '').split(',')...` — so both the legacy/buggy array shape and the canonical CSV-string shape work. `set()` is unchanged (`arr.join(', ')`), so any decision touched by `rename()`/`ensure()` self-heals to the canonical CSV string on its next mutation.
+
+**Key decisions:**
+- **Decision:** Fix in `hub-tags.js`'s accessor (normalize on read), not in the 6 call sites that push `tags: []`. **Why:** one defensive read-side fix covers all current and future callers that get this wrong, is forward-compatible, and self-heals affected decisions to CSV the next time `rename()`/`ensure()` touches them — touching 6 files for the same one-line change is more risk for no extra benefit. **Alternative rejected:** fix all 6 push-sites to use `tags: ''` — correct in principle but doesn't fix *existing* user data already saved with `tags: []`, which is the actual failure the user hit. **Confidence:** high.
+- **Decision:** Did not add blanket try/catch around every `entry.get()` in `scanUsage()`/`rename()`. **Why:** the discovered bug is a specific, real, reproducible type mismatch with a precise fix; a blanket catch would silently swallow *other* future bugs in tag scanning with no signal. **Confidence:** med. **Revisit when:** another tag-source type-mismatch bug surfaces — consider a shared "always return an array" normalization helper at that point.
+
+**Files:** `hub-tags.js`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
