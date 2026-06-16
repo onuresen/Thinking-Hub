@@ -138,41 +138,6 @@
       opacity: 0.85;
     }
 
-    .sch-import-btn {
-      padding: 8px 10px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      color: var(--text2);
-      font-family: var(--font-body);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-
-    .sch-import-btn:hover {
-      border-color: var(--border2);
-      color: var(--text);
-    }
-
-    .sch-import-btn .import-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 16px;
-      height: 16px;
-      padding: 0 4px;
-      background: var(--accent);
-      color: #111;
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: 700;
-      margin-left: 5px;
-      line-height: 1;
-    }
-
     .sch-filter {
       display: flex;
       gap: 4px;
@@ -1057,140 +1022,6 @@
       color: #f44;
     }
 
-    /* ── Import modal ──────────────────────────────────────────── */
-    .sch-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: 200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-
-    .sch-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .sch-modal {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: var(--r);
-      width: 460px;
-      max-width: 95vw;
-      max-height: 78vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .sch-modal-header {
-      padding: 18px 20px 14px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-
-    .sch-modal-title {
-      flex: 1;
-      font-family: var(--font-display);
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    .sch-modal-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px 20px;
-    }
-
-    .sch-modal-body::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .sch-modal-body::-webkit-scrollbar-thumb {
-      background: var(--border2);
-      border-radius: 2px;
-    }
-
-    .sch-modal-footer {
-      padding: 14px 20px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .sch-modal-note {
-      font-size: 11px;
-      color: var(--text3);
-      margin-left: auto;
-    }
-
-    .sch-import-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .sch-import-row:last-child {
-      border-bottom: none;
-    }
-
-    .sch-import-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .sch-import-dot.ms-shape {
-      border-radius: 2px;
-      transform: rotate(45deg);
-    }
-
-    .sch-import-info {
-      flex: 1;
-    }
-
-    .sch-import-title {
-      font-size: 12.5px;
-      font-weight: 500;
-    }
-
-    .sch-import-meta {
-      font-size: 10.5px;
-      color: var(--text3);
-      font-family: var(--font-mono);
-    }
-
-    .sch-import-skip {
-      font-size: 10.5px;
-      color: var(--text3);
-      font-style: italic;
-    }
-
-    .sch-modal-empty {
-      text-align: center;
-      padding: 30px;
-      color: var(--text3);
-      font-size: 13px;
-    }
-
-    .sch-btn-primary:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
     /* ── Toast ─────────────────────────────────────────────────── */
     .sch-toast {
       position: fixed;
@@ -1362,15 +1193,13 @@
     </div>
 
     <div class="sch-view-toggle">
-      <button class="sch-view-btn active" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
-      <button class="sch-view-btn" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+      <button class="sch-view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+      <button class="sch-view-btn" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
       <button class="sch-view-btn" id="btn-multi" onclick="switchView('multi')">Projects</button>
     </div>
 
     <div class="sch-sidebar-actions">
       <button class="sch-add-btn" onclick="openDrawer(null)">+ Add Item</button>
-      <button class="sch-import-btn" id="import-btn" onclick="openImportModal()"
-        title="Import tasks &amp; milestones from Project Hub">↓ Import</button>
     </div>
 
     <div class="sch-filter">
@@ -1515,22 +1344,6 @@
     </div>
   </div>
 
-  <!-- ══ Import Modal ══════════════════════════════════════════════ -->
-  <div class="sch-overlay" id="import-overlay">
-    <div class="sch-modal">
-      <div class="sch-modal-header">
-        <span class="sch-modal-title">Import from Project Hub</span>
-        <button class="sch-close-btn" onclick="closeImportModal()">&#10005;</button>
-      </div>
-      <div class="sch-modal-body" id="import-body"></div>
-      <div class="sch-modal-footer">
-        <button class="sch-btn-primary" id="import-confirm-btn" onclick="executeImport()">Import</button>
-        <button class="sch-btn-ghost" onclick="closeImportModal()">Cancel</button>
-        <span class="sch-modal-note" id="import-note"></span>
-      </div>
-    </div>
-  </div>
-
   <!-- Toast -->
   <div class="sch-toast" id="sch-toast"></div>
 
@@ -1654,7 +1467,7 @@
     // ═══════════════════════════════════════════════════════════════
     let state;
     let ui = {
-      activeView: 'timeline',
+      activeView: 'calendar',
       zoom: 'month',
       calYear: new Date().getFullYear(),
       calMonth: new Date().getMonth(),
@@ -1666,7 +1479,6 @@
       multiOffset: 0,
       collapsedProjects: new Set(),
     };
-    let _pendingImport = [];
     let _drawerColor = PALETTE[2];
 
     // ═══════════════════════════════════════════════════════════════
@@ -2684,106 +2496,6 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Import from Project Hub
-    // ═══════════════════════════════════════════════════════════════
-    function openImportModal() {
-      const raw = HubStorage.get('project-hub-v1');
-      if (!raw) {
-        showToast('No Project Hub data found. Create some tasks there first.');
-        return;
-      }
-
-      let phData;
-      try { phData = JSON.parse(raw); }
-      catch { showToast('Could not read Project Hub data.'); return; }
-
-      const existingSourceIds = new Set(
-        state.items.filter(it => it.sourceTool === 'project-hub').map(it => it.sourceId)
-      );
-
-      _pendingImport = [];
-      let html = '';
-      let newCount = 0;
-
-      for (const project of (phData.projects || [])) {
-        for (const task of (project.tasks || [])) {
-          if (!task.due) continue;
-          const skip = existingSourceIds.has(task.id);
-          if (!skip) newCount++;
-          _pendingImport.push({
-            id: uid(), title: task.title || '(untitled)',
-            type: 'task', start: task.due, end: task.due,
-            color: project.color || PALETTE[2],
-            projectId: project.id || null,
-            projectRef: project.name || null,
-            sourceId: task.id, sourceTool: 'project-hub',
-            done: !!task.done, createdAt: new Date().toISOString(), _skip: skip,
-          });
-          const dotClass = '';
-          html += `<div class="sch-import-row">
-        <div class="sch-import-dot" style="background:${project.color || PALETTE[2]}"></div>
-        <div class="sch-import-info">
-          <div class="sch-import-title">${esc(task.title || '(untitled)')}</div>
-          <div class="sch-import-meta">${esc(project.name || 'Project')} &middot; ${fmtDate(task.due)}</div>
-        </div>
-        ${skip ? '<span class="sch-import-skip">already imported</span>' : ''}
-      </div>`;
-        }
-
-        for (const ms of (project.milestones || [])) {
-          if (!ms.date) continue;
-          const skip = existingSourceIds.has(ms.id);
-          if (!skip) newCount++;
-          _pendingImport.push({
-            id: uid(), title: ms.name || '(milestone)',
-            type: 'milestone', start: ms.date, end: ms.date,
-            color: ms.color || PALETTE[1],
-            projectId: project.id || null,
-            projectRef: project.name || null,
-            sourceId: ms.id, sourceTool: 'project-hub',
-            done: false, createdAt: new Date().toISOString(), _skip: skip,
-          });
-          html += `<div class="sch-import-row">
-        <div class="sch-import-dot ms-shape" style="background:${ms.color || PALETTE[1]}"></div>
-        <div class="sch-import-info">
-          <div class="sch-import-title">${esc(ms.name || '(milestone)')}</div>
-          <div class="sch-import-meta">${esc(project.name || 'Project')} &middot; ${fmtDate(ms.date)} &middot; milestone</div>
-        </div>
-        ${skip ? '<span class="sch-import-skip">already imported</span>' : ''}
-      </div>`;
-        }
-      }
-
-      const bodyEl = document.getElementById('import-body');
-      bodyEl.innerHTML = html || `<div class="sch-modal-empty">No tasks or milestones with dates found in Project Hub.</div>`;
-
-      const btn = document.getElementById('import-confirm-btn');
-      btn.disabled = newCount === 0;
-      btn.textContent = newCount > 0 ? `Import ${newCount} item${newCount !== 1 ? 's' : ''}` : 'Nothing new';
-      document.getElementById('import-note').textContent =
-        newCount === 0 ? 'All items already imported.' : '';
-
-      document.getElementById('import-overlay').classList.add('open');
-    }
-
-    function closeImportModal() {
-      document.getElementById('import-overlay').classList.remove('open');
-      _pendingImport = [];
-    }
-
-    function executeImport() {
-      const toAdd = _pendingImport
-        .filter(it => !it._skip)
-        .map(({ _skip, ...rest }) => rest);
-      if (!toAdd.length) return;
-      state.items.push(...toAdd);
-      saveState();
-      closeImportModal();
-      render();
-      showToast(`Imported ${toAdd.length} item${toAdd.length !== 1 ? 's' : ''}.`);
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // Toast
     // ═══════════════════════════════════════════════════════════════
     let _toastTimer = null;
@@ -2800,9 +2512,7 @@
     // ═══════════════════════════════════════════════════════════════
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (document.getElementById('import-overlay').classList.contains('open')) {
-          closeImportModal();
-        } else if (document.getElementById('sch-drawer').classList.contains('open')) {
+        if (document.getElementById('sch-drawer').classList.contains('open')) {
           closeDrawer();
         } else {
           try { window.parent.postMessage({ type: 'hub-home' }, window.location.origin || '*'); } catch { }
@@ -2853,36 +2563,6 @@
       if (changed) { saveState(); render(); }
     }
 
-    function updateImportBadge() {
-      const btn = document.getElementById('import-btn');
-      if (!btn) return;
-      const raw = HubStorage.get('project-hub-v1');
-      if (!raw) return;
-      let phData;
-      try { phData = JSON.parse(raw); } catch { return; }
-
-      const existingSourceIds = new Set(
-        state.items.filter(it => it.sourceTool === 'project-hub').map(it => it.sourceId)
-      );
-      let newCount = 0;
-      for (const project of (phData.projects || [])) {
-        for (const task of (project.tasks || [])) {
-          if (task.due && !existingSourceIds.has(task.id)) newCount++;
-        }
-        for (const ms of (project.milestones || [])) {
-          if (ms.date && !existingSourceIds.has(ms.id)) newCount++;
-        }
-      }
-
-      const existing = btn.querySelector('.import-badge');
-      if (newCount > 0) {
-        if (existing) { existing.textContent = newCount; }
-        else { btn.insertAdjacentHTML('beforeend', `<span class="import-badge">${newCount}</span>`); }
-      } else {
-        if (existing) existing.remove();
-      }
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // Project select helpers
     // ═══════════════════════════════════════════════════════════════
@@ -2906,11 +2586,9 @@
     state = loadState();
     try {
       _populateProjectSelect();
-      updateImportBadge();
       HubData.onChange(() => {
         _populateProjectSelect();
         syncFromProjectHub();
-        updateImportBadge();
         if (ui.activeView === 'multi') renderMultiView();
       });
     } catch { }
