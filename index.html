@@ -697,18 +697,18 @@
     }
 
     .stat-badge.risk {
-      background: rgba(255, 80, 80, 0.12);
-      color: #ff9090;
+      background: var(--accent-nope-dim, rgba(255, 80, 80, 0.12));
+      color: var(--accent-nope);
     }
 
     .stat-badge.note {
-      background: rgba(150, 150, 200, 0.1);
-      color: #9999cc;
+      background: var(--accent-dim);
+      color: var(--text2);
     }
 
     .stat-badge.open {
-      background: rgba(255, 180, 0, 0.1);
-      color: #ffb833;
+      background: var(--accent-super-dim, rgba(255, 180, 0, 0.1));
+      color: var(--accent-super);
     }
 
     .stat-card-footer {
@@ -1239,8 +1239,8 @@
 
     .sfield-status.ok {
       display: block;
-      background: rgba(100, 200, 100, .12);
-      color: #6db86d;
+      background: var(--accent-like-dim, rgba(100, 200, 100, .12));
+      color: var(--accent-like);
     }
 
     .sfield-status.err {
@@ -1896,6 +1896,11 @@
       <div class="proj-ctx-bar" id="proj-ctx-bar"></div>
       <div class="proj-ctx-name" id="proj-ctx-name"></div>
       <div class="proj-ctx-stats" id="proj-ctx-stats"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <kbd style="background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-size:9px;color:var(--text3);">⌘K</kbd>
+      <span style="margin-left:5px;color:var(--text3);font-size:10px;">Search everything</span>
     </div>
 
   </nav>

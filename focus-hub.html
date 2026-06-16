@@ -657,6 +657,13 @@
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => { HubBootstrap.start('focus-hub'); });
+    window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+        const el = document.querySelector(`.session-row[data-id="${e.data.itemId}"]`);
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 1500); }
+      }
+    });
   </script>
 </body>
 </html>

@@ -681,6 +681,13 @@
     HubBootstrap.start('risk-hub');
   });
 
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      openDetail(e.data.itemId);
+    }
+  });
+
   document.getElementById('add-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('add-modal-overlay')) closeAddModal();
   });

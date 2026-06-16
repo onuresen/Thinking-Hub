@@ -1249,6 +1249,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             HubBootstrap.start('tool-portfolio');
         });
+        window.addEventListener('message', e => {
+            if (e.origin !== window.location.origin) return;
+            if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+                openTool(e.data.itemId);
+            }
+        });
     </script>
 </body>
 

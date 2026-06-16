@@ -916,6 +916,13 @@
     HubBootstrap.start('goals-hub');
   });
 
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      openObjModal(e.data.itemId);
+    }
+  });
+
   document.getElementById('obj-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('obj-modal-overlay')) closeObjModal();
   });

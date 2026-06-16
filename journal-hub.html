@@ -1052,6 +1052,14 @@
     HubData.onChange && HubData.onChange(() => { if (rhInited) rhRenderDoneCol(); });
     HubBootstrap.start('journal-hub');
   });
+
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      switchJhTab('daily');
+      lhOpenDate(e.data.itemId);
+    }
+  });
 </script>
 </body>
 </html>

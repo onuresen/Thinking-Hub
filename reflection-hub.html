@@ -1604,6 +1604,26 @@
 
     HubBootstrap.start('reflection-hub');
   });
+
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      const id = e.data.itemId;
+      const board = getActiveBoard();
+      if (!board) return;
+      for (const col of ['signal', 'friction', 'question', 'action']) {
+        if ((board.columns?.[col] || []).find(it => it.id === id)) {
+          st.selectedItemId = id;
+          renderAll();
+          setTimeout(() => {
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+          }, 80);
+          return;
+        }
+      }
+    }
+  });
 </script>
 </body>
 </html>
