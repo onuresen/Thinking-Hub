@@ -661,6 +661,7 @@
     const kr = obj.keyResults.find(k => k.id === krId);
     if (!kr) return;
     if (kr.type === 'checkbox') kr.done = !kr.done;
+    kr.updatedAt = new Date().toISOString();
     save(); renderMain();
   }
 
@@ -672,6 +673,7 @@
     const kr = obj.keyResults.find(k => k.id === krId);
     if (!kr) return;
     kr.current = parseFloat(val) || 0;
+    kr.updatedAt = new Date().toISOString();
     save(); renderMain();
   }
 

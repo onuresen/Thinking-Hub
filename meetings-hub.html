@@ -422,6 +422,10 @@
         <div class="field-label">Action item</div>
         <input class="field-input" id="action-input" placeholder="What needs to happen?" />
       </div>
+      <div style="margin-top:10px">
+        <div class="field-label">Due date <span style="color:var(--text3);font-weight:400">(optional)</span></div>
+        <input class="field-input" id="action-due" type="date" />
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveAction()">Add</button>
@@ -1671,6 +1675,7 @@
 
   function openActionModal() {
     document.getElementById('action-input').value = '';
+    document.getElementById('action-due').value = '';
     document.getElementById('action-modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('action-input').focus(), 50);
   }
@@ -1679,7 +1684,8 @@
     const text = document.getElementById('action-input').value.trim(); if (!text) return;
     const m = activeMeeting(); if (!m) return;
     if (!m.actionItems) m.actionItems = [];
-    m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, createdAt: new Date().toISOString() });
+    const dueDate = document.getElementById('action-due').value || null;
+    m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, dueDate, createdAt: new Date().toISOString() });
     save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 

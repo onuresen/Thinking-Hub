@@ -2993,6 +2993,105 @@
           });
       } catch { }
 
+      // B1 — Risks due for review (open/mitigating, reviewDate <= today)
+      try {
+        const rd = HubStorage.get('risk-hub-v1') || {};
+        (rd.risks || []).filter(r => r.status !== 'closed' && r.reviewDate && r.reviewDate <= todayStr)
+          .sort((a, b) => (a.reviewDate || '').localeCompare(b.reviewDate || ''))
+          .slice(0, 2)
+          .forEach(r => {
+            const key = 'risk:' + r.id;
+            if (_resurfaceDismissed(key)) return;
+            out.push({
+              key, tool: 'risk-hub', id: r.id, icon: '⚠',
+              dot: 'var(--accent-nope)',
+              text: r.title || '(untitled risk)',
+              meta: `review due ${r.reviewDate} — ${r.status || 'open'}`
+            });
+          });
+      } catch { }
+
+      // B2 — Decisions with condition revisit text but no fixed date (30/60/90d cadence)
+      try {
+        const dl2 = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const decs2 = Array.isArray(dl2) ? dl2 : (dl2.entries || []);
+        const condMilestones = [30, 60, 90];
+        decs2.filter(d => !d.archived && d.revisitWhen && !d.revisitDate && !d.outcome && d.createdAt)
+          .forEach(d => {
+            const age = Math.floor((Date.now() - new Date(d.createdAt).getTime()) / 86400000);
+            const hit = condMilestones.find(m => Math.abs(age - m) <= 3);
+            if (!hit) return;
+            const key = 'dec-cond:' + d.id + ':' + hit;
+            if (_resurfaceDismissed(key)) return;
+            out.push({
+              key, tool: 'decision-hub', id: d.id, icon: '◎',
+              dot: 'var(--accent-super)',
+              text: d.title || '(untitled decision)',
+              meta: `${hit}d old — revisit if: ${d.revisitWhen}`
+            });
+          });
+      } catch { }
+
+      // B3 — Liked/super ideas older than 30d — bring them back
+      try {
+        const history = HubStorage.get('ideaswipe_history_v6') || [];
+        history.filter(h => (h.vote === 'like' || h.vote === 'super') &&
+            h.ts && (Date.now() - h.ts) > 30 * 86400000)
+          .sort((a, b) => b.ts - a.ts)
+          .slice(0, 2)
+          .forEach(h => {
+            const key = 'idea:' + h.ts;
+            if (_resurfaceDismissed(key)) return;
+            out.push({
+              key, tool: 'idea-swiper', id: String(h.ts), icon: h.vote === 'super' ? '★' : '♥',
+              dot: h.vote === 'super' ? 'var(--accent-super)' : 'var(--accent)',
+              text: (h.idea || '').slice(0, 80),
+              meta: `${h.vote} idea — ${Math.floor((Date.now() - h.ts) / 86400000)}d ago`
+            });
+          });
+      } catch { }
+
+      // B5 — Overdue meeting action items (have dueDate, not done)
+      try {
+        const mh2 = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+        (mh2.meetings || []).filter(m => !m.archived).forEach(m => {
+          (m.actionItems || []).filter(a => !a.done && a.dueDate && a.dueDate <= todayStr)
+            .forEach(a => {
+              const key = 'action:' + a.id;
+              if (_resurfaceDismissed(key)) return;
+              out.push({
+                key, tool: 'meetings-hub', id: m.id, icon: '✓',
+                dot: 'var(--accent-nope)',
+                text: a.text || '(action)',
+                meta: `overdue action — ${m.title || 'meeting'}`
+              });
+            });
+        });
+      } catch { }
+
+      // B6 — Stale KRs (not updated 14+ days)
+      try {
+        const gh = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
+        const activeQtrs = (gh.quarters || []).filter(q => !q.archived);
+        if (activeQtrs.length) {
+          const latest = activeQtrs[activeQtrs.length - 1];
+          (latest.objectives || []).forEach(obj => {
+            (obj.keyResults || []).filter(kr => !kr.done && kr.updatedAt).forEach(kr => {
+              const age = Math.floor((Date.now() - new Date(kr.updatedAt).getTime()) / 86400000);
+              if (age < 14) return;
+              const key = 'kr:' + kr.id;
+              if (_resurfaceDismissed(key)) return;
+              out.push({
+                key, tool: 'goals-hub', id: obj.id, icon: '🎯',
+                dot: 'var(--accent-super)',
+                text: kr.title || '(key result)',
+                meta: `KR not updated in ${age}d — ${_esc(obj.title || latest.label || 'OKR')}`
+              });
+            });
+          });
+        }
+      } catch { }
+
       return out.slice(0, 5);
     }
 
@@ -3031,6 +3130,17 @@
       return card;
     }
 
+    function _currentWeekKey() {
+      const now = new Date();
+      const day = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      monday.setHours(0, 0, 0, 0);
+      const jan4 = new Date(monday.getFullYear(), 0, 4);
+      const week = Math.ceil(((monday - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+      return `${monday.getFullYear()}-W${String(week).padStart(2, '0')}`;
+    }
+
     function buildTodayView() {
       const container = document.getElementById('today-view');
       if (!container) return;
@@ -3062,8 +3172,24 @@
         if (open.length) sections.push({ type: 'decisions', items: open });
       } catch { }
 
+      // B4 — This week's rocks from Weekly Review
+      let thisWeekRocks = [];
+      try {
+        const rh = HubStorage.get('review-hub-v1') || {};
+        const weekKey = _currentWeekKey();
+        thisWeekRocks = ((rh[weekKey] && rh[weekKey].rocks) || []).filter(Boolean);
+      } catch { }
+
+      // B7 — Count unscored decisions past revisit date for calibration nudge
+      let calibrationDueCount = 0;
+      try {
+        const dlc = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
+        const decsc = Array.isArray(dlc) ? dlc : (dlc.entries || []);
+        calibrationDueCount = decsc.filter(d => !d.archived && d.revisitDate && d.revisitDate <= todayStr && !d.outcome).length;
+      } catch { }
+
       const resurface = buildResurfaceItems();
-      const hasContent = sections.some(s => s.items.length > 0) || resurface.length;
+      const hasContent = sections.some(s => s.items.length > 0) || resurface.length || thisWeekRocks.length;
       if (!hasContent) {
         container.innerHTML = `<div class="today-all-clear">
           <div class="today-all-clear-icon">✓</div>
@@ -3076,7 +3202,26 @@
       const grid = document.createElement('div');
       grid.className = 'status-grid';
 
+      // B7 — Calibration nudge strip (≥3 decisions unscored and past revisit)
+      if (calibrationDueCount >= 3) {
+        const nudge = document.createElement('div');
+        nudge.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-sm);background:var(--accent-super-dim,rgba(255,180,0,.1));border:1px solid var(--accent-super);cursor:pointer;font-size:13px;color:var(--text2)';
+        nudge.innerHTML = `<span style="font-size:16px">⚖</span> <span><strong>${calibrationDueCount} decisions</strong> are past their revisit date — <span style="color:var(--accent-super)">calibrate your calls</span></span><span style="margin-left:auto;font-size:11px;color:var(--text3)">Open Decision Hub →</span>`;
+        nudge.addEventListener('click', () => openApp('decision-hub'));
+        grid.appendChild(nudge);
+      }
+
       if (resurface.length) grid.appendChild(buildResurfaceCard(resurface));
+
+      // B4 — This week's rocks card
+      if (thisWeekRocks.length) {
+        const rockRows = thisWeekRocks.map(r => `
+          <div class="stat-item" data-tool="project-hub" data-item-id="${_esc(r.id || '')}">
+            <div class="stat-item-dot" style="background:var(--accent)"></div>
+            <div class="stat-item-text">⠿ ${_esc(r.title || r.text || '')}</div>
+          </div>`).join('');
+        grid.appendChild(_buildTodayCard('🪨', "This Week's Rocks", `${thisWeekRocks.length} pinned`, rockRows, '', 'journal-hub', false));
+      }
 
       sections.forEach(sec => {
         const { type, items } = sec;

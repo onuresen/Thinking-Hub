@@ -989,6 +989,26 @@ Project selects/lists in 7 tools previously used raw `project-hub-v1` storage or
 
 ---
 
+### ~~Roadmap Group B — Resurface Loop Expansion~~ ✓ Done `[group: resurface-expansion]`
+Seven improvements extending the Resurface card and Today view to pull from more buried data sources.
+
+- **B1 — Risks due for review** — `buildResurfaceItems()` now reads `risk-hub-v1` and surfaces open/mitigating risks where `reviewDate ≤ today`, up to 2 entries, dismissable for 30d. Dismiss key: `risk:<id>`.
+- **B2 — Condition-only decision revisits** — Decisions with `revisitWhen` text but no `revisitDate` are surfaced at 30/60/90d cadence (±3d window) after `createdAt`. Dismiss key: `dec-cond:<id>:<days>`.
+- **B3 — Liked/super ideas older than 30d** — `ideaswipe_history_v6` entries with `vote === 'like'|'super'` and age > 30d are surfaced (newest first, up to 2). Dismiss key: `idea:<ts>`.
+- **B4 — This Week's Rocks card in Today view** — Reads `review-hub-v1[currentWeekKey].rocks` (up to 3 pinned tasks from the Weekly Review); renders as a "🪨 This Week's Rocks" stat-card in Today. Clicking each rock navigates to project-hub. Helper `_currentWeekKey()` added before `buildTodayView()`.
+- **B5 — Overdue meeting action items** — Meeting Hub's "Add Action" modal gained an optional **Due date** `<input type="date">` field (saved as `a.dueDate`). `buildResurfaceItems()` surfaces actions where `dueDate ≤ today` and `!done`. Dismiss key: `action:<id>`.
+- **B6 — Stale KRs** — `toggleKR()` and `updateKRProgress()` in `goals-hub.html` now stamp `kr.updatedAt` on every KR mutation. `buildResurfaceItems()` surfaces KRs (latest active quarter) where `updatedAt` exists and age ≥ 14d, linking to the parent objective. Dismiss key: `kr:<id>`.
+- **B7 — Calibration nudge strip** — When ≥3 decisions are past `revisitDate` and unscored, a full-width amber strip appears at the top of the Today grid prompting "calibrate your calls", navigating to decision-hub on click. Rendered before the Resurface card.
+
+**Key decisions:**
+- **Decision:** B3 (ideas) surfaces all liked/super ideas >30d — not just those without a linked project — because `ideaswipe_history_v6` entries don't carry a `projectId` (the send-to-hub flow creates the task but doesn't back-mark the idea). **Why:** a resurfaced idea the user already actioned is still harmless (they dismiss it); an unsent idea that wasn't resurfaced is the actual loss. **Confidence:** high.
+- **Decision:** B4 rocks card navigates to `journal-hub` (not `project-hub`) on card click, but each rock row navigates to `project-hub` for `hub-highlight`. **Why:** the rocks panel lives in the Journal/Weekly Review, so the card-level CTA goes to "manage your rocks"; item-level CTA goes to the underlying task. **Confidence:** med.
+- **Decision:** B7 nudge uses inline `style.cssText` (not a CSS class) for the strip. **Why:** it's a one-off element appended to a `.status-grid` without a CSS class of its own; adding a class to `theme.css` for one element that appears only when ≥3 decisions are overdue is disproportionate. **Confidence:** high.
+
+**Files:** `index.html`, `meetings-hub.html`, `goals-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
