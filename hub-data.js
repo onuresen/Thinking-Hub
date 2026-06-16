@@ -55,6 +55,35 @@ window.HubData = (() => {
     return getData().projects;
   }
 
+  // Returns projects sorted by the user's saved group order (Project Hub →
+  // Groupings view), then alphabetically within each group, ungrouped last.
+  // Identical ordering to the Tool Portfolio "Enabled Projects" list.
+  function getProjectsSorted() {
+    const raw = HubStorage.get(PH_KEY) || {};
+    const projects = Array.isArray(raw.projects) ? raw.projects : [];
+    const savedOrder = Array.isArray(raw.groupOrder) ? raw.groupOrder : [];
+
+    const groupMap = new Map();
+    projects.forEach(p => {
+      const key = (p.group || '').trim();
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key).push(p);
+    });
+
+    const namedKeys = [...groupMap.keys()].filter(k => k);
+    const known = savedOrder.filter(g => namedKeys.includes(g));
+    const extra = namedKeys.filter(g => !known.includes(g)).sort((a, b) => a.localeCompare(b));
+    const orderedGroups = [...known, ...extra];
+    if (groupMap.has('')) orderedGroups.push('');
+
+    const sorted = [];
+    for (const group of orderedGroups) {
+      const groupProjects = (groupMap.get(group) || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+      sorted.push(...groupProjects);
+    }
+    return sorted;
+  }
+
   function getProject(projectId) {
     return getData().projects.find(p => p.id === projectId) || null;
   }
@@ -155,6 +184,7 @@ window.HubData = (() => {
     getData,
     hasData,
     getProjects,
+    getProjectsSorted,
     getProject,
     getMembers,
     getMember,

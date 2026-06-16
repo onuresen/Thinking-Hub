@@ -763,7 +763,7 @@
 
     // Project select
     const projSel = document.getElementById('om-project');
-    const allProjects = (typeof HubData !== 'undefined') ? HubData.getProjects() : [];
+    const allProjects = (typeof HubData !== 'undefined') ? HubData.getProjectsSorted() : [];
     projSel.innerHTML = '<option value="">— none —</option>' +
       allProjects.map(p => `<option value="${_esc(p.id)}"${p.id === (obj && obj.projectId) ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
 
