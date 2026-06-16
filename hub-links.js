@@ -258,6 +258,32 @@ window.HubLinks = (() => {
         }));
       }
 
+      if (toolId === 'journal-hub') {
+        const data = HubStorage.get('log-hub-v1');
+        if (!data || !data.entries) return [];
+        return Object.keys(data.entries)
+          .sort((a, b) => b.localeCompare(a))
+          .slice(0, 100)
+          .map(date => {
+            const e = data.entries[date] || {};
+            const preview = (e.text || '').slice(0, 50) || '(no entry)';
+            return { id: date, label: date, subtitle: preview };
+          });
+      }
+
+      if (toolId === 'focus-hub') {
+        const data = HubStorage.get('focus-hub-v1');
+        if (!data || !Array.isArray(data.sessions)) return [];
+        return data.sessions.slice(-100).reverse().map(s => {
+          const mins = s.elapsedSec ? Math.floor(s.elapsedSec / 60) : (s.durationMin || 0);
+          return {
+            id: s.id,
+            label: s.taskTitle || '(no task)',
+            subtitle: `${mins}m${s.completed ? ' ✓' : ''}`
+          };
+        });
+      }
+
       if (toolId === 'tags-hub') {
         // Prefer HubTags.scanUsage() when loaded — includes tags already in
         // use but not yet in the registry (e.g. graph nodes for them exist

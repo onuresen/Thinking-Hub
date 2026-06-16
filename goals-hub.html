@@ -661,6 +661,7 @@
     const kr = obj.keyResults.find(k => k.id === krId);
     if (!kr) return;
     if (kr.type === 'checkbox') kr.done = !kr.done;
+    kr.updatedAt = new Date().toISOString();
     save(); renderMain();
   }
 
@@ -672,6 +673,7 @@
     const kr = obj.keyResults.find(k => k.id === krId);
     if (!kr) return;
     kr.current = parseFloat(val) || 0;
+    kr.updatedAt = new Date().toISOString();
     save(); renderMain();
   }
 
@@ -914,6 +916,13 @@
     activeQId = activeQuarters().length ? activeQuarters()[activeQuarters().length - 1].id : null;
     renderMain();
     HubBootstrap.start('goals-hub');
+  });
+
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      openObjModal(e.data.itemId);
+    }
   });
 
   document.getElementById('obj-modal-overlay').addEventListener('click', e => {

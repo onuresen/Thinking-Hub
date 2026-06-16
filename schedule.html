@@ -142,11 +142,12 @@
     }
 
     .sch-toolbar {
-      height: 52px;
+      min-height: 52px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 0 20px;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 16px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       background: var(--surface);
@@ -1443,40 +1444,7 @@
     // ═══════════════════════════════════════════════════════════════
     // Sidebar
     // ═══════════════════════════════════════════════════════════════
-    function renderSidebar() {
-      const items = filteredItems();
-      const el = document.getElementById('item-list');
 
-      if (!items.length) {
-        el.innerHTML = `<div class="sch-empty-list">No items yet.<br>Click <b>+ Add Item</b> to start.</div>`;
-      } else {
-        el.innerHTML = items.map(it => {
-          const isSelected = it.id === ui.selectedId;
-          const dateStr = it.start === it.end
-            ? fmtDate(it.start)
-            : `${fmtDate(it.start)} → ${fmtDate(it.end)}`;
-          const msClass = it.type === 'milestone' ? ' ms-shape' : '';
-          const projName = it.projectId
-            ? (HubData.getProject(it.projectId)?.name || it.projectRef || '')
-            : (it.projectRef || '');
-          return `<div class="sch-list-row${isSelected ? ' selected' : ''}"
-          data-id="${it.id}" onclick="selectItem('${it.id}')">
-        <div class="sch-list-dot${msClass}" style="background:${it.color}"></div>
-        <div class="sch-list-info">
-          <div class="sch-list-title${it.done ? ' done' : ''}">${esc(it.title || '(untitled)')}</div>
-          <div class="sch-list-dates">${dateStr}${projName ? ` · ${esc(projName)}` : ''}</div>
-        </div>
-      </div>`;
-        }).join('');
-      }
-
-      document.getElementById('sidebar-footer').textContent =
-        `${state.items.length} item${state.items.length !== 1 ? 's' : ''}`;
-
-      document.querySelectorAll('.sch-filter-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.filter === ui.filterType);
-      });
-    }
 
     // ═══════════════════════════════════════════════════════════════
     // Gantt / Timeline
@@ -2266,11 +2234,6 @@
     // ═══════════════════════════════════════════════════════════════
     // Selection
     // ═══════════════════════════════════════════════════════════════
-    function selectItem(id) {
-      ui.selectedId = id === ui.selectedId ? null : id;
-      render();
-    }
-
     function selectAndEdit(id) {
       ui.selectedId = id;
       render();

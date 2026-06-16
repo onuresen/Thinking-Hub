@@ -542,6 +542,25 @@
     initDragDrop();
     HubBootstrap.start('retro-hub');
   });
+
+  window.addEventListener('message', e => {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+      const id = e.data.itemId;
+      for (const retro of (data.retros || [])) {
+        for (const col of ['well', 'improve', 'actions']) {
+          if ((retro.items?.[col] || []).find(it => it.id === id)) {
+            switchRetro(retro.id);
+            setTimeout(() => {
+              const el = document.querySelector(`[data-id="${id}"]`);
+              if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 1500); }
+            }, 100);
+            return;
+          }
+        }
+      }
+    }
+  });
 </script>
 </body>
 </html>
