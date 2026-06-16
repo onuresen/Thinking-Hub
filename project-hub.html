@@ -1752,6 +1752,41 @@
     .mx-card-meta { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mx-edit-btn { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; padding: 1px; opacity: 0; transition: opacity 0.12s; }
     .mx-card:hover .mx-edit-btn { opacity: 1; }
+
+    /* ── Stakeholder view ────────────────────────────────────────────────── */
+    .sh-view-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+    .sh-view-wrap { flex: 1; display: flex; overflow: hidden; padding: 10px 14px; gap: 0; min-height: 0; }
+    .sh-view-y-label { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; justify-content: center; width: 16px; flex-shrink: 0; user-select: none; }
+    .sh-view-inner { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+    .sh-view-x-row { display: flex; gap: 0; }
+    .sh-view-x-label { flex: 1; text-align: center; font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 4px; user-select: none; }
+    .sh-view-grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
+    .sh-view-grid-row + .sh-view-grid-row { margin-top: 8px; }
+    .sh-view-quadrant { flex: 1; border-radius: var(--r); border: 2px solid; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-width: 0; }
+    .sh-view-quadrant.q-manage  { border-color: var(--border-purple); background: rgba(139,92,246,0.05); }
+    .sh-view-quadrant.q-satisfy { border-color: var(--accent-super);  background: rgba(255,180,0,0.04); }
+    .sh-view-quadrant.q-inform  { border-color: var(--accent);        background: var(--accent-dim); }
+    .sh-view-quadrant.q-monitor { border-color: var(--border);        background: transparent; }
+    .sh-view-q-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-bottom: 2px; }
+    .sh-view-q-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+    .sh-view-q-title.q-manage  { color: var(--border-purple); }
+    .sh-view-q-title.q-satisfy { color: var(--accent-super); }
+    .sh-view-q-title.q-inform  { color: var(--accent); }
+    .sh-view-q-title.q-monitor { color: var(--text3); }
+    .sh-view-q-add { margin-left: auto; background: none; border: none; color: var(--text3); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .sh-view-q-add:hover { color: var(--text); }
+    .sh-view-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color 0.12s; }
+    .sh-view-card:hover { border-color: var(--border2); }
+    .sh-view-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text2); flex-shrink: 0; font-family: var(--font-mono); }
+    .sh-view-info { flex: 1; min-width: 0; }
+    .sh-view-name { font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sh-view-role { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sh-stance { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .sh-stance.champion  { background: var(--accent-like); }
+    .sh-stance.supporter { background: var(--accent); }
+    .sh-stance.neutral   { background: var(--text3); }
+    .sh-stance.skeptic   { background: var(--accent-super); }
+    .sh-stance.blocker   { background: var(--accent-nope); }
     .mx-edit-btn:hover { color: var(--text); }
 
     /* ── VIEW TOGGLE ─────────────────────────────────────────── */
@@ -1894,6 +1929,10 @@
         <div class="nav-item" onclick="setView('concepts')">
           <span class="nav-icon">⊠</span> Concept Matrix
           <span class="nav-badge" id="badge-concepts">0</span>
+        </div>
+        <div class="nav-item" onclick="setView('stakeholders')">
+          <span class="nav-icon">◎</span> Stakeholders
+          <span class="nav-badge" id="badge-stakeholders">0</span>
         </div>
       </div>
     </div>
@@ -2560,6 +2599,10 @@
         document.getElementById('badge-matrix').textContent = (mxd.items || []).filter(i => !i.done).length;
       } catch { document.getElementById('badge-matrix').textContent = '0'; }
       document.getElementById('badge-concepts').textContent = (state.concepts || []).length;
+      try {
+        const shd = HubStorage.get('stakeholder-hub-v1') || { stakeholders: [] };
+        document.getElementById('badge-stakeholders').textContent = (shd.stakeholders || []).length;
+      } catch { document.getElementById('badge-stakeholders').textContent = '0'; }
       const groupNames = new Set(state.projects.map(p => (p.group || '').trim()).filter(Boolean));
       document.getElementById('badge-groupings').textContent = groupNames.size;
     }
@@ -2584,9 +2627,9 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix', concepts: 'Concept Matrix' };
+      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix', concepts: 'Concept Matrix', stakeholders: 'Stakeholders' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
-      const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept' };
+      const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept', stakeholders: '+ Stakeholder' };
       document.getElementById('main-action-btn').textContent = btnLabels[view] || '+ Task';
       document.getElementById('main-action-btn').style.display = view === 'groupings' ? 'none' : '';
       document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
@@ -2611,6 +2654,8 @@
         openMxModal(null);
       } else if (state.currentView === 'concepts') {
         openConceptModal(null);
+      } else if (state.currentView === 'stakeholders') {
+        openShViewModal(null, 'manage');
       } else { showAddTask(); }
     }
 
@@ -2630,6 +2675,7 @@
       else if (state.currentView === 'matrix') renderMxView(c);
       else if (state.currentView === 'concepts') renderConceptMatrix(c);
       else if (state.currentView === 'groupings') renderGroupings(c);
+      else if (state.currentView === 'stakeholders') renderStakeholdersView(c);
     }
 
     // ─── OVERVIEW ────────────────────────────────────────────────────────────────
@@ -4733,6 +4779,176 @@
       renderContent();
     }
 
+    // ─── STAKEHOLDERS VIEW ───────────────────────────────────────────────────────
+    const SH_KEY = 'stakeholder-hub-v1';
+    const SH_QUADRANTS = ['manage', 'satisfy', 'inform', 'monitor'];
+    const SH_Q_LABELS  = { manage: 'Manage Closely', satisfy: 'Keep Satisfied', inform: 'Keep Informed', monitor: 'Monitor' };
+    const SH_Q_DEFAULTS = { manage: [4,4], satisfy: [4,2], inform: [2,4], monitor: [2,2] };
+    let _shProjFilter = '';
+
+    function _shQuadrantFor(sh) {
+      const p = parseInt(sh.power) || 3, i = parseInt(sh.interest) || 3;
+      if (p >= 3 && i >= 3) return 'manage';
+      if (p >= 3 && i < 3)  return 'satisfy';
+      if (p < 3  && i >= 3) return 'inform';
+      return 'monitor';
+    }
+
+    function renderStakeholdersView(container) {
+      const shData = HubStorage.get(SH_KEY) || { stakeholders: [] };
+      const stakeholders = shData.stakeholders || [];
+      const activeProj = state.selectedProject ? state.projects.find(p => p.id === state.selectedProject) : null;
+
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.overflow = 'hidden';
+
+      // Toolbar
+      const toolbar = document.createElement('div');
+      toolbar.className = 'sh-view-toolbar';
+      const projects = state.projects;
+      const projOptions = projects.map(p => `<option value="${HubUtils.esc(p.id)}" ${_shProjFilter === p.id ? 'selected' : ''}>${HubUtils.esc(p.name)}</option>`).join('');
+      toolbar.innerHTML = `
+        <select style="font-size:12px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);min-width:140px"
+          onchange="_shProjFilter=this.value;renderContent()">
+          <option value="">All projects</option>${projOptions}
+        </select>
+        <span style="font-size:11px;color:var(--text3);margin-left:4px">Click a card to open in Stakeholder Hub</span>
+      `;
+      container.appendChild(toolbar);
+
+      // Filter stakeholders
+      const filterProjId = activeProj ? activeProj.id : _shProjFilter;
+      const filtered = filterProjId
+        ? stakeholders.filter(sh => (sh.projectIds || []).includes(filterProjId))
+        : stakeholders;
+
+      // 2×2 grid
+      const wrap = document.createElement('div');
+      wrap.className = 'sh-view-wrap';
+      wrap.innerHTML = `
+        <div class="sh-view-y-label">Power →</div>
+        <div class="sh-view-inner">
+          <div class="sh-view-x-row">
+            <div class="sh-view-x-label">Low Interest</div>
+            <div class="sh-view-x-label">High Interest</div>
+          </div>
+          <div class="sh-view-grid-row" id="shv-row-hi">
+            <div class="sh-view-quadrant q-satisfy" id="shv-satisfy">
+              <div class="sh-view-q-header">
+                <span class="sh-view-q-title q-satisfy">${SH_Q_LABELS.satisfy}</span>
+                <button class="sh-view-q-add" title="Add stakeholder" onclick="openShViewModal(null,'satisfy')">+</button>
+              </div>
+            </div>
+            <div class="sh-view-quadrant q-manage" id="shv-manage">
+              <div class="sh-view-q-header">
+                <span class="sh-view-q-title q-manage">${SH_Q_LABELS.manage}</span>
+                <button class="sh-view-q-add" title="Add stakeholder" onclick="openShViewModal(null,'manage')">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="sh-view-grid-row" id="shv-row-lo">
+            <div class="sh-view-quadrant q-monitor" id="shv-monitor">
+              <div class="sh-view-q-header">
+                <span class="sh-view-q-title q-monitor">${SH_Q_LABELS.monitor}</span>
+                <button class="sh-view-q-add" title="Add stakeholder" onclick="openShViewModal(null,'monitor')">+</button>
+              </div>
+            </div>
+            <div class="sh-view-quadrant q-inform" id="shv-inform">
+              <div class="sh-view-q-header">
+                <span class="sh-view-q-title q-inform">${SH_Q_LABELS.inform}</span>
+                <button class="sh-view-q-add" title="Add stakeholder" onclick="openShViewModal(null,'inform')">+</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      container.appendChild(wrap);
+
+      // Populate cards
+      SH_QUADRANTS.forEach(q => {
+        const el = document.getElementById('shv-' + q);
+        if (!el) return;
+        const inQ = filtered.filter(sh => _shQuadrantFor(sh) === q);
+        if (!inQ.length) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'font-size:11px;color:var(--text3);font-style:italic;padding:2px';
+          empty.textContent = 'No stakeholders here';
+          el.appendChild(empty);
+          return;
+        }
+        inQ.forEach(sh => {
+          const card = document.createElement('div');
+          card.className = 'sh-view-card';
+          const inits = (sh.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+          const stanceCls = sh.stance || 'neutral';
+          card.innerHTML = `
+            <div class="sh-view-avatar">${HubUtils.esc(inits)}</div>
+            <div class="sh-view-info">
+              <div class="sh-view-name">${HubUtils.esc(sh.name || 'Unnamed')}</div>
+              ${sh.role ? `<div class="sh-view-role">${HubUtils.esc(sh.role)}</div>` : ''}
+            </div>
+            <div class="sh-stance ${stanceCls}" title="${stanceCls}"></div>`;
+          card.addEventListener('click', () => {
+            if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('stakeholder-hub', sh.id);
+          });
+          el.appendChild(card);
+        });
+      });
+
+      // Empty state
+      if (!filtered.length && !filterProjId) {
+        wrap.innerHTML = `<div class="ph-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px">
+          <div style="font-size:32px">◎</div>
+          <div class="ph-empty-title" style="font-size:15px;font-weight:600;color:var(--text2)">No stakeholders yet</div>
+          <div class="ph-empty-desc" style="font-size:12px;color:var(--text3);text-align:center">Add stakeholders to map who has power and interest in your projects.</div>
+          <button class="btn btn-primary" style="margin-top:8px" onclick="openShViewModal(null,'manage')">+ Add Stakeholder</button>
+        </div>`;
+      }
+    }
+
+    // ── Add-stakeholder modal (inline, lightweight) ───────────────────────────
+    let _shViewPendingQ = 'manage';
+
+    function openShViewModal(id, defaultQ) {
+      _shViewPendingQ = defaultQ || 'manage';
+      const overlay = document.getElementById('sh-view-modal-overlay');
+      if (!overlay) return;
+      document.getElementById('shvm-name').value = '';
+      document.getElementById('shvm-role').value = '';
+      document.getElementById('shvm-quadrant').value = _shViewPendingQ;
+      overlay.classList.add('is-open');
+      setTimeout(() => document.getElementById('shvm-name').focus(), 50);
+    }
+
+    function closeShViewModal() {
+      const overlay = document.getElementById('sh-view-modal-overlay');
+      if (overlay) overlay.classList.remove('is-open');
+    }
+
+    function saveShViewModal() {
+      const name = document.getElementById('shvm-name').value.trim();
+      if (!name) return;
+      const q = document.getElementById('shvm-quadrant').value;
+      const [power, interest] = SH_Q_DEFAULTS[q] || [3, 3];
+      const shData = HubStorage.get(SH_KEY) || { stakeholders: [] };
+      if (!shData.stakeholders) shData.stakeholders = [];
+      const filterProjId = state.selectedProject || _shProjFilter;
+      shData.stakeholders.push({
+        id: 'sh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        name,
+        role: document.getElementById('shvm-role').value.trim(),
+        power, interest, stance: 'neutral', engagement: '',
+        projectIds: filterProjId ? [filterProjId] : [],
+        notes: '', strategy: '',
+        createdAt: new Date().toISOString()
+      });
+      HubStorage.set(SH_KEY, shData);
+      closeShViewModal();
+      renderContent();
+      updateBadges();
+      showToast('Stakeholder added');
+    }
+
     // ─── INIT ─────────────────────────────────────────────────────────────────────
     renderSidebarUsers();
     renderContent();
@@ -4803,6 +5019,36 @@
         <button class="btn btn-ghost" onclick="closeConceptModal()">Cancel</button>
         <div style="flex:1"></div>
         <button class="btn btn-danger" id="cm-modal-delete" onclick="deleteConceptModal()" style="display:none">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Stakeholder modal -->
+  <div class="ui-modal-overlay" id="sh-view-modal-overlay" onclick="if(event.target===this)closeShViewModal()" style="z-index:300">
+    <div class="ui-modal" style="width:380px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">Add Stakeholder</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div class="label">Name</div>
+          <input class="input" id="shvm-name" placeholder="Stakeholder name" onkeydown="if(event.key==='Enter')saveShViewModal()">
+        </div>
+        <div>
+          <div class="label">Role / Organisation</div>
+          <input class="input" id="shvm-role" placeholder="e.g. Project Sponsor, BIM Manager…">
+        </div>
+        <div>
+          <div class="label">Starting quadrant</div>
+          <select class="select" id="shvm-quadrant">
+            <option value="manage">Manage Closely (High power, High interest)</option>
+            <option value="satisfy">Keep Satisfied (High power, Low interest)</option>
+            <option value="inform">Keep Informed (Low power, High interest)</option>
+            <option value="monitor">Monitor (Low power, Low interest)</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-primary" onclick="saveShViewModal()">Add</button>
+        <button class="btn btn-ghost" onclick="closeShViewModal()">Cancel</button>
       </div>
     </div>
   </div>
