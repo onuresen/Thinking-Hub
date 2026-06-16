@@ -351,6 +351,79 @@
     }
 
     /* ── Gantt ─────────────────────────────────────────────────── */
+    .gantt-layout {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .gantt-label-col {
+      width: 196px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border2);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .gantt-label-head {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    .gantt-label-body {
+      flex: 1;
+      overflow: hidden; /* scroll driven by gantt-scroll sync */
+    }
+
+    .gantt-label-row {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+
+    .gantt-label-row:hover { background: var(--surface2); }
+    .gantt-label-row.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); padding-left: 8px; }
+    .gantt-label-row.alt { background: var(--surface2); }
+    .gantt-label-row.alt:hover { background: var(--surface3); }
+    .gantt-label-row.alt.selected { background: var(--accent-dim); }
+
+    .gantt-label-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .gantt-label-dot.ms-shape {
+      border-radius: 1px;
+      transform: rotate(45deg);
+    }
+
+    .gantt-label-name {
+      font-size: 12px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .gantt-wrap {
       display: flex;
       height: 100%;
@@ -1202,15 +1275,14 @@
       <button class="sch-add-btn" onclick="openDrawer(null)">+ Add Item</button>
     </div>
 
-    <div class="sch-filter">
-      <button class="sch-filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
-      <button class="sch-filter-btn" data-filter="task" onclick="setFilter('task')">Tasks</button>
-      <button class="sch-filter-btn" data-filter="milestone" onclick="setFilter('milestone')">Milestones</button>
-      <button class="sch-filter-btn" data-filter="event" onclick="setFilter('event')">Events</button>
+    <div id="sidebar-filter-section" style="display:none">
+      <div class="sch-filter">
+        <button class="sch-filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="sch-filter-btn" data-filter="task" onclick="setFilter('task')">Tasks</button>
+        <button class="sch-filter-btn" data-filter="milestone" onclick="setFilter('milestone')">Milestones</button>
+        <button class="sch-filter-btn" data-filter="event" onclick="setFilter('event')">Events</button>
+      </div>
     </div>
-
-    <div class="sch-item-list" id="item-list"></div>
-    <div class="sch-sidebar-footer" id="sidebar-footer">0 items</div>
   </aside>
 
   <!-- ══ Main ═════════════════════════════════════════════════════ -->
@@ -1224,11 +1296,17 @@
     <div class="sch-view-host">
 
       <!-- Timeline / Gantt -->
-      <div id="view-timeline">
-        <div class="gantt-wrap">
-          <div class="gantt-scroll" id="gantt-scroll">
-            <div class="gantt-header" id="gantt-header"></div>
-            <div class="gantt-body" id="gantt-body"></div>
+      <div id="view-timeline" class="view-hidden">
+        <div class="gantt-layout">
+          <div class="gantt-label-col" id="gantt-label-col">
+            <div class="gantt-label-head">Item</div>
+            <div class="gantt-label-body" id="gantt-label-body"></div>
+          </div>
+          <div class="gantt-wrap">
+            <div class="gantt-scroll" id="gantt-scroll">
+              <div class="gantt-header" id="gantt-header"></div>
+              <div class="gantt-body" id="gantt-body"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1249,7 +1327,7 @@
       </div>
 
       <!-- Calendar -->
-      <div id="view-calendar" class="view-hidden">
+      <div id="view-calendar">
         <div class="cal-nav">
           <button class="cal-nav-btn" onclick="calNav(-1)">&#8249;</button>
           <span class="cal-nav-title" id="cal-title"></span>
@@ -1681,6 +1759,31 @@
       });
 
       bodyEl.innerHTML = html;
+
+      // ── Label column (aligned with gantt rows) ──
+      const labelBody = document.getElementById('gantt-label-body');
+      if (labelBody) {
+        if (!items.length) {
+          labelBody.innerHTML = '';
+        } else {
+          labelBody.innerHTML = items.map((it, i) => {
+            const msClass = it.type === 'milestone' ? ' ms-shape' : '';
+            const altClass = i % 2 ? ' alt' : '';
+            const selClass = it.id === ui.selectedId ? ' selected' : '';
+            return `<div class="gantt-label-row${altClass}${selClass}" data-id="${it.id}" onclick="selectAndEdit('${it.id}')">
+              <div class="gantt-label-dot${msClass}" style="background:${it.color}"></div>
+              <div class="gantt-label-name">${esc(it.title || '(untitled)')}</div>
+            </div>`;
+          }).join('');
+        }
+
+        // Sync label body scroll with gantt body scroll
+        const gs = document.getElementById('gantt-scroll');
+        if (gs && !gs._labelSyncBound) {
+          gs._labelSyncBound = true;
+          gs.addEventListener('scroll', () => { labelBody.scrollTop = gs.scrollTop; });
+        }
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2299,7 +2402,6 @@
     }
 
     function render() {
-      renderSidebar();
       renderToolbar();
       if (ui.activeView === 'timeline') renderTimeline();
       else if (ui.activeView === 'multi') renderMultiView();
@@ -2328,6 +2430,9 @@
       document.getElementById('view-timeline').classList.toggle('view-hidden', view !== 'timeline');
       document.getElementById('view-calendar').classList.toggle('view-hidden', view !== 'calendar');
       document.getElementById('view-multi').classList.toggle('view-hidden', view !== 'multi');
+      // Filter chips only useful on Timeline (they control which items appear in the gantt)
+      const filterSec = document.getElementById('sidebar-filter-section');
+      if (filterSec) filterSec.style.display = view === 'timeline' ? '' : 'none';
       render();
       if (view === 'timeline') setTimeout(scrollToToday, 60);
     }
@@ -2592,7 +2697,8 @@
         if (ui.activeView === 'multi') renderMultiView();
       });
     } catch { }
-    render();
+    // Initialize view state (sets view-hidden classes + filter section visibility) then render
+    switchView(ui.activeView);
     setTimeout(scrollToToday, 160);
   </script>
   <script>
