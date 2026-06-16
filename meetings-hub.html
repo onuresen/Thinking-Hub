@@ -1418,7 +1418,7 @@
     empty.style.display = 'none';
     content.style.display = 'flex';
 
-    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
     const projOpts = `<option value="">— No project —</option>` +
       projects.map(p => `<option value="${esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 

@@ -538,7 +538,7 @@
     const members = (() => { try { return HubData.getMembers(); } catch { return []; } })();
     document.getElementById('dp-member-list').innerHTML = members.map(m => `<option value="${_esc(m.name||m.id)}"></option>`).join('');
 
-    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
     document.getElementById('dp-project').innerHTML = '<option value="">— None —</option>' +
       projects.map(proj => `<option value="${_esc(proj.id)}"${proj.id === r.projectId ? ' selected' : ''}>${_esc(proj.name)}</option>`).join('');
 
@@ -667,7 +667,7 @@
 
   function initProjectFilter() {
     const sel = document.getElementById('project-filter');
-    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })();
+    const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
     sel.innerHTML = '<option value="">All projects</option>' +
       projects.map(p => `<option value="${_esc(p.id)}">${_esc(p.name)}</option>`).join('');
   }
