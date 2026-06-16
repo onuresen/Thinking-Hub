@@ -960,6 +960,35 @@ Two bug fixes from real use.
 
 ---
 
+### ~~Priority 62 — Schedule: remove manual import button + tab-specific sidebar~~ ✓ Done `[group: schedule-ux]`
+Three improvements to `schedule.html` from user-reported issues.
+
+- **Remove manual "↓ Import" button** — `syncFromProjectHub()` already runs automatically on `HubData.onChange()`, so the manual import button was redundant. Removed CSS (`.sch-import-btn`, `.sch-overlay`, `.sch-modal-*`, `.sch-import-*`, `.sch-btn-primary:disabled`), HTML (button + `#import-overlay` modal), and JS (`_pendingImport`, `openImportModal`, `closeImportModal`, `executeImport`, `updateImportBadge`).
+- **Tab order changed to Calendar → Timeline → Projects** — Calendar is the most-used view, so it's now first. Default `activeView` changed from `'timeline'` to `'calendar'`.
+- **Calendar not visible on first load** — `#view-timeline` was missing `class="view-hidden"` in HTML (so Timeline was visible on load); `#view-calendar` had `class="view-hidden"` (hidden). Fixed by swapping the classes. Init now calls `switchView(ui.activeView)` instead of `render()` so `view-hidden` classes and sidebar-filter section visibility are correctly set from the start.
+- **Tab-specific sidebar content** — The sidebar showed a flat item list for all three tabs, misaligning with Timeline's fixed `ROW_H=44px` rows and providing no value on Calendar. Fix:
+  - Removed `#item-list` and `#sidebar-footer` from the sidebar HTML; removed `renderSidebar()` call from `render()`; `.sch-filter` wrapped in `#sidebar-filter-section` (shown only when `view === 'timeline'`).
+  - Added a frozen `.gantt-label-col` (196px) directly inside `#view-timeline`'s `.gantt-layout` flex container, with `.gantt-label-head` ("Item") and `#gantt-label-body`. `renderTimeline()` renders one `44px` `.gantt-label-row` per item (color dot + name), synchronized to `gantt-scroll`'s vertical scrollTop. Clicking a label row calls `selectAndEdit`.
+  - Calendar and Projects tabs have a clean sidebar with no item list.
+
+**Key decisions:**
+- **Decision:** Add the label column *inside* `#view-timeline`'s `.gantt-layout`, not in the shared sidebar. **Why:** the gantt uses fixed `ROW_H=44px` rows — the only way to guarantee pixel-perfect alignment is to make the label column part of the same flex row as `.gantt-wrap`, using identical row heights and scroll-syncing via `scrollTop`. A sidebar-based list can't guarantee this since sidebar rows can wrap or have variable padding. **Alternative rejected:** keep sidebar list but enforce fixed height — too fragile; any font-size difference or browser zoom breaks alignment. **Confidence:** high.
+- **Decision:** Filter chips remain in the sidebar (hidden on Calendar/Projects, shown on Timeline). **Why:** the filters (`#sidebar-filter-section`) are Timeline-specific (item type/status/project filters); hiding them on other tabs is cleaner than moving them into the toolbar. They share the sidebar's existing padding and width without a new layout region. **Confidence:** high.
+
+**Files:** `schedule.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 63 — Project list sorted by group order across all tools~~ ✓ Done `[group: data-layer]`
+Project selects/lists in 7 tools previously used raw `project-hub-v1` storage order (creation order). A single `HubData.getProjectsSorted()` function in `hub-data.js` now groups projects by `groupOrder` (Project Hub's saved drag order), sorts alphabetically within each group, and appends ungrouped projects last — identical to Project Hub's Groupings view. All 7 `getProjects()` call sites swapped to `getProjectsSorted()`.
+
+**Key decisions:**
+- **Decision:** Add `getProjectsSorted()` to `hub-data.js` alongside `getProjects()` rather than replacing it. **Why:** `getProjects()` is used by `hub-links.js` and `hub-search.js` for Cmd+K resolution where any stable order is acceptable, and `getProjectsSorted()` has slightly higher overhead (reads `groupOrder`). Keeping both lets callers opt in. **Confidence:** high.
+
+**Files:** `hub-data.js`, `meetings-hub.html`, `goals-hub.html`, `risk-hub.html`, `stakeholder-hub.html`, `decision-hub.html`, `schedule.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
