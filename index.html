@@ -4136,9 +4136,10 @@
       for (const key of storageKeys) {
         let val = safeParseStorage(key);
         if (val !== null) {
-          // Strip bulky Obsidian vault index — users can re-index after restore
+          // Strip bulky Obsidian vault index (users can re-index after restore) and
+          // the live Anthropic API key (a secret — never belongs in a shareable export)
           if (key === 'hub-settings-v1' && val && typeof val === 'object') {
-            const { obsidianIndex, obsidianIndexedAt, ...rest } = val;
+            const { obsidianIndex, obsidianIndexedAt, anthropicKey, ...rest } = val;
             val = rest;
           }
           const label = EXPORT_KEY_LABELS[key] || key;
@@ -4220,7 +4221,14 @@
             // Use HubStorage.set() so local MCP file subscribers fire
             for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
               if (parsed.data[section] !== undefined) {
-                HubStorage.set(storageKey, parsed.data[section]);
+                let val = parsed.data[section];
+                // Exports never carry the Anthropic key (stripped for safety) — keep
+                // whatever key is already configured in this browser, don't wipe it.
+                if (storageKey === 'hub-settings-v1' && val && typeof val === 'object') {
+                  const existing = HubStorage.get('hub-settings-v1') || {};
+                  val = { ...val, anthropicKey: existing.anthropicKey };
+                }
+                HubStorage.set(storageKey, val);
               }
             }
           } else if (parsed.storageKey && parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data)) {

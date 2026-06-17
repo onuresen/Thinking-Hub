@@ -200,7 +200,7 @@ The ⚙️ Data & Backup modal in `index.html` has a scoped export with three ra
 - `updateExportSizeEstimate()` — called on radio `onchange` and modal open; updates `#data-size-str` with scope-specific KB + tool count
 - Import (`handleImportFile`) handles both v2 (restores via `storageKeys` map) and v1 legacy (flat key→string) formats; blocks restore of non-Full-Backup scopes
 
-**Excluded from all exports:** `hub-cloud-config-v1` (Supabase credentials), `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1` (ephemeral UI state).
+**Excluded from all exports:** `hub-cloud-config-v1` (Supabase credentials), `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1` (ephemeral UI state), `hub-settings-v1.anthropicKey` (live API key — stripped from the settings block specifically, rest of `hub-settings-v1` still exports; see Priority 66).
 
 ---
 
@@ -1046,6 +1046,21 @@ The `.legend` (Tools), `.controls` (bottom-left button row), and `#empty` empty-
 - **Decision:** Legend stays non-draggable, made collapsible-only. **Why:** that's what was asked — the legend already had a working collapse toggle from a prior pass; fixing the anchor/overlap bug doesn't require adding drag support, which is separate scope. **Confidence:** high. **Revisit when:** the user asks for drag-to-reposition specifically.
 
 **Files:** `graph-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 66 — Strip live Anthropic API key from exports~~ ✓ Done `[group: data-safety]`
+Triggered by reviewing a real Full Backup upload — `hub-settings-v1.anthropicKey` (the user's live API key, saved in plaintext via the ⚙️ Integrations panel) was included in every export, including the Full Backup the user routinely uploads to an external AI alongside a meeting transcript for analysis. A backup file is meant to be shareable/uploadable; a live credential inside it is not.
+
+- **`buildExportPayload()`** (`index.html`) — the existing `hub-settings-v1` field-stripping (already removing `obsidianIndex`/`obsidianIndexedAt`) now also destructures out `anthropicKey` before the section is added to the export payload. Applies to all scopes (Full Backup, AI Context, Current Tool) since all three go through the same function.
+- **`handleImportFile()`** (`index.html`) — restoring a v2 backup now special-cases the `hub-settings-v1` section: instead of a blind `HubStorage.set()` overwrite, it merges in the *currently configured* local `anthropicKey` (`{ ...val, anthropicKey: existing.anthropicKey }`) so restoring a backup — old or new — never wipes (or silently re-imports a stale) key already saved in the browser.
+- **`ai-upload-guide.md`** updated to state new exports are safe to share as-is; only pre-2026-06-17 backup files still need the key manually deleted before uploading externally.
+
+**Key decisions:**
+- **Decision:** Strip the key on export rather than encrypt/mask it. **Why:** there's no in-browser secret to encrypt *with* — any obfuscation reversible by the app is just as reversible by anyone reading the export, so omission is the only real fix. **Alternative rejected:** partial masking (e.g. show last 4 chars) — gives a false sense of safety since the use case (uploading to an external AI) doesn't need to see the key at all. **Confidence:** high.
+- **Decision:** On import, always prefer the existing local key over whatever (if anything) is in the backup, rather than prompting or importing it. **Why:** post-fix, new exports never carry a key, so the only way a backup *would* contain one is an old export from before this change — importing a possibly-stale/different-account key automatically would be a worse default than just leaving the current browser's key alone. **Alternative rejected:** prompt the user on conflict — overkill for a field most users never look at after initial setup. **Confidence:** med.
+
+**Files:** `index.html`, `ai-upload-guide.md`, `CLAUDE.md`
 
 ---
 
