@@ -1019,6 +1019,21 @@ Two consolidation ideas were proposed and one was fully implemented, then both w
 
 ---
 
+### ~~Priority 64 — Stakeholder Map: central registry + sorted project checklist~~ ✓ Done `[group: stakeholder-ux]`
+Two follow-up fixes to `stakeholder-hub.html`, prompted by real use after the E2 revert above (Stakeholder Map staying a standalone tool made these gaps visible): every "+ Add stakeholder" created a brand-new record scoped to the current project filter, so the same person added to a second project became a duplicate (with risk of casing/spelling drift), and there was no way to edit a stakeholder's project links after creation.
+
+- **Central registry picker in the Add modal** — a new "Existing stakeholder" `<select>` (alphabetical) sits above the name field; picking one skips creating a duplicate and instead adds the current project filter to that stakeholder's `projectIds` (deduped), then opens their detail panel. Typing a name that case-insensitively matches an existing stakeholder (datalist-assisted) shows the same merge behavior on save — catches accidental retypes even if the user didn't use the dropdown. `data.stakeholders` was already a single global array (not per-project), so the "registry" already existed in the data model — the gap was purely UI (no way to reuse an existing record).
+- **Projects checklist in the detail panel** — a stakeholder's `projectIds` can now be edited directly via a grouped, checkbox-style project list (buffered in `_dpProjectIds`, committed on Save), reusing the exact group-order + alphabetical-within-group sorting from `getProjectsSorted()`/`hub-data.js` (Priority 63) and the same grouped-checklist rendering pattern as Tool Portfolio's "Enabled Projects" list (Priority 58).
+- Added `hub-toast.js` (was missing) for save/link feedback, consistent with the rest of the app (Priority 35/45).
+
+**Key decisions:**
+- **Decision:** Merge-on-match is non-blocking (a hint, not a hard validation error) — typing a name that happens to match is treated as intentional reuse, not an error to dismiss. **Why:** false positives are harmless (worst case: linking an existing record to one more project, which is itself a valid action), and a hard block would force users through an extra "are you sure" for what's usually the desired outcome anyway. **Confidence:** high.
+- **Decision:** Reused the exact `getProjectsSorted()`-equivalent grouping logic locally in `stakeholder-hub.html` rather than refactoring it into a shared helper. **Why:** matches the existing "known duplication, accepted" pattern in this codebase (the same logic is already inlined in `tool-portfolio.html`); a shared helper would need to move group-by-name + saved-order logic out of `hub-data.js` into something importable by tools without `hub-data.js`, which is broader scope than this fix needed. **Confidence:** med.
+
+**Files:** `stakeholder-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

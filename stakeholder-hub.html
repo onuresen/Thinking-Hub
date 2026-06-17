@@ -8,6 +8,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
@@ -267,6 +268,10 @@
         <div class="field-label">Notes</div>
         <textarea class="field-textarea" id="dp-notes" oninput="dpChange()"></textarea>
       </div>
+      <div>
+        <div class="field-label">Projects</div>
+        <div id="dp-projects"></div>
+      </div>
     </div>
     <div class="dp-footer">
       <button class="btn btn-primary" onclick="saveDetail()">Save</button>
@@ -286,22 +291,32 @@
     </div>
     <div class="modal-body">
       <div>
-        <div class="field-label">Name *</div>
-        <input class="field-input" id="am-name" placeholder="Full name" />
-      </div>
-      <div>
-        <div class="field-label">Role / Title</div>
-        <input class="field-input" id="am-role" placeholder="Role or organisation" />
-      </div>
-      <div>
-        <div class="field-label">Starting quadrant</div>
-        <select class="field-select" id="am-quadrant">
-          <option value="manage">Manage Closely (High Power, High Interest)</option>
-          <option value="satisfy">Keep Satisfied (High Power, Low Interest)</option>
-          <option value="inform">Keep Informed (Low Power, High Interest)</option>
-          <option value="monitor">Monitor (Low Power, Low Interest)</option>
+        <div class="field-label">Existing stakeholder <span style="color:var(--text3);font-size:10px;font-weight:400">(single source of truth — link instead of duplicating)</span></div>
+        <select class="field-select" id="am-existing" onchange="onExistingPick()">
+          <option value="">+ New stakeholder</option>
         </select>
       </div>
+      <div id="am-new-fields">
+        <div>
+          <div class="field-label">Name *</div>
+          <input class="field-input" id="am-name" placeholder="Full name" list="am-name-suggestions" oninput="onAmNameInput()" />
+          <datalist id="am-name-suggestions"></datalist>
+        </div>
+        <div>
+          <div class="field-label">Role / Title</div>
+          <input class="field-input" id="am-role" placeholder="Role or organisation" />
+        </div>
+        <div>
+          <div class="field-label">Starting quadrant</div>
+          <select class="field-select" id="am-quadrant">
+            <option value="manage">Manage Closely (High Power, High Interest)</option>
+            <option value="satisfy">Keep Satisfied (High Power, Low Interest)</option>
+            <option value="inform">Keep Informed (Low Power, High Interest)</option>
+            <option value="monitor">Monitor (Low Power, Low Interest)</option>
+          </select>
+        </div>
+      </div>
+      <div id="am-existing-hint" style="display:none;font-size:11.5px;color:var(--text3);padding:2px 0"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveNewStakeholder()">Add</button>
@@ -382,6 +397,8 @@
 
   // ── Detail panel ─────────────────────────────────────────────────────────────
 
+  let _dpProjectIds = [];
+
   function openDetail(id) {
     activeId = id;
     const sh = data.stakeholders.find(s => s.id === id);
@@ -398,7 +415,61 @@
     document.getElementById('dp-interest').value = i;
     document.getElementById('pwr-val').textContent = p;
     document.getElementById('int-val').textContent = i;
+    _dpProjectIds = (sh.projectIds || []).slice();
+    renderProjectChecklist();
     renderGrid();
+  }
+
+  // ── Project checklist (sorted by Project Hub's saved group order) ─────────────
+
+  function getGroupedSortedProjects() {
+    const raw = HubStorage.get('project-hub-v1') || {};
+    const projects = Array.isArray(raw.projects) ? raw.projects : [];
+    const savedOrder = Array.isArray(raw.groupOrder) ? raw.groupOrder : [];
+    const groupMap = new Map();
+    projects.forEach(p => {
+      const key = (p.group || '').trim();
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key).push(p);
+    });
+    const namedKeys = [...groupMap.keys()].filter(k => k);
+    const known = savedOrder.filter(g => namedKeys.includes(g));
+    const extra = namedKeys.filter(g => !known.includes(g)).sort((a, b) => a.localeCompare(b));
+    const orderedGroups = [...known, ...extra];
+    if (groupMap.has('')) orderedGroups.push('');
+    return orderedGroups.map(name => ({
+      name,
+      projects: (groupMap.get(name) || []).slice().sort((a, b) => a.name.localeCompare(b.name))
+    })).filter(g => g.projects.length);
+  }
+
+  function renderProjectChecklist() {
+    const el = document.getElementById('dp-projects');
+    const groups = getGroupedSortedProjects();
+    if (!groups.length) {
+      el.innerHTML = `<div style="font-size:11.5px;color:var(--text3);font-style:italic">No projects found in Project Hub yet.</div>`;
+      return;
+    }
+    el.innerHTML = groups.map(g => {
+      const heading = (g.name || groups.length > 1)
+        ? `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:6px 0 3px">${_esc(g.name || 'Ungrouped')}</div>`
+        : '';
+      const rows = g.projects.map(p => {
+        const checked = _dpProjectIds.includes(p.id);
+        return `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--border)">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleDpProject('${p.id}')" style="accent-color:var(--accent);width:13px;height:13px;flex-shrink:0">
+          <span style="flex:1;font-weight:${checked?'600':'400'}">${_esc(p.name)}</span>
+        </label>`;
+      }).join('');
+      return heading + rows;
+    }).join('');
+  }
+
+  function toggleDpProject(projId) {
+    const idx = _dpProjectIds.indexOf(projId);
+    if (idx >= 0) _dpProjectIds.splice(idx, 1);
+    else _dpProjectIds.push(projId);
+    renderProjectChecklist();
   }
 
   function closeDetail() {
@@ -425,8 +496,10 @@
     sh.power = parseInt(document.getElementById('dp-power').value);
     sh.interest = parseInt(document.getElementById('dp-interest').value);
     sh.notes = document.getElementById('dp-notes').value.trim();
+    sh.projectIds = _dpProjectIds.slice();
     sh.updatedAt = new Date().toISOString();
     save(); closeDetail();
+    showToast('Stakeholder saved');
   }
 
   function deleteStakeholder() {
@@ -438,22 +511,89 @@
 
   // ── Add modal ────────────────────────────────────────────────────────────────
 
+  let _addModalQuadrant = 'manage';
+
   function openAddModal(defaultQuadrant) {
+    _addModalQuadrant = defaultQuadrant || 'manage';
+    document.getElementById('am-existing').value = '';
     document.getElementById('am-name').value = '';
     document.getElementById('am-role').value = '';
-    document.getElementById('am-quadrant').value = defaultQuadrant || 'manage';
+    document.getElementById('am-quadrant').value = _addModalQuadrant;
+    buildExistingPicker();
+    document.getElementById('am-name-suggestions').innerHTML =
+      data.stakeholders.map(s => `<option value="${_esc(s.name)}"></option>`).join('');
+    onExistingPick();
     document.getElementById('add-modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('am-name').focus(), 50);
   }
   function closeAddModal() { document.getElementById('add-modal-overlay').classList.remove('open'); }
 
+  // ── Central registry: pick an existing stakeholder instead of duplicating ─────
+
+  function buildExistingPicker() {
+    const sel = document.getElementById('am-existing');
+    const sorted = data.stakeholders.slice().sort((a, b) => (a.name||'').localeCompare(b.name||''));
+    sel.innerHTML = '<option value="">+ New stakeholder</option>' +
+      sorted.map(s => `<option value="${s.id}">${_esc(s.name)}${s.role ? ' — ' + _esc(s.role) : ''}</option>`).join('');
+  }
+
+  function onExistingPick() {
+    const id = document.getElementById('am-existing').value;
+    const newFields = document.getElementById('am-new-fields');
+    const hint = document.getElementById('am-existing-hint');
+    if (!id) {
+      newFields.style.display = '';
+      hint.style.display = 'none';
+      return;
+    }
+    newFields.style.display = 'none';
+    const sh = data.stakeholders.find(s => s.id === id);
+    hint.style.display = '';
+    hint.textContent = projectFilter
+      ? (sh && (sh.projectIds||[]).includes(projectFilter)
+          ? 'Already linked to this project.'
+          : 'Will link this existing stakeholder to the current project filter.')
+      : 'Already in the registry — pick a project filter first to link them to a project.';
+  }
+
+  function onAmNameInput() {
+    // Warn (non-blocking) if the typed name matches an existing stakeholder, so
+    // misspellings/duplicates surface before save instead of after.
+    const name = document.getElementById('am-name').value.trim().toLowerCase();
+    const hint = document.getElementById('am-existing-hint');
+    if (!name) { hint.style.display = 'none'; return; }
+    const match = data.stakeholders.find(s => (s.name||'').trim().toLowerCase() === name);
+    if (match) {
+      hint.style.display = '';
+      hint.textContent = `Matches existing stakeholder "${match.name}" — saving will link to them instead of creating a duplicate.`;
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
   function saveNewStakeholder() {
-    const name = document.getElementById('am-name').value.trim();
-    if (!name) { document.getElementById('am-name').focus(); return; }
+    const existingId = document.getElementById('am-existing').value;
+    const typedName = document.getElementById('am-name').value.trim();
+    const existingMatch = existingId
+      ? data.stakeholders.find(s => s.id === existingId)
+      : data.stakeholders.find(s => (s.name||'').trim().toLowerCase() === typedName.toLowerCase());
+
+    if (existingMatch) {
+      if (projectFilter && !(existingMatch.projectIds||[]).includes(projectFilter)) {
+        existingMatch.projectIds = [...(existingMatch.projectIds||[]), projectFilter];
+        existingMatch.updatedAt = new Date().toISOString();
+        save();
+        showToast('Linked existing stakeholder to project');
+      }
+      closeAddModal(); openDetail(existingMatch.id);
+      return;
+    }
+
+    if (!typedName) { document.getElementById('am-name').focus(); return; }
     const q = document.getElementById('am-quadrant').value;
     const [p, i] = QUADRANT_DEFAULTS[q] || [3,3];
     const sh = {
-      id: uid(), name, role: document.getElementById('am-role').value.trim(),
+      id: uid(), name: typedName, role: document.getElementById('am-role').value.trim(),
       stance: 'neutral', engagement: '', power: p, interest: i,
       projectIds: projectFilter ? [projectFilter] : [],
       notes: '', createdAt: new Date().toISOString()
