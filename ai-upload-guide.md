@@ -5,9 +5,10 @@ Upload this file alongside a Thinking Hub backup JSON when asking an external AI
 the exact shape of each section so it proposes edits that match the real schema
 instead of guessing field names.
 
-**Before uploading:** delete `data["⚙️ Settings"].anthropicKey` (or whatever label
-your export uses for the settings block) from the JSON first — it's your live API
-key in plaintext. Everything else in a Full Backup is safe to share.
+Exports no longer include your Anthropic API key (it's stripped automatically as of
+2026-06-17) — if you're working from an older backup file, delete
+`data["⚙️ Settings"].anthropicKey` from the JSON before uploading it anywhere, since
+older files still have it in plaintext. New exports are safe to share as-is.
 
 ## Top-level shape
 
@@ -216,8 +217,10 @@ Internal/UI bookkeeping — low value for recommendations, mostly noise.
 
 ### `settings` (hub-settings-v1)
 ```json
-{ "obsidianVault": "vault name", "anthropicKey": "STRIP BEFORE UPLOADING", "profile": { "name", "role", "selfMemberId" } }
+{ "obsidianVault": "vault name", "profile": { "name", "role", "selfMemberId" } }
 ```
+(`anthropicKey` is stored locally but stripped from every export — it will never
+appear in a backup file.)
 
 ### `kmqt_board` (kmqt_current_v2) — retired tool, import-only source now
 ```json
