@@ -96,6 +96,15 @@
     }
 
     /* ── Network canvas ─────────────────────────────────────── */
+    .canvas-area {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
     #mynetwork {
       flex: 1;
       width: 100%;
@@ -332,35 +341,37 @@
     <div class="filter-bar" id="filter-bar"></div>
   </div>
 
-  <div class="controls">
-    <button class="btn" onclick="fitGraph()">Fit to Screen</button>
-    <button class="btn" id="physics-btn" onclick="togglePhysics()">Freeze Layout</button>
-    <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
-    <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
-    <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
-    <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
+  <div class="canvas-area">
+    <div class="controls">
+      <button class="btn" onclick="fitGraph()">Fit to Screen</button>
+      <button class="btn" id="physics-btn" onclick="togglePhysics()">Freeze Layout</button>
+      <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
+      <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
+      <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
+      <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div id="empty" class="empty-state">
+      <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px;opacity:0.55">
+        <circle cx="14" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="48" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="48" cy="60" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="82" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="48" cy="36" r="5" fill="currentColor" opacity="0.3"/>
+        <line x1="22" y1="32" x2="40" y2="17" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <line x1="22" y1="40" x2="40" y2="55" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <line x1="56" y1="17" x2="74" y2="31" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <line x1="56" y1="55" x2="74" y2="41" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <line x1="48" y1="20" x2="48" y2="52" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.4"/>
+      </svg>
+      <div class="empty-title">No relationships yet</div>
+      <div class="empty-text">Start linking your tasks, ideas, and decisions across the Thinking Hub — they'll appear here as a live graph.</div>
+    </div>
+
+    <div id="mynetwork"></div>
   </div>
-
-  <div class="legend" id="legend"></div>
-
-  <div id="empty" class="empty-state">
-    <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px;opacity:0.55">
-      <circle cx="14" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="12" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="60" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="82" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="48" cy="36" r="5" fill="currentColor" opacity="0.3"/>
-      <line x1="22" y1="32" x2="40" y2="17" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="22" y1="40" x2="40" y2="55" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="56" y1="17" x2="74" y2="31" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="56" y1="55" x2="74" y2="41" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-      <line x1="48" y1="20" x2="48" y2="52" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.4"/>
-    </svg>
-    <div class="empty-title">No relationships yet</div>
-    <div class="empty-text">Start linking your tasks, ideas, and decisions across the Thinking Hub — they'll appear here as a live graph.</div>
-  </div>
-
-  <div id="mynetwork"></div>
 
   <!-- Edge info panel -->
   <div class="edge-panel" id="edge-panel">
