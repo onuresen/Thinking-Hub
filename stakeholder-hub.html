@@ -360,7 +360,8 @@
 
   function buildProjectFilter() {
     const sel = document.getElementById('project-filter');
-    const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
+    const projects = (() => { try { return HubData.getProjects(); } catch { return []; } })()
+      .slice().sort((a, b) => (a.name||'').localeCompare(b.name||''));
     sel.innerHTML = '<option value="">All projects</option>' +
       projects.map(p => `<option value="${_esc(p.id)}">${_esc(p.name)}</option>`).join('');
   }
