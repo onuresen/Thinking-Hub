@@ -1009,6 +1009,16 @@ Seven improvements extending the Resurface card and Today view to pull from more
 
 ---
 
+### Rejected — Stakeholder Map embedded in Project Hub, and People Hub → Profile consolidation `[group: tool-consolidation]`
+Two consolidation ideas were proposed and one was fully implemented, then both were explicitly rejected by the user in the same session.
+
+- **Decision:** Do NOT embed a Stakeholders view inside Project Hub. Stakeholder Map (`stakeholder-hub.html`) stays a fully standalone sidebar tool, unchanged. **Why:** implemented once (power/interest grid view + Add Stakeholder modal inside `project-hub.html`, mirroring the Priority Matrix / Assumptions precedent) and the user disliked the result in practice: *"to be honest I didn't like Stakeholders inside project hub. it's better as a separate tool as it is now."* Reverted via `git revert` — `project-hub.html`, `index.html`, `help-hub.html` restored to pre-embedding state. **Alternative rejected:** keep the embedded view as an additional surface alongside the standalone tool — user wants the standalone tool only, no embedded duplicate. **Confidence:** high. **Revisit when:** the user asks for it again — don't re-propose proactively.
+- **Decision:** Do NOT add a "Team" tab to the Profile page (`achievements-hub.html`) surfacing People Hub's Org Tree + Load Matrix. People Hub (`people-hub.html`) stays exactly as it is, unmodified and in the sidebar. **Why:** this was a proposed (not yet built) alternative to deleting People Hub; user rejected the proposal outright: *"I didn't like your People Hub to profile suggestion as well so keep it as it is."* **Alternative rejected:** delete People Hub entirely — user already ruled this out earlier in the same exchange ("E1 is out, I do wanna delete People Hub" was misread by the assistant as approval to consolidate; the user's actual ask was either improve-in-place or leave alone, and the final answer is leave alone). **Confidence:** high. **Lesson:** the precedent of prior successful tool-consolidations (Assumptions → Decision Hub, Priority Matrix → Project Hub) does not generalize to every tool — Stakeholder Map and People Hub both work better as their existing standalone forms. Don't re-propose either consolidation without new user-initiated interest.
+
+**Files:** `project-hub.html`, `index.html`, `help-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
