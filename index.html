@@ -2133,7 +2133,7 @@
       // ── People & Network ──────────────────────────────────────────────
       { id: 'graph-hub', label: 'Dependency Graph', group: 'People & Network', wg: 'People & Network', icon: '🕸️', file: 'graph-hub.html', desc: 'Draw links between tasks, decisions and ideas to see what depends on what' },
       { id: 'people-hub', label: 'People Hub', group: 'People & Network', wg: 'People & Network', icon: '◉', file: 'people-hub.html', desc: 'See your whole team in one place — roles, workload and who is over-allocated' },
-      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'People & Network', wg: 'People & Network', icon: '◇', file: 'stakeholder-hub.html', desc: 'Place stakeholders on a power/interest grid — full detail view. The grid is also embedded in Project Hub → Stakeholders.' },
+      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'People & Network', wg: 'People & Network', icon: '◇', file: 'stakeholder-hub.html', desc: 'Place stakeholders on a power/interest grid and plan your engagement approach' },
       { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'People & Network', wg: 'People & Network', icon: '🧰', file: 'tool-portfolio.html', desc: 'Keep a curated map of the tools, platforms and vendors your team uses' },
       // ── Learning & Ideas ──────────────────────────────────────────────
       { id: 'learning-hub', label: 'Learning Hub', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '◑', file: 'learning-hub.html', desc: 'Log books, articles and courses — capture highlights, key insights and reading progress' },
@@ -2156,8 +2156,8 @@
 
     const MODES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub'] },
-      bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub'] },
+      bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
       dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
 

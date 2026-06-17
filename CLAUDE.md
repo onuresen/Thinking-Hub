@@ -1009,41 +1009,6 @@ Seven improvements extending the Resurface card and Today view to pull from more
 
 ---
 
-### ~~Priority E2 — Stakeholder Map → Project Hub "Stakeholders" view~~ ✓ Done `[group: tool-consolidation]`
-The standalone Stakeholder Map (`stakeholder-hub.html`) is retired from the sidebar and its power/interest grid is now embedded as a first-class view inside Project Hub (sidebar → Views → Stakeholders). Data stays in `stakeholder-hub-v1` unchanged.
-
-**What was added to `project-hub.html`:**
-- **CSS** — `.sh-view-*` classes for the 2×2 grid, quadrant colour tokens (`var(--border-purple)`, `var(--accent-super)`, `var(--accent)`, `var(--border)`), avatar, role, and stance-dot styles
-- **Sidebar nav item** — "◎ Stakeholders" with a live badge (total count from `stakeholder-hub-v1`)
-- **`renderStakeholdersView(container)`** — builds the 2×2 power/interest grid reading from `stakeholder-hub-v1`; auto-filters to `state.selectedProject` when a project is open, otherwise a project filter dropdown in the toolbar. Clicking a card navigates to `stakeholder-hub.html` via `HubLinks.navigateTo` + `hub-highlight` (the standalone tool opens at the matching stakeholder for full detail/edit).
-- **`openShViewModal / saveShViewModal`** — lightweight "Add Stakeholder" modal (name, role, starting quadrant); saves directly to `stakeholder-hub-v1` with the active project already linked. Full edit capability stays in the standalone tool.
-- **`handleMainAction()`** — wired to `openShViewModal(null, 'manage')` when the Stakeholders view is active.
-- **`updateBadges()`** — reads `stakeholder-hub-v1.stakeholders.length` for `badge-stakeholders`.
-
-**`index.html`:** stakeholder-hub removed from `dx` and `bim` mode tool lists (still in APPS so `openApp('stakeholder-hub')` works; still shows in `everything` mode for direct access; clicking a card in Project Hub still navigates to it).
-
-**Key decisions:**
-- **Decision:** Keep stakeholder-hub in APPS (not fully deleted or hidden from `everything` mode). **Why:** the standalone tool still provides the full detail panel, notes, strategy, engagement edit UI, and contact fields — the Project Hub view is a quick-add + 2×2 overview, not a replacement for editing. Navigation from Project Hub → Stakeholder Hub covers the edit case. **Alternative rejected:** delete the file (loses full-detail editing). **Confidence:** high.
-- **Decision:** Use `var(--border-purple)` for "Manage Closely" (high power, high interest) — the most important quadrant. **Why:** purple was the only remaining `--border-*` / `--node-*` color token not already semantically claimed by another quadrant in the existing stakeholder-hub CSS (`#6366f1`/indigo maps to purple in theme.css). Using the token instead of the hex keeps ink/light themes correct. **Confidence:** high.
-- **Decision:** `_shProjFilter` is module-level state (not saved), overridden by `state.selectedProject` when a project panel is open. **Why:** follows the same pattern as `mxShowDone` and `cmSort` — view-level ephemeral state, no new storage key. **Confidence:** high.
-
-**Files:** `project-hub.html`, `index.html`, `help-hub.html`, `CLAUDE.md`
-
----
-
-### Priority E1 — People Hub consolidation (proposed, not yet implemented)
-People Hub is team-shaped but the user is a solo strategist. Rather than deleting it, the proposal is to **add a "Team" tab to the Profile page (`achievements-hub.html`)** that surfaces the Org Tree + Load Matrix views from `people-hub.html`, then retire People Hub from the sidebar (file kept, data in `project-hub-v1.members` unchanged).
-
-**What the Profile + Team tab would do:**
-- Profile tab (existing) — name, role, self-member link, achievements, activity heatmap
-- Team tab (new) — Org Tree (member hierarchy by `reportsTo`) + Load Matrix (open tasks per member, overload color) read from `project-hub-v1.members` — the same data People Hub already reads
-
-**Why this follows the established pattern:** Assumptions → Decision Hub, Priority Matrix → Project Hub, Stakeholder Map → Project Hub (P-E2 above). People Hub is superseded by this consolidation.
-
-**Still pending:** awaiting user confirmation before implementation.
-
----
-
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
