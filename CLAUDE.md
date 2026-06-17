@@ -1036,6 +1036,19 @@ Two follow-up fixes to `stakeholder-hub.html`, prompted by real use after the E2
 
 ---
 
+### ~~Priority 65 — Dependency Graph: fix Tools legend overlapping search/stats~~ ✓ Done `[group: graph-links]`
+The `.legend` (Tools), `.controls` (bottom-left button row), and `#empty` empty-state were all `position: absolute` direct children of `<body>` with no positioned ancestor — so their `top`/`right`/`inset` offsets resolved against the full viewport, not the graph canvas area below the header. With `.legend { top: 20px; right: 20px }`, that placed it inside the header's vertical space, overlapping the node-search input and the "N nodes · N links" count label.
+
+**Fix:** wrapped `.controls`, `#legend`, `#empty`, and `#mynetwork` in a new `.canvas-area` div (`position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden`) — the header stays a sibling above it. The three previously-viewport-anchored elements now position relative to `.canvas-area`, which only starts below the header, so `top: 20px` lands just under the header instead of inside it. Verified via headless-browser layout check: legend top (95.5px) now clears the header bottom (75.5px) with zero rect overlap against both the search input and stats label.
+
+**Key decisions:**
+- **Decision:** Anchor via a wrapping `position: relative` container, not by adding a hardcoded top offset (e.g. `top: 90px`) to clear the header. **Why:** the header's height isn't fixed — the filter-bar row appears/disappears depending on whether filters are active, so a hardcoded offset would either leave a gap or re-overlap when the header's height changes. Anchoring to a sibling container that starts after the header is layout-independent. **Confidence:** high.
+- **Decision:** Legend stays non-draggable, made collapsible-only. **Why:** that's what was asked — the legend already had a working collapse toggle from a prior pass; fixing the anchor/overlap bug doesn't require adding drag support, which is separate scope. **Confidence:** high. **Revisit when:** the user asks for drag-to-reposition specifically.
+
+**Files:** `graph-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
