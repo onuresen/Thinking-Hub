@@ -214,6 +214,79 @@
       margin-top: 6px;
     }
 
+    /* ── View Options panel ─────────────────────────────────── */
+    .view-opts {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 100;
+      font-size: 11px;
+      display: none;
+      flex-direction: column;
+      gap: 7px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      max-width: 200px;
+    }
+
+    .view-opts.visible {
+      display: flex;
+    }
+
+    .view-opts.collapsed .view-opts-body {
+      display: none;
+    }
+
+    .view-opts-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .view-opt-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text2);
+      cursor: pointer;
+    }
+
+    .view-opt-row input[type="checkbox"] {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .view-opt-sep {
+      margin-top: 4px;
+      padding-top: 7px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .view-opt-sep label {
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .view-opts select {
+      width: 100%;
+      padding: 4px 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 11px;
+    }
+
     /* ── New Link modal ─────────────────────────────────────── */
     .gh-overlay {
       position: fixed;
@@ -616,6 +689,13 @@
           oninput="searchNodes(this.value)" style="width:160px;font-size:11.5px;padding:4px 9px">
         <button id="graph-search-clear" class="gh-btn" style="display:none;padding:3px 8px;font-size:11px"
           onclick="clearNodeSearch()">✕</button>
+        <select id="new-since-select" class="gh-select" style="width:auto;padding:4px 6px;font-size:11px;margin:0"
+          title="Only show links created since…" onchange="setNewSinceFilter(this.value)">
+          <option value="0">All time</option>
+          <option value="24">New since 24h</option>
+          <option value="168">New since 7d</option>
+          <option value="720">New since 30d</option>
+        </select>
         <div class="header-subtitle" id="stats">0 nodes · 0 links</div>
       </div>
     </div>
@@ -629,10 +709,42 @@
       <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
       <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
       <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
+      <select id="cluster-select" class="btn" style="padding:6px 8px" title="Collapse nodes into groups"
+        onchange="setClusterMode(this.value)">
+        <option value="none">No clustering</option>
+        <option value="project">Cluster by project</option>
+        <option value="tool">Cluster by tool</option>
+      </select>
+      <button class="btn" id="view-opts-btn" onclick="toggleViewOptsPanel()">View ▾</button>
       <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
     </div>
 
     <div class="legend" id="legend"></div>
+
+    <div class="view-opts" id="view-opts">
+      <div class="legend-title" onclick="this.closest('.view-opts').classList.toggle('collapsed')"
+        style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>VIEW OPTIONS</span><span class="legend-toggle" id="view-opts-arrow">▾</span>
+      </div>
+      <div class="view-opts-body">
+        <label class="view-opt-row">
+          <input type="checkbox" id="opt-ambient-drift" checked onchange="toggleAmbientDrift(this.checked)">
+          Ambient drift
+        </label>
+        <label class="view-opt-row">
+          <input type="checkbox" id="opt-edge-flow" onchange="toggleEdgeFlow(this.checked)">
+          Edge flow
+        </label>
+        <label class="view-opt-row">
+          <input type="checkbox" id="opt-breathing" onchange="toggleBreathingNodes(this.checked)">
+          Breathing nodes
+        </label>
+        <label class="view-opt-row">
+          <input type="checkbox" id="opt-degree-sizing" onchange="toggleDegreeSizing(this.checked)">
+          Degree-based sizing
+        </label>
+      </div>
+    </div>
 
     <div id="empty" class="empty-state">
       <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px;opacity:0.55">
@@ -807,6 +919,199 @@
     let hiddenTools = new Set();
     let physicsEnabled = true;
     let autoLinksEnabled = true;
+    let linkCreatedAt = new Map(); // linkId -> ISO createdAt, for the "New since" filter
+    let newSinceCutoff = 0; // epoch ms; 0 = show all
+
+    // ── View options (animations + sizing) ─────────────────────
+    let ambientDriftEnabled = true;
+    let edgeFlowEnabled = false;
+    let breathingEnabled = false;
+    let degreeSizingEnabled = false;
+    let animFrameId = null;
+    let animClock = 0;
+
+    function physicsOptionsFor(enabled, ambientDrift) {
+      return {
+        enabled,
+        forceAtlas2Based: {
+          gravitationalConstant: -80,
+          centralGravity: ambientDrift ? 0.004 : 0.02,
+          springLength: 160,
+          springConstant: 0.06
+        },
+        minVelocity: ambientDrift ? 0.5 : 2.5,
+        solver: 'forceAtlas2Based'
+      };
+    }
+
+    function toggleViewOptsPanel() {
+      const panel = document.getElementById('view-opts');
+      panel.classList.toggle('visible');
+    }
+
+    function toggleAmbientDrift(checked) {
+      ambientDriftEnabled = checked;
+      if (network) network.setOptions({ physics: physicsOptionsFor(physicsEnabled, ambientDriftEnabled) });
+    }
+
+    function startAnimationLoop() {
+      if (animFrameId) return;
+      const loop = () => {
+        animClock += 1;
+        if (network && (edgeFlowEnabled || breathingEnabled)) {
+          network.redraw();
+          animFrameId = requestAnimationFrame(loop);
+        } else {
+          animFrameId = null;
+        }
+      };
+      animFrameId = requestAnimationFrame(loop);
+    }
+
+    function toggleEdgeFlow(checked) {
+      edgeFlowEnabled = checked;
+      if (checked) startAnimationLoop();
+    }
+
+    function toggleBreathingNodes(checked) {
+      breathingEnabled = checked;
+      if (checked) startAnimationLoop();
+    }
+
+    function toggleDegreeSizing(checked) {
+      degreeSizingEnabled = checked;
+      buildGraph();
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawAnimationOverlay(ctx) {
+      if (!network || !nodesDS || !edgesDS) return;
+      if (!edgeFlowEnabled && !breathingEnabled) return;
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
+
+      if (edgeFlowEnabled) {
+        edgesDS.get().forEach(edge => {
+          if (edge.hidden) return;
+          const fromNode = nodesDS.get(edge.from);
+          const toNode = nodesDS.get(edge.to);
+          if (!fromNode || !toNode || fromNode.hidden || toNode.hidden) return;
+          const positions = network.getPositions([edge.from, edge.to]);
+          const p1 = positions[edge.from], p2 = positions[edge.to];
+          if (!p1 || !p2) return;
+          const t = (animClock * 0.006) % 1;
+          const x = p1.x + (p2.x - p1.x) * t;
+          const y = p1.y + (p2.y - p1.y) * t;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = accent;
+          ctx.globalAlpha = 0.85;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
+
+      if (breathingEnabled) {
+        const pulse = (Math.sin(animClock * 0.05) + 1) / 2; // 0..1
+        nodesDS.get().forEach(node => {
+          if (node.hidden) return;
+          let box;
+          try { box = network.getBoundingBox(node.id); } catch { box = null; }
+          if (!box) return;
+          const pad = 4 + pulse * 5;
+          ctx.save();
+          ctx.strokeStyle = accent;
+          ctx.globalAlpha = 0.12 + pulse * 0.28;
+          ctx.lineWidth = 1.5;
+          roundRectPath(ctx, box.left - pad, box.top - pad, (box.right - box.left) + pad * 2, (box.bottom - box.top) + pad * 2, 8);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+    }
+
+    // ── Clustering ───────────────────────────────────────────
+    let clusterMode = 'none';
+    let activeClusterIds = [];
+
+    function openAllClusters() {
+      if (!network) return;
+      activeClusterIds.forEach(id => { if (network.isCluster(id)) network.openCluster(id); });
+      activeClusterIds = [];
+    }
+
+    function setClusterMode(mode) {
+      if (!network) { clusterMode = mode; return; }
+      openAllClusters();
+      clusterMode = mode;
+      applyClustering();
+    }
+
+    function applyClustering() {
+      if (!network || clusterMode === 'none') return;
+      const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
+
+      if (clusterMode === 'project') {
+        nodesMap.forEach((node, id) => {
+          if (node.tool !== 'project-hub' || hiddenTools.has(node.tool)) return;
+          const clusterId = 'cluster-project::' + node.itemId;
+          try {
+            if (network.isCluster(id)) return; // already absorbed into another cluster
+            network.clusterByConnection(id, {
+              joinCondition: () => true,
+              clusterNodeProperties: {
+                id: clusterId,
+                label: '▣ ' + node.label,
+                shape: 'box',
+                color: { background: node.color.background, border: accentColor },
+                font: node.font,
+                borderWidth: 2,
+                margin: { top: 10, bottom: 10, left: 12, right: 12 }
+              }
+            });
+            activeClusterIds.push(clusterId);
+          } catch { /* node already part of a cluster — skip */ }
+        });
+      } else if (clusterMode === 'tool') {
+        const tools = new Set(Array.from(nodesMap.values()).map(n => n.tool));
+        tools.forEach(tool => {
+          if (hiddenTools.has(tool)) return;
+          const clusterId = 'cluster-tool::' + tool;
+          const count = Array.from(nodesMap.values()).filter(n => n.tool === tool).length;
+          try {
+            network.cluster({
+              joinCondition: nodeOptions => nodeOptions.tool === tool,
+              clusterNodeProperties: {
+                id: clusterId,
+                label: (TOOL_LABELS[tool] || tool) + ' (' + count + ')',
+                shape: 'box',
+                color: { background: isDark ? '#2a2a30' : '#e4e4ea', border: accentColor },
+                font: { color: isDark ? '#e8e8f0' : '#1a1a2e', size: 12, face: 'DM Sans, sans-serif' },
+                borderWidth: 2,
+                margin: { top: 10, bottom: 10, left: 12, right: 12 }
+              }
+            });
+            activeClusterIds.push(clusterId);
+          } catch { /* no matching nodes — skip */ }
+        });
+      }
+    }
+
+    // ── New since filter ─────────────────────────────────────
+    function setNewSinceFilter(hoursStr) {
+      const hours = parseInt(hoursStr, 10) || 0;
+      newSinceCutoff = hours > 0 ? (Date.now() - hours * 60 * 60 * 1000) : 0;
+      applyFilters();
+    }
 
     // ── Controls ──────────────────────────────────────────────
 
@@ -816,7 +1121,7 @@
 
     function togglePhysics() {
       physicsEnabled = !physicsEnabled;
-      if (network) network.setOptions({ physics: { enabled: physicsEnabled } });
+      if (network) network.setOptions({ physics: physicsOptionsFor(physicsEnabled, ambientDriftEnabled) });
       const btn = document.getElementById('physics-btn');
       btn.textContent = physicsEnabled ? 'Freeze Layout' : 'Resume Physics';
       btn.classList.toggle('frozen', !physicsEnabled);
@@ -831,6 +1136,20 @@
         updates.push({ id, hidden: hiddenTools.has(node.tool) });
       });
       nodesDS.update(updates);
+
+      if (edgesDS) {
+        const edgeUpdates = [];
+        edgesDS.get().forEach(edge => {
+          if (!edge._linkId) return; // only manual links carry a createdAt
+          let hidden = false;
+          if (newSinceCutoff > 0) {
+            const created = linkCreatedAt.get(edge._linkId);
+            hidden = !created || new Date(created).getTime() < newSinceCutoff;
+          }
+          edgeUpdates.push({ id: edge.id, hidden });
+        });
+        if (edgeUpdates.length) edgesDS.update(edgeUpdates);
+      }
       updateStats();
     }
 
@@ -1075,8 +1394,10 @@
         (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => taskProjectMap.set(t.id, p.id)));
       } catch { }
       const taskHostEdgeAdded = new Set();
+      linkCreatedAt = new Map();
 
       links.forEach(link => {
+        linkCreatedAt.set(link.id, link.createdAt);
         [link.a, link.b].forEach(side => {
           const id = nodeId(side.tool, side.itemId);
           if (!nodesMap.has(id)) {
@@ -1151,6 +1472,27 @@
       buildLegend(tools);
 
       if (network) { network.destroy(); network = null; }
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      activeClusterIds = [];
+
+      if (degreeSizingEnabled) {
+        const degree = new Map();
+        edges.forEach(e => {
+          degree.set(e.from, (degree.get(e.from) || 0) + 1);
+          degree.set(e.to, (degree.get(e.to) || 0) + 1);
+        });
+        const maxDeg = Math.max(1, ...nodes.map(n => degree.get(n.id) || 0));
+        nodes.forEach(n => {
+          const d = degree.get(n.id) || 0;
+          const ratio = d / maxDeg;
+          const mScale = 1 + ratio * 1.4;
+          n.margin = {
+            top: Math.round(8 * mScale), bottom: Math.round(8 * mScale),
+            left: Math.round(10 * mScale), right: Math.round(10 * mScale)
+          };
+          n.font = { ...n.font, size: Math.round(12 * (0.85 + ratio * 0.6)) };
+        });
+      }
 
       nodesDS = new vis.DataSet(nodes);
       edgesDS = new vis.DataSet(edges);
@@ -1159,17 +1501,7 @@
         document.getElementById('mynetwork'),
         { nodes: nodesDS, edges: edgesDS },
         {
-          physics: {
-            enabled: physicsEnabled,
-            forceAtlas2Based: {
-              gravitationalConstant: -80,
-              centralGravity: 0.004,
-              springLength: 160,
-              springConstant: 0.06
-            },
-            minVelocity: 0.5,
-            solver: 'forceAtlas2Based'
-          },
+          physics: physicsOptionsFor(physicsEnabled, ambientDriftEnabled),
           interaction: {
             hover: true,
             tooltipDelay: 150,
@@ -1180,9 +1512,20 @@
         }
       );
 
+      network.on('afterDrawing', drawAnimationOverlay);
+      if (edgeFlowEnabled || breathingEnabled) startAnimationLoop();
+      if (clusterMode !== 'none') applyClustering();
+      if (newSinceCutoff > 0) applyFilters();
+
       network.on('doubleClick', params => {
         if (!params.nodes.length) return;
-        const node = nodesMap.get(params.nodes[0]);
+        const id = params.nodes[0];
+        if (network.isCluster(id)) {
+          network.openCluster(id);
+          activeClusterIds = activeClusterIds.filter(x => x !== id);
+          return;
+        }
+        const node = nodesMap.get(id);
         if (node) HubLinks.navigateTo(node.tool, node.itemId);
       });
 
