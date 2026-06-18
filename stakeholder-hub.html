@@ -157,6 +157,37 @@
     .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
     .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
     .modal-footer .spacer { flex: 1; }
+
+    /* ── View tabs ── */
+    .view-tab-bar { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
+    .view-tab {
+      padding: 5px 14px; border-radius: 5px; border: none; background: transparent;
+      color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: var(--font-body); transition: all 0.12s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+
+    /* ── Organizations view ── */
+    .orgs-area { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .orgs-area::-webkit-scrollbar { width: 6px; }
+    .orgs-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .org-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+    .org-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .org-name { font-family: var(--font-display); font-size: 14px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .org-type-badge { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: var(--r-chip); flex-shrink: 0; }
+    .org-type-badge.vendor { background: var(--node-blue); color: var(--border-blue); border: 1px solid var(--border-blue); }
+    .org-type-badge.consultant { background: var(--node-purple); color: var(--border-purple); border: 1px solid var(--border-purple); }
+    .org-type-badge.dept { background: var(--accent2-dim); color: var(--accent2); border: 1px solid var(--accent2); }
+    .org-type-badge.none { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+    .org-meta-row { display: flex; gap: 14px; font-size: 11px; color: var(--text3); margin-bottom: 10px; flex-wrap: wrap; }
+    .org-health.fresh { color: var(--accent-like); font-weight: 600; }
+    .org-health.stale { color: var(--accent-super); font-weight: 600; }
+    .org-proj-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+    .org-proj-chip { font-size: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-chip); padding: 2px 7px; color: var(--text2); }
+    .org-members { display: flex; flex-direction: column; gap: 5px; }
+    .org-add-person { margin-top: 8px; }
+    .orgs-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 40px 0; }
   </style>
 </head>
 <body>
@@ -164,15 +195,20 @@
 <div class="topbar">
   <div class="logo-mark">◇</div>
   <div class="logo-text">Stakeholder Map</div>
+  <div class="view-tab-bar" id="view-tabs">
+    <button class="view-tab active" data-view="orgs" onclick="switchView('orgs')">Organizations</button>
+    <button class="view-tab" data-view="matrix" onclick="switchView('matrix')">Power / Interest</button>
+  </div>
   <div class="topbar-spacer"></div>
-  <select class="project-filter" id="project-filter" onchange="renderGrid()">
+  <select class="project-filter" id="project-filter" onchange="renderAll()">
     <option value="">All projects</option>
   </select>
   <button class="btn btn-primary" onclick="openAddModal()" style="font-size:12px;padding:6px 14px">+ Add stakeholder</button>
 </div>
 
 <div class="body-wrap">
-  <div class="grid-area">
+  <div class="orgs-area" id="orgs-area"></div>
+  <div class="grid-area" id="grid-area" style="display:none">
     <div class="grid-with-axis">
       <div class="axis-y-label">Power →</div>
       <div class="grid-main">
@@ -232,12 +268,40 @@
         <input class="field-input" id="dp-role" oninput="dpChange()" />
       </div>
       <div>
+        <div class="field-label">Organization</div>
+        <input class="field-input" id="dp-org" oninput="dpChange()" list="org-suggestions" placeholder="Company or department name" />
+      </div>
+      <div>
+        <div class="field-label">Org Type</div>
+        <select class="field-select" id="dp-orgtype" onchange="dpChange()">
+          <option value="">— unset —</option>
+          <option value="vendor">Vendor</option>
+          <option value="consultant">Consultant</option>
+          <option value="dept">Internal Department</option>
+        </select>
+      </div>
+      <div>
         <div class="field-label">Stance</div>
         <select class="field-select" id="dp-stance" onchange="dpChange()">
           <option value="champion">Champion</option>
           <option value="neutral">Neutral</option>
           <option value="resistant">Resistant</option>
         </select>
+      </div>
+      <div>
+        <div class="field-label">Responsiveness</div>
+        <select class="field-select" id="dp-responsiveness" onchange="dpChange()">
+          <option value="">— not rated —</option>
+          <option value="1">1 — Very slow</option>
+          <option value="2">2 — Slow</option>
+          <option value="3">3 — Average</option>
+          <option value="4">4 — Responsive</option>
+          <option value="5">5 — Very responsive</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Last Contact</div>
+        <input class="field-input" type="date" id="dp-lastcontact" onchange="dpChange()" />
       </div>
       <div>
         <div class="field-label">Power (1–5)</div>
@@ -307,6 +371,19 @@
           <input class="field-input" id="am-role" placeholder="Role or organisation" />
         </div>
         <div>
+          <div class="field-label">Organization</div>
+          <input class="field-input" id="am-org" placeholder="Company or department name" list="org-suggestions" />
+        </div>
+        <div>
+          <div class="field-label">Org Type</div>
+          <select class="field-select" id="am-orgtype">
+            <option value="">— unset —</option>
+            <option value="vendor">Vendor</option>
+            <option value="consultant">Consultant</option>
+            <option value="dept">Internal Department</option>
+          </select>
+        </div>
+        <div>
           <div class="field-label">Starting quadrant</div>
           <select class="field-select" id="am-quadrant">
             <option value="manage">Manage Closely (High Power, High Interest)</option>
@@ -325,6 +402,8 @@
   </div>
 </div>
 
+<datalist id="org-suggestions"></datalist>
+
 <script>
   const STORAGE_KEY = 'stakeholder-hub-v1';
   const QUADRANTS = ['manage','satisfy','inform','monitor'];
@@ -333,6 +412,9 @@
   let data = { stakeholders: [] };
   let activeId = null;
   let projectFilter = '';
+  let activeView = 'orgs';
+  const ORG_TYPE_LABELS = { vendor: 'Vendor', consultant: 'Consultant', dept: 'Internal Dept', '': 'Unset' };
+  const STALE_DAYS = 30;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -364,6 +446,103 @@
       .slice().sort((a, b) => (a.name||'').localeCompare(b.name||''));
     sel.innerHTML = '<option value="">All projects</option>' +
       projects.map(p => `<option value="${_esc(p.id)}">${_esc(p.name)}</option>`).join('');
+  }
+
+  function buildOrgSuggestions() {
+    const dl = document.getElementById('org-suggestions');
+    const orgs = [...new Set(data.stakeholders.map(s => (s.org||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    dl.innerHTML = orgs.map(o => `<option value="${_esc(o)}"></option>`).join('');
+  }
+
+  // ── View switching ───────────────────────────────────────────────────────────
+
+  function switchView(view) {
+    activeView = view;
+    document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    document.getElementById('orgs-area').style.display = view === 'orgs' ? 'flex' : 'none';
+    document.getElementById('grid-area').style.display = view === 'matrix' ? 'flex' : 'none';
+  }
+
+  function renderAll() {
+    projectFilter = document.getElementById('project-filter').value;
+    buildOrgSuggestions();
+    renderOrgsView();
+    renderGrid();
+  }
+
+  // ── Organizations view ───────────────────────────────────────────────────────
+
+  function getOrgGroups(items) {
+    const map = new Map();
+    items.forEach(sh => {
+      const key = (sh.org || '').trim();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(sh);
+    });
+    const named = [...map.keys()].filter(k => k).sort((a,b) => a.localeCompare(b));
+    const groups = named.map(name => ({ name, orgType: (map.get(name).find(s=>s.orgType)||{}).orgType || '', members: map.get(name) }));
+    if (map.has('')) groups.push({ name: '', orgType: '', members: map.get('') });
+    return groups;
+  }
+
+  function orgHealth(members) {
+    const rated = members.map(m => parseInt(m.responsiveness)).filter(n => !isNaN(n));
+    const avgResp = rated.length ? (rated.reduce((a,b)=>a+b,0) / rated.length) : null;
+    const contacts = members.map(m => m.lastContact).filter(Boolean).sort().reverse();
+    const lastContact = contacts[0] || null;
+    let stale = false;
+    if (lastContact) {
+      const days = (Date.now() - new Date(lastContact).getTime()) / 86400000;
+      stale = days > STALE_DAYS;
+    }
+    return { avgResp, lastContact, stale };
+  }
+
+  function orgProjectIds(members) {
+    return [...new Set(members.flatMap(m => m.projectIds || []))];
+  }
+
+  function renderOrgsView() {
+    const el = document.getElementById('orgs-area');
+    let items = data.stakeholders;
+    if (projectFilter) items = items.filter(sh => (sh.projectIds||[]).includes(projectFilter));
+    if (!items.length) {
+      el.innerHTML = `<div class="orgs-empty">No stakeholders yet. Click "+ Add stakeholder" to get started.</div>`;
+      return;
+    }
+    const groups = getOrgGroups(items);
+    let projectsById = {};
+    try { (HubData.getProjects()||[]).forEach(p => projectsById[p.id] = p.name); } catch {}
+
+    el.innerHTML = groups.map(g => {
+      const health = orgHealth(g.members);
+      const projIds = orgProjectIds(g.members);
+      const projChips = projIds.length
+        ? `<div class="org-proj-chips">${projIds.map(id => `<span class="org-proj-chip">${_esc(projectsById[id] || 'Unknown project')}</span>`).join('')}</div>`
+        : '';
+      const healthText = health.lastContact
+        ? `Last contact ${_esc(health.lastContact)}`
+        : 'No contact logged';
+      const respText = health.avgResp != null ? `Avg responsiveness ${health.avgResp.toFixed(1)}/5` : '';
+      const healthClass = health.lastContact ? (health.stale ? 'stale' : 'fresh') : '';
+      const orgName = g.name || 'No organization';
+      const badgeClass = g.orgType || 'none';
+      const badgeLabel = ORG_TYPE_LABELS[g.orgType] || 'Unset';
+      const membersHtml = g.members.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(sh => renderCard(sh)).join('');
+      return `<div class="org-card">
+        <div class="org-card-head">
+          <div class="org-name">${_esc(orgName)}</div>
+          <span class="org-type-badge ${badgeClass}">${_esc(badgeLabel)}</span>
+        </div>
+        <div class="org-meta-row">
+          <span class="org-health ${healthClass}">${healthText}</span>
+          ${respText ? `<span>${respText}</span>` : ''}
+        </div>
+        ${projChips}
+        <div class="org-members">${membersHtml}</div>
+        <button class="q-add-btn org-add-person" onclick="openAddModal('manage','${_esc(g.name).replace(/'/g,"\\'")}','${g.orgType||''}')">+ Add person to ${g.name ? _esc(g.name) : 'this org'}</button>
+      </div>`;
+    }).join('');
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -408,7 +587,11 @@
     document.getElementById('dp-title').textContent = sh.name || 'Stakeholder';
     document.getElementById('dp-name').value = sh.name || '';
     document.getElementById('dp-role').value = sh.role || '';
+    document.getElementById('dp-org').value = sh.org || '';
+    document.getElementById('dp-orgtype').value = sh.orgType || '';
     document.getElementById('dp-stance').value = sh.stance || 'neutral';
+    document.getElementById('dp-responsiveness').value = sh.responsiveness || '';
+    document.getElementById('dp-lastcontact').value = sh.lastContact || '';
     document.getElementById('dp-engagement').value = sh.engagement || '';
     document.getElementById('dp-notes').value = sh.notes || '';
     const p = parseInt(sh.power)||3, i = parseInt(sh.interest)||3;
@@ -418,6 +601,7 @@
     document.getElementById('int-val').textContent = i;
     _dpProjectIds = (sh.projectIds || []).slice();
     renderProjectChecklist();
+    renderOrgsView();
     renderGrid();
   }
 
@@ -476,6 +660,7 @@
   function closeDetail() {
     document.getElementById('detail-panel').style.display = 'none';
     activeId = null;
+    renderOrgsView();
     renderGrid();
   }
 
@@ -492,7 +677,11 @@
     if (!sh) return;
     sh.name = document.getElementById('dp-name').value.trim();
     sh.role = document.getElementById('dp-role').value.trim();
+    sh.org = document.getElementById('dp-org').value.trim();
+    sh.orgType = document.getElementById('dp-orgtype').value;
     sh.stance = document.getElementById('dp-stance').value;
+    sh.responsiveness = document.getElementById('dp-responsiveness').value;
+    sh.lastContact = document.getElementById('dp-lastcontact').value;
     sh.engagement = document.getElementById('dp-engagement').value;
     sh.power = parseInt(document.getElementById('dp-power').value);
     sh.interest = parseInt(document.getElementById('dp-interest').value);
@@ -513,12 +702,18 @@
   // ── Add modal ────────────────────────────────────────────────────────────────
 
   let _addModalQuadrant = 'manage';
+  let _addModalOrg = '';
+  let _addModalOrgType = '';
 
-  function openAddModal(defaultQuadrant) {
+  function openAddModal(defaultQuadrant, presetOrg, presetOrgType) {
     _addModalQuadrant = defaultQuadrant || 'manage';
+    _addModalOrg = presetOrg || '';
+    _addModalOrgType = presetOrgType || '';
     document.getElementById('am-existing').value = '';
     document.getElementById('am-name').value = '';
     document.getElementById('am-role').value = '';
+    document.getElementById('am-org').value = _addModalOrg;
+    document.getElementById('am-orgtype').value = _addModalOrgType;
     document.getElementById('am-quadrant').value = _addModalQuadrant;
     buildExistingPicker();
     document.getElementById('am-name-suggestions').innerHTML =
@@ -595,7 +790,10 @@
     const [p, i] = QUADRANT_DEFAULTS[q] || [3,3];
     const sh = {
       id: uid(), name: typedName, role: document.getElementById('am-role').value.trim(),
-      stance: 'neutral', engagement: '', power: p, interest: i,
+      org: document.getElementById('am-org').value.trim(),
+      orgType: document.getElementById('am-orgtype').value,
+      stance: 'neutral', engagement: '', responsiveness: '', lastContact: '',
+      power: p, interest: i,
       projectIds: projectFilter ? [projectFilter] : [],
       notes: '', createdAt: new Date().toISOString()
     };
@@ -608,7 +806,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     load();
     buildProjectFilter();
-    renderGrid();
+    switchView('orgs');
+    renderAll();
     HubBootstrap.start('stakeholder-hub');
   });
 
