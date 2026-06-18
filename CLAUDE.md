@@ -45,7 +45,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `argument-hub.html` | Argument Hub — structure a case top-down with the Pyramid Principle (Barbara Minto): SCQA intro, governing thought, recursive MECE supporting pyramid (inductive/deductive logic + time/structure/degree ordering per group), live structure checks, Markdown export. Storage `argument-hub-v1` |
 | `goals-hub.html` | OKR / quarterly goals hub |
 | `learning-hub.html` | Reading & learning log |
-| `stakeholder-hub.html` | Visual power/interest stakeholder grid |
+| `stakeholder-hub.html` | Stakeholder Map — Organizations roster (vendor/consultant/internal dept grouping, relationship health) as the default view, with the Power/Interest grid as a secondary tab |
 | `risk-hub.html` | Risk register with heat-map |
 | `achievements-hub.html` | Achievements & milestones tracker + **Profile** (identity header: name / role / who-is-me, edits `hub-settings-v1.profile`; P53) |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
@@ -1084,6 +1084,22 @@ User loves the Dependency Graph and asked for Onexus-style ambient motion plus a
 - **Deferred to a later session (explicit, per user request):** shortest-path highlighting between two selected nodes.
 
 **Files:** `graph-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 68 — Stakeholder Map: Organizations view (vendor/consultant/dept roster)~~ ✓ Done `[group: stakeholder-ux]`
+The classic PMBOK Power/Interest 2×2 ("Manage Closely / Keep Satisfied / Keep Informed / Monitor") didn't match how the user actually works: managing relationships with external **vendor** companies, external **consultant** companies, and internal **departments** (same company, different team) — abstract influence-quadrant triage wasn't the relatable lens.
+
+- **New fields on stakeholder objects:** `org` (free-text company/department name, with a shared `<datalist id="org-suggestions">` across both the Add modal and Detail panel for consistent spelling/casing), `orgType` (`'vendor'|'consultant'|'dept'|''`), `responsiveness` (unrated or 1–5 select), `lastContact` (optional date).
+- **New default view — "Organizations":** a two-tab switcher in the topbar (`Organizations` default, `Power / Interest` secondary — same `.view-tab`/`.view-tab-bar` visual pattern as `journal-hub.html`'s `.jh-tab`, written fresh here since it's a small enough pattern not to warrant a new shared CSS class). `getOrgGroups(items)` groups stakeholders by `org` (alphabetical, ungrouped last); each org renders as a card showing an org-type badge (vendor=`--node-blue`/`--border-blue`, consultant=`--node-purple`/`--border-purple`, dept=`--accent2`/`--accent2-dim`, unset=gray), a relationship-health line (`orgHealth()`: most recent `lastContact` across members, colored `--accent-like` if ≤30 days / `--accent-super` if stale, plus avg `responsiveness` if any member is rated), project chips (union of all members' `projectIds`, resolved via `HubData.getProjects()`), the member roster (reusing the existing `renderCard()` person-card), and a "+ Add person to this org" button that pre-fills the Add modal's org/org-type fields via new `_addModalOrg`/`_addModalOrgType` state.
+- **Power/Interest matrix kept, not deleted** — demoted to the second tab; still useful for an individual stakeholder who's politically tricky regardless of which org they belong to.
+
+**Key decisions:**
+- **Decision:** Keep the Power/Interest matrix as a secondary tab rather than removing it. **Why:** the user said it's "not very related" to their day-to-day, not useless outright — it still has a niche use for a specific hard-to-read individual. Deleting it would lose that case for no benefit, since both views read from the same `data.stakeholders` array with no migration needed. **Confidence:** high.
+- **Decision:** `org` is free-text (datalist-assisted) rather than a separate "Organizations" registry object. **Why:** matches this codebase's established "registry via shared string, not a new entity table" pattern (e.g. Tags Hub's tag strings, not tag IDs) — grouping happens at render time via `getOrgGroups()`, so there's no new storage shape or migration, and a typo is just a render-time miss-group, easily fixed by editing the field, not a referential-integrity break. **Alternative rejected:** a dedicated `organizations` array with `orgId` foreign keys on stakeholders — more correct in the abstract, but adds a second CRUD surface (rename, merge, delete-cascade) for a personal app where org count is small. **Confidence:** med. **Revisit when:** org count grows large enough that typo-drift becomes a real problem — at that point a Tags-Hub-style central registry (Priority 57) would be the natural upgrade path.
+- **Decision:** `responsiveness`/`lastContact` are optional with explicit "not rated"/empty defaults, not required fields. **Why:** most existing stakeholders predate these fields and backfilling every record on day one isn't realistic; the health indicator already handles "no contact logged" as a neutral (non-colored) state rather than treating missing data as automatically stale. **Confidence:** high.
+
+**Files:** `stakeholder-hub.html`, `CLAUDE.md`
 
 ---
 
