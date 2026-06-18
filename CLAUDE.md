@@ -1064,6 +1064,28 @@ Triggered by reviewing a real Full Backup upload — `hub-settings-v1.anthropicK
 
 ---
 
+### ~~Priority 67 — Dependency Graph: view options (animations, sizing, clustering, recency filter)~~ ✓ Done `[group: graph-view-options]`
+User loves the Dependency Graph and asked for Onexus-style ambient motion plus a few structural features, all explicitly **opt-in toggles that preserve the current default look** — none of this changes what the graph shows by default.
+
+- **Ambient Drift toggle** (`opt-ambient-drift`, default ON) — formalizes the existing physics behavior (the user-loved "nodes slowly rotate after a drag") as a named, explicit setting rather than an accidental side-effect. `physicsOptionsFor(enabled, ambientDrift)` returns the original `centralGravity:0.004`/`minVelocity:0.5` tuning when ON (unchanged default feel) or a firmer `centralGravity:0.02`/`minVelocity:2.5` when OFF, so unchecking it makes the layout settle and stay still instead of drifting indefinitely.
+- **Edge Flow** (`opt-edge-flow`, default OFF) — small dots animate along each visible edge from `from` → `to`, looping. **Breathing Nodes** (`opt-breathing`, default OFF) — a pulsing accent-colored glow halo around every visible node. Both are drawn via `network.on('afterDrawing', ...)` (vis-network's raw-canvas hook, coordinates already in node-position space) driven by a single shared `requestAnimationFrame` loop (`startAnimationLoop`) that only runs while at least one of the two is enabled, calling `network.redraw()` each frame to re-trigger the hook.
+- **Degree-based sizing** (`opt-degree-sizing`, default OFF, explicit checkbox per the user's request — "might disturb looking, I don't know until trying") — since every node uses `shape:'box'` (auto-sized to label, `size` has no effect), this scales `margin`/`font.size` proportionally to each node's edge-degree (most-connected node = largest) instead. Computed once per `buildGraph()` call, only when enabled.
+- **Cluster by project / by tool** (`#cluster-select` dropdown in the controls bar) — uses vis-network's native `network.clusterByConnection()` (one-hop, per project node) and `network.cluster()` (joinCondition by `tool`) rather than a custom implementation. Double-clicking a cluster node opens it (`network.openCluster()`) instead of navigating; switching modes or rebuilding the graph calls `openAllClusters()` first to avoid stacking stale clusters.
+- **"New since" filter** (`#new-since-select` in the header — All time / 24h / 7d / 30d) — hides *manual* cross-tool links (`edge._linkId`) created before the cutoff; auto-generated structural edges (project/task/tag relationships, which have no creation timestamp of their own and aren't "new" in a meaningful sense) are unaffected. Backed by a `linkCreatedAt` map built from `HubLinks.getAll()`'s `link.createdAt` during every `buildGraph()`.
+- **"View Options" panel** — new collapsible panel (`.view-opts`, modeled on the existing `.legend` pattern) anchored top-left (top-right is Legend, bottom-left is the button row), toggled via a new "View ▾" button in the controls bar, housing the four checkboxes.
+
+**Key decisions:**
+- **Decision:** All four checkboxes + cluster mode are session-only state (plain module-level JS vars), not persisted to localStorage. **Why:** matches the established convention for every other graph toggle (`physicsEnabled`, `autoLinksEnabled`, `leavesOnly`, `orphansOnly`) and Tags Hub's filter/sort state (Priority 59) — these are viewing preferences for the current look-around, not data. **Confidence:** high.
+- **Decision:** Edge Flow + Breathing Nodes share one `requestAnimationFrame` loop rather than two independent ones. **Why:** both only need to force a redraw each frame; a single loop that no-ops when both are off (and self-terminates) is simpler and avoids double `network.redraw()` calls per frame. **Confidence:** high.
+- **Decision:** Degree-based sizing scales `margin`/`font.size`, not vis's `size` property. **Why:** every node in this graph uses `shape:'box'`, which auto-sizes to its label text — `size` is a no-op for box-shaped nodes in vis-network. **Confidence:** high.
+- **Decision:** Clustering uses vis-network's native cluster API (`clusterByConnection`/`cluster`) instead of a custom group-and-hide implementation. **Why:** vis-network already handles the visual collapse, the synthetic cluster node, edge re-routing, and the open/close lifecycle — reimplementing that would duplicate well-tested library behavior for no benefit. **Confidence:** high.
+- **Decision:** "New since" only filters manual links, not auto-generated structural edges. **Why:** auto edges (e.g. "task → project", "tagged: X") represent standing relationships derived from current data, not a discrete moment of creation — there's no meaningful "new" timestamp to filter on, and hiding them would make the graph look broken rather than filtered. **Confidence:** high.
+- **Deferred to a later session (explicit, per user request):** shortest-path highlighting between two selected nodes; export the graph view as a PNG.
+
+**Files:** `graph-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
