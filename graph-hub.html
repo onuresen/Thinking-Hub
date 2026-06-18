@@ -716,6 +716,7 @@
         <option value="tool">Cluster by tool</option>
       </select>
       <button class="btn" id="view-opts-btn" onclick="toggleViewOptsPanel()">View ▾</button>
+      <button class="btn" onclick="exportGraphPNG()">⬇ PNG</button>
       <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
     </div>
 
@@ -1125,6 +1126,30 @@
       const btn = document.getElementById('physics-btn');
       btn.textContent = physicsEnabled ? 'Freeze Layout' : 'Resume Physics';
       btn.classList.toggle('frozen', !physicsEnabled);
+    }
+
+    function exportGraphPNG() {
+      if (!network) { showToast('Nothing to export yet'); return; }
+      network.redraw(); // make sure the canvas reflects the current view before reading it
+      const srcCanvas = network.canvas.frame.canvas;
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#111';
+      // Composite onto a solid background — vis-network's own canvas is transparent,
+      // so a raw toDataURL() would export with no background at all.
+      const out = document.createElement('canvas');
+      out.width = srcCanvas.width;
+      out.height = srcCanvas.height;
+      const ctx = out.getContext('2d');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, out.width, out.height);
+      ctx.drawImage(srcCanvas, 0, 0);
+
+      const a = document.createElement('a');
+      a.href = out.toDataURL('image/png');
+      a.download = `dependency-graph-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('Graph exported as PNG');
     }
 
     // ── Filtering ─────────────────────────────────────────────
