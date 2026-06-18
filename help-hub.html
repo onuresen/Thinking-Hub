@@ -214,24 +214,34 @@
 
 const TOOLS = [
   {
+    id: 'capture-hub', label: 'Capture Hub', icon: '⊞', group: 'Daily Work', wg: 'Daily Work',
+    file: 'capture-hub.html',
+    desc: 'Brain dump everything at once — one line per thought, auto-sorted to the right tool.',
+    frameworks: ['GTD'],
+    fwIds: ['GTD'],
+    whenToUse: 'When your head is full and you want zero friction getting it out — before a meeting, at the start of the day, or after a flood of ideas. Type fast, don\'t stop to categorize; let the classifier do that.',
+    features: ['Free-text dump area — one thought per line, no forms', 'Auto-classifies each line as task / decision / risk / question / event / idea / learning / note', 'Live per-line type gutter so you can sanity-check before sending', 'One click routes every line to its matching tool (Project Hub, Decision Hub, Risk Register, Reflection Board, Schedule, Idea Swiper, Learning Hub, Journal Hub)', 'Nothing is lost to a "where did I write that down" search later'],
+    sample: 'Monday morning brain dump: "fix the broken CI pipeline", "decided to use Postgres over Mongo", "risk: vendor contract expires in March", "should we hire a contractor?", "meeting with finance Thursday 2pm", "idea: what if onboarding was a checklist?". One parse pass classifies all six lines correctly — task, decision, risk, question, event, idea — and routes each to its tool with one click.'
+  },
+  {
     id: 'project-hub', label: 'Project Hub', icon: '◈', group: 'Daily Work', wg: 'Daily Work',
     file: 'project-hub.html',
     desc: 'Track milestones, tasks and workstreams across a project.',
     frameworks: ['PMBOK', 'Kanban', 'Eisenhower Matrix', 'RACI / DACI'],
     fwIds: ['PMBOK', 'Kanban', 'Eisenhower-Matrix', 'RACI-DACI'],
     whenToUse: 'You have a named initiative with a deadline, a defined team, or more than a handful of parallel tasks. Great for anything that spans more than a week and involves more than one person — or any solo project complex enough to need structure.',
-    features: ['Projects with tasks, members, priorities, and due dates', 'Kanban board with WIP limits (visualize flow)', 'Priority Matrix (Eisenhower 2×2) for task triage', 'Member roles (RACI-inspired: Owner, Lead, Contributor…)', 'Goal and risk count badges from connected tools', 'Auto-sync with Schedule for timeline visibility'],
+    features: ['Projects with tasks, members, priorities, and due dates', 'Kanban board with WIP limits (visualize flow)', 'Priority Matrix (Eisenhower 2×2) for task triage', 'Groupings view — custom drag-to-reorder project groups', 'Member roles (RACI-inspired: Owner, Lead, Contributor…)', 'Goal and risk count badges from connected tools', 'Auto-sync with Schedule for timeline visibility'],
     sample: 'You\'re kicking off "Brand Refresh Q3". Create the project, add teammates with roles (Design Lead, Content Contributor), break work into tasks. Open Kanban — the "In Progress" WIP limit of 3 lights up when the team is overloaded. Open Priority Matrix to find tasks that can wait vs. must happen this week.'
   },
   {
     id: 'schedule', label: 'Schedule', icon: '▦', group: 'Daily Work', wg: 'Daily Work',
     file: 'schedule.html',
-    desc: 'Timeline and calendar views for tasks, milestones, and events.',
+    desc: 'Calendar, hourly time-block grid, and Gantt timeline for tasks, milestones, meetings, and events.',
     frameworks: ['Gantt Chart', 'Critical Path Method', 'PERT'],
     fwIds: ['Gantt-Chart', 'Critical-Path-Method', 'PERT'],
-    whenToUse: 'When you need to see tasks across time — not just a list. Invaluable for spotting deadline conflicts, showing a project roadmap to stakeholders, or planning sprints against real calendar dates.',
-    features: ['Gantt-style timeline bar chart', 'Month / week / day zoom levels', 'Auto-syncs task due dates from Project Hub', 'Milestone markers', 'Color-coded by project'],
-    sample: 'Three projects run in parallel. Open Schedule — a marketing campaign due April 15 and a product launch due April 20 both need the same designer. The overlap is obvious now, before it becomes a crisis. Negotiate priorities while there\'s still time.'
+    whenToUse: 'When you need to see tasks across time — not just a list. Invaluable for spotting deadline conflicts, time-blocking your actual day hour by hour, showing a project roadmap to stakeholders, or planning sprints against real calendar dates.',
+    features: ['Calendar view — month/week grid with meetings and schedule items as pills', 'Hourly week time-block grid (06:00–22:00) with drag-to-move and drag-to-resize blocks', 'Gantt-style timeline bar chart with milestone markers', 'Meetings from Meeting Hub render alongside tasks on both Calendar and the time grid', 'Auto-syncs task due dates from Project Hub', 'Color-coded by project; weekend tint on Calendar and the time grid'],
+    sample: 'Three projects run in parallel. Open Schedule\'s Calendar tab — a marketing campaign due April 15 and a product launch due April 20 both need the same designer, and a client meeting is right between them. Switch to the time-block grid to drag your actual work hours around the meeting before the overlap becomes a crisis.'
   },
   {
     id: 'meetings-hub', label: 'Meeting Hub', icon: '▣', group: 'Daily Work', wg: 'Daily Work',
@@ -240,8 +250,8 @@ const TOOLS = [
     frameworks: ['PMBOK', 'RACI / DACI'],
     fwIds: ['PMBOK', 'RACI-DACI'],
     whenToUse: 'Before and during any meeting with decisions, action items, or stakeholders. Even a 15-minute sync benefits from structured capture — who decided what, who owns what, by when.',
-    features: ['Meeting metadata: title, date, attendees, type', 'Structured sections: agenda, discussion, decisions, actions', 'Action item extraction with owner and due date', 'Project linkage', 'Full-text search across past meetings'],
-    sample: 'Monday kick-off for the website launch. Add attendees, note the three decisions made (go/no-go criteria, launch date, comms lead), extract 5 action items each with a clear owner. By the end of the meeting, everyone knows exactly what they own — no follow-up email needed.'
+    features: ['Meeting metadata: title, date, time, attendees, type', 'Structured sections: agenda, discussion, decisions, actions (with optional due dates)', 'Import recurring and one-off meetings straight from an Outlook/Teams/Google .ics export', 'Attendee bulk-edit, member-aware autocomplete, and collapse for long lists', '"🔁 Repeat" to spin up the next occurrence of a recurring meeting', 'Project linkage and full-text search across past meetings'],
+    sample: 'Monday kick-off for the website launch. Import the recurring weekly sync straight from your calendar .ics file, add the remaining attendees from the member autocomplete, note the three decisions made (go/no-go criteria, launch date, comms lead), extract 5 action items each with a clear owner and due date. By the end of the meeting, everyone knows exactly what they own — no follow-up email needed.'
   },
   {
     id: 'journal-hub', label: 'Journal Hub', icon: '◷', group: 'Daily Work', wg: 'Daily Work',
@@ -270,8 +280,8 @@ const TOOLS = [
     frameworks: ['Decision Matrix', 'Cynefin Framework', 'Six Thinking Hats', 'Assumption-Based Planning'],
     fwIds: ['Decision-Matrix', 'Cynefin-Framework', 'Six-Thinking-Hats', 'Assumption-Based-Planning'],
     whenToUse: 'When you face a meaningful decision — anything involving trade-offs, multiple stakeholders, or consequences that will last more than a month. Structured decisions age better than gut calls.',
-    features: ['Decision log with type, confidence, status, and reasoning', 'Cynefin domain field (Clear / Complicated / Complex / Chaotic)', 'Option comparison and pros/cons table', 'Alignment matrix — who agrees, who has concerns', 'Assumptions tab with Signpost and Hedging Actions (ABP)', 'Send to KMQT Board as a question'],
-    sample: 'Deciding: build vs. buy a data pipeline. Tag it "Complex" in Cynefin — cause and effect aren\'t obvious. List options. Add assumption: "We have 2 engineers available" with signpost: "Confirmed in planning meeting" and hedge: "Outsource if < 2 engineers available." Reach 80% alignment score before committing.'
+    features: ['Decision log with type, confidence, status, and reasoning', 'Cynefin domain field (Clear / Complicated / Complex / Chaotic)', 'Alternative considered, revisit-when condition/date, and a scored outcome (held / partly / didn\'t / too-early)', '⚖ Calibration modal — hit-rate per confidence band, an overconfidence read, and a due-for-revisit count', 'Option comparison and pros/cons table; alignment matrix — who agrees, who has concerns', 'Assumptions tab with Signpost and Hedging Actions (ABP)', 'Send to Reflection Board as a question'],
+    sample: 'Deciding: build vs. buy a data pipeline. Tag it "Complex" in Cynefin — cause and effect aren\'t obvious. List options, log the alternative you rejected and why, and set a revisit-when condition: "after 2 sprints of integration." Add assumption: "We have 2 engineers available" with signpost: "Confirmed in planning meeting" and hedge: "Outsource if < 2 engineers available." Reach 80% alignment score before committing. Two sprints later, the decision resurfaces on the home dashboard — score the outcome and check your calibration.'
   },
   {
     id: 'risk-hub', label: 'Risk Register', icon: '⚠', group: 'Strategy & Decisions', wg: 'Strategy & Decisions',
@@ -299,9 +309,9 @@ const TOOLS = [
     desc: 'Visual map of your tasks, decisions, and ideas as a linked graph.',
     frameworks: ['Critical Path Method', 'PERT', 'PMBOK'],
     fwIds: ['Critical-Path-Method', 'PERT', 'PMBOK'],
-    whenToUse: 'When tasks have dependencies and you need to see the critical path. Also powerful for mapping how decisions connect — pairs well with Reflection Board and Decision Hub.',
-    features: ['Interactive node graph (vis-network, pan and zoom)', 'Create links between tasks, decisions, and ideas', 'Edge notes explaining the dependency type', 'Orphan filter — find unconnected nodes instantly', 'Color-coded node types', 'Searchable via Cmd+K global search'],
-    sample: 'You have 20 tasks for a product launch. Add them as nodes, draw links: "Finalize copy" → "Design assets" → "Dev build" → "QA" → "Deploy." The longest chain is 12 days — that\'s your critical path. You spot "Legal review" as an orphan with no connection. Someone forgot to sequence it. Fixed before it blocked launch.'
+    whenToUse: 'When tasks have dependencies and you need to see the critical path. Also powerful for mapping how decisions, tags, and ideas connect — pairs well with Reflection Board, Decision Hub, and Tags.',
+    features: ['Interactive node graph (vis-network, pan and zoom)', 'Create links between tasks, projects, decisions, tags, and ideas', 'Tags appear as their own nodes, dotted-linked to every item that uses them', 'Edge notes explaining the dependency type', 'Orphan filter and "new since" (24h/7d/30d) filter for recently linked items', 'View Options panel — Ambient Drift, Edge Flow, Breathing Nodes, degree-based sizing', 'Cluster by project or by tool; export the current view as a PNG', 'Searchable via Cmd+K global search'],
+    sample: 'You have 20 tasks for a product launch. Add them as nodes, draw links: "Finalize copy" → "Design assets" → "Dev build" → "QA" → "Deploy." The longest chain is 12 days — that\'s your critical path. Cluster by project to declutter the view, switch on Edge Flow to see the direction of dependencies at a glance, and export a PNG for the kickoff deck. You spot "Legal review" as an orphan with no connection — fixed before it blocked launch.'
   },
   {
     id: 'people-hub', label: 'People Hub', icon: '◉', group: 'People & Network', wg: 'People & Network',
@@ -316,12 +326,12 @@ const TOOLS = [
   {
     id: 'stakeholder-hub', label: 'Stakeholder Map', icon: '◇', group: 'People & Network', wg: 'People & Network',
     file: 'stakeholder-hub.html',
-    desc: 'Power/interest grid for mapping and managing project stakeholders.',
+    desc: 'Organizations roster — vendors, consultants, and internal departments — plus a Power/Interest grid for individual stakeholders.',
     frameworks: ['Mendelow Matrix', 'Salience Model', 'PMBOK'],
     fwIds: ['Mendelow-Matrix', 'Salience-Model', 'PMBOK'],
-    whenToUse: 'At project start and whenever the team, sponsor, or regulatory situation changes. Knowing your power/interest landscape prevents the biggest project surprises — the ones that come from people, not technology.',
-    features: ['2×2 power/interest grid (Mendelow Matrix) with drag positioning', 'Engagement level: Unaware → Resistant → Neutral → Supportive → Leading', 'Project linkage per stakeholder', 'Contact info and relationship notes', 'Visual legend and strategy labels'],
-    sample: 'New product launch. CEO (High Power, High Interest) → Manage Closely. Legal (High Power, Low Interest) → Keep Satisfied. Beta users (Low Power, High Interest) → Keep Informed. Legal\'s engagement is "Neutral" — plan a proactive briefing before it becomes "Resistant."'
+    whenToUse: 'At project start and whenever the team, sponsor, vendor roster, or regulatory situation changes. Knowing who you depend on — and how healthy each relationship is — prevents the biggest project surprises, the ones that come from people, not technology.',
+    features: ['Organizations view (default) — vendor / consultant / internal-dept cards grouped and color-badged', 'Relationship health per org — last contact freshness, avg. responsiveness', 'Drag a person onto a different org card to reassign them; drag org cards to set your own order', 'Auto favicon avatar from a stakeholder\'s website/profile URL', 'Power / Interest grid (Mendelow Matrix) as a secondary tab, for politically tricky individuals', 'Engagement level: Unaware → Resistant → Neutral → Supportive → Leading', 'Project linkage per stakeholder; contact info and relationship notes'],
+    sample: 'You work with three vendors and one consulting firm. Open Organizations — "Acme Construction" shows 4 contacts, last touched 45 days ago (flagged stale), with an avg. responsiveness of 3.2/5. Drag a new hire\'s card from "Unassigned" onto "Acme Construction" to link them. Reorder the org cards so your most active vendor sits first. For the one politically tricky exec across all your projects, flip to the Power/Interest tab and place them in Manage Closely.'
   },
   {
     id: 'tool-portfolio', label: 'Tool Portfolio', icon: '🧰', group: 'People & Network', wg: 'People & Network',
@@ -360,8 +370,8 @@ const TOOLS = [
     frameworks: ['Pomodoro Technique', 'GTD', 'Systems Thinking'],
     fwIds: ['Pomodoro-Technique', 'GTD', 'Systems-Thinking'],
     whenToUse: 'When you need to protect deep work time from interruptions and task-switching. The timer creates a commitment device — starting it is a micro-promise to yourself that makes distractions feel like a betrayal.',
-    features: ['25 / 50 / 5-min session modes (Pomodoro standard)', 'Task selector from Project Hub open tasks', 'Energy level: ⚡ High / 🌤 Medium / 🌙 Low (GTD context matching)', 'Context tag: @deep-work, @admin, @calls, or custom', 'Pomodoro estimate before starting (compare vs. actual)', 'Session history + weekly histogram'],
-    sample: 'Two-hour window before lunch. Select "Write Q3 strategy doc", Energy: ⚡ High, Context: @deep-work, Estimate: 4 🍅. Start. 25 minutes of uninterrupted writing. 5-min break. Repeat. Three complete sessions logged. The fourth pomodoro went over — normal. The histogram shows Tuesday as your most productive writing day.'
+    features: ['25 / 50 / 5-min session modes (Pomodoro standard)', 'Task selector from Project Hub open tasks', 'Energy level: ⚡ High / 🌤 Medium / 🌙 Low (GTD context matching)', 'Context tag: @deep-work, @admin, @calls, or custom', 'Pomodoro estimate before starting (compare vs. actual)', '✦ AI Energy Insights — correlates 14 days of session energy/timing against your logged daily mood', 'Session history + weekly histogram'],
+    sample: 'Two-hour window before lunch. Select "Write Q3 strategy doc", Energy: ⚡ High, Context: @deep-work, Estimate: 4 🍅. Start. 25 minutes of uninterrupted writing. 5-min break. Repeat. Three complete sessions logged. The fourth pomodoro went over — normal. After two weeks, run AI Energy Insights — it notices your high-energy sessions cluster on days you logged a good mood, and that afternoon @admin blocks correlate with your lowest-rated days.'
   },
   {
     id: 'idea-swiper', label: 'Idea Swiper', icon: '⟳', group: 'Learning & Ideas', wg: 'Learning & Ideas',
@@ -402,6 +412,16 @@ const TOOLS = [
     whenToUse: 'Set up once: your name, role, and which person in People Hub is "you" (drives "My Work" on the home dashboard). Then return whenever you ship something meaningful or want to see your progress. The reinforcing loop: achievement → recognition → motivation → more achievement.',
     features: ['Identity header: name, role, and "this is me" (People Hub link)', 'Achievement cards with date, category, and project link', 'Activity heatmap (GitHub-style contribution graph)', 'Streak tracking across Daily Log and tools', 'Badge system for milestones'],
     sample: 'You ship the redesigned onboarding flow. Log it: "Launched new onboarding — activation rate up 18%." Category: Product. Link to "Site Redesign Q3." The heatmap shows a 23-day active streak. The reinforcing loop is running: visible progress fuels the next sprint of work.'
+  },
+  {
+    id: 'tags-hub', label: 'Tags', icon: '🏷', group: 'Tools & Focus', wg: 'Tools & Focus',
+    file: 'tags-hub.html',
+    desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere.',
+    frameworks: ['PKM'],
+    fwIds: ['PKM'],
+    whenToUse: 'When the same idea has accumulated several spellings ("BIM" / "bim" / "Bim") across Learning Hub, Decision Hub, Meeting Hub, and Reflection Board, or when you want a tag to exist as a standalone topic node in the Dependency Graph even before it\'s used anywhere.',
+    features: ['One registry across every tool with a tags field — Learning Hub, Decision Hub, Meeting Hub, Reflection Board, Reflection Board imports', 'Usage counts per tag, broken down by source tool', 'Inline rename-with-merge — renaming "bim" to "BIM" folds both into one tag everywhere it\'s used', 'Add a topic-only tag with zero current usage, for future planning', 'Cascading delete — removes a tag from every item, not just the registry', 'Every tag appears as a node in the Dependency Graph, dotted-linked to everything tagged with it'],
+    sample: 'You notice "Shop drawing" and "shop drawings" both exist as separate tags across Decision Hub and Meeting Hub. Open Tags, rename one to match the other — both merge into a single canonical tag, every affected decision and meeting updates automatically, and the Dependency Graph now shows one tag node instead of two disconnected ones.'
   },
 ];
 
@@ -495,6 +515,7 @@ const WORKFLOWS = [
       { tool: 'Stakeholder Map', action: 'Identify who needs to approve vs. who needs to be informed' },
       { tool: 'Risk Register', action: 'Add risks tied to each option before committing' },
       { tool: 'Decision Hub', action: 'Add assumptions with signposts and hedging actions (ABP)' },
+      { tool: 'Argument Hub', action: 'Structure the case top-down (SCQA + pyramid) before presenting it' },
     ]
   },
   {
