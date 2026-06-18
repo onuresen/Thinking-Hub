@@ -1103,6 +1103,20 @@ The classic PMBOK Power/Interest 2×2 ("Manage Closely / Keep Satisfied / Keep I
 
 ---
 
+### ~~Priority 69 — Stakeholder Map: wider detail panel + auto-favicon avatar from URL~~ ✓ Done `[group: stakeholder-ux]`
+Two small follow-up polish items.
+
+- **Wider detail panel** — `.detail-panel` width bumped `300px → 420px`; there was unused horizontal space next to it, and the panel was getting cramped after Priority 68 added 4 more fields (org, org type, responsiveness, last contact) on top of the original 7.
+- **Auto-favicon avatar from URL** — new `url` field on stakeholder objects (Website / Profile URL, in the Detail panel). When set, `shAvatarHtml()` swaps the `.sh-avatar` initials circle for a Google favicon (`https://www.google.com/s2/favicons?domain=...`) resolved from the URL's hostname, with an `onerror` fallback back to the existing initials — exact same auto-icon-with-fallback pattern as `tool-portfolio.html`'s `toolIconHtml()`. A live preview row (icon + domain + "auto" tag) appears under the URL input as you type, mirroring Tool Portfolio's `_iconPreviewHtml()`.
+
+**Key decisions:**
+- **Decision:** Reuse Tool Portfolio's exact favicon-fetch + onerror-fallback pattern rather than inventing a new one. **Why:** it's already proven in this codebase, needs no new dependency, and keeps the "auto icon, fallback to initials/emoji" idiom consistent across tools. **Confidence:** high.
+- **Decision:** `url` only added to the Detail panel, not the Add modal. **Why:** matches the explicit ask (the user only mentioned the right panel) — most stakeholders won't have a URL on first add, so it's a detail-panel enrichment field, not a required step. **Confidence:** med. **Revisit when:** if quick-add usage shows people want to set it immediately on creation.
+
+**Files:** `stakeholder-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

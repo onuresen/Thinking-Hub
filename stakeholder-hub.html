@@ -90,8 +90,21 @@
     .sh-avatar {
       width: 28px; height: 28px; border-radius: 50%; background: var(--surface2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: var(--text2); flex-shrink: 0;
+      font-size: 12px; font-weight: 700; color: var(--text2); flex-shrink: 0; overflow: hidden;
     }
+    .sh-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sh-avatar .sh-avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .url-preview-row {
+      display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: var(--r-sm);
+      background: var(--surface2); border: 1px solid var(--border); margin-top: 6px;
+    }
+    .url-preview-icon {
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      background: var(--surface3); border-radius: 50%; font-size: 13px; flex-shrink: 0; overflow: hidden;
+    }
+    .url-preview-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .url-preview-domain { font-size: 11px; color: var(--text2); font-family: var(--font-mono); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .url-preview-auto { font-size: 9px; color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
     .sh-info { flex: 1; min-width: 0; }
     .sh-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sh-role { font-size: 10.5px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -108,7 +121,7 @@
 
     /* ── Detail panel ── */
     .detail-panel {
-      width: 300px; min-width: 300px; border-left: 1px solid var(--border);
+      width: 420px; min-width: 420px; border-left: 1px solid var(--border);
       display: flex; flex-direction: column; background: var(--surface); overflow: hidden;
     }
     .dp-header {
@@ -266,6 +279,11 @@
       <div>
         <div class="field-label">Role / Title</div>
         <input class="field-input" id="dp-role" oninput="dpChange()" />
+      </div>
+      <div>
+        <div class="field-label">Website / Profile URL</div>
+        <input class="field-input" id="dp-url" oninput="dpChange();renderUrlPreview()" placeholder="https://..." />
+        <div id="dp-url-preview"></div>
       </div>
       <div>
         <div class="field-label">Organization</div>
@@ -438,6 +456,33 @@
     return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   }
 
+  function urlDomain(url) {
+    try { return new URL(url).hostname || null; } catch { return null; }
+  }
+
+  function shAvatarHtml(sh) {
+    const fb = _esc(initials(sh.name));
+    const domain = sh.url ? urlDomain(sh.url) : null;
+    if (!domain) return `<span class="sh-avatar-fallback">${fb}</span>`;
+    return `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+      `<span class="sh-avatar-fallback" style="display:none">${fb}</span>`;
+  }
+
+  function renderUrlPreview() {
+    const el = document.getElementById('dp-url-preview');
+    const url = document.getElementById('dp-url').value.trim();
+    const domain = url ? urlDomain(url) : null;
+    if (!domain) { el.innerHTML = ''; return; }
+    const fb = _esc(initials(document.getElementById('dp-name').value));
+    el.innerHTML = `<div class="url-preview-row">
+      <div class="url-preview-icon">
+        <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64" alt="" onerror="this.parentElement.innerHTML='${fb}'">
+      </div>
+      <span class="url-preview-domain">${_esc(domain)}</span>
+      <span class="url-preview-auto">auto</span>
+    </div>`;
+  }
+
   // ── Project filter ───────────────────────────────────────────────────────────
 
   function buildProjectFilter() {
@@ -565,7 +610,7 @@
     const engEmoji = { unaware:'😶', resistant:'🚫', neutral:'😐', supportive:'👍', leading:'🚀' };
     const engBadge = sh.engagement ? `<span style="font-size:13px" title="${sh.engagement}">${engEmoji[sh.engagement]||''}</span>` : '';
     return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" data-id="${sh.id}" onclick="openDetail('${sh.id}')">
-      <div class="sh-avatar">${_esc(initials(sh.name))}</div>
+      <div class="sh-avatar">${shAvatarHtml(sh)}</div>
       <div class="sh-info">
         <div class="sh-name">${_esc(sh.name||'Unnamed')}</div>
         ${sh.role ? `<div class="sh-role">${_esc(sh.role)}</div>` : ''}
@@ -587,6 +632,8 @@
     document.getElementById('dp-title').textContent = sh.name || 'Stakeholder';
     document.getElementById('dp-name').value = sh.name || '';
     document.getElementById('dp-role').value = sh.role || '';
+    document.getElementById('dp-url').value = sh.url || '';
+    renderUrlPreview();
     document.getElementById('dp-org').value = sh.org || '';
     document.getElementById('dp-orgtype').value = sh.orgType || '';
     document.getElementById('dp-stance').value = sh.stance || 'neutral';
@@ -677,6 +724,7 @@
     if (!sh) return;
     sh.name = document.getElementById('dp-name').value.trim();
     sh.role = document.getElementById('dp-role').value.trim();
+    sh.url = document.getElementById('dp-url').value.trim();
     sh.org = document.getElementById('dp-org').value.trim();
     sh.orgType = document.getElementById('dp-orgtype').value;
     sh.stance = document.getElementById('dp-stance').value;
@@ -790,6 +838,7 @@
     const [p, i] = QUADRANT_DEFAULTS[q] || [3,3];
     const sh = {
       id: uid(), name: typedName, role: document.getElementById('am-role').value.trim(),
+      url: '',
       org: document.getElementById('am-org').value.trim(),
       orgType: document.getElementById('am-orgtype').value,
       stance: 'neutral', engagement: '', responsiveness: '', lastContact: '',
