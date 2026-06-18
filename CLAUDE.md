@@ -1132,6 +1132,23 @@ Two drag-and-drop interactions added to the Organizations view, mirroring the es
 
 ---
 
+### ~~Priority 71 — Help & Guide: staleness sweep~~ ✓ Done `[group: docs-hygiene]`
+After 20+ priorities of feature work (P40-P70) since `help-hub.html` was last touched, an audit found its Tools/Frameworks/Workflows reference data had drifted from the real app. Fixed all findings.
+
+- **Added 2 missing tool cards** — **Capture Hub** (brain-dump-and-auto-route, was in `index.html` APPS but never had a help-hub entry at all) and **Tags Hub** (central tag registry, Priority 57 — shipped without a help-hub card).
+- **Refreshed 7 stale tool cards** whose `features`/`desc`/`sample` text predated major capability additions: **Stakeholder Map** (Organizations view is now the default, not Power/Interest — P68/70), **Schedule** (hourly time-block grid + meetings-on-calendar — P46/47), **Meeting Hub** (.ics import, attendee bulk-edit/repeat — P43/44), **Project Hub** (Groupings view — P55), **Decision Hub** (Calibration modal + resurface schema fields — P51), **Dependency Graph** (view-options pack: Ambient Drift/Edge Flow/Breathing Nodes/clustering/PNG export — P67; Tag nodes — P57), **Focus Timer** (AI Energy Insights — P47).
+- **Fixed 1 dead reference** — Decision Hub's feature list said "Send to KMQT Board as a question"; KMQT Board was retired long ago in favor of Reflection Board. Corrected.
+- **Threaded Argument Hub into the Decision Sprint workflow** as a closing step (structure the case before presenting it) — it existed as a tool card (added Priority 52) but wasn't referenced by any of the 4 workflow guides.
+- **Verified clean, no action needed:** Frameworks list (Pyramid Principle/SCQA/MECE present and correctly tied to Argument Hub; no Scrum Board/War Room references anywhere); the "Profile" relabel (Priority 53) already correctly reflected in both the tool card and the Systems Thinking framework's `tools:` list.
+
+**Key decisions:**
+- **Decision:** Audit via a read-only subagent pass before editing, rather than editing while auditing. **Why:** the staleness was spread across 21 tool cards plus 3 reference arrays — a structured "find everything first, then fix in one batch" pass surfaces the full scope before any edit, avoiding partial fixes that miss siblings of the same bug (e.g. catching all 7 stale cards in one sweep instead of fixing them as separately-reported issues). **Confidence:** high.
+- **Decision:** Tags Hub's tool card lists `PKM` as its only framework tie-in (no new "Taxonomy"/"Tagging" framework invented). **Why:** the project's framework reference is meant to be real, named methodologies with certifications/provenance — inventing a framework just to give a new tool a longer `frameworks` array would dilute that. PKM (Personal Knowledge Management) is the closest genuine fit since tag registries are a PKM-organization concern. **Confidence:** med.
+
+**Files:** `help-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
