@@ -1117,6 +1117,21 @@ Two small follow-up polish items.
 
 ---
 
+### ~~Priority 70 — Stakeholder Map: drag-and-drop persons between orgs + draggable org reordering~~ ✓ Done `[group: stakeholder-ux]`
+Two drag-and-drop interactions added to the Organizations view, mirroring the established `project-hub.html` Groupings drag-reorder pattern (Priority 55).
+
+- **Draggable person cards** — every stakeholder card rendered inside an org card (`renderCard(sh, true)`) is now `draggable="true"`. Dragging a person onto a different org card sets `sh.org` to that org's name (and backfills `sh.orgType` from the target org if the person had none set), then re-renders. Dropping on the "No organization" bucket clears `sh.org`. Matrix-view cards (`renderGrid()`) are unaffected — `renderCard()`'s new `draggable` param defaults falsy there, so person-drag is scoped to the Organizations view only.
+- **Draggable org cards** — each named org card (not the "No organization" bucket) is itself `draggable="true"` with a `⠿` drag handle in its header. Dropping one org card onto another reorders a new persisted `data.orgOrder` array (string org names), unknown orgs appended alphabetically — same backfill-on-drop pattern as `project-hub.html`'s `state.groupOrder`. `getOrgGroups()` now sorts named groups by `orgOrder` index instead of pure alphabetical.
+- Both drag types share one drop target (the org card) and are disambiguated by which module-level var is set (`personDragSrc` vs `orgDragSrc`) — since a person card's own `draggable="true"` takes priority over its draggable org-card ancestor for the browser's native drag-start targeting, no extra region-restriction logic was needed.
+
+**Key decisions:**
+- **Decision:** Reuse the org card itself as the drop target for both interactions (person-move and org-reorder), rather than separate drop zones. **Why:** HTML5 drag events naturally route a `dragstart` to the most specific `draggable` ancestor under the cursor — starting a drag from a person card (also `draggable`) never bubbles to the parent org card's dragstart, so one `ondrop` handler reading `personDragSrc` vs `orgDragSrc` cleanly disambiguates which action is in flight with no separate hit-test regions. **Confidence:** high.
+- **Decision:** The "No organization" bucket card is a valid drop target for persons (clears `sh.org`) but is never itself draggable and never participates in `orgOrder`. **Why:** matches Project Hub Groupings' `isUngrouped` precedent — an implicit bucket has no stable identity to reorder against. **Confidence:** high.
+
+**Files:** `stakeholder-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
