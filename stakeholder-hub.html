@@ -201,6 +201,14 @@
     .org-members { display: flex; flex-direction: column; gap: 5px; }
     .org-add-person { margin-top: 8px; }
     .orgs-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 40px 0; }
+
+    /* ── Drag & drop (persons ↔ orgs, org reordering) ── */
+    .org-drag-handle { cursor: grab; color: var(--text3); font-size: 13px; flex-shrink: 0; }
+    .org-card[draggable="true"] { cursor: default; }
+    .org-card.org-drag-src { opacity: 0.4; }
+    .org-card.drag-over-org { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+    .sh-card[draggable="true"] { cursor: grab; }
+    .sh-card.person-drag-src { opacity: 0.4; }
   </style>
 </head>
 <body>
@@ -524,10 +532,87 @@
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(sh);
     });
-    const named = [...map.keys()].filter(k => k).sort((a,b) => a.localeCompare(b));
+    const named = [...map.keys()].filter(k => k);
+    const order = data.orgOrder || [];
+    named.sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
     const groups = named.map(name => ({ name, orgType: (map.get(name).find(s=>s.orgType)||{}).orgType || '', members: map.get(name) }));
     if (map.has('')) groups.push({ name: '', orgType: '', members: map.get('') });
     return groups;
+  }
+
+  // ── Drag & drop: persons between orgs, org-card reordering ─────────────────
+  let personDragSrc = null;
+  let orgDragSrc = null;
+
+  function onPersonDragStart(e, id) {
+    personDragSrc = id;
+    e.currentTarget.classList.add('person-drag-src');
+    e.dataTransfer.effectAllowed = 'move';
+    e.stopPropagation();
+  }
+  function onPersonDragEnd(e) {
+    e.currentTarget.classList.remove('person-drag-src');
+    personDragSrc = null;
+    document.querySelectorAll('.org-card.drag-over-org').forEach(c => c.classList.remove('drag-over-org'));
+  }
+
+  function onOrgCardDragStart(e, name) {
+    orgDragSrc = name;
+    e.currentTarget.classList.add('org-drag-src');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function onOrgCardDragEnd(e) {
+    e.currentTarget.classList.remove('org-drag-src');
+    orgDragSrc = null;
+    document.querySelectorAll('.org-card.drag-over-org').forEach(c => c.classList.remove('drag-over-org'));
+  }
+
+  function onOrgCardDragOver(e, name) {
+    if (!personDragSrc && !(orgDragSrc && orgDragSrc !== name)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over-org');
+  }
+  function onOrgCardDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over-org');
+  }
+  function onOrgCardDrop(e, name, orgType) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over-org');
+
+    if (personDragSrc) {
+      const sh = data.stakeholders.find(s => s.id === personDragSrc);
+      personDragSrc = null;
+      if (!sh || (sh.org || '') === name) return;
+      sh.org = name;
+      if (!sh.orgType && orgType) sh.orgType = orgType;
+      save();
+      showToast(name ? `Moved to ${name}` : 'Removed from organization');
+      renderAll();
+      return;
+    }
+
+    if (orgDragSrc && orgDragSrc !== name) {
+      const allNames = getOrgGroups(data.stakeholders).map(g => g.name).filter(Boolean);
+      const order = (data.orgOrder && data.orgOrder.length) ? [...data.orgOrder] : [];
+      allNames.forEach(n => { if (!order.includes(n)) order.push(n); });
+      const fromIdx = order.indexOf(orgDragSrc);
+      const toIdx = order.indexOf(name);
+      orgDragSrc = null;
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = order.splice(fromIdx, 1);
+      order.splice(toIdx, 0, moved);
+      data.orgOrder = order;
+      save();
+      showToast('Organization order updated');
+      renderAll();
+    }
   }
 
   function orgHealth(members) {
@@ -573,9 +658,16 @@
       const orgName = g.name || 'No organization';
       const badgeClass = g.orgType || 'none';
       const badgeLabel = ORG_TYPE_LABELS[g.orgType] || 'Unset';
-      const membersHtml = g.members.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(sh => renderCard(sh)).join('');
-      return `<div class="org-card">
+      const membersHtml = g.members.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(sh => renderCard(sh, true)).join('');
+      const nameJs = (g.name || '').replace(/'/g, "\\'");
+      const orgTypeJs = (g.orgType || '').replace(/'/g, "\\'");
+      const dragAttrs = g.name
+        ? `draggable="true" ondragstart="onOrgCardDragStart(event,'${nameJs}')" ondragend="onOrgCardDragEnd(event)"`
+        : '';
+      return `<div class="org-card" ${dragAttrs}
+        ondragover="onOrgCardDragOver(event,'${nameJs}')" ondragleave="onOrgCardDragLeave(event)" ondrop="onOrgCardDrop(event,'${nameJs}','${orgTypeJs}')">
         <div class="org-card-head">
+          ${g.name ? `<span class="org-drag-handle">⠿</span>` : ''}
           <div class="org-name">${_esc(orgName)}</div>
           <span class="org-type-badge ${badgeClass}">${_esc(badgeLabel)}</span>
         </div>
@@ -606,10 +698,13 @@
     });
   }
 
-  function renderCard(sh) {
+  function renderCard(sh, draggable) {
     const engEmoji = { unaware:'😶', resistant:'🚫', neutral:'😐', supportive:'👍', leading:'🚀' };
     const engBadge = sh.engagement ? `<span style="font-size:13px" title="${sh.engagement}">${engEmoji[sh.engagement]||''}</span>` : '';
-    return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" data-id="${sh.id}" onclick="openDetail('${sh.id}')">
+    const dragAttrs = draggable
+      ? `draggable="true" ondragstart="onPersonDragStart(event,'${sh.id}')" ondragend="onPersonDragEnd(event)"`
+      : '';
+    return `<div class="sh-card${sh.id === activeId ? ' selected' : ''}" data-id="${sh.id}" ${dragAttrs} onclick="openDetail('${sh.id}')">
       <div class="sh-avatar">${shAvatarHtml(sh)}</div>
       <div class="sh-info">
         <div class="sh-name">${_esc(sh.name||'Unnamed')}</div>
