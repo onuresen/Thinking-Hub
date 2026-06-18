@@ -2359,6 +2359,10 @@
 
     // ── App loading ───────────────────────────────────────────────────────────────
 
+    // Cache-bust tool iframes once per shell load — fixes stale cached tool HTML
+    // surviving a code update across browser sessions, while still letting the
+    // browser cache normally for repeat in-session tool switches.
+    const APP_LOAD_TS = Date.now();
     let activeAppId = null;
 
     function openApp(id) {
@@ -2386,7 +2390,7 @@
       const frame = document.getElementById('app-frame');
       const loadBar = document.getElementById('load-bar');
       loadBar.classList.add('active');
-      frame.src = app.file;
+      frame.src = app.file + '?v=' + APP_LOAD_TS;
       frame.style.display = 'block';
 
       // Send highlight once the tool finishes loading
