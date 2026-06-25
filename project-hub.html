@@ -1376,6 +1376,33 @@
       font-style: italic;
     }
 
+    .task-checklist {
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-left: 4px;
+      border-left: 2px solid var(--surface3);
+    }
+    .task-checklist-item {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text2);
+      cursor: pointer;
+      padding-left: 6px;
+    }
+    .task-checklist-item:hover { color: var(--text); }
+    .task-checklist-item.done {
+      color: var(--text3);
+      text-decoration: line-through;
+    }
+    .task-checklist-check {
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
     .p-high {
       background: rgba(240, 67, 107, 0.1);
       color: var(--accent3);
@@ -3256,6 +3283,15 @@
       const focusBadge = focusMin > 0 ? `<span class="focus-time-badge" title="Focus time logged">⏱ ${focusMin >= 60 ? Math.floor(focusMin/60)+'h '+(focusMin%60 ? focusMin%60+'m' : '') : focusMin+'m'}</span>` : '';
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
+      const checklist = task.checklist || [];
+      const checklistHTML = checklist.length ? `
+        <div class="task-checklist">
+          ${checklist.map(c => `
+            <div class="task-checklist-item ${c.done ? 'done' : ''}" onclick="event.stopPropagation();toggleChecklistItem('${task.id}','${task.projectId || ''}','${c.id}')">
+              <span class="task-checklist-check">${c.done ? '✓' : '☐'}</span>
+              <span>${(c.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
+            </div>`).join('')}
+        </div>` : '';
       return `
     <div class="task-item" draggable="true" data-drag-id="${task.id}" data-drag-group="${task.done ? 'done' : 'open'}" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
       <span class="ph-drag-handle">⠿</span>
@@ -3275,6 +3311,7 @@
           ${obsidianBadge}
         </div>
         ${blockedNote}
+        ${checklistHTML}
       </div>
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
@@ -3422,6 +3459,17 @@
           return;
         }
       }
+      renderContent();
+      if (state.selectedProject) renderPanel(state.selectedProject);
+    }
+
+    function toggleChecklistItem(taskId, projectId, itemId) {
+      const task = findTask(taskId, projectId);
+      if (!task || !task.checklist) return;
+      const item = task.checklist.find(c => c.id === itemId);
+      if (!item) return;
+      item.done = !item.done;
+      saveState();
       renderContent();
       if (state.selectedProject) renderPanel(state.selectedProject);
     }

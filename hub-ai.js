@@ -254,8 +254,11 @@ create_project — create a new project:
 create_milestone — add a milestone to a project:
   { "type":"create_milestone", "projectId":"id", "projectName":"name", "name":"milestone title", "date":"YYYY-MM-DD", "description":"optional" }
 
-create_task — add a task to a project:
+create_task — add a task to a project. ONLY use this if the work clearly clears the task threshold: it produces a visible artifact/decision, takes roughly 0.5-2 days, and someone would notice meaningful progress when it's done. If the work is a smaller step (an execution detail, a sub-step of something bigger, a reminder), it is NOT a task — use add_checklist_item instead, or just mention it in "message" as a suggestion without any action at all:
   { "type":"create_task", "title":"title", "projectId":"id", "projectName":"name", "priority":"high|medium|low", "dueDate":"YYYY-MM-DD (optional)", "assignee":"name (optional)" }
+
+add_checklist_item — attach a micro-step to an EXISTING task's checklist, for work that does not clear the task threshold above. Prefer this over create_task whenever the item is a sub-step of something already on the board:
+  { "type":"add_checklist_item", "taskId":"id", "projectId":"id", "taskTitle":"name", "projectName":"name", "text":"the step" }
 
 create_risk — log a new risk:
   { "type":"create_risk", "title":"title", "description":"details", "projectId":"id (optional)" }
