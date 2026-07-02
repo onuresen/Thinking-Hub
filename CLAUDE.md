@@ -1149,6 +1149,17 @@ After 20+ priorities of feature work (P40-P70) since `help-hub.html` was last to
 
 ---
 
+### ~~Priority 72 — Meeting Hub: multi-file .ics import~~ ✓ Done `[group: meetings-import]`
+"📥 Import .ics" previously only accepted a single file (`event.target.files[0]`), forcing repeated imports (and repeated toasts) when a user had several calendar exports (e.g. separate personal/work calendars) to bring in at once. File input gained the `multiple` attribute; `handleIcsImport` now reads all selected files in parallel (`Promise.all` over `FileReader`), and `importICSText` was split from its side effects — it now just parses+dedupes one file's text and returns `{added, skipped}` instead of calling `save()`/`renderList()`/`showToast()` itself. The caller aggregates totals across every file, then does exactly one `save()`, one `renderList()`, and one combined toast (e.g. "Imported 5 meetings, 2 already imported, 1 file failed"). A per-file try/catch means one malformed `.ics` doesn't abort the rest of the batch. Dedup (`icsKey`) still works correctly across the batch since `data.meetings` is mutated in-place between sequential per-file `importICSText` calls, so a duplicate event repeated across two of the selected files is still caught.
+
+**Key decisions:**
+- **Decision:** Read all files in parallel (`Promise.all`) but import them sequentially inside `.then()`, rather than importing inside each file's own `reader.onload`. **Why:** sequential import (not parallel) is required for cross-file dedup correctness — `existingKeys` is rebuilt from `data.meetings` at the start of each `importICSText` call, so files must be processed one after another for a duplicate event present in two files to be caught on the second occurrence. Reading is parallelized since `FileReader` I/O has no such ordering constraint. **Confidence:** high.
+- **Decision:** `importICSText` no longer performs its own save/render/toast — that responsibility moved entirely to `handleIcsImport`. **Why:** with N files needing one combined summary instead of N separate toasts, the side effects had to move to the batch-level caller; keeping `importICSText` a pure parse-and-return function also makes it easier to reason about per-file error isolation. **Confidence:** high.
+
+**Files:** `meetings-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
