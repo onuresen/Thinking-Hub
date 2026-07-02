@@ -328,8 +328,8 @@
   <div class="logo-mark">▦</div>
   <div class="logo-text">Meeting Hub</div>
   <div class="topbar-spacer"></div>
-  <button class="btn btn-ghost" onclick="document.getElementById('ics-file-input').click()" style="font-size:12px;padding:6px 12px" title="Import meetings from an Outlook/Teams calendar export (.ics)">📥 Import .ics</button>
-  <input type="file" id="ics-file-input" accept=".ics,text/calendar" style="display:none" onchange="handleIcsImport(event)">
+  <button class="btn btn-ghost" onclick="document.getElementById('ics-file-input').click()" style="font-size:12px;padding:6px 12px" title="Import meetings from one or more Outlook/Teams calendar exports (.ics)">📥 Import .ics</button>
+  <input type="file" id="ics-file-input" accept=".ics,text/calendar" multiple style="display:none" onchange="handleIcsImport(event)">
   <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+ New meeting</button>
 </div>
 
@@ -1310,21 +1310,48 @@
   }
 
   function handleIcsImport(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try { importICSText(e.target.result); }
-      catch (err) { console.error(err); showToast('Failed to import .ics file', 'error'); }
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const readFile = file => new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve({ name: file.name, text: e.target.result, error: null });
+      reader.onerror = () => resolve({ name: file.name, text: null, error: true });
+      reader.readAsText(file);
+    });
+
+    Promise.all(files.map(readFile)).then(results => {
+      let totalAdded = 0, totalSkipped = 0, failedFiles = 0;
+      results.forEach(({ name, text, error }) => {
+        if (error || text == null) { failedFiles++; console.error(`Failed to read ${name}`); return; }
+        try {
+          const { added, skipped } = importICSText(text);
+          totalAdded += added; totalSkipped += skipped;
+        } catch (err) {
+          console.error(`Failed to import ${name}`, err);
+          failedFiles++;
+        }
+      });
+
+      if (totalAdded > 0) save();
+      renderList();
+
+      const parts = [];
+      if (totalAdded > 0) parts.push(`Imported ${totalAdded} meeting${totalAdded === 1 ? '' : 's'}`);
+      if (totalSkipped > 0) parts.push(`${totalSkipped} already imported`);
+      if (failedFiles > 0) parts.push(`${failedFiles} file${failedFiles === 1 ? '' : 's'} failed`);
+      if (!parts.length) parts.push('No upcoming meetings found (checks 7 days back to 90 days ahead)');
+      showToast(parts.join(', '), failedFiles > 0 && totalAdded === 0 ? 'error' : undefined);
+
       event.target.value = '';
-    };
-    reader.onerror = () => { showToast('Failed to read file', 'error'); event.target.value = ''; };
-    reader.readAsText(file);
+    });
   }
 
+  // Parses and imports events from one .ics file's text; returns {added, skipped}.
+  // Does not save/render/toast — callers batch those across multiple files.
   function importICSText(text) {
     const events = parseICS(text);
-    if (!events.length) { showToast('No events found in file'); return; }
+    if (!events.length) return { added: 0, skipped: 0 };
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const windowStart = dateFromYMD(todayStr); windowStart.setUTCDate(windowStart.getUTCDate() - 7);
@@ -1381,15 +1408,7 @@
       });
     });
 
-    save();
-    renderList();
-    if (added > 0) {
-      showToast(`Imported ${added} meeting${added === 1 ? '' : 's'}${skipped ? ` (${skipped} already imported)` : ''}`);
-    } else if (skipped > 0) {
-      showToast('All meetings already imported');
-    } else {
-      showToast('No upcoming meetings found (checks 7 days back to 90 days ahead)');
-    }
+    return { added, skipped };
   }
 
   // ── Mobile sidebar ────────────────────────────────────────────────────────────
