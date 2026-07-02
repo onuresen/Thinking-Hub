@@ -328,7 +328,7 @@
   <div class="logo-mark">▦</div>
   <div class="logo-text">Meeting Hub</div>
   <div class="topbar-spacer"></div>
-  <button class="btn btn-ghost" onclick="document.getElementById('ics-file-input').click()" style="font-size:12px;padding:6px 12px" title="Import meetings from one or more Outlook/Teams calendar exports (.ics)">📥 Import .ics</button>
+  <button class="btn btn-ghost" onclick="openIcsImportOptions()" style="font-size:12px;padding:6px 12px" title="Import meetings from one or more Outlook/Teams calendar exports (.ics)">📥 Import .ics</button>
   <input type="file" id="ics-file-input" accept=".ics,text/calendar" multiple style="display:none" onchange="handleIcsImport(event)">
   <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+ New meeting</button>
 </div>
@@ -406,6 +406,46 @@
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="confirmRepeatMeeting()">Create</button>
       <button class="btn btn-ghost" onclick="closeRepeatModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ICS import options modal -->
+<div class="modal-overlay" id="ics-opts-modal-overlay">
+  <div class="modal" style="width:360px">
+    <div class="modal-header">
+      <div class="modal-title">Import Options</div>
+      <button class="modal-close" onclick="closeIcsImportOptions()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label" style="margin-bottom:10px;color:var(--text3);text-transform:none;letter-spacing:normal">
+        Choose what to bring in from the calendar file(s). Title, date, and time are always imported.
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;cursor:pointer">
+        <input type="checkbox" id="ics-opt-attendees" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;margin-top:2px">
+        <span>
+          <div style="font-size:13px;font-weight:600">Attendees</div>
+          <div style="font-size:11px;color:var(--text3)">Names of meeting participants — may be confidential</div>
+        </span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;cursor:pointer">
+        <input type="checkbox" id="ics-opt-location" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;margin-top:2px">
+        <span>
+          <div style="font-size:13px;font-weight:600">Location</div>
+          <div style="font-size:11px;color:var(--text3)">Room name, address, or video call link</div>
+        </span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;cursor:pointer">
+        <input type="checkbox" id="ics-opt-description" style="accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;margin-top:2px">
+        <span>
+          <div style="font-size:13px;font-weight:600">Description / notes</div>
+          <div style="font-size:11px;color:var(--text3)">Raw event body text from the calendar invite</div>
+        </span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="confirmIcsImportOptions()">Choose file(s)…</button>
+      <button class="btn btn-ghost" onclick="closeIcsImportOptions()">Cancel</button>
     </div>
   </div>
 </div>
@@ -1309,9 +1349,34 @@
     return 'custom';
   }
 
+  // Persists across imports within the same page session (not saved to storage).
+  let icsImportPrefs = { attendees: true, location: true, description: true };
+
+  function openIcsImportOptions() {
+    document.getElementById('ics-opt-attendees').checked = icsImportPrefs.attendees;
+    document.getElementById('ics-opt-location').checked = icsImportPrefs.location;
+    document.getElementById('ics-opt-description').checked = icsImportPrefs.description;
+    document.getElementById('ics-opts-modal-overlay').classList.add('open');
+  }
+
+  function closeIcsImportOptions() {
+    document.getElementById('ics-opts-modal-overlay').classList.remove('open');
+  }
+
+  function confirmIcsImportOptions() {
+    icsImportPrefs = {
+      attendees: document.getElementById('ics-opt-attendees').checked,
+      location: document.getElementById('ics-opt-location').checked,
+      description: document.getElementById('ics-opt-description').checked,
+    };
+    closeIcsImportOptions();
+    document.getElementById('ics-file-input').click();
+  }
+
   function handleIcsImport(event) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
+    const opts = icsImportPrefs;
 
     const readFile = file => new Promise(resolve => {
       const reader = new FileReader();
@@ -1325,7 +1390,7 @@
       results.forEach(({ name, text, error }) => {
         if (error || text == null) { failedFiles++; console.error(`Failed to read ${name}`); return; }
         try {
-          const { added, skipped } = importICSText(text);
+          const { added, skipped } = importICSText(text, opts);
           totalAdded += added; totalSkipped += skipped;
         } catch (err) {
           console.error(`Failed to import ${name}`, err);
@@ -1349,7 +1414,8 @@
 
   // Parses and imports events from one .ics file's text; returns {added, skipped}.
   // Does not save/render/toast — callers batch those across multiple files.
-  function importICSText(text) {
+  function importICSText(text, opts) {
+    opts = opts || { attendees: true, location: true, description: true };
     const events = parseICS(text);
     if (!events.length) return { added: 0, skipped: 0 };
 
@@ -1366,7 +1432,7 @@
         const key = `${ev.uid || ev.summary}::${dateStr}`;
         if (existingKeys.has(key)) { skipped++; return; }
 
-        const attendeesList = (ev.attendees || []).map(name => ({ name, role: 'contributor' }));
+        const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
         const notesParts = [];
         let time = '', durationMins = null;
         let meetingDate = dateStr;
@@ -1384,8 +1450,8 @@
           }
           if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
         }
-        if (ev.location) notesParts.push(`📍 ${ev.location}`);
-        if (ev.description) notesParts.push(ev.description);
+        if (opts.location && ev.location) notesParts.push(`📍 ${ev.location}`);
+        if (opts.description && ev.description) notesParts.push(ev.description);
 
         const m = normalizeMeeting({
           id: uid(),
@@ -1827,6 +1893,9 @@
   });
   document.getElementById('tpl-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('tpl-modal-overlay')) closeTplModal();
+  });
+  document.getElementById('ics-opts-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('ics-opts-modal-overlay')) closeIcsImportOptions();
   });
 </script>
 </body>

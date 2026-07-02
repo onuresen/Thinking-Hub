@@ -1160,6 +1160,22 @@ After 20+ priorities of feature work (P40-P70) since `help-hub.html` was last to
 
 ---
 
+### ~~Priority 73 — Meeting Hub: .ics import options (skip Attendees/Location/Description)~~ ✓ Done `[group: meetings-import]`
+Follow-up to Priority 72 — imported attendee names, locations, and raw invite bodies can be confidential or simply noise the user doesn't want carried into Meeting Hub. "📥 Import .ics" now opens a small **Import Options** modal first (`#ics-opts-modal-overlay`) with three checkboxes — Attendees, Location, Description/notes (all default-checked, preserving prior full-import behavior) — before the native file picker opens. "Choose file(s)…" snapshots the checkbox states into a module-level `icsImportPrefs` object, closes the modal, and triggers the (unchanged) multi-file `#ics-file-input`. Title/date/time are always imported (not toggleable — they're required for the meeting to exist at all).
+
+`importICSText(text, opts)` gained an `opts` param (`{attendees, location, description}`, defaulting to all-true for safety if called without one): `attendeesList` is built only when `opts.attendees` is true (otherwise `[]`, so `attendees`/`attendeesList` both end up empty); `📍 location` and the raw description line are only pushed into `notesParts` when their respective flag is true. `handleIcsImport` snapshots `icsImportPrefs` once per batch and passes it to every file's `importICSText` call, so a multi-file import applies one consistent set of choices across all selected files.
+
+`icsImportPrefs` persists only in memory for the page session (not localStorage) — reopening the modal later in the same session shows the last-used choices as a convenience, but a fresh page load always resets to all-checked.
+
+**Key decisions:**
+- **Decision:** Options apply per-import-batch (one modal → one set of choices → all files in that selection), not per-file. **Why:** the modal opens once before the file picker, and a user importing several files in one go (e.g. work + personal calendars) is very likely to want the same privacy choice applied uniformly; per-file granularity would need a second UI pass after file selection, adding friction for a feature whose whole point is fewer surprises. **Confidence:** high.
+- **Decision:** Session-only in-memory prefs (module-level var), not persisted to `localStorage`. **Why:** matches the codebase convention for viewing/session preferences (Tags Hub filter/sort, graph view-options toggles) — this is a "how do you want this specific action to behave right now" choice, not durable data; a stale "attendees off" default silently surviving a reload could cause a user to think an import silently dropped attendees they actually wanted. Confirming from a clean all-checked default on reload is safer. **Confidence:** med.
+- **Decision:** All three checkboxes default to checked (preserves pre-P73 behavior) rather than defaulting Attendees to unchecked. **Why:** the ask was to make attendees *optional*, not to change the default import behavior for users who haven't hit a confidentiality concern yet — an unannounced default change would silently drop data for existing workflows. **Confidence:** high.
+
+**Files:** `meetings-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
