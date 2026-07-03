@@ -638,7 +638,12 @@
       ctx => ({ unlocked: ctx.stakes.length >= 1, progress: Math.min(ctx.stakes.length, 1), total: 1 })),
 
     makeAch('con-meeting-notes', '📋', 'Meeting Maker','connector', 100, 'Log 5 meetings',
-      ctx => ({ unlocked: ctx.meetings.length >= 5, progress: ctx.meetings.length, total: 5 })),
+      ctx => {
+        // Recurring series consolidate many weekly occurrences into one record —
+        // count occurrences, not records, so this still tracks meetings actually logged.
+        const count = ctx.meetings.reduce((sum, m) => sum + (m.recurring ? (m.occurrenceDates || []).length : 1), 0);
+        return { unlocked: count >= 5, progress: count, total: 5 };
+      }),
 
     makeAch('con-assumption', '🔍', 'Assumption Buster','connector', 200, 'Resolve 3 assumptions (Validated or Invalidated)',
       ctx => ({ unlocked: ctx.resolvedAssumps >= 3, progress: ctx.resolvedAssumps, total: 3 })),

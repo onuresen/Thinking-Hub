@@ -2551,6 +2551,21 @@
       return { text, isStale: days > 13 };
     }
 
+    // Recurring meeting series keep action items inside per-week log entries, not on
+    // the meeting object itself — this flattens across all weeks for series, or falls
+    // back to the meeting's own actionItems for a plain one-off meeting.
+    function mhActionItemsOf(m) {
+      return m.recurring ? (m.log || []).flatMap(l => l.actionItems || []) : (m.actionItems || []);
+    }
+
+    // Whether a recurring series has any occurrence landing on the given date
+    // (or, for a one-off meeting, whether its single date matches).
+    function mhOccursOn(m, dateStr) {
+      return m.recurring
+        ? (m.occurrenceDates || []).some(o => o.date === dateStr)
+        : (m.date || '').slice(0, 10) === dateStr;
+    }
+
     function buildStatusWidgets() {
       const grid = document.getElementById('status-grid');
       const section = document.getElementById('status-section');
@@ -2756,7 +2771,7 @@
       try {
         const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
         const actions = (mh.meetings || []).flatMap(m =>
-          (m.actionItems || []).filter(a => !a.done && !a.taskCreated)
+          mhActionItemsOf(m).filter(a => !a.done && !a.taskCreated)
             .map(a => ({ ...a, _meeting: m.title || 'Meeting' }))
         );
         if (actions.length) {
@@ -3059,7 +3074,7 @@
       try {
         const mh2 = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
         (mh2.meetings || []).filter(m => !m.archived).forEach(m => {
-          (m.actionItems || []).filter(a => !a.done && a.dueDate && a.dueDate <= todayStr)
+          mhActionItemsOf(m).filter(a => !a.done && a.dueDate && a.dueDate <= todayStr)
             .forEach(a => {
               const key = 'action:' + a.id;
               if (_resurfaceDismissed(key)) return;
@@ -3165,7 +3180,11 @@
 
       try {
         const mh = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
-        const todayMeetings = (mh.meetings || []).filter(m => (m.date || '').slice(0, 10) === todayStr);
+        const todayMeetings = (mh.meetings || []).filter(m => mhOccursOn(m, todayStr)).map(m => {
+          if (!m.recurring) return m;
+          const occ = (m.occurrenceDates || []).find(o => o.date === todayStr);
+          return { ...m, time: occ ? occ.time : m.time, durationMins: occ ? occ.durationMins : m.durationMins };
+        });
         if (todayMeetings.length) sections.push({ type: 'meetings', items: todayMeetings });
       } catch { }
 
@@ -3404,7 +3423,7 @@
       });
 
       // Open meeting actions
-      const openActions = allMeetings.flatMap(m => (m.actionItems||[]).filter(a => !a.done && !a.taskCreated));
+      const openActions = allMeetings.flatMap(m => mhActionItemsOf(m).filter(a => !a.done && !a.taskCreated));
       if (openActions.length) {
         attn.push({ sev: openActions.length > 7 ? 'med' : 'low', text: `${openActions.length} unresolved meeting action item${openActions.length>1?'s':''}`, sub: '', tool: 'meetings-hub' });
       }
