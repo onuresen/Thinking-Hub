@@ -1200,6 +1200,24 @@ Real-world pain: importing a Teams .ics with weekly standing meetings (section s
 
 ---
 
+### ~~Priority 74 follow-up — Manual weekly series (no ICS required)~~ ✓ Done `[group: meetings-import]`
+Priority 74's series data model was built while investigating a Teams ICS import complaint, but the user's actual ask was broader: control recurrence **from inside Meeting Hub itself** — pick a meeting, mark it weekly, set a start/end date — with no calendar export involved. The data model (`recurring`/`occurrenceDates`/`log`) and every consumer (calendar, graph, dashboard, achievements) already work regardless of how a series was created, so this was purely a UI gap, not a redo.
+
+- **"📆 Make Weekly" button** (shown on any non-recurring meeting, next to "🔁 Repeat") opens a modal: start date (defaults to the meeting's current date), an end date field, and quick-pick chips (+4 weeks / +3 months / +6 months / +1 year). `confirmMakeWeekly()` calls `weeklyDatesInRange(start, end)` — a plain weekly stepper (`addDaysToDate(cur, 7)`, capped at 520 iterations ≈ 10 years) — converts the meeting to `recurring: true`, and builds `occurrenceDates`/`log` for every week in range, same weekday as the start date. The meeting's existing notes/action items/decisions are preserved as the log entry for the start-date occurrence (nothing is lost by converting).
+- **"🔁 Extend Series" button** replaces "Repeat" once a meeting is recurring — same modal, but the start-date field is hidden and the range begins the week after the series' current last occurrence, so repeated clicks keep pushing the end date out without ever creating a gap or duplicate week.
+- Both flows reuse the exact `occurrenceDates`/`log`/`syncSeriesAnchor` plumbing from ICS import — a manually-created series and an ICS-imported one are indistinguishable to every other consumer (calendar, graph, dashboard widgets, achievements) once created. `icsUid` stays unset for manual series, which is intentional: it means a later ICS import can never accidentally merge into a hand-built series (they only merge when the iCal UID actually matches).
+
+**Verified end-to-end:** creating a meeting, filling in notes, then "Make Weekly" with the "+3 months" quick-pick generated 14 same-weekday occurrences with the original notes correctly attached to the start-date week; "Extend Series" with another "+3 months" click added 13 more weeks continuing seamlessly from the prior end date (27 total, no gap or overlap).
+
+**Key decisions:**
+- **Decision:** No day-of-week picker — the series always repeats on whatever weekday the start date falls on. **Why:** matches the explicit ask ("starting date... automatically every week") without adding a control nobody asked for; changing the weekday is just changing the start date. **Confidence:** high.
+- **Decision:** "Make Weekly" converts an *existing* meeting in place rather than being a separate creation flow. **Why:** reuses the whole existing title/agenda/attendees/notes editing UI with zero duplication, and directly parallels how "🔁 Repeat" already works (act on the currently open meeting) rather than introducing a second "+ New weekly meeting" entry point. **Confidence:** high.
+- **Decision:** "Extend Series" always continues from the series' actual last occurrence (not from today or a user-typed start), with no way to leave a gap. **Why:** a gap in a "standing weekly meeting" is almost certainly a mistake, not intent — anchoring to the last occurrence makes the extension always contiguous by construction. **Confidence:** high.
+
+**Files:** `meetings-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
