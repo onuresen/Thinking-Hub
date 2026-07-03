@@ -427,6 +427,39 @@
   </div>
 </div>
 
+<!-- Make weekly / extend series modal -->
+<div class="modal-overlay" id="weekly-modal-overlay">
+  <div class="modal" style="width:360px">
+    <div class="modal-header">
+      <div class="modal-title" id="weekly-modal-title">Make Weekly Meeting</div>
+      <button class="modal-close" onclick="closeWeeklyModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="mw-start-row">
+        <div class="field-label">Start date</div>
+        <input class="field-input" id="mw-start" type="date" onchange="weeklyStartChanged()">
+      </div>
+      <div style="margin-top:10px">
+        <div class="field-label">Repeats weekly until</div>
+        <input class="field-input" id="mw-end" type="date">
+      </div>
+      <div class="repeat-quick-row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="setWeeklyEnd(4)">+4 weeks</button>
+        <button class="btn btn-ghost" onclick="setWeeklyEnd(13)">+3 months</button>
+        <button class="btn btn-ghost" onclick="setWeeklyEnd(26)">+6 months</button>
+        <button class="btn btn-ghost" onclick="setWeeklyEnd(52)">+1 year</button>
+      </div>
+      <div class="field-label" id="weekly-modal-hint" style="margin-top:10px;color:var(--text3);text-transform:none;letter-spacing:normal">
+        Creates one weekly occurrence for each week in the range, same day of week as the start date. You can add more weeks later from the series.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="confirmMakeWeekly()">Make Weekly</button>
+      <button class="btn btn-ghost" onclick="closeWeeklyModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ICS import options modal -->
 <div class="modal-overlay" id="ics-opts-modal-overlay">
   <div class="modal" style="width:360px">
@@ -1775,7 +1808,10 @@
           </button>`}
           <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
           <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
-          ${m.recurring ? '' : `<button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>`}
+          ${m.recurring
+            ? `<button class="btn btn-ghost" onclick="openWeeklyModal()" style="font-size:12px;padding:5px 10px" title="Add more weeks to this series">🔁 Extend Series</button>`
+            : `<button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>
+               <button class="btn btn-ghost" onclick="openWeeklyModal()" style="font-size:12px;padding:5px 10px" title="Turn this into a weekly recurring meeting">📆 Make Weekly</button>`}
           <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
           <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete</button>
         </div>
@@ -2071,6 +2107,94 @@
     showToast(`Follow-up meeting created for ${newDate}`);
   }
 
+  // ── Make weekly / extend series ───────────────────────────────────────────────
+  // Manual alternative to ICS import: turn any meeting into a weekly series, or add
+  // more weeks to an existing one, entirely from within Meeting Hub.
+
+  let weeklyModalMode = 'create';
+
+  function weeklyDatesInRange(startDate, endDate) {
+    const dates = [];
+    let cur = startDate, iter = 0;
+    while (cur <= endDate && iter < 520) { dates.push(cur); cur = addDaysToDate(cur, 7); iter++; }
+    return dates;
+  }
+
+  function openWeeklyModal() {
+    const m = activeMeeting(); if (!m) return;
+    weeklyModalMode = m.recurring ? 'extend' : 'create';
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('weekly-modal-title').textContent = weeklyModalMode === 'extend' ? 'Extend Weekly Series' : 'Make Weekly Meeting';
+    document.getElementById('mw-start-row').style.display = weeklyModalMode === 'extend' ? 'none' : '';
+    document.getElementById('weekly-modal-hint').textContent = weeklyModalMode === 'extend'
+      ? 'Adds one weekly occurrence for each week through the new end date.'
+      : 'Creates one weekly occurrence for each week in the range, same day of week as the start date. You can add more weeks later from the series.';
+    let base;
+    if (weeklyModalMode === 'extend') {
+      base = m.occurrenceDates.length ? m.occurrenceDates[m.occurrenceDates.length - 1].date : (m.date || today);
+    } else {
+      base = m.date || today;
+      document.getElementById('mw-start').value = base;
+    }
+    document.getElementById('mw-end').value = addDaysToDate(base, 13 * 7);
+    document.getElementById('weekly-modal-overlay').classList.add('open');
+  }
+
+  function closeWeeklyModal() {
+    document.getElementById('weekly-modal-overlay').classList.remove('open');
+  }
+
+  function weeklyStartChanged() {
+    if (weeklyModalMode !== 'create') return;
+    const start = document.getElementById('mw-start').value;
+    if (start) document.getElementById('mw-end').value = addDaysToDate(start, 13 * 7);
+  }
+
+  function setWeeklyEnd(weeks) {
+    const m = activeMeeting(); if (!m) return;
+    const base = weeklyModalMode === 'extend'
+      ? (m.occurrenceDates.length ? m.occurrenceDates[m.occurrenceDates.length - 1].date : m.date)
+      : (document.getElementById('mw-start').value || m.date);
+    document.getElementById('mw-end').value = addDaysToDate(base, weeks * 7);
+  }
+
+  function confirmMakeWeekly() {
+    const m = activeMeeting(); if (!m) return;
+    const endDate = document.getElementById('mw-end').value;
+    if (!endDate) { showToast('Pick an end date', 'warn'); return; }
+
+    if (weeklyModalMode === 'extend') {
+      const lastDate = m.occurrenceDates.length ? m.occurrenceDates[m.occurrenceDates.length - 1].date : m.date;
+      const newDates = weeklyDatesInRange(addDaysToDate(lastDate, 7), endDate);
+      if (!newDates.length) { showToast('End date is already covered', 'warn'); return; }
+      newDates.forEach(d => {
+        if (m.occurrenceDates.some(o => o.date === d)) return;
+        m.occurrenceDates.push({ date: d, time: m.time || '', durationMins: m.durationMins || null });
+        m.log.push({ date: d, notes: '', actionItems: [], decisions: [] });
+      });
+      m.occurrenceDates.sort((a, b) => a.date.localeCompare(b.date));
+      m.log.sort((a, b) => a.date.localeCompare(b.date));
+      syncSeriesAnchor(m);
+      showToast(`Extended through ${fmtShortDate(endDate)}`);
+    } else {
+      const startDate = document.getElementById('mw-start').value || m.date || new Date().toISOString().slice(0, 10);
+      const dates = weeklyDatesInRange(startDate, endDate);
+      if (!dates.length) { showToast('End date must be on or after the start date', 'warn'); return; }
+      flushCurrentDetail();
+      m.recurring = true;
+      m.occurrenceDates = dates.map(d => ({ date: d, time: m.time || '', durationMins: m.durationMins || null }));
+      m.icsOccKeys = dates.slice();
+      m.log = dates.map(d => d === startDate
+        ? { date: d, notes: m.notes || '', actionItems: m.actionItems || [], decisions: m.decisions || [] }
+        : { date: d, notes: '', actionItems: [], decisions: [] });
+      syncSeriesAnchor(m);
+      activeOccDate = startDate;
+      showToast(`Now repeats weekly through ${fmtShortDate(endDate)}`);
+    }
+    closeWeeklyModal();
+    save(); renderDetail(); renderList();
+  }
+
   function toggleShowArchived() {
     showArchived = !showArchived;
     activeId = null;
@@ -2119,6 +2243,9 @@
   });
   document.getElementById('ics-opts-modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('ics-opts-modal-overlay')) closeIcsImportOptions();
+  });
+  document.getElementById('weekly-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('weekly-modal-overlay')) closeWeeklyModal();
   });
 </script>
 </body>
