@@ -1597,6 +1597,14 @@
       try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { }
       const byDate = {};
       (meetingsData.meetings || []).forEach(m => {
+        if (m.recurring) {
+          // One pill per occurrence date, sharing the series id (used by drag/resize + click-to-open).
+          (m.occurrenceDates || []).forEach(occ => {
+            const pillM = { ...m, date: occ.date, time: occ.time, durationMins: occ.durationMins };
+            (byDate[occ.date] = byDate[occ.date] || []).push(pillM);
+          });
+          return;
+        }
         if (!m.date) return;
         (byDate[m.date] = byDate[m.date] || []).push(m);
       });
@@ -1604,9 +1612,10 @@
     }
 
     function meetingPillHtml(m) {
+      const icon = m.recurring ? '🔁' : '▣';
       return `<span class="cal-pill meeting"
         onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
-        title="${esc(m.title || 'Meeting')}">▣ ${esc((m.title || 'Meeting').slice(0, 16))}</span>`;
+        title="${esc(m.title || 'Meeting')}">${icon} ${esc((m.title || 'Meeting').slice(0, 16))}</span>`;
     }
 
     function renderCalMonth() {
@@ -1933,13 +1942,13 @@
 
       if (drag.mode === 'resize') {
         const newEndTime = minutesToTime(drag.previewEndMin);
-        if (drag.type === 'meeting') resizeMeeting(drag.id, drag.previewEndMin - drag.origStartMin);
+        if (drag.type === 'meeting') resizeMeeting(drag.id, drag.previewEndMin - drag.origStartMin, drag.origIso);
         else resizeItem(drag.id, newEndTime);
       } else {
         const newStartTime = minutesToTime(drag.previewStartMin);
         const newEndTime = minutesToTime(drag.previewStartMin + drag.duration);
         const newIso = drag.previewIso || drag.origIso;
-        if (drag.type === 'meeting') moveMeeting(drag.id, newIso, newStartTime);
+        if (drag.type === 'meeting') moveMeeting(drag.id, newIso, newStartTime, drag.origIso);
         else moveItem(drag.id, newIso, newStartTime, newEndTime);
       }
       renderCalendar();
@@ -1963,23 +1972,52 @@
       saveState();
     }
 
-    function moveMeeting(id, newIso, newTime) {
+    // For a recurring series, occDate identifies which occurrence a pill represents
+    // (the day-column it was dragged from) since m.id is shared across all its pills.
+    function seriesAnchorOccurrenceLocal(occurrenceDates, todayStr) {
+      if (!occurrenceDates || !occurrenceDates.length) return null;
+      const upcoming = occurrenceDates.filter(o => o.date >= todayStr);
+      return upcoming.length ? upcoming[0] : occurrenceDates[occurrenceDates.length - 1];
+    }
+
+    function moveMeeting(id, newIso, newTime, occDate) {
       let data;
       try { data = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { data = {}; }
       const m = (data.meetings || []).find(x => x.id === id);
       if (!m) return;
-      m.date = newIso;
-      m.time = newTime;
+      if (m.recurring && occDate) {
+        const occ = (m.occurrenceDates || []).find(o => o.date === occDate);
+        if (!occ) return;
+        occ.date = newIso;
+        occ.time = newTime;
+        m.occurrenceDates.sort((a, b) => a.date.localeCompare(b.date));
+        const logEntry = (m.log || []).find(l => l.date === occDate);
+        if (logEntry) logEntry.date = newIso;
+        if (m.log) m.log.sort((a, b) => a.date.localeCompare(b.date));
+        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, new Date().toISOString().slice(0, 10));
+        if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
+      } else {
+        m.date = newIso;
+        m.time = newTime;
+      }
       HubStorage.set('meetings-hub-v1', data);
       showToast(`Moved to ${fmtDate(newIso)} ${newTime}`);
     }
 
-    function resizeMeeting(id, newDurationMins) {
+    function resizeMeeting(id, newDurationMins, occDate) {
       let data;
       try { data = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { data = {}; }
       const m = (data.meetings || []).find(x => x.id === id);
       if (!m) return;
-      m.durationMins = newDurationMins;
+      if (m.recurring && occDate) {
+        const occ = (m.occurrenceDates || []).find(o => o.date === occDate);
+        if (!occ) return;
+        occ.durationMins = newDurationMins;
+        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, new Date().toISOString().slice(0, 10));
+        if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
+      } else {
+        m.durationMins = newDurationMins;
+      }
       HubStorage.set('meetings-hub-v1', data);
     }
 

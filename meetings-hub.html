@@ -169,6 +169,23 @@
     .att-member-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--accent); }
     .repeat-quick-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
     .repeat-quick-row .btn { font-size: 11px; padding: 5px 10px; }
+    .series-count { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+
+    /* Recurring series occurrence strip */
+    .occ-strip-wrap { padding: 8px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+    .occ-strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: thin; flex: 1; min-width: 0; }
+    .occ-strip::-webkit-scrollbar { height: 4px; }
+    .occ-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .occ-chip {
+      font-size: 11px; font-family: var(--font-mono); padding: 4px 9px; border-radius: 999px;
+      border: 1px solid var(--border); background: none; color: var(--text3); cursor: pointer;
+      white-space: nowrap; flex-shrink: 0; transition: all 0.12s;
+    }
+    .occ-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .occ-chip.today { border-color: var(--accent2); color: var(--accent2); }
+    .occ-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .occ-add-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .occ-add-row .meta-date { width: 130px; }
 
     .detail-actions-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
     .save-indicator { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
@@ -565,6 +582,7 @@
   let showArchived = false;
   let showTemplates = false;
   let decisionsOpen = false;
+  let activeOccDate = null; // selected week's log entry, for recurring series only
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -582,7 +600,119 @@
     if (m.scheduleEventId === undefined) m.scheduleEventId = null;
     if (m.time === undefined) m.time = '';
     if (m.durationMins === undefined) m.durationMins = null;
+    if (m.recurring === undefined) m.recurring = false;
+    if (m.recurring) {
+      if (!Array.isArray(m.occurrenceDates)) m.occurrenceDates = [];
+      if (!Array.isArray(m.icsOccKeys)) m.icsOccKeys = m.occurrenceDates.map(o => o.date);
+      if (!Array.isArray(m.log)) m.log = [];
+      m.occurrenceDates.forEach(o => {
+        if (!m.log.some(l => l.date === o.date)) m.log.push({ date: o.date, notes: '', actionItems: [], decisions: [] });
+      });
+      m.log.forEach(l => {
+        if (!Array.isArray(l.actionItems)) l.actionItems = [];
+        if (!Array.isArray(l.decisions))   l.decisions   = [];
+        if (l.notes === undefined) l.notes = '';
+      });
+      m.occurrenceDates.sort((a, b) => a.date.localeCompare(b.date));
+      m.log.sort((a, b) => a.date.localeCompare(b.date));
+    }
     return m;
+  }
+
+  // Recurring series: a lightweight running log per occurrence date lives in m.log,
+  // fed by ICS re-imports; non-recurring meetings just use the meeting object itself.
+  function activeLogEntry(m) {
+    if (!m.recurring) return m;
+    if (!activeOccDate || !m.log.some(l => l.date === activeOccDate)) {
+      activeOccDate = pickDefaultOccDate(m);
+    }
+    let entry = m.log.find(l => l.date === activeOccDate);
+    if (!entry) {
+      entry = { date: activeOccDate || new Date().toISOString().slice(0, 10), notes: '', actionItems: [], decisions: [] };
+      m.log.push(entry);
+    }
+    return entry;
+  }
+
+  function seriesAnchorOccurrence(occurrenceDates, todayStr) {
+    if (!occurrenceDates || !occurrenceDates.length) return null;
+    const upcoming = occurrenceDates.filter(o => o.date >= todayStr);
+    return upcoming.length ? upcoming[0] : occurrenceDates[occurrenceDates.length - 1];
+  }
+
+  function pickDefaultOccDate(m) {
+    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], new Date().toISOString().slice(0, 10));
+    return anchor ? anchor.date : null;
+  }
+
+  function syncSeriesAnchor(m) {
+    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], new Date().toISOString().slice(0, 10));
+    if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
+  }
+
+  function countOpenActions(m) {
+    const items = m.recurring ? (m.log || []).flatMap(l => l.actionItems || []) : (m.actionItems || []);
+    return items.filter(a => !a.done && !a.taskCreated).length;
+  }
+
+  function fmtShortDate(dateStr) {
+    return dateStr ? new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  }
+
+  function selectOccurrence(dateStr) {
+    activeOccDate = dateStr;
+    renderDetail();
+  }
+
+  function addManualOccurrence() {
+    const m = activeMeeting(); if (!m || !m.recurring) return;
+    const input = document.getElementById('occ-add-date');
+    const dateStr = input ? input.value : '';
+    if (!dateStr) { showToast('Pick a date first', 'warn'); return; }
+    if (m.occurrenceDates.some(o => o.date === dateStr)) {
+      activeOccDate = dateStr; renderDetail(); return;
+    }
+    m.occurrenceDates.push({ date: dateStr, time: '', durationMins: null });
+    m.log.push({ date: dateStr, notes: '', actionItems: [], decisions: [] });
+    m.occurrenceDates.sort((a, b) => a.date.localeCompare(b.date));
+    m.log.sort((a, b) => a.date.localeCompare(b.date));
+    syncSeriesAnchor(m);
+    activeOccDate = dateStr;
+    save(); renderDetail(); renderList();
+  }
+
+  // Rewrites any hub-links-v1 entries pointing at swallowed occurrence-record ids
+  // onto the new consolidated series id, so existing cross-tool links don't dangle.
+  function migrateLinksToSeries(oldIds, newId) {
+    if (!oldIds.length) return;
+    const links = HubStorage.get('hub-links-v1');
+    if (!Array.isArray(links) || !links.length) return;
+    const oldSet = new Set(oldIds);
+    let changed = false;
+    links.forEach(l => {
+      ['a', 'b'].forEach(side => {
+        if (l[side] && l[side].tool === 'meetings-hub' && oldSet.has(l[side].itemId)) {
+          l[side].itemId = newId; changed = true;
+        }
+      });
+    });
+    if (changed) HubStorage.set('hub-links-v1', links);
+  }
+
+  // Folds previously-imported flat occurrence records (from before series support existed)
+  // sharing this icsUid into one series, so re-importing an old export doesn't leave dupes.
+  function absorbLegacyOccurrences(icsUidVal) {
+    const legacy = data.meetings.filter(m => !m.recurring && m.icsUid === icsUidVal);
+    if (!legacy.length) return null;
+    const occurrenceDates = [], log = [], icsOccKeys = [], oldIds = [];
+    legacy.forEach(m => {
+      occurrenceDates.push({ date: m.date, time: m.time || '', durationMins: m.durationMins || null });
+      log.push({ date: m.date, notes: m.notes || '', actionItems: m.actionItems || [], decisions: m.decisions || [] });
+      icsOccKeys.push(m.date);
+      oldIds.push(m.id);
+    });
+    data.meetings = data.meetings.filter(m => !(!m.recurring && m.icsUid === icsUidVal));
+    return { seed: legacy[0], occurrenceDates, log, icsOccKeys, oldIds };
   }
 
   // ── Storage ───────────────────────────────────────────────────────────────────
@@ -653,8 +783,10 @@
 
     list.innerHTML = items.map(m => {
       const typeInfo = MEETING_TYPES[m.type] || MEETING_TYPES.custom;
-      const openActions = (m.actionItems || []).filter(a => !a.done && !a.taskCreated).length;
-      const dateLabel = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const openActions = countOpenActions(m);
+      const dateLabel = m.recurring
+        ? `🔁 ${fmtShortDate(m.date)}${m.occurrenceDates.length ? ` · ${m.occurrenceDates.length}×` : ''}`
+        : fmtShortDate(m.date);
       const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('meetings-hub', m.id).length : 0;
       return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
         <div class="mr-title">${typeInfo.icon} ${esc(m.title || 'Untitled meeting')}</div>
@@ -979,8 +1111,8 @@
 
   // ── Decision helpers ──────────────────────────────────────────────────────────
 
-  function buildDecisionsBody(m) {
-    const decisions = m.decisions || [];
+  function buildDecisionsBody(m, target) {
+    const decisions = target.decisions || [];
     const attendeeNames = (m.attendeesList || []).map(a => a.name);
     if (!decisions.length) {
       return '<div style="font-size:12px;color:var(--text3);padding:4px 6px">No decisions logged yet.</div>';
@@ -1002,10 +1134,11 @@
 
   function refreshDecisionsBody() {
     const m = activeMeeting(); if (!m) return;
+    const target = activeLogEntry(m);
     const body = document.getElementById('decisions-body');
-    if (body) body.innerHTML = buildDecisionsBody(m);
+    if (body) body.innerHTML = buildDecisionsBody(m, target);
     const title = document.getElementById('dec-hdr-title');
-    if (title) title.textContent = `Decisions Made (${(m.decisions || []).length})`;
+    if (title) title.textContent = `Decisions Made (${(target.decisions || []).length})`;
   }
 
   function toggleDecisions() {
@@ -1018,8 +1151,9 @@
 
   function logDecision() {
     const m = activeMeeting(); if (!m) return;
-    if (!m.decisions) m.decisions = [];
-    m.decisions.push({ id: uid(), text: '', owner: '', status: 'open' });
+    const target = activeLogEntry(m);
+    if (!target.decisions) target.decisions = [];
+    target.decisions.push({ id: uid(), text: '', owner: '', status: 'open' });
     save();
     if (!decisionsOpen) toggleDecisions();
     refreshDecisionsBody();
@@ -1032,13 +1166,15 @@
 
   function updateDecision(decId, field, value) {
     const m = activeMeeting(); if (!m) return;
-    const d = (m.decisions || []).find(x => x.id === decId);
+    const target = activeLogEntry(m);
+    const d = (target.decisions || []).find(x => x.id === decId);
     if (d) { d[field] = value; save(); }
   }
 
   function cycleDecisionStatus(decId) {
     const m = activeMeeting(); if (!m) return;
-    const d = (m.decisions || []).find(x => x.id === decId);
+    const target = activeLogEntry(m);
+    const d = (target.decisions || []).find(x => x.id === decId);
     if (!d) return;
     d.status = STATUS_NEXT[d.status || 'open'] || 'open';
     save();
@@ -1047,7 +1183,8 @@
 
   function sendDecisionToHub(decId) {
     const m = activeMeeting(); if (!m) return;
-    const d = (m.decisions || []).find(x => x.id === decId);
+    const target = activeLogEntry(m);
+    const d = (target.decisions || []).find(x => x.id === decId);
     if (!d) return;
     const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
     const id = 'dh-' + Date.now().toString(36);
@@ -1065,7 +1202,8 @@
 
   function deleteDecision(decId) {
     const m = activeMeeting(); if (!m) return;
-    m.decisions = (m.decisions || []).filter(x => x.id !== decId);
+    const target = activeLogEntry(m);
+    target.decisions = (target.decisions || []).filter(x => x.id !== decId);
     save();
     refreshDecisionsBody();
   }
@@ -1412,8 +1550,34 @@
     });
   }
 
+  // Builds the per-occurrence time/notes content shared by both series and one-off imports.
+  function buildIcsOccurrence(ev, dateStr, opts) {
+    const notesParts = [];
+    let time = '', durationMins = null;
+    let occDate = dateStr;
+    if (ev.dtstart.time) {
+      let timeStr = ev.dtstart.time;
+      if (ev.dtend && ev.dtend.time) timeStr += '–' + ev.dtend.time;
+      if (ev.dtstart.utc) {
+        const local = icsUtcToLocal(dateStr, ev.dtstart.time);
+        time = local.time;
+        occDate = local.date;
+        notesParts.push(`🕐 ${timeStr} UTC`);
+      } else {
+        time = ev.dtstart.time;
+        notesParts.push(`🕐 ${timeStr}`);
+      }
+      if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
+    }
+    if (opts.location && ev.location) notesParts.push(`📍 ${ev.location}`);
+    if (opts.description && ev.description) notesParts.push(ev.description);
+    return { date: occDate, time, durationMins, notes: notesParts.join('\n') };
+  }
+
   // Parses and imports events from one .ics file's text; returns {added, skipped}.
   // Does not save/render/toast — callers batch those across multiple files.
+  // Recurring events (RRULE + UID) are consolidated into one series meeting record
+  // with one occurrence/log entry per date, instead of a flat record per week.
   function importICSText(text, opts) {
     opts = opts || { attendees: true, location: true, description: true };
     const events = parseICS(text);
@@ -1423,55 +1587,83 @@
     const windowStart = dateFromYMD(todayStr); windowStart.setUTCDate(windowStart.getUTCDate() - 7);
     const windowEnd = dateFromYMD(todayStr); windowEnd.setUTCDate(windowEnd.getUTCDate() + 90);
 
-    const existingKeys = new Set(data.meetings.map(m => m.icsKey).filter(Boolean));
+    const existingKeys = new Set(data.meetings.filter(m => !m.recurring).map(m => m.icsKey).filter(Boolean));
+    const seriesByUid = new Map(data.meetings.filter(m => m.recurring && m.icsUid).map(m => [m.icsUid, m]));
     let added = 0, skipped = 0;
 
     events.forEach(ev => {
       if (!ev.dtstart || (ev.status || '') === 'CANCELLED') return;
-      expandEventOccurrences(ev, windowStart, windowEnd).forEach(dateStr => {
-        const key = `${ev.uid || ev.summary}::${dateStr}`;
-        if (existingKeys.has(key)) { skipped++; return; }
+      const occDates = expandEventOccurrences(ev, windowStart, windowEnd);
+      const isSeries = !!(ev.rrule && ev.uid);
 
-        const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
-        const notesParts = [];
-        let time = '', durationMins = null;
-        let meetingDate = dateStr;
-        if (ev.dtstart.time) {
-          let timeStr = ev.dtstart.time;
-          if (ev.dtend && ev.dtend.time) timeStr += '–' + ev.dtend.time;
-          if (ev.dtstart.utc) {
-            const local = icsUtcToLocal(dateStr, ev.dtstart.time);
-            time = local.time;
-            meetingDate = local.date;
-            notesParts.push(`🕐 ${timeStr} UTC`);
-          } else {
-            time = ev.dtstart.time;
-            notesParts.push(`🕐 ${timeStr}`);
-          }
-          if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
-        }
-        if (opts.location && ev.location) notesParts.push(`📍 ${ev.location}`);
-        if (opts.description && ev.description) notesParts.push(ev.description);
-
-        const m = normalizeMeeting({
-          id: uid(),
-          title: ev.summary || 'Imported meeting',
-          date: meetingDate,
-          time, durationMins,
-          type: guessMeetingType(ev.summary),
-          desiredOutcome: '',
-          attendees: attendeesList.map(a => a.name).join(', '),
-          attendeesList,
-          projectId: null, projectName: null,
-          agenda: '', notes: notesParts.join('\n'),
-          actionItems: [], decisions: [], scheduleEventId: null,
-          createdAt: new Date().toISOString(),
-          icsUid: ev.uid || null, icsKey: key,
+      if (!isSeries) {
+        occDates.forEach(dateStr => {
+          const key = `${ev.uid || ev.summary}::${dateStr}`;
+          if (existingKeys.has(key)) { skipped++; return; }
+          const occ = buildIcsOccurrence(ev, dateStr, opts);
+          const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
+          const m = normalizeMeeting({
+            id: uid(),
+            title: ev.summary || 'Imported meeting',
+            date: occ.date, time: occ.time, durationMins: occ.durationMins,
+            type: guessMeetingType(ev.summary), desiredOutcome: '',
+            attendees: attendeesList.map(a => a.name).join(', '), attendeesList,
+            projectId: null, projectName: null,
+            agenda: '', notes: occ.notes,
+            actionItems: [], decisions: [], scheduleEventId: null,
+            createdAt: new Date().toISOString(),
+            icsUid: ev.uid || null, icsKey: key,
+          });
+          data.meetings.unshift(m);
+          existingKeys.add(key);
+          added++;
         });
-        data.meetings.unshift(m);
-        existingKeys.add(key);
+        return;
+      }
+
+      // Recurring: find or create the one series record for this UID, absorbing any
+      // pre-existing flat occurrence records from before series support (if present).
+      let series = seriesByUid.get(ev.uid);
+      if (!series) {
+        const absorbed = absorbLegacyOccurrences(ev.uid);
+        const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
+        series = normalizeMeeting({
+          id: absorbed ? absorbed.seed.id : uid(),
+          title: ev.summary || (absorbed && absorbed.seed.title) || 'Imported meeting',
+          recurring: true,
+          date: '', time: '', durationMins: null,
+          type: (absorbed && absorbed.seed.type) || guessMeetingType(ev.summary),
+          desiredOutcome: (absorbed && absorbed.seed.desiredOutcome) || '',
+          attendees: attendeesList.map(a => a.name).join(', '), attendeesList,
+          projectId: (absorbed && absorbed.seed.projectId) || null,
+          projectName: (absorbed && absorbed.seed.projectName) || null,
+          agenda: (absorbed && absorbed.seed.agenda) || '', notes: '',
+          actionItems: [], decisions: [], scheduleEventId: null,
+          createdAt: (absorbed && absorbed.seed.createdAt) || new Date().toISOString(),
+          icsUid: ev.uid, icsKey: null,
+          occurrenceDates: absorbed ? absorbed.occurrenceDates : [],
+          icsOccKeys: absorbed ? absorbed.icsOccKeys : [],
+          log: absorbed ? absorbed.log : [],
+        });
+        data.meetings.unshift(series);
+        seriesByUid.set(ev.uid, series);
+        if (absorbed) {
+          migrateLinksToSeries(absorbed.oldIds, series.id);
+          added += absorbed.occurrenceDates.length;
+        }
+      }
+
+      occDates.forEach(dateStr => {
+        if (series.icsOccKeys.includes(dateStr)) { skipped++; return; }
+        const occ = buildIcsOccurrence(ev, dateStr, opts);
+        series.occurrenceDates.push({ date: occ.date, time: occ.time, durationMins: occ.durationMins });
+        series.log.push({ date: occ.date, notes: occ.notes, actionItems: [], decisions: [] });
+        series.icsOccKeys.push(dateStr);
         added++;
       });
+      series.occurrenceDates.sort((a, b) => a.date.localeCompare(b.date));
+      series.log.sort((a, b) => a.date.localeCompare(b.date));
+      syncSeriesAnchor(series);
     });
 
     return { added, skipped };
@@ -1494,6 +1686,7 @@
   function openMeeting(id) {
     closeSidebar();
     flushCurrentDetail();
+    if (id !== activeId) activeOccDate = null;
     activeId = id;
     renderList();
     renderDetail();
@@ -1507,6 +1700,8 @@
     empty.style.display = 'none';
     content.style.display = 'flex';
 
+    const target = activeLogEntry(m); // notes/actionItems/decisions live here (m itself, or this week's log entry)
+
     const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
     const projOpts = `<option value="">— No project —</option>` +
       projects.map(p => `<option value="${esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
@@ -1515,7 +1710,7 @@
       `<option value="${k}"${m.type === k ? ' selected' : ''}>${v.icon} ${v.label}</option>`
     ).join('');
 
-    const actionsHtml = (m.actionItems || []).map(a => `
+    const actionsHtml = (target.actionItems || []).map(a => `
       <div class="action-item" draggable="true" data-drag-id="${a.id}" id="ai-${a.id}">
         <div class="action-check${a.done ? ' done' : ''}" onclick="toggleAction('${a.id}')"></div>
         <div class="action-text${a.done ? ' done' : ''}">${esc(a.text)}</div>
@@ -1525,6 +1720,30 @@
         <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
       </div>`).join('');
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const metaDateHtml = m.recurring
+      ? `<span class="meta-label">🔁 Weekly series</span>
+         <span class="series-count">${m.occurrenceDates.length} occurrence${m.occurrenceDates.length === 1 ? '' : 's'}</span>`
+      : `<span class="meta-label">Date</span>
+         <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
+         <span class="meta-label">Time</span>
+         <select class="meta-input meta-date" id="dt-time" onchange="scheduleSave()">${meetingTimeOptions(m.time || '')}</select>
+         <span class="meta-label">Duration</span>
+         <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
+           style="width:60px" placeholder="min" value="${m.durationMins || ''}" onchange="scheduleSave()">`;
+
+    const occStripHtml = m.recurring ? `
+      <div class="occ-strip-wrap">
+        <div class="occ-strip">
+          ${m.occurrenceDates.map(o => `<button class="occ-chip${o.date === activeOccDate ? ' active' : ''}${o.date === todayStr ? ' today' : ''}"
+            onclick="selectOccurrence('${o.date}')" title="${o.time ? esc(o.time) : ''}">${fmtShortDate(o.date)}</button>`).join('')}
+        </div>
+        <div class="occ-add-row">
+          <input type="date" id="occ-add-date" class="meta-input meta-date">
+          <button class="btn btn-ghost" onclick="addManualOccurrence()" style="font-size:11px;padding:4px 8px">+ Add week</button>
+        </div>
+      </div>` : '';
+
     content.innerHTML = `
       <div class="detail-header">
         <input class="detail-title-input" id="dt-title" placeholder="Meeting title…"
@@ -1532,13 +1751,7 @@
 
         <div class="detail-meta-row">
           <select class="type-select" id="dt-type" onchange="changeType(this)">${typeOpts}</select>
-          <span class="meta-label">Date</span>
-          <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
-          <span class="meta-label">Time</span>
-          <select class="meta-input meta-date" id="dt-time" onchange="scheduleSave()">${meetingTimeOptions(m.time || '')}</select>
-          <span class="meta-label">Duration</span>
-          <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
-            style="width:60px" placeholder="min" value="${m.durationMins || ''}" onchange="scheduleSave()">
+          ${metaDateHtml}
           <span class="meta-label">Project</span>
           <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select>
         </div>
@@ -1555,47 +1768,49 @@
         <div class="detail-actions-row">
           <span class="save-indicator" id="save-indicator"></span>
           <div style="flex:1"></div>
-          <button class="sync-sched-btn${m.scheduleEventId ? ' synced' : ''}" id="sync-sched-btn"
+          ${m.recurring ? '' : `<button class="sync-sched-btn${m.scheduleEventId ? ' synced' : ''}" id="sync-sched-btn"
             onclick="${m.scheduleEventId ? '' : 'syncToSchedule()'}" ${m.scheduleEventId ? 'disabled' : ''}
             title="${m.scheduleEventId ? 'Already synced' : 'Sync to Schedule'}">
             ${m.scheduleEventId ? '✓ Schedule' : '→ Schedule'}
-          </button>
+          </button>`}
           <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
           <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
-          <button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>
+          ${m.recurring ? '' : `<button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>`}
           <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
           <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete</button>
         </div>
       </div>
 
+      ${occStripHtml}
+
       <div class="notes-area">
         <div class="agenda-col">
-          <div class="col-header">Agenda</div>
+          <div class="col-header">Agenda${m.recurring ? ' (shared across series)' : ''}</div>
           <textarea class="col-textarea" id="dt-agenda"
             placeholder="Meeting agenda, topics to cover…" oninput="scheduleSave()">${esc(m.agenda || '')}</textarea>
         </div>
         <div class="notes-col">
-          <div class="col-header">Notes</div>
+          <div class="col-header">Notes${m.recurring ? ` — ${fmtShortDate(target.date)}` : ''}</div>
           <textarea class="col-textarea" id="dt-notes"
-            placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${esc(m.notes || '')}</textarea>
+            placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${esc(target.notes || '')}</textarea>
         </div>
       </div>
 
       <div class="decisions-section" id="decisions-section">
         <div class="decisions-hdr" onclick="toggleDecisions()">
           <span class="dec-toggle-icon${decisionsOpen ? ' open' : ''}" id="dec-toggle-icon">▶</span>
-          <span class="dec-hdr-title" id="dec-hdr-title">Decisions Made (${(m.decisions || []).length})</span>
+          <span class="dec-hdr-title" id="dec-hdr-title">Decisions Made (${(target.decisions || []).length})</span>
           <button class="add-action-btn" onclick="event.stopPropagation();logDecision()" style="margin-left:auto">+ Log decision</button>
         </div>
         <div class="decisions-body" id="decisions-body"
           style="display:${decisionsOpen ? 'flex' : 'none'};flex-direction:column;gap:5px">
-          ${buildDecisionsBody(m)}
+          ${buildDecisionsBody(m, target)}
         </div>
       </div>
 
       <div class="actions-panel">
         <div class="actions-header">
-          <div class="actions-title">Action Items (${(m.actionItems || []).length})</div>
+          <div class="actions-title">Action Items (${(target.actionItems || []).length})</div>
           <button class="add-action-btn" onclick="openActionModal()">+ Add action</button>
         </div>
         <div class="actions-list" id="actions-list">
@@ -1645,7 +1860,7 @@
       const rect = item.getBoundingClientRect();
       const before = e.clientY < rect.top + rect.height / 2;
       const mtg = data.meetings.find(x => x.id === meetingId); if (!mtg) return;
-      const arr = mtg.actionItems;
+      const arr = activeLogEntry(mtg).actionItems;
       const fromIdx = arr.findIndex(a => a.id === _id); if (fromIdx === -1) return;
       const [moved] = arr.splice(fromIdx, 1);
       const toIdx = arr.findIndex(a => a.id === toId);
@@ -1662,14 +1877,17 @@
     const m = activeMeeting(); if (!m) return;
     const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
     if (v('dt-title')   !== null) m.title          = v('dt-title');
-    if (v('dt-date')    !== null) m.date            = v('dt-date');
-    if (v('dt-time')    !== null) m.time            = v('dt-time');
-    if (v('dt-duration') !== null) m.durationMins   = parseInt(v('dt-duration'), 10) || null;
     if (v('dt-type')    !== null) m.type            = v('dt-type');
     if (v('dt-outcome') !== null) m.desiredOutcome  = v('dt-outcome');
     if (v('dt-agenda')  !== null) m.agenda          = v('dt-agenda');
-    if (v('dt-notes')   !== null) m.notes           = v('dt-notes');
     m.attendees = (m.attendeesList || []).map(a => a.name).join(', ');
+    const target = activeLogEntry(m);
+    if (v('dt-notes') !== null) target.notes = v('dt-notes');
+    if (!m.recurring) {
+      if (v('dt-date')     !== null) m.date          = v('dt-date');
+      if (v('dt-time')     !== null) m.time           = v('dt-time');
+      if (v('dt-duration') !== null) m.durationMins   = parseInt(v('dt-duration'), 10) || null;
+    }
     save();
   }
 
@@ -1709,19 +1927,22 @@
 
   function toggleAction(id) {
     const m = activeMeeting(); if (!m) return;
-    const a = (m.actionItems || []).find(x => x.id === id);
+    const target = activeLogEntry(m);
+    const a = (target.actionItems || []).find(x => x.id === id);
     if (a) { a.done = !a.done; save(); renderDetail(); }
   }
 
   function deleteAction(id) {
     const m = activeMeeting(); if (!m) return;
-    m.actionItems = (m.actionItems || []).filter(a => a.id !== id);
+    const target = activeLogEntry(m);
+    target.actionItems = (target.actionItems || []).filter(a => a.id !== id);
     save(); renderDetail(); renderList();
   }
 
   function sendActionToProjectHub(actionId) {
     const m = activeMeeting(); if (!m) return;
-    const a = (m.actionItems || []).find(x => x.id === actionId); if (!a) return;
+    const target = activeLogEntry(m);
+    const a = (target.actionItems || []).find(x => x.id === actionId); if (!a) return;
     const ph = HubStorage.get('project-hub-v1');
     if (!ph || !Array.isArray(ph.projects) || !ph.projects.length) {
       showToast('Open Project Hub first to create a project', 'warn'); return;
@@ -1744,11 +1965,12 @@
 
   function sendMeetingAsDecision() {
     const m = activeMeeting(); if (!m) return;
+    const target = activeLogEntry(m);
     const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
     const id = 'dh-' + Date.now().toString(36);
     arr.push({
       id, title: 'From meeting: ' + (m.title || 'Untitled'),
-      summary: [m.agenda, m.notes].filter(Boolean).join('\n\n'),
+      summary: [m.agenda, target.notes].filter(Boolean).join('\n\n'),
       status: 'open', type: 'tactical', cynefin: '', confidence: 3,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: '',
@@ -1768,9 +1990,10 @@
   function saveAction() {
     const text = document.getElementById('action-input').value.trim(); if (!text) return;
     const m = activeMeeting(); if (!m) return;
-    if (!m.actionItems) m.actionItems = [];
+    const target = activeLogEntry(m);
+    if (!target.actionItems) target.actionItems = [];
     const dueDate = document.getElementById('action-due').value || null;
-    m.actionItems.push({ id: uid(), text, done: false, taskCreated: false, dueDate, createdAt: new Date().toISOString() });
+    target.actionItems.push({ id: uid(), text, done: false, taskCreated: false, dueDate, createdAt: new Date().toISOString() });
     save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 

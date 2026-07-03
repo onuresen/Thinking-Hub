@@ -1888,6 +1888,17 @@
         if (tool === 'meetings-hub') {
           const data = HubStorage.get('meetings-hub-v1') || {};
           const m = (data.meetings || []).find(m => m.id === itemId);
+          if (m && m.recurring) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const occ = m.occurrenceDates || [];
+            const upcoming = occ.filter(o => o.date >= todayStr);
+            const nextDate = upcoming.length ? upcoming[0].date : (occ.length ? occ[occ.length - 1].date : '—');
+            return [
+              { k: 'Type', v: (m.type || '—') + ' · 🔁 weekly series' },
+              { k: 'Next', v: nextDate },
+              { k: 'Occurrences', v: String(occ.length) },
+            ];
+          }
           if (m) return [
             { k: 'Type', v: m.type || '—' },
             { k: 'Date', v: m.date || '—' },
