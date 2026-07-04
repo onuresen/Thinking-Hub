@@ -1218,6 +1218,20 @@ Priority 74's series data model was built while investigating a Teams ICS import
 
 ---
 
+### ~~Priority 75 — Dependency Graph: Critical Path highlighting~~ ✓ Done `[group: graph-links]`
+Sourced from an esen-vault cross-pollination check: the vault's `frameworks/Critical-Path-Method.md` reference note had flagged an honest gap since May — "Dependency Graph shows the network but does not calculate or highlight the critical path" — and it was still true. Added a "⛓ Critical Path" toggle to Graph Hub that highlights the longest chain of dependency-linked, dated tasks and shows each task's schedule float.
+
+**Implementation (`graph-hub.html`):** No schema changes — reuses two things that already existed but weren't connected: the `blocks`/`depends-on` `relType` values on manual links (already directional — `blocks` arrows a→b, `depends-on` arrows a→b meaning b is the predecessor) and Project Hub tasks' existing `due` field. `computeCriticalPath()` builds a predecessor→successor adjacency map from `hub-links-v1` entries where both endpoints are project-hub tasks with a `due` date, runs Kahn's algorithm for a topological sort (any nodes left over are in a cycle and are excluded, not crashed on), then a longest-path DP by hop count (ties broken by later due date) to find the chain. Float per task = days between its due date and its longest-chain predecessor's due date; ≤0 is flagged "at risk." The critical chain is highlighted in the graph (accent-colored thick border/edges) and listed in a new bottom-right `.cpath-panel` (finish date + task count, click a row to focus that node); `fetchNodeMeta`'s project-hub task branch gained `Due` and, when a float is computed, `Float` rows. Reapplies automatically after any `buildGraph()` rebuild (theme switch, clustering, etc.) via a silent re-apply that skips the "no chain found" toast.
+
+**Key decisions:**
+- **Decision:** Derive dependency direction from the *existing* `blocks`/`depends-on` link types instead of adding a new field or link type. **Why:** these relTypes already carry directional arrows in the graph and are already selectable in both the edge-panel and "+ New Link" modal — any user who'd already tagged links this way gets critical-path analysis for free, and it keeps the feature at zero schema/migration cost. **Alternative rejected:** infer direction purely from comparing two linked tasks' due dates (no relType needed at all) — rejected because it would silently mis-order same-day or reversed-intent links with no way for the user to correct it; requiring an explicit `blocks`/`depends-on` link keeps the computation honest about what it actually knows. **Confidence:** high.
+- **Decision:** Use hop-count longest-path (not duration-weighted CPM) as the "critical path," with due-date gaps surfaced separately as "float." **Why:** this app deliberately has no task-duration/start-date fields — the `Now.md` vault note records a standing rule to avoid execution-step-level estimation overhead — so a textbook forward/backward-pass CPM would need new fields this project has intentionally avoided. Hop-count longest-path is the closest honest analogue: "longest dependency chain," with float computed from the due dates that already exist. **Confidence:** med. **Revisit when:** if task start dates are ever added for other reasons, upgrade to duration-weighted CPM.
+- **Decision:** Cyclic dependencies are excluded from the ranking (reported via a small ⚠ note) rather than erroring or breaking the whole computation. **Why:** matches this codebase's general defensive-parsing convention (e.g. the Tags Hub `[].split` crash fixed in Priority 57) — a bad/contradictory link shouldn't take down an otherwise-useful feature. **Confidence:** high.
+
+**Files:** `graph-hub.html`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

@@ -287,6 +287,60 @@
       font-size: 11px;
     }
 
+    /* ── Critical Path panel ────────────────────────────────── */
+    .cpath-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 100;
+      font-size: 11px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 260px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .cpath-panel.visible {
+      display: flex;
+    }
+
+    .cpath-chain-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--text2);
+    }
+
+    .cpath-chain-item:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .cpath-due {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      flex-shrink: 0;
+    }
+
+    .cpath-summary {
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      color: var(--text3);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
     /* ── New Link modal ─────────────────────────────────────── */
     .gh-overlay {
       position: fixed;
@@ -709,6 +763,7 @@
       <button class="btn" id="leaves-btn" onclick="toggleLeaves()">Leaves</button>
       <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
       <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
+      <button class="btn" id="cpath-btn" onclick="toggleCriticalPath()" title="Highlight the longest chain of 'Blocks'/'Depends on' links between dated tasks">⛓ Critical Path</button>
       <select id="cluster-select" class="btn" style="padding:6px 8px" title="Collapse nodes into groups"
         onchange="setClusterMode(this.value)">
         <option value="none">No clustering</option>
@@ -745,6 +800,11 @@
           Degree-based sizing
         </label>
       </div>
+    </div>
+
+    <div class="cpath-panel" id="cpath-panel">
+      <div class="legend-title">CRITICAL PATH</div>
+      <div id="cpath-body"></div>
     </div>
 
     <div id="empty" class="empty-state">
@@ -922,6 +982,10 @@
     let autoLinksEnabled = true;
     let linkCreatedAt = new Map(); // linkId -> ISO createdAt, for the "New since" filter
     let newSinceCutoff = 0; // epoch ms; 0 = show all
+
+    // ── Critical Path (CPM-lite) ────────────────────────────────
+    let criticalPathEnabled = false;
+    let criticalPathFloat = new Map(); // nodeId -> float in days (only for nodes on a tracked chain)
 
     // ── View options (animations + sizing) ─────────────────────
     let ambientDriftEnabled = true;
@@ -1597,6 +1661,7 @@
         network.fit({ animation: false });
       }, 0);
       updateStats();
+      if (criticalPathEnabled) applyCriticalPath(true);
     }
 
     // ── Leaves filter ─────────────────────────────────────────
@@ -1701,6 +1766,166 @@
       autoLinksEnabled = !autoLinksEnabled;
       document.getElementById('auto-btn').classList.toggle('frozen', autoLinksEnabled);
       buildGraph();
+    }
+
+    // ── Critical Path (CPM-lite) ────────────────────────────────
+    // No new schema: reuses existing 'blocks'/'depends-on' hub-links-v1 relTypes
+    // as directed predecessor→successor edges, and project-hub tasks' existing
+    // `due` field as the only timing signal (this app has no task durations).
+
+    function _taskDueMap() {
+      const map = new Map(); // nodeId -> { due, label }
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => {
+          if (t.due) map.set(`project-hub::${t.id}`, { due: t.due });
+        }));
+      } catch { }
+      return map;
+    }
+
+    function computeCriticalPath() {
+      const dueMap = _taskDueMap();
+      const links = HubLinks.getAll();
+      const adj = new Map(); // predecessor nodeId -> [successor nodeId, ...]
+      const involved = new Set();
+
+      links.forEach(link => {
+        if (link.relType !== 'blocks' && link.relType !== 'depends-on') return;
+        const aId = `${link.a.tool}::${link.a.itemId}`;
+        const bId = `${link.b.tool}::${link.b.itemId}`;
+        if (!dueMap.has(aId) || !dueMap.has(bId)) return;
+        // 'blocks': a blocks b -> a is predecessor. 'depends-on': a depends on b -> b is predecessor.
+        const pred = link.relType === 'blocks' ? aId : bId;
+        const succ = link.relType === 'blocks' ? bId : aId;
+        if (!adj.has(pred)) adj.set(pred, []);
+        adj.get(pred).push(succ);
+        involved.add(pred); involved.add(succ);
+      });
+
+      if (!involved.size) return null;
+
+      // Kahn's topological sort — also isolates any circular dependencies
+      const indeg = new Map();
+      involved.forEach(id => indeg.set(id, 0));
+      adj.forEach(succs => succs.forEach(s => indeg.set(s, (indeg.get(s) || 0) + 1)));
+      const queue = [...involved].filter(id => indeg.get(id) === 0);
+      const topo = [];
+      while (queue.length) {
+        const id = queue.shift();
+        topo.push(id);
+        (adj.get(id) || []).forEach(s => {
+          indeg.set(s, indeg.get(s) - 1);
+          if (indeg.get(s) === 0) queue.push(s);
+        });
+      }
+      const excludedCycle = involved.size - topo.length;
+
+      // Longest path by hop count (no durations available); ties broken by later due date
+      const longest = new Map(); // id -> { len, prev }
+      topo.forEach(id => longest.set(id, { len: 0, prev: null }));
+      topo.forEach(id => {
+        (adj.get(id) || []).forEach(s => {
+          const candidate = longest.get(id).len + 1;
+          const existing = longest.get(s);
+          const candidateLater = !existing.prev || dueMap.get(id).due >= dueMap.get(existing.prev).due;
+          if (candidate > existing.len || (candidate === existing.len && candidateLater)) {
+            longest.set(s, { len: candidate, prev: id });
+          }
+        });
+      });
+
+      let bestId = null, bestLen = -1;
+      longest.forEach((v, id) => {
+        if (v.len > bestLen || (v.len === bestLen && dueMap.get(id).due > dueMap.get(bestId).due)) {
+          bestLen = v.len; bestId = id;
+        }
+      });
+      if (bestId === null) return null;
+
+      const chain = [];
+      for (let cur = bestId; cur; cur = longest.get(cur).prev) chain.unshift(cur);
+
+      // Float: gap in days between a node's due date and its longest-chain predecessor's due date
+      const floatMap = new Map();
+      longest.forEach((v, id) => {
+        if (v.prev) {
+          const days = Math.round((new Date(dueMap.get(id).due) - new Date(dueMap.get(v.prev).due)) / 86400000);
+          floatMap.set(id, days);
+        }
+      });
+
+      return { chain, floatMap, dueMap, excludedCycle };
+    }
+
+    function toggleCriticalPath() {
+      criticalPathEnabled = !criticalPathEnabled;
+      document.getElementById('cpath-btn').classList.toggle('frozen', criticalPathEnabled);
+      if (criticalPathEnabled) applyCriticalPath(false);
+      else clearCriticalPath();
+    }
+
+    function applyCriticalPath(silent) {
+      if (!nodesDS || !edgesDS) { if (!silent) showToast('No graph to analyze'); return; }
+      const result = computeCriticalPath();
+      criticalPathFloat = result ? result.floatMap : new Map();
+      document.getElementById('cpath-panel').classList.toggle('visible', !!result);
+      renderCriticalPathPanel(result);
+      if (!result) {
+        if (!silent) showToast(`No "Depends on"/"Blocks" links between dated tasks yet — create one via + New Link`);
+        return;
+      }
+
+      const chainSet = new Set(result.chain);
+      const chainEdgeSet = new Set();
+      for (let i = 0; i < result.chain.length - 1; i++) chainEdgeSet.add(result.chain[i] + '__' + result.chain[i + 1]);
+
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
+
+      const nodeUpdates = [];
+      nodesMap.forEach((node, id) => {
+        if (!chainSet.has(id)) return;
+        nodeUpdates.push({
+          id, borderWidth: 3,
+          color: { ...node.color, border: accentColor, highlight: { ...node.color.highlight, border: accentColor } }
+        });
+      });
+      if (nodeUpdates.length) nodesDS.update(nodeUpdates);
+
+      const edgeUpdates = [];
+      edgesDS.forEach(e => {
+        if (chainEdgeSet.has(e.from + '__' + e.to)) edgeUpdates.push({ id: e.id, width: 4, color: { ...e.color, color: accentColor } });
+      });
+      if (edgeUpdates.length) edgesDS.update(edgeUpdates);
+    }
+
+    function clearCriticalPath() {
+      document.getElementById('cpath-panel').classList.remove('visible');
+      criticalPathFloat = new Map();
+      buildGraph();
+    }
+
+    function renderCriticalPathPanel(result) {
+      const body = document.getElementById('cpath-body');
+      if (!result) { body.innerHTML = `<div class="cpath-summary">No blocking chain found among dated tasks.</div>`; return; }
+      const rows = result.chain.map(id => {
+        const node = nodesMap.get(id);
+        const due = result.dueMap.get(id)?.due || '—';
+        return `<div class="cpath-chain-item" onclick="focusCriticalPathNode('${id}')">
+          <span>${HubUtils.esc((node?.label || id).slice(0, 26))}</span><span class="cpath-due">${due}</span>
+        </div>`;
+      }).join('');
+      const finish = result.dueMap.get(result.chain[result.chain.length - 1])?.due || '—';
+      const cycleNote = result.excludedCycle
+        ? `<div class="cpath-summary" style="color:var(--accent-super)">⚠ ${result.excludedCycle} task(s) in a circular dependency were excluded</div>` : '';
+      body.innerHTML = rows + `<div class="cpath-summary">${result.chain.length} tasks · finishes ${finish}</div>` + cycleNote;
+    }
+
+    function focusCriticalPathNode(id) {
+      if (!network) return;
+      network.selectNodes([id]);
+      network.fit({ nodes: [id], animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+      showNodePanel(id);
     }
 
     const _pickerMode = { a: 'tasks', b: 'tasks' };
@@ -1836,11 +2061,20 @@
           const data = HubStorage.get('project-hub-v1') || {};
           for (const p of (data.projects || [])) {
             const t = (p.tasks || []).find(t => t.id === itemId);
-            if (t) return [
-              { k: 'Project', v: p.name || '—' },
-              { k: 'Status', v: t.status || '—' },
-              { k: 'Priority', v: t.priority || '—' },
-            ];
+            if (t) {
+              const meta = [
+                { k: 'Project', v: p.name || '—' },
+                { k: 'Status', v: t.status || '—' },
+                { k: 'Priority', v: t.priority || '—' },
+                { k: 'Due', v: t.due || '—' },
+              ];
+              const floatId = `project-hub::${itemId}`;
+              if (criticalPathEnabled && criticalPathFloat.has(floatId)) {
+                const f = criticalPathFloat.get(floatId);
+                meta.push({ k: 'Float', v: f <= 0 ? `⚠ ${f}d (at risk)` : `${f}d` });
+              }
+              return meta;
+            }
           }
           const proj = (data.projects || []).find(p => p.id === itemId);
           if (proj) {
