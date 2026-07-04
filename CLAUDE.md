@@ -1230,6 +1230,10 @@ Sourced from an esen-vault cross-pollination check: the vault's `frameworks/Crit
 
 **Files:** `graph-hub.html`, `CLAUDE.md`
 
+**Follow-up — Project Hub: quick dependency link ✓ Done:** Critical Path only works if `blocks`/`depends-on` links exist, but creating one required leaving Project Hub for Graph Hub's "+ New Link" modal. Added a "⛓" action button on each task row → small modal, pick a sibling task in the same project + a direction (Depends on / Blocks) → calls `HubLinks.addLink(..., {relType})` directly. No changes to the shared `hub-links.js` picker (kept generic/cross-tool as-is); this is a project-hub-local modal scoped to same-project tasks only, since that's the only case Critical Path can use.
+
+**Files:** `project-hub.html`, `CLAUDE.md`
+
 ---
 
 ## Decision Log Convention

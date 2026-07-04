@@ -2154,6 +2154,28 @@
     </div>
   </div>
 
+  <div class="ui-modal-overlay" id="modal-depends" onclick="closeModal('modal-depends')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Add Dependency</div>
+      <div class="modal-sub">Link to another task in this project</div>
+      <div class="form-group">
+        <label class="form-label">Direction</label>
+        <select class="form-select" id="dep-direction">
+          <option value="depends-on">Depends on</option>
+          <option value="blocks">Blocks</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Task</label>
+        <select class="form-select" id="dep-task"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-depends')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDependsLink()">Add</button>
+      </div>
+    </div>
+  </div>
+
   <div class="ui-modal-overlay" id="modal-goal" onclick="closeModal('modal-goal')">
     <div class="ui-modal" onclick="event.stopPropagation()">
       <div class="modal-title">New Goal</div>
@@ -3315,6 +3337,7 @@
       </div>
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
+        <button class="task-action-btn" title="Add dependency" onclick="event.stopPropagation();openDependsModal('${task.id}','${task.projectId || ''}')">⛓</button>
         <button class="task-action-btn obsidian" title="Link Obsidian note" onclick="promptObsidianNote(event,'${task.id}','${task.projectId || ''}')">⟡</button>
         <button class="task-action-btn edit" title="Edit" onclick="openEditTask('${task.id}','${task.projectId || ''}')">✎</button>
         <button class="task-action-btn" title="${task.archived ? 'Restore task' : 'Archive task'}" onclick="archiveTask(event,'${task.id}','${task.projectId || ''}')">📦</button>
@@ -3889,6 +3912,39 @@
     // ─── MODALS ───────────────────────────────────────────────────────────────────
     function openModal(id) { document.getElementById(id).classList.add('is-open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('is-open'); }
+
+    // ─── Task dependency links (feeds Dependency Graph's Critical Path) ───────────
+    let _dependsTaskId = null, _dependsProjectId = null;
+
+    function openDependsModal(taskId, projectId) {
+      const proj = state.projects.find(p => p.id === projectId);
+      if (!proj) return;
+      const siblings = proj.tasks.filter(t => t.id !== taskId);
+      if (!siblings.length) { showToast('No other tasks in this project'); return; }
+      _dependsTaskId = taskId; _dependsProjectId = projectId;
+      document.getElementById('dep-direction').value = 'depends-on';
+      document.getElementById('dep-task').innerHTML = siblings
+        .map(t => `<option value="${t.id}">${HubUtils.esc(t.title)} — ${t.due ? formatDate(t.due) : 'no due date'}</option>`)
+        .join('');
+      openModal('modal-depends');
+    }
+
+    function saveDependsLink() {
+      const proj = state.projects.find(p => p.id === _dependsProjectId);
+      const task = proj && proj.tasks.find(t => t.id === _dependsTaskId);
+      const other = proj && proj.tasks.find(t => t.id === document.getElementById('dep-task').value);
+      if (!task || !other) return;
+      const relType = document.getElementById('dep-direction').value;
+      const ok = HubLinks.addLink(
+        { tool: 'project-hub', itemId: task.id, label: task.title },
+        { tool: 'project-hub', itemId: other.id, label: other.title },
+        { relType }
+      );
+      closeModal('modal-depends');
+      if (!ok) { showToast('Already linked'); return; }
+      showToast('Dependency added');
+      if (typeof window.__hl_onLinkChange === 'function') window.__hl_onLinkChange();
+    }
 
     function showAddProject() {
       const c = document.getElementById('proj-members');
