@@ -18,7 +18,7 @@
   /* Text */
   --text: #f0f0f5;
   --text2: #c9c9d1;
-  --text3: #7a7a87;
+  --text3: #8c8c99;  /* muted/tertiary — clears WCAG AA 4.5:1 on --surface (#16161a) */
 
   /* Accent */
   --accent: #b8f033;
