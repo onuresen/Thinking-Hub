@@ -1615,7 +1615,7 @@
       const icon = m.recurring ? '🔁' : '▣';
       return `<span class="cal-pill meeting"
         onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
-        title="${esc(m.title || 'Meeting')}">${icon} ${esc((m.title || 'Meeting').slice(0, 16))}</span>`;
+        title="${esc(m.title || 'Meeting')}">${icon} ${esc(m.title || 'Meeting')}</span>`;
     }
 
     function renderCalMonth() {
@@ -1682,7 +1682,7 @@
           return `<span class="cal-pill${it.done ? ' done' : ''}"
         style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
         onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
-        title="${esc(it.title)}">${esc((it.title || '').slice(0, 18))}${cont}</span>`;
+        title="${esc(it.title)}">${esc(it.title || '')}${cont}</span>`;
         }).join('');
 
         return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}${isWE ? ' weekend' : ''}"
@@ -1749,7 +1749,7 @@
           return `<span class="cal-pill${it.done ? ' done' : ''}"
         style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
         onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
-        title="${esc(it.title)}">${esc((it.title || '').slice(0, 18))}${cont}</span>`;
+        title="${esc(it.title)}">${esc(it.title || '')}${cont}</span>`;
         }).join('');
 
         return `<div class="wg-allday-col${isWE ? ' weekend' : ''}${isToday ? ' today' : ''}"
