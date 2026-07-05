@@ -1873,6 +1873,17 @@
       .content { padding: 14px 12px; gap: 14px; }
       .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     }
+    /* P5 — destructive Reset recedes until intended: neutral ghost, danger on hover */
+    .btn-reset {
+      background: transparent;
+      color: var(--text3);
+      border: 1px solid var(--border);
+    }
+    .btn-reset:hover {
+      background: rgba(240, 67, 107, 0.12);
+      color: #e8455a;
+      border-color: rgba(240, 67, 107, 0.3);
+    }
   </style>
 </head>
 
@@ -1948,7 +1959,7 @@
       <button class="btn btn-primary" id="main-action-btn" onclick="handleMainAction()">+ Task</button>
       <button class="btn btn-ghost topbar-mob-hide" onclick="exportJSON()" title="Download a JSON backup">Export</button>
       <button class="btn btn-ghost topbar-mob-hide" onclick="importJSON()" title="Restore from a JSON backup">Import</button>
-      <button class="btn btn-danger topbar-mob-hide" onclick="resetToDefault()"
+      <button class="btn btn-reset topbar-mob-hide" onclick="resetToDefault()"
         title="Clear local data and restore defaults">Reset</button>
       <input type="file" id="import-file" accept="application/json" style="display:none" />
     </div>
