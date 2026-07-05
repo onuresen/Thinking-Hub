@@ -373,6 +373,7 @@
       font-size: 22px;
       font-weight: 800;
       color: var(--text);
+      margin-top: 0;
       margin-bottom: 6px;
       letter-spacing: -0.3px;
     }
@@ -1911,7 +1912,7 @@
   <div class="main-area">
 
     <!-- Session bar -->
-    <div class="session-bar">
+    <div class="session-bar" role="banner">
       <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobileSidebar()"
         aria-label="Open navigation">☰</button>
       <span class="session-label" id="session-label-el">Session</span>
@@ -1941,8 +1942,8 @@
     <div class="content-host">
 
       <!-- Home dashboard -->
-      <div id="home-dashboard">
-        <div class="home-greeting" id="greeting">Good morning.</div>
+      <div id="home-dashboard" role="main">
+        <h1 class="home-greeting" id="greeting">Good morning.</h1>
         <div class="home-sub" style="margin-bottom:16px">What are we working on?</div>
 
         <div class="dash-tabs">
