@@ -3671,7 +3671,9 @@
         <div class="an-charts-row">
           <div class="an-chart-box">
             <div class="an-chart-title">Tasks Created / Week</div>
-            <div class="an-bar-wrap">${barHTML}</div>
+            ${barWeeks.some(w => w.count > 0)
+              ? `<div class="an-bar-wrap">${barHTML}</div>`
+              : '<div class="an-empty">No tasks created in this period</div>'}
           </div>
           <div class="an-chart-box">
             <div class="an-chart-title">Capture Inbox by Category</div>
