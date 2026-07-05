@@ -5,3 +5,4 @@ Thumbs.db
 # Editor
 .vscode/
 *.swp
+.gstack/
