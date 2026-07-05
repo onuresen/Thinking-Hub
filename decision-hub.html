@@ -1583,6 +1583,11 @@
         if (dec) openDecision(dec.id);
       }
     });
+
+    // Auto-select first decision so the detail pane isn't blank when items exist.
+    // Runs at end of script (after all `let`s initialize); a hub-highlight
+    // postMessage (deep-link) arrives async and overrides this.
+    if (!currentId && decisions.length) openDecision(decisions[0].id);
   </script>
 </body>
 

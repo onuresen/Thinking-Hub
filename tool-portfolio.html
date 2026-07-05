@@ -1244,6 +1244,9 @@
         }
 
         load();
+        // Auto-select first tool so the detail pane isn't blank when items exist.
+        // A hub-highlight postMessage (deep-link) arrives async and overrides this.
+        if (!currentId && tools.length) openTool(tools[0].id);
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
