@@ -1236,6 +1236,30 @@ Sourced from an esen-vault cross-pollination check: the vault's `frameworks/Crit
 
 ---
 
+### ~~Priority 76 — Web performance audit + font-loading consolidation (Fix #1)~~ ✓ Done `[group: perf]`
+Ran a runtime performance audit of the whole app (served locally, measured Navigation/Resource Timing in a real browser + static analysis of every file). Findings, worst-first: (1) **fonts loaded twice on every page** — a render-blocking `@import` in `theme.css:1` (`Syne:700;800 + DM Sans + Fraunces`) *and* a per-page `<link>` (`Syne:700 + DM Sans + JetBrains`), with **DM Sans downloaded twice** (~37KB dup) and font weight-strings inconsistent across tools (so no cross-tool cache reuse); only `capture-hub.html` had a `preconnect`. (2) Heavy tools carry a large HTML/inline-CSS parse tax paid on every open (project-hub 209KB HTML / 52KB inline CSS → ~105ms parse-to-interactive, re-parsed each switch since the iframe is torn down to `about:blank` on close). (3) `graph-hub` loads **673KB of vis-network** synchronously from unpkg (blocks its render). Non-issues confirmed: `APP_LOAD_TS = Date.now()` is per-session (caching works within a session), storage subscriptions are per-key (no re-render storm), localStorage read cost is trivial/data-dependent.
+
+**Fix #1 shipped (fonts only — the highest-leverage, lowest-risk item; #2/#3 deferred):**
+- Removed the render-blocking `@import` from `theme.css:1`.
+- Gave all 29 standard tools **one byte-identical** Google Fonts `<link>` (`DM Sans:400;500;700 + Fraunces:400;500;600;700 + JetBrains Mono:400;500 + Syne:700;800` — the exact **union of what each page already fetched**, so no glyph/weight is lost and rendering is unchanged), each preceded by `preconnect` to `fonts.googleapis.com` + `fonts.gstatic.com`.
+- `capture-hub.html`: kept its richer italic/opsz set, **extended** it to cover the weights it used to get from the `@import` (Fraunces 500;600;700, Syne 800) so it's self-sufficient after removal; added the gstatic preconnect.
+- `blocked-depth.html`: had **no** font link of its own (relied solely on the `@import`) — added the canonical link explicitly so it didn't lose fonts.
+- **31 files changed** (29 tools + capture + blocked-depth + theme.css). Both target URLs validated (HTTP 200, all four families) before any edit.
+
+**Measured before → after (shell load):** font stylesheet requests 2 → **1**; woff2 downloads 5 (DM Sans doubled) → **4 (no dupes)**; render-blocking `@import` waterfall removed; `preconnect` now on every page; fonts now cache **once** across all tools instead of per-tool variants. Verified: no console errors, headings still render Fraunces, `font-weight:800` Fraunces still synthesizes from 700 exactly as before — **zero visual change**.
+
+**Key decisions:**
+- **Decision:** Ship Fix #1 (fonts) only; defer #2 (lazy-load/pin vis-network) and #3 (extract project-hub's inline CSS). **Why:** #1 is the widest-reach, lowest-risk change (mechanical, fully reversible, zero visual change) and touches every tool via one shared URL; #2 changes how a 673KB lib initializes (race risk) and #3 is cascade-order-sensitive (tool `<style>` intentionally loads after `theme.css`) — both are medium-risk and warrant their own session. **Confidence:** high.
+- **Decision:** Canonical URL = the **exact union of currently-fetched weights**, not a "correct" superset. **Why:** the goal was a *pure delivery fix with zero visual change* — notably, `font-weight:800` on Fraunces is used widely but Fraunces 800 was never in any font URL, so those headings have **always** been faux-synthesized from 700; adding real 800 would be a visible design change, out of scope for a perf pass. Keep the synthesis behavior identical; flag 800 as a separate future design call. **Confidence:** high.
+- **Decision:** `capture-hub.html` keeps its own richer (italic/opsz/weight-300) URL rather than folding into the one canonical URL. **Why:** capture genuinely renders DM Sans italic + weight 300 + optical sizing that the other 29 don't; a single universal URL would either strip those (regress capture) or add `opsz` to the other 29's DM Sans (which, with the browser-default `font-optical-sizing: auto`, could subtly shift their rendering). Two URLs = both capture and the 29 stay byte-identical. **Confidence:** high.
+- **Decision:** Used a controlled Node script (literal targeted regex, per-file match-count check) for the 29-file sweep, not PowerShell `-replace`. **Why:** the repo's standing file-safety rule — `-replace` with concatenated strings can silently truncate files; a verified Node `String.replace` with a tight `fonts.googleapis.com/css2` anchor + `git diff` review is safe. **Confidence:** high.
+
+**Deferred (not done):** #2 lazy-load + local-pin vis-network / html2canvas; #3 extract heavy tools' inline `<style>` to cached external CSS; #4 evaluate dropping/subsetting Fraunces (67KB/page); #5 iframe keep-alive (highest-risk — live timers/subscriptions; likely skip). Also noted for a future *design* (not perf) pass: Fraunces 800 headings render synthesized — add real 800 if desired.
+
+**Files:** all 30 tool HTML files, `theme.css`, `CLAUDE.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
