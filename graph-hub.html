@@ -342,6 +342,37 @@
       line-height: 1.5;
     }
 
+    /* ── Trace panel (Reasoning Path / Impact Analysis) ─────── */
+    .trace-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 100;
+      font-size: 11px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 280px;
+      max-height: 50vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .trace-panel.visible {
+      display: flex;
+    }
+
+    .trace-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
     /* ── New Link modal ─────────────────────────────────────── */
     .gh-overlay {
       position: fixed;
@@ -808,6 +839,14 @@
       <div id="cpath-body"></div>
     </div>
 
+    <div class="trace-panel" id="trace-panel">
+      <div class="trace-panel-header">
+        <div class="legend-title" id="trace-panel-title">TRACE</div>
+        <button class="gh-btn" style="padding:2px 7px" onclick="clearTrace()">✕</button>
+      </div>
+      <div id="trace-body"></div>
+    </div>
+
     <div id="empty" class="empty-state">
       <svg width="96" height="72" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:4px;opacity:0.55">
         <circle cx="14" cy="36" r="8" stroke="currentColor" stroke-width="1.5"/>
@@ -858,6 +897,10 @@
       <button class="gh-btn gh-btn-primary" style="flex:1" id="np-open-btn">Open</button>
       <button class="gh-btn" id="np-link-btn">+ Link</button>
       <button class="gh-btn" onclick="closeNodePanel()">✕</button>
+    </div>
+    <div class="edge-panel-actions" style="margin-top:2px" title="Walk 'Depends on'/'Blocks'/'Leads to' links (plus tag/host context edges) from this item">
+      <button class="gh-btn" style="flex:1" id="np-reasoning-btn">⤺ Reasoning Path</button>
+      <button class="gh-btn" style="flex:1" id="np-impact-btn">⤻ Impact Analysis</button>
     </div>
   </div>
 
@@ -1906,6 +1949,121 @@
       buildGraph();
     }
 
+    // ── Reasoning Path / Impact Analysis ────────────────────────
+    // Generalizes Critical Path's per-relType direction convention (above) to any
+    // selected node and the whole edge set (manual links + auto tag/host edges), not
+    // just dated project-hub tasks on 'blocks'/'depends-on'. Direction matters and is
+    // NOT the same as raw edge direction for every relType — same caveat ONEXUS's
+    // `what_if` MCP tool documents: 'blocks'/'leads-to' impact flows with the edge
+    // (a blocks b -> if a slips, b is affected); 'depends-on' impact flows AGAINST it
+    // (a depends-on b -> if b changes, a is affected, not the reverse). Auto edges
+    // (tags, task->project host) and 'relates' have no causal direction, so they're
+    // walked both ways. Unlike OneRoot's own reasoningPath()/impactTree() — which
+    // OneRoot_v2's CLAUDE.md documents as having no visited-guard, safe only because
+    // its datasets are kept deliberately acyclic — this graph has no such guarantee
+    // (two decisions can easily mutually depend-on each other), so the BFS below
+    // tracks `visited` explicitly.
+    function _impactAdjacency() {
+      const forward = new Map(), backward = new Map();
+      function link(fromId, toId, edgeId, relType) {
+        if (!forward.has(fromId)) forward.set(fromId, []);
+        forward.get(fromId).push({ to: toId, edgeId, relType });
+        if (!backward.has(toId)) backward.set(toId, []);
+        backward.get(toId).push({ to: fromId, edgeId, relType });
+      }
+      if (!edgesDS) return { forward, backward };
+      const relTypeById = new Map(HubLinks.getAll().map(l => [l.id, l.relType]));
+      edgesDS.forEach(e => {
+        if (e._auto) { link(e.from, e.to, e.id, 'auto'); link(e.to, e.from, e.id, 'auto'); return; }
+        const relType = relTypeById.get(e._linkId) || 'relates';
+        if (relType === 'blocks' || relType === 'leads-to') link(e.from, e.to, e.id, relType);
+        else if (relType === 'depends-on') link(e.to, e.from, e.id, relType);
+        else { link(e.from, e.to, e.id, relType); link(e.to, e.from, e.id, relType); }
+      });
+      return { forward, backward };
+    }
+
+    // mode 'impact' walks the forward (impact-flow) adjacency — "what does this affect".
+    // mode 'reasoning' walks the backward adjacency — "why does this exist / what feeds it".
+    function traceFromNode(nodeId, mode, maxDepth = 6) {
+      const { forward, backward } = _impactAdjacency();
+      const adj = mode === 'impact' ? forward : backward;
+      const visited = new Set([nodeId]);
+      const order = [];
+      let frontier = [nodeId];
+      let depth = 0;
+      while (frontier.length && depth < maxDepth) {
+        depth++;
+        const next = [];
+        for (const cur of frontier) {
+          for (const { to, edgeId, relType } of (adj.get(cur) || [])) {
+            if (visited.has(to)) continue;
+            visited.add(to);
+            order.push({ id: to, depth, edgeId, relType });
+            next.push(to);
+          }
+        }
+        frontier = next;
+      }
+      return order;
+    }
+
+    function applyTrace(nodeId, mode) {
+      if (!nodesDS || !edgesDS) return;
+      buildGraph(); // clean baseline — wipes any stale Critical Path or prior-trace overlay
+
+      const result = traceFromNode(nodeId, mode);
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
+      const accent2 = getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim() || '#e08850';
+      const traceColor = mode === 'impact' ? accentColor : accent2;
+
+      const nodeIds = new Set([nodeId, ...result.map(r => r.id)]);
+      const edgeIds = new Set(result.map(r => r.edgeId));
+
+      const nodeUpdates = [];
+      nodesMap.forEach((node, id) => {
+        if (!nodeIds.has(id)) return;
+        nodeUpdates.push({
+          id, borderWidth: id === nodeId ? 4 : 3,
+          color: { ...node.color, border: traceColor, highlight: { ...node.color.highlight, border: traceColor } }
+        });
+      });
+      if (nodeUpdates.length) nodesDS.update(nodeUpdates);
+
+      const edgeUpdates = [];
+      edgesDS.forEach(e => {
+        if (edgeIds.has(e.id)) edgeUpdates.push({ id: e.id, width: 4, color: { ...e.color, color: traceColor } });
+      });
+      if (edgeUpdates.length) edgesDS.update(edgeUpdates);
+
+      renderTracePanel(nodeId, mode, result);
+      document.getElementById('trace-panel').classList.add('visible');
+    }
+
+    function clearTrace() {
+      document.getElementById('trace-panel').classList.remove('visible');
+      buildGraph();
+    }
+
+    function renderTracePanel(nodeId, mode, result) {
+      const title = mode === 'impact' ? 'IMPACT ANALYSIS' : 'REASONING PATH';
+      document.getElementById('trace-panel-title').textContent = title;
+      const body = document.getElementById('trace-body');
+      const node = nodesMap.get(nodeId);
+      const verb = mode === 'impact' ? 'affects' : 'depends on / follows from';
+      if (!result.length) {
+        body.innerHTML = `<div class="cpath-summary">No ${mode === 'impact' ? 'downstream' : 'upstream'} links found from "${HubUtils.esc(node?.label || nodeId)}".</div>`;
+        return;
+      }
+      const byDepth = new Map();
+      result.forEach(r => { if (!byDepth.has(r.depth)) byDepth.set(r.depth, []); byDepth.get(r.depth).push(r); });
+      const rows = [...byDepth.entries()].map(([d, items]) => items.map(it => `
+        <div class="cpath-chain-item" onclick="focusCriticalPathNode('${it.id}')">
+          <span>${HubUtils.esc((nodesMap.get(it.id)?.label || it.id).slice(0, 24))}</span><span class="cpath-due">${d} hop${d > 1 ? 's' : ''}</span>
+        </div>`).join('')).join('');
+      body.innerHTML = rows + `<div class="cpath-summary">"${HubUtils.esc(node?.label || nodeId)}" ${verb} ${result.length} item${result.length === 1 ? '' : 's'}.</div>`;
+    }
+
     function renderCriticalPathPanel(result) {
       const body = document.getElementById('cpath-body');
       if (!result) { body.innerHTML = `<div class="cpath-summary">No blocking chain found among dated tasks.</div>`; return; }
@@ -2189,6 +2347,9 @@
         closeNodePanel();
         openNewLinkModal({ side: 'a', tool: node.tool, itemId: node.itemId });
       };
+
+      document.getElementById('np-reasoning-btn').onclick = () => applyTrace(nodeId, 'reasoning');
+      document.getElementById('np-impact-btn').onclick = () => applyTrace(nodeId, 'impact');
 
       document.getElementById('node-panel').classList.add('visible');
     }

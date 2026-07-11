@@ -30,7 +30,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `kmqt-board.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import KMQT" button |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
 | `canvas-hub.html` | Infinite spatial canvas |
-| `graph-hub.html` | Task dependency graph (vis-network) |
+| `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
 | `focus-hub.html` | Pomodoro focus timer, task session log |
@@ -1257,6 +1257,23 @@ Ran a runtime performance audit of the whole app (served locally, measured Navig
 **Deferred (not done):** #2 lazy-load + local-pin vis-network / html2canvas; #3 extract heavy tools' inline `<style>` to cached external CSS; #4 evaluate dropping/subsetting Fraunces (67KB/page); #5 iframe keep-alive (highest-risk — live timers/subscriptions; likely skip). Also noted for a future *design* (not perf) pass: Fraunces 800 headings render synthesized — add real 800 if desired.
 
 **Files:** all 30 tool HTML files, `theme.css`, `CLAUDE.md`
+
+---
+
+### ~~Priority 77 — Dependency Graph: Reasoning Path / Impact Analysis trace mode~~ ✓ Done `[group: graph-links]`
+Sourced from cross-pollinating an esen-vault session's work on OneRoot (a decision-reasoning tool) into Thinking Hub. OneRoot's founding move is answering two questions about any node: *why does it exist* (walk backward) and *what does it affect* (walk forward). Priority 75's Critical Path already proved the underlying idea works here — a directed adjacency built from `blocks`/`depends-on` `relType`s — but only for the single longest chain among *dated project-hub tasks*. This generalizes it to **any node, any tool, on demand**: two new buttons in the node panel, "⤺ Reasoning Path" (backward) and "⤻ Impact Analysis" (forward).
+
+**Implementation (`graph-hub.html`):** `_impactAdjacency()` builds a forward/backward adjacency map over the *whole* current graph (manual `hub-links-v1` entries **and** auto context edges — tags, task→project hosting, decision/risk/goal/meeting→project), not just dated tasks. Direction is **not** the same as raw edge direction for every `relType` — same caveat ONEXUS's `what_if` MCP tool documents for its own graph traversal: `blocks`/`leads-to` impact flows *with* the edge (a blocks b → if a slips, b is affected), but `depends-on` impact flows *against* it (a depends-on b → if b changes, a is affected, not the reverse). Auto edges and `relates` have no causal direction, so they're walked both ways. `traceFromNode(nodeId, mode)` is a depth-tracked BFS over the chosen adjacency direction, capped at 6 hops. Highlighting reuses Critical Path's exact visual language (accent-colored border/edge width) via a full `buildGraph()` reset before each new trace, so stale highlights from a prior trace or Critical Path never stack. Results render in a new bottom-left `.trace-panel` (mirrors `.cpath-panel`'s styling, kept as a separate panel so the two features can't visually collide), grouped by hop count, each row focusable.
+
+**Key decisions:**
+- **Decision:** Add an explicit `visited` set to the BFS, unlike OneRoot's own `reasoningPath()`/`impactTree()` (documented in `OneRoot_v2/CLAUDE.md` as having *no* cycle guard). **Why:** OneRoot's datasets are hand-authored and kept deliberately acyclic, so it never needed one; this graph has no such guarantee — two decisions can easily end up mutually `depends-on` each other — so an unguarded walk would infinite-loop. **Confidence:** high.
+- **Decision:** Include auto context edges (tags, task→project, decision/risk/goal/meeting→project) in the trace, not just manual `blocks`/`depends-on`/`leads-to` links. **Why:** excluding them would make Reasoning Path silently incomplete — e.g. two tasks under the same project sharing no manual link still share real context a "why does this exist" trace should surface. They're walked bidirectionally since they carry no causal direction, same treatment as `relates`. **Confidence:** high.
+- **Decision:** Reuse Critical Path's per-`relType` direction convention verbatim (don't reinvent it) rather than defining a fresh direction table. **Why:** it was already correct, already reviewed (Priority 75), and this is exactly the "one engine, generalize the traversal" move OneRoot's own architecture is built around — keeping direction semantics in one place avoids the two features silently disagreeing later. **Confidence:** high.
+- **Decision:** Full `buildGraph()` reset at the start of every `applyTrace()` call, instead of tracking + reverting the previous highlight set manually. **Why:** matches Critical Path's own reset idiom (`clearCriticalPath()` already does this) — cheap at personal-scale graph sizes, and categorically avoids a class of stale-highlight bugs (old trace or Critical Path colors lingering on nodes not in the new result) that manual bookkeeping would risk. **Confidence:** high.
+
+**Verified** against a seeded test graph (2 decisions, 2 tasks, 1 risk, one of each `relType` including a chained `depends-on`) via the real UI path (`showNodePanel` → button click, not just the underlying function): confirmed the `depends-on` reversal in isolation (`forward[task-1]` correctly excludes `task-2`; `forward[task-2]` correctly includes `task-1`) before trusting the full BFS output, then verified the rendered panel text, hop counts, and highlighted node/edge sets end to end, and that `clearTrace()` fully resets border widths. Zero console errors.
+
+**Files:** `graph-hub.html`, `CLAUDE.md`
 
 ---
 
