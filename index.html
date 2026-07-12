@@ -2479,9 +2479,6 @@
         _pendingHighlight = itemId || null;
         openApp(tool);
       }
-      if (e.data.type === 'hub-replay-tour') {
-        startTour();
-      }
       if (e.data.type === 'hub-first-project') {
         if (!HubStorage.get('quick-tour-seen-v1')) {
           HubStorage.set('quick-tour-seen-v1', true);
