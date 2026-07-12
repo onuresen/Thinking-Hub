@@ -441,9 +441,31 @@
             return v ? v : 'OTHER';
         }
 
+        const FRESHNESS_BUCKETS = [
+            { key: 'today',     label: 'Today' },
+            { key: 'week',      label: 'This week' },
+            { key: 'month',     label: 'This month' },
+            { key: 'stale',     label: 'Stale' },
+            { key: 'forgotten', label: 'Forgotten' }
+        ];
+        const MASTERY_LABELS = ['Novice', 'Comfortable', 'Skilled', 'Power-user'];
+
+        // Pure function: ISO timestamp or null -> bucket key. No DOM/state access, so it's
+        // directly testable from the devtools console (see Step 5).
+        function getFreshnessBucket(lastUsedAt) {
+            if (!lastUsedAt) return 'forgotten';
+            const days = (Date.now() - new Date(lastUsedAt).getTime()) / 86400000;
+            if (days < 1) return 'today';
+            if (days <= 7) return 'week';
+            if (days <= 30) return 'month';
+            if (days <= 90) return 'stale';
+            return 'forgotten';
+        }
+
         function load() {
             tools = HubStorage.get(STORAGE_KEY) || [];
             ensureOrderFields();
+            ensureUsageFields();
             renderList();
             renderStatsBar();
             renderDetail();
@@ -486,6 +508,17 @@
             if (changed) HubStorage.set(STORAGE_KEY, tools);
         }
 
+        // Backfill freshness/mastery fields for tools created before this feature existed
+        function ensureUsageFields() {
+            let changed = false;
+            tools.forEach(t => {
+                if (t.lastUsedAt === undefined) { t.lastUsedAt = null; changed = true; }
+                if (typeof t.useCount !== 'number') { t.useCount = 0; changed = true; }
+                if (typeof t.mastery !== 'number') { t.mastery = 0; changed = true; }
+            });
+            if (changed) HubStorage.set(STORAGE_KEY, tools);
+        }
+
         function createTool() {
             const t = {
                 id: 'tool-' + Date.now().toString(36),
@@ -498,7 +531,10 @@
                 category: '',
                 note: '',
                 projectIds: [],
-                order: 999999 // appended at end of its category
+                order: 999999, // appended at end of its category
+                lastUsedAt: null,
+                useCount: 0,
+                mastery: 0
             };
             tools.push(t);
             normalizeOrdersInCategory(normCat(t.category));
