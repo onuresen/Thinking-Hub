@@ -414,6 +414,16 @@
         .tp-chip-yellow { background: var(--node-yellow); border-color: var(--border-yellow); }
         .tp-chip-purple { background: var(--node-purple); border-color: var(--border-purple); }
         .tp-chip-red    { background: var(--node-red);    border-color: var(--border-red); }
+
+        .tp-popover-backdrop { position: fixed; inset: 0; z-index: 50; background: transparent; }
+        .tp-popover { position: absolute; z-index: 51; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 12px; width: 220px; }
+        .tp-popover-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+        .tp-popover-row { margin-bottom: 8px; }
+        .tp-popover-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); margin-bottom: 4px; }
+        .tp-mastery-dots { display: flex; gap: 6px; }
+        .tp-mastery-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface2); cursor: pointer; }
+        .tp-mastery-dot.filled { background: var(--accent); border-color: var(--accent); }
+        .tp-popover-link { font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: none; display: block; margin-top: 8px; }
     </style>
 </head>
 
@@ -530,6 +540,73 @@
             });
             html += '</div>';
             el.innerHTML = html;
+        }
+
+        function closeChipPopover() {
+            const existing = document.getElementById('tp-popover');
+            if (existing) existing.remove();
+            const backdrop = document.getElementById('tp-popover-backdrop');
+            if (backdrop) backdrop.remove();
+        }
+
+        function openChipPopover(toolId, anchorEl) {
+            closeChipPopover();
+            const t = tools.find(x => x.id === toolId);
+            if (!t) return;
+
+            const backdrop = document.createElement('div');
+            backdrop.id = 'tp-popover-backdrop';
+            backdrop.className = 'tp-popover-backdrop';
+            backdrop.onclick = closeChipPopover;
+            document.body.appendChild(backdrop);
+
+            const rect = anchorEl.getBoundingClientRect();
+            const pop = document.createElement('div');
+            pop.id = 'tp-popover';
+            pop.className = 'tp-popover';
+            pop.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+            pop.style.left = (rect.left + window.scrollX) + 'px';
+            pop.onclick = e => e.stopPropagation();
+
+            // 4 dots representing mastery levels 0-3 (Novice..Power-user). Dot `lvl` renders
+            // filled when `mastery >= lvl` (level 0/Novice's dot is always at least filled),
+            // clicking dot `lvl` sets mastery to exactly `lvl`.
+            const dots = [0, 1, 2, 3].map(lvl =>
+                `<span class="tp-mastery-dot${(t.mastery ?? 0) >= lvl ? ' filled' : ''}" title="${escapeAttr(MASTERY_LABELS[lvl])}" onclick="setToolMastery('${escapeAttr(t.id)}', ${lvl})"></span>`
+            ).join('');
+
+            pop.innerHTML = `
+                <div class="tp-popover-title">${escapeHtml(t.icon || '🛠')} ${escapeHtml(t.name)}</div>
+                <div class="tp-popover-row">
+                    <div class="tp-popover-label">Used ${t.useCount || 0}× · last ${t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString() : 'never'}</div>
+                    <button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onclick="logToolUsage('${escapeAttr(t.id)}')">✓ Used today</button>
+                </div>
+                <div class="tp-popover-row">
+                    <div class="tp-popover-label">Mastery — ${escapeHtml(MASTERY_LABELS[t.mastery ?? 0])}</div>
+                    <div class="tp-mastery-dots" id="tp-mastery-dots">${dots}</div>
+                </div>
+                <a class="tp-popover-link" onclick="switchTpView('list'); openTool('${escapeAttr(t.id)}'); closeChipPopover();">View details →</a>
+            `;
+            document.body.appendChild(pop);
+        }
+
+        function logToolUsage(toolId) {
+            const t = tools.find(x => x.id === toolId);
+            if (!t) return;
+            t.lastUsedAt = new Date().toISOString();
+            t.useCount = (t.useCount || 0) + 1;
+            save();
+            renderMatrix();
+            closeChipPopover();
+        }
+
+        function setToolMastery(toolId, level) {
+            const t = tools.find(x => x.id === toolId);
+            if (!t) return;
+            t.mastery = level;
+            save();
+            renderMatrix();
+            closeChipPopover();
         }
 
         function load() {
