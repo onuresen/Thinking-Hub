@@ -603,7 +603,7 @@
         function setToolMastery(toolId, level) {
             const t = tools.find(x => x.id === toolId);
             if (!t) return;
-            t.mastery = level;
+            t.mastery = Math.min(3, Math.max(0, Math.round(level)));
             save();
             renderMatrix();
             closeChipPopover();
@@ -662,6 +662,8 @@
                 if (t.lastUsedAt === undefined) { t.lastUsedAt = null; changed = true; }
                 if (typeof t.useCount !== 'number') { t.useCount = 0; changed = true; }
                 if (typeof t.mastery !== 'number') { t.mastery = 0; changed = true; }
+                const clamped = Math.min(3, Math.max(0, Math.round(t.mastery)));
+                if (t.mastery !== clamped) { t.mastery = clamped; changed = true; }
             });
             if (changed) HubStorage.set(STORAGE_KEY, tools);
         }
@@ -1439,6 +1441,7 @@
         window.addEventListener('message', e => {
             if (e.origin !== window.location.origin) return;
             if (e.data?.type === 'hub-highlight' && e.data.itemId) {
+                switchTpView('list');
                 openTool(e.data.itemId);
             }
         });
