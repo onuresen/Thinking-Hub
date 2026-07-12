@@ -197,6 +197,7 @@
       <span class="search-icon">🔎</span>
       <input class="search-input" id="search-input" type="text" placeholder="Search tools, frameworks…" oninput="onSearch()" />
     </div>
+    <button class="view-btn" id="btn-replay-tour" onclick="replayTour()" title="Replay the guided tour on the Thinking Hub home screen">▶ Replay Tour</button>
   </div>
 
   <!-- Content area -->
@@ -653,6 +654,10 @@ function toggleSidebar() {
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('hh-backdrop').classList.remove('open');
+}
+
+function replayTour() {
+  parent.postMessage({ type: 'hub-replay-tour' }, window.location.origin || '*');
 }
 
 function selectItem(id) {
