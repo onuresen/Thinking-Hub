@@ -9,6 +9,14 @@ window.HubTutorial = (() => {
 
   let overlayEl = null;
   let tooltipEl = null;
+  let activeGate = null; // { target, event, handler } for the current step's waitFor, if any
+
+  function clearGate() {
+    if (activeGate) {
+      activeGate.target.removeEventListener(activeGate.event, activeGate.handler, true);
+      activeGate = null;
+    }
+  }
 
   function injectStyles() {
     if (document.getElementById('hub-tutorial-styles')) return;
@@ -108,6 +116,7 @@ window.HubTutorial = (() => {
   function start(tourSteps) {
     if (!tourSteps || tourSteps.length === 0) return;
     end(); // always start from a clean slate
+    clearGate();
     steps = tourSteps;
     currentIdx = 0;
 
@@ -171,7 +180,8 @@ window.HubTutorial = (() => {
     const backBtn = currentIdx > 0
       ? '<button class="ht-btn ht-btn-ghost" onclick="HubTutorial.prev()">Back</button>'
       : '';
-    const nextLabel = currentIdx === steps.length - 1 ? 'Finish' : 'Next →';
+    const isLast = currentIdx === steps.length - 1;
+    const nextLabel = isLast ? 'Finish' : (step.waitFor ? 'Next (or do it) →' : 'Next →');
 
     tooltipEl.innerHTML =
       '<div class="ht-title">' + step.title + '</div>' +
@@ -188,9 +198,22 @@ window.HubTutorial = (() => {
     // Remove ht-show first so the fade-in transition re-triggers on every step
     tooltipEl.classList.remove('ht-show');
     setTimeout(function() { tooltipEl.classList.add('ht-show'); }, 50);
+
+    clearGate();
+    if (step.waitFor && step.waitFor.selector && step.waitFor.event) {
+      const handler = function(e) {
+        const hit = e.target && (e.target.matches?.(step.waitFor.selector) || e.target.closest?.(step.waitFor.selector));
+        if (!hit) return;
+        clearGate();
+        next();
+      };
+      document.addEventListener(step.waitFor.event, handler, true);
+      activeGate = { target: document, event: step.waitFor.event, handler: handler };
+    }
   }
 
   function next() {
+    clearGate();
     if (currentIdx < steps.length - 1) {
       currentIdx++;
       renderStep();
@@ -200,6 +223,7 @@ window.HubTutorial = (() => {
   }
 
   function prev() {
+    clearGate();
     if (currentIdx > 0) {
       currentIdx--;
       renderStep();
@@ -207,6 +231,7 @@ window.HubTutorial = (() => {
   }
 
   function end() {
+    clearGate();
     if (overlayEl) {
       overlayEl.remove();
       overlayEl = null;
