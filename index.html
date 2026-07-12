@@ -2479,6 +2479,9 @@
         _pendingHighlight = itemId || null;
         openApp(tool);
       }
+      if (e.data.type === 'hub-replay-tour') {
+        startTour();
+      }
       if (e.data.type === 'hub-first-project') {
         if (!HubStorage.get('quick-tour-seen-v1')) {
           HubStorage.set('quick-tour-seen-v1', true);
@@ -2515,6 +2518,12 @@
       if (e.key === 'Escape') {
         if (document.getElementById('data-modal').style.display === 'flex') { closeDataModal(); return; }
         if (activeAppId && document.activeElement.tagName !== 'INPUT') goHome();
+      }
+      if (e.key === '?') {
+        const tag = (document.activeElement && document.activeElement.tagName) || '';
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        startTour();
       }
     });
 
