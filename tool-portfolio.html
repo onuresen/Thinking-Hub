@@ -397,6 +397,11 @@
             .mob-nav-btn { display: flex; align-items: center; }
             .topbar { padding: 0 8px; gap: 6px; }
         }
+
+        .tp-tab-bar { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; gap: 2px; margin: 0 16px 10px; width: fit-content; }
+        .tp-tab { padding: 6px 14px; border: none; background: none; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: var(--text3); cursor: pointer; }
+        .tp-tab:hover { color: var(--text); }
+        .tp-tab.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
     </style>
 </head>
 
@@ -418,11 +423,16 @@
             <div class="topbar-title" id="topbar-title">Select a tool</div>
             <button class="btn btn-ghost" id="compare-btn" onclick="toggleCompare()" style="display:none;font-size:12px">⇄ Compare</button>
         </div>
+        <div class="tp-tab-bar">
+            <button class="tp-tab active" data-view="list" onclick="switchTpView('list')">📋 List</button>
+            <button class="tp-tab" data-view="matrix" onclick="switchTpView('matrix')">▦ Matrix</button>
+        </div>
         <div class="stats-bar" id="stats-bar"></div>
 
         <div class="content" id="content">
             <div class="empty">Select a tool or add a new one.</div>
         </div>
+        <div id="matrix-view" style="display:none;padding:0 16px 16px;"></div>
     </div>
 
     <script>
@@ -435,6 +445,15 @@
         // Drag state
         let dragId = null;
         let dragCat = null;
+
+        let tpView = 'list';
+        function switchTpView(view) {
+            tpView = view;
+            document.getElementById('content').style.display = view === 'list' ? '' : 'none';
+            document.getElementById('matrix-view').style.display = view === 'matrix' ? '' : 'none';
+            document.querySelectorAll('.tp-tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+            if (view === 'matrix') renderMatrix();
+        }
 
         function normCat(s) {
             const v = (s || '').trim();
