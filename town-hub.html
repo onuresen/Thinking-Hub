@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machi Town</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <script src="machi-engine.js"></script>
+  <script src="machi-achievements.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+    body { display: flex; flex-direction: column; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--bg); z-index: var(--z-sticky); flex-shrink: 0;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
+
+    .content { padding: 22px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
+    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 18px; max-width: 760px; }
+
+    .town-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .town-scroll { max-width: 100%; overflow-x: auto; }
+    canvas { border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .legend span::before { content: "■ "; }
+
+    #detail {
+      display: none; width: 460px; max-width: 92vw;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 14px 16px; font-size: 13px; line-height: 1.5;
+    }
+    #detail.open { display: block; }
+    #detail h2 { font-family: var(--font-display); font-size: 16px; margin: 0 0 2px; }
+    #detail .d-status { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 8px; }
+    #detail .d-note { color: var(--text2); margin: 0 0 10px; }
+    #detail .d-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    #detail .d-tags span {
+      font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px;
+    }
+    #detail .d-actions { display: flex; gap: 10px; align-items: center; }
+    #detail button {
+      background: var(--accent); color: var(--accent-contrast, #fff); border: none; border-radius: var(--r-sm);
+      font-family: var(--font-body); font-size: 12px; font-weight: 600; padding: 7px 12px; cursor: pointer;
+    }
+    #detail a { color: var(--accent); font-size: 12px; text-decoration: none; }
+    #detail a:hover { text-decoration: underline; }
+
+    .empty-state {
+      text-align: center; color: var(--text2); font-size: 13px; padding: 48px 20px;
+      border: 1px dashed var(--border); border-radius: var(--r-md); max-width: 520px; margin: 0 auto;
+    }
+    .empty-state a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR TOOL STACK AS A LIVING CITY</span></div>
+  </div>
+
+  <div class="content">
+    <p class="intro">
+      Every tool in your <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a> is a building.
+      Height = mastery, lit windows = how recently you used it, overgrowth = neglect, flag = adopted.
+      Click a building, then hit <strong>Used it now</strong> — watch the lights come back on.
+    </p>
+
+    <div class="town-wrap">
+      <div class="town-scroll"><canvas id="town"></canvas></div>
+      <div class="legend">
+        <span style="color:#5bd67a">adopt</span>
+        <span style="color:#5b8cff">trial</span>
+        <span style="color:#ff9f5b">assess</span>
+        <span style="color:#8a8f9c">hold</span>
+      </div>
+      <div id="detail"></div>
+      <div class="empty-state" id="empty" style="display:none">
+        No tools in your portfolio yet.<br>
+        Add some in the <a href="tool-portfolio.html">Tool Portfolio</a> and the town will grow.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    HubBootstrap.start('town-hub');
+
+    // ── Thinking Hub adapter ────────────────────────────────────────────────
+    // Maps tool-portfolio-v1 records into MachiEntity objects. This is the
+    // host-specific layer; machi-engine.js stays host-agnostic.
+    const STORAGE_KEY = 'tool-portfolio-v1';
+
+    const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
+
+    function daysSince(iso) {
+      if (!iso) return null;
+      return (Date.now() - new Date(iso).getTime()) / 86400000;
+    }
+
+    function toEntity(t) {
+      const days = daysSince(t.lastUsedAt);
+      return MachiHub.createEntity({
+        id: t.id,
+        name: t.name,
+        category: RING_TO_CATEGORY[t.ring] || 'default',
+        tier: 1 + Math.min(3, Math.max(0, t.mastery ?? 0)),   // mastery 0-3 → tier 1-4
+        activity: days === null ? 0 : 1 / (1 + days / 10),    // same decay curve as the vault host
+        staleness: days === null ? 1 : Math.min(1, days / 60), // never used = fully overgrown
+        shipped: t.ring === 'adopt',
+        meta: {
+          icon: t.icon, ring: t.ring, status: t.status, note: t.note,
+          useCount: t.useCount || 0, mastery: t.mastery ?? 0,
+          lastUsedAt: t.lastUsedAt, category: t.category,
+        },
+      });
+    }
+
+    // Host rules on top of the defaults — these read meta, which default rules never touch.
+    const hubRules = MachiAchievements.DEFAULT_RULES.concat([
+      { id: 'power-user', label: 'Power user — top mastery', icon: '🥋', test: (e) => e.meta.mastery === 3 },
+      { id: 'well-worn', label: 'Well-worn — used 20+ times', icon: '🔁', test: (e) => e.meta.useCount >= 20 },
+    ]);
+
+    // ── Host UI ─────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('town');
+    const detail = document.getElementById('detail');
+    const empty = document.getElementById('empty');
+    let town = null;
+    let selectedId = null;
+
+    function loadTools() {
+      return HubStorage.get(STORAGE_KEY) || [];
+    }
+
+    // Same write path as Tool Portfolio's logToolUsage — HubStorage.set notifies
+    // any subscribed tool, so the two views stay in sync.
+    function markUsedNow(toolId) {
+      const tools = loadTools();
+      const t = tools.find((x) => x.id === toolId);
+      if (!t) return;
+      t.lastUsedAt = new Date().toISOString();
+      t.useCount = (t.useCount || 0) + 1;
+      HubStorage.set(STORAGE_KEY, tools);
+      rebuild();
+      const e = town && town.entities.find((x) => x.id === toolId);
+      if (e) showDetail(e);
+      if (window.HubToast) HubToast.show('Logged — the lights are on ✨');
+    }
+
+    // All text goes in via textContent — never innerHTML with data values.
+    function showDetail(e) {
+      selectedId = e.id;
+      detail.replaceChildren();
+      const m = e.meta || {};
+
+      const h2 = document.createElement('h2');
+      h2.textContent = (m.icon ? m.icon + ' ' : '') + e.name;
+      detail.appendChild(h2);
+
+      const status = document.createElement('div');
+      status.className = 'd-status';
+      const days = daysSince(m.lastUsedAt);
+      const lastTxt = m.lastUsedAt ? `last used ${Math.floor(days)}d ago` : 'never used';
+      status.textContent = [m.ring, m.status, `${m.useCount}× used`, lastTxt].filter(Boolean).join(' · ');
+      detail.appendChild(status);
+
+      if (m.note) {
+        const p = document.createElement('p');
+        p.className = 'd-note';
+        p.textContent = m.note;
+        detail.appendChild(p);
+      }
+      if (e.achievements && e.achievements.length) {
+        const ach = document.createElement('div');
+        ach.className = 'd-tags';
+        e.achievements.forEach((a) => {
+          const s = document.createElement('span');
+          s.textContent = (a.icon ? a.icon + ' ' : '') + a.label;
+          ach.appendChild(s);
+        });
+        detail.appendChild(ach);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'd-actions';
+      const btn = document.createElement('button');
+      btn.textContent = '✓ Used it now';
+      btn.addEventListener('click', () => markUsedNow(e.id));
+      actions.appendChild(btn);
+      const link = document.createElement('a');
+      link.href = 'tool-portfolio.html';
+      link.textContent = 'Open in Tool Portfolio →';
+      actions.appendChild(link);
+      detail.appendChild(actions);
+
+      detail.classList.add('open');
+    }
+
+    function rebuild() {
+      const tools = loadTools();
+      if (!tools.length) {
+        empty.style.display = '';
+        canvas.style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      canvas.style.display = '';
+
+      const entities = MachiAchievements.evaluate(tools.map(toEntity), hubRules);
+      if (!town) {
+        town = new MachiHub.Town(canvas, { scale: 5, maxPerRow: 6 })
+          .setEntities(entities)
+          .render()
+          .enableInteraction({ onClick: showDetail });
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
+      } else {
+        town.setEntities(entities).render();
+      }
+    }
+
+    // Re-render live if another tab/tool updates the portfolio.
+    HubStorage.subscribe(STORAGE_KEY, rebuild);
+
+    rebuild();
+  </script>
+</body>
+</html>
