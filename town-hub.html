@@ -140,8 +140,11 @@
     // ── Events: incident rules over data each lens already reads ────────────
     // Kept host-side (not in machi-engine.js) — incident detection needs
     // project/tool/risk-hub specifics the engine deliberately knows nothing about.
-    function buildingIncident(staleness, activity, useCount) {
-      if (staleness >= 1) return 'fire';                           // fully dead — 60+ days or never used
+    function buildingIncident(staleness, activity, useCount, hasUsageHistory = true) {
+      // "Never tracked" is not evidence of neglect. Portfolio usage fields were
+      // added after many adopted tools already existed, so only a real timestamp
+      // can start the 60-day fire clock. Hub Pages always have logged activity.
+      if (hasUsageHistory && staleness >= 1) return 'fire';        // genuinely untouched for 60+ days
       if (activity >= 0.85 && (useCount || 0) >= 25) return 'crane'; // used today AND well past casual use — rare on purpose
       return null;
     }
@@ -179,7 +182,7 @@
           activity,
           staleness,
           shipped: t.ring === 'adopt',
-          incident: buildingIncident(staleness, activity, t.useCount),
+          incident: buildingIncident(staleness, activity, t.useCount, Boolean(t.lastUsedAt)),
           meta: {
             lens: 'portfolio', toolId: t.id,
             icon: t.icon, ring: t.ring, status: t.status, note: t.note,
