@@ -44,6 +44,7 @@
     canvas { border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
     .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
     .legend span::before { content: "■ "; }
+    #legend-events span::before { content: ""; } /* emoji already is the icon — no color square */
 
     /* popover anchored next to the clicked building/car/person */
     #detail {
@@ -88,11 +89,15 @@
 
   <div class="content">
     <p class="intro">
-      One connected city, five lenses. <strong>Buildings</strong> are tools — the Hub Pages district holds
+      One connected city, six lenses. <strong>Buildings</strong> are tools — the Hub Pages district holds
       Thinking Hub's own tools (lit by real opens), the Portfolio district holds your
       <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>. <strong>Cars</strong> are your
       active projects (busier = faster). <strong>Pedestrians</strong> are your people. The <strong>blimp</strong>
-      carries your badge count — the more you earn, the more the city celebrates with fireworks. Click anything.
+      carries your badge count — the more you earn, the more the city celebrates with fireworks. Trouble shows up
+      as real incidents: a dead tool catches <strong>fire</strong>, a blocked project <strong>crashes</strong>, an
+      overdue one sits with <strong>hazards on</strong>, heavy active work gets a <strong>crane</strong>, and a
+      risk you're actively mitigating sends a <strong>response vehicle</strong>. Enough trouble at once and the
+      sky turns to storm. Click anything.
     </p>
 
     <div class="lens-bar" id="lens-bar"></div>
@@ -104,6 +109,13 @@
         <span style="color:#5b8cff">trial</span>
         <span style="color:#ff9f5b">assess</span>
         <span style="color:#8a8f9c">hold</span>
+      </div>
+      <div class="legend" id="legend-events">
+        <span>🔥 dead tool</span>
+        <span>🏗️ heavy dev</span>
+        <span>⚠️ overdue project</span>
+        <span>💥 blocked project</span>
+        <span>🚑 risk response</span>
       </div>
       <div class="empty-state" id="empty" style="display:none">
         Nothing to show — every lens is off or empty.<br>
@@ -123,6 +135,30 @@
     }
     function activityFrom(days) { return days === null ? 0 : 1 / (1 + days / 10); }
     function stalenessFrom(days) { return days === null ? 1 : Math.min(1, days / 60); }
+    function isOverdue(d) { return d ? new Date(d) < new Date() : false; }
+
+    // ── Events: incident rules over data each lens already reads ────────────
+    // Kept host-side (not in machi-engine.js) — incident detection needs
+    // project/tool/risk-hub specifics the engine deliberately knows nothing about.
+    function buildingIncident(staleness, activity, useCount) {
+      if (staleness >= 1) return 'fire';                           // fully dead — 60+ days or never used
+      if (activity >= 0.85 && (useCount || 0) >= 25) return 'crane'; // used today AND well past casual use — rare on purpose
+      return null;
+    }
+    function projectIncident(p) {
+      const tasks = p.tasks || [];
+      if (tasks.some((t) => t.status === 'blocked')) return 'crash';
+      const overdueTask = tasks.some((t) => !t.done && isOverdue(t.due));
+      const overdueMilestone = (p.milestones || []).some((m) => isOverdue(m.date));
+      return (overdueTask || overdueMilestone) ? 'stalled' : null;
+    }
+    const INCIDENT_LABELS = {
+      fire: '🔥 Gone cold — untouched 60+ days',
+      crane: '🏗️ Heavy active development',
+      crash: '💥 Blocked',
+      stalled: '⚠️ Overdue',
+    };
+    const INCIDENT_COLORS = { fire: '#ff5b5b', crash: '#ff5b5b', stalled: '#ffb84d', crane: '#5bd67a' };
 
     // ── Lens 1: Tool Portfolio district (buildings) ─────────────────────────
     const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
@@ -131,6 +167,8 @@
       const tools = HubStorage.get('tool-portfolio-v1') || [];
       return tools.map((t) => {
         const days = daysSince(t.lastUsedAt);
+        const activity = activityFrom(days);
+        const staleness = stalenessFrom(days);
         return {
           id: 'tp-' + t.id,
           name: t.name,
@@ -138,9 +176,10 @@
           district: 'Portfolio',
           category: RING_TO_CATEGORY[t.ring] || 'default',
           tier: 1 + Math.min(3, Math.max(0, t.mastery ?? 0)),
-          activity: activityFrom(days),
-          staleness: stalenessFrom(days),
+          activity,
+          staleness,
           shipped: t.ring === 'adopt',
+          incident: buildingIncident(staleness, activity, t.useCount),
           meta: {
             lens: 'portfolio', toolId: t.id,
             icon: t.icon, ring: t.ring, status: t.status, note: t.note,
@@ -197,6 +236,8 @@
           [appId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), '🛠', 'Tools & Focus'];
         const u = usage[appId];
         const days = daysSince(u.last);
+        const activity = activityFrom(days);
+        const staleness = stalenessFrom(days);
         const tier = u.count >= 50 ? 4 : u.count >= 20 ? 3 : u.count >= 5 ? 2 : 1;
         return {
           id: 'hub-' + appId,
@@ -205,8 +246,9 @@
           district: 'Hub Pages',
           color: GROUP_COLORS[group] || '#8a8f9c',
           tier,
-          activity: activityFrom(days),
-          staleness: stalenessFrom(days),
+          activity,
+          staleness,
+          incident: buildingIncident(staleness, activity, u.count),
           meta: { lens: 'hub-page', appId, icon, group, useCount: u.count, lastUsedAt: u.last },
         };
       });
@@ -224,6 +266,7 @@
           kind: 'vehicle',
           color: p.color || '#5b8cff',
           activity: Math.min(1, open / 8), // busier project → faster car
+          incident: projectIncident(p),
           meta: {
             lens: 'project', desc: p.desc, status: p.status,
             openTasks: open, doneTasks: tasks.length - open,
@@ -274,6 +317,35 @@
       return ((data.seenAchievements || []).length) / 32;
     }
 
+    // ── Lens 6: Risk response vehicles ───────────────────────────────────────
+    // One responder per risk actively being mitigated (has an owner, status =
+    // mitigating). Not tied to a specific building/car — reads as "help is
+    // out on patrol," which is honest to what the data actually says.
+    function responderEntities() {
+      const data = HubStorage.get('risk-hub-v1') || {};
+      return (data.risks || [])
+        .filter((r) => r.status === 'mitigating' && r.owner)
+        .map((r) => ({
+          id: 'responder-' + r.id,
+          name: r.title || 'Risk response',
+          kind: 'responder',
+          activity: 0.6,
+          meta: {
+            lens: 'responder', title: r.title, owner: r.owner, mitigation: r.mitigation,
+            probability: r.probability, impact: r.impact,
+          },
+        }));
+    }
+
+    // Weather = how much of the visible city is in trouble right now.
+    // Cranes don't count — heavy development is a good sign, not a storm.
+    function weatherLevel(entities) {
+      const relevant = entities.filter((e) => e.kind === 'building' || e.kind === 'vehicle');
+      if (!relevant.length) return 0;
+      const bad = relevant.filter((e) => e.incident === 'fire' || e.incident === 'crash' || e.incident === 'stalled').length;
+      return Math.min(1, (bad / relevant.length) * 2.5);
+    }
+
     // ── Achievement rules (buildings) ───────────────────────────────────────
     const hubRules = MachiAchievements.DEFAULT_RULES.concat([
       { id: 'power-user', label: 'Power user — top mastery', icon: '🥋', test: (e) => e.meta.mastery === 3 },
@@ -287,6 +359,7 @@
       { id: 'portfolio', label: '🧰 Tool Portfolio', build: portfolioEntities },
       { id: 'projects', label: '🚗 Projects', build: projectEntities },
       { id: 'people', label: '🚶 People', build: peopleEntities },
+      { id: 'responders', label: '🚑 Risk Response', build: responderEntities },
       { id: 'sky', label: '🎈 Achievements', build: skyEntities },
     ];
     const lensOn = Object.fromEntries(LENSES.map((l) => [l.id, true]));
@@ -319,6 +392,15 @@
       const el = document.createElement(cls === 'd-note' ? 'p' : 'div');
       el.className = cls;
       el.textContent = text;
+      parent.appendChild(el);
+    }
+
+    function incidentLine(parent, incident) {
+      if (!incident) return;
+      const el = document.createElement('div');
+      el.className = 'd-status';
+      el.style.color = INCIDENT_COLORS[incident] || '';
+      el.textContent = INCIDENT_LABELS[incident] || incident;
       parent.appendChild(el);
     }
 
@@ -387,7 +469,13 @@
         line(detail, 'd-note', m.unlocked
           ? 'The city celebrates what you finish — more badges, more fireworks.'
           : 'No badges seen yet — visit your Profile to start earning; the fireworks are waiting.');
+      } else if (m.lens === 'responder') {
+        line(detail, 'd-status', ['🚑 responding', m.owner ? `owner: ${m.owner}` : null,
+          (m.probability && m.impact) ? `risk score ${m.probability * m.impact}` : null].filter(Boolean).join(' · '));
+        line(detail, 'd-note', m.mitigation || 'Actively being mitigated — no mitigation notes yet.');
       }
+
+      if (e.kind === 'building' || e.kind === 'vehicle') incidentLine(detail, e.incident);
 
       if (e.achievements && e.achievements.length && (m.lens === 'portfolio' || m.lens === 'hub-page')) {
         const ach = document.createElement('div');
@@ -415,6 +503,7 @@
         'project': ['project-hub.html', 'Open in Project Hub →'],
         'person': ['people-hub.html', 'Open in People Hub →'],
         'sky': ['achievements-hub.html', 'Open Profile →'],
+        'responder': ['risk-hub.html', 'Open in Risk Register →'],
       };
       const [href, label] = links[m.lens] || [];
       if (href) {
@@ -454,10 +543,13 @@
       if (!hasAnything) return;
       closeDetail();
 
+      const weather = weatherLevel(entities);
+
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
           .setEntities(entities)
           .setCelebration(celebrationLevel())
+          .setWeather(weather)
           .render()
           .enableInteraction({ onClick: showDetail });
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
@@ -471,6 +563,7 @@
         town.setMaxPerRow(colsForContainer())
           .setEntities(entities)
           .setCelebration(celebrationLevel())
+          .setWeather(weather)
           .render();
       }
     }
@@ -484,7 +577,7 @@
     });
 
     // Live re-render when other tabs/tools change the underlying data.
-    for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1']) {
+    for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1']) {
       HubStorage.subscribe(key, rebuild);
     }
 

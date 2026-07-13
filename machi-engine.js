@@ -54,7 +54,7 @@ const MachiHub = (() => {
    * @typedef {Object} MachiEntity
    * @property {string} id
    * @property {string} name
-   * @property {string} [kind]         'building' (default) | 'vehicle' | 'walker' | 'sky'.
+   * @property {string} [kind]         'building' (default) | 'vehicle' | 'responder' | 'walker' | 'sky'.
    * @property {string} [district]     Buildings only: groups rows into labeled districts.
    * @property {string} [category]     Free-form; unrecognized values fall back to a neutral color.
    * @property {string} [color]        Optional hex override; wins over the category color.
@@ -63,8 +63,12 @@ const MachiHub = (() => {
    * @property {number} [staleness]    0-1. Buildings: desaturation + overgrowth. Default 0.
    * @property {boolean} [shipped]     Buildings: flag on the roof. Default false.
    * @property {Array<{id:string,label:string,icon:string}>} [achievements] Badge pixels (buildings).
+   * @property {string|null} [incident] Building: 'fire' | 'crane'. Vehicle/responder: 'crash' | 'stalled'.
+   *   Null (default) = no incident. Host decides what qualifies; the engine only renders it.
    * @property {Object} [meta]         Host-specific passthrough. Untouched here.
    */
+
+  const VALID_INCIDENTS = new Set(['fire', 'crane', 'crash', 'stalled']);
 
   /** Fills defaults and clamps ranges. Throws if id/name are missing — those are the only required fields. */
   function createEntity(partial) {
@@ -83,6 +87,7 @@ const MachiHub = (() => {
       staleness: clamp01(partial.staleness),
       shipped: !!partial.shipped,
       achievements: partial.achievements || [],
+      incident: VALID_INCIDENTS.has(partial.incident) ? partial.incident : null,
       meta: partial.meta || {},
     };
   }
@@ -134,6 +139,9 @@ const MachiHub = (() => {
       this._nextFireworkIn = 4;
       this._smoke = [];
       this._hoveredId = null;
+      this._weather = 0;    // 0..1 storm intensity, host-driven via setWeather()
+      this._clouds = [];
+      this._rain = [];
     }
 
     setEntities(entities) {
@@ -150,7 +158,7 @@ const MachiHub = (() => {
       return this;
     }
 
-    /** Show/hide a whole kind ('vehicle', 'walker', 'sky', 'building'). Hidden kinds skip draw + hits. */
+    /** Show/hide a whole kind ('building', 'vehicle', 'responder', 'walker', 'sky'). Hidden kinds skip draw + hits. */
     setKindVisible(kind, visible) {
       if (visible) this._hiddenKinds.delete(kind);
       else this._hiddenKinds.add(kind);
@@ -161,6 +169,12 @@ const MachiHub = (() => {
     /** 0..1 — how often celebratory fireworks burst over the town (0 = never). */
     setCelebration(level) {
       this._celebration = clamp01(level);
+      return this;
+    }
+
+    /** 0..1 — overall system-health weather. 0 = clear starry sky. Higher = clouds + rain, driven by incident density. */
+    setWeather(level) {
+      this._weather = clamp01(level);
       return this;
     }
 
@@ -225,10 +239,19 @@ const MachiHub = (() => {
         period: 1.5 + srand() * 3,
       }));
 
-      // seed movement state for actors (vehicles/walkers/sky), spread across rows
+      // cloud field for weather — a handful of drifting blobs, only visible when weather > 0
+      const crand = seedFrom('machi-clouds-' + this.entities.map((e) => e.id).join(','));
+      this._clouds = Array.from({ length: 5 }, () => ({
+        x: crand() * width,
+        y: 2 + crand() * (TOP_SKY - 10),
+        w: 10 + Math.floor(crand() * 8),
+        speed: 1.5 + crand() * 2,
+      }));
+
+      // seed movement state for actors (vehicles/responders/walkers/sky), spread across rows
       let vi = 0, wi = 0, si = 0;
       for (const e of this.entities) {
-        if (e.kind === 'vehicle') {
+        if (e.kind === 'vehicle' || e.kind === 'responder') {
           const rand = seedFrom(e.id);
           const r = vi % rows;
           const lane = vi % 2; // 0: →, 1: ←
@@ -308,7 +331,7 @@ const MachiHub = (() => {
 
     #tick(dt) {
       this._time += dt;
-      const { width, hasAvenue, avenueAfter } = this.grid;
+      const { width, height, hasAvenue, avenueAfter } = this.grid;
       const ax = hasAvenue ? MARGIN_X + avenueAfter * CELL_W : -999;
       const green = this.#lightIsGreen();
 
@@ -346,16 +369,20 @@ const MachiHub = (() => {
       for (const e of this.entities) {
         const a = this._actors.get(e.id);
         if (!a) continue;
-        if (e.kind === 'vehicle') {
-          let nx = a.x + a.dir * a.speed * dt;
-          // red light: stop at the avenue stop line instead of entering the crossing
-          if (hasAvenue && !green) {
-            if (a.dir === 1 && a.x + 5 <= ax && nx + 5 > ax - 1) nx = ax - 6;
-            if (a.dir === -1 && a.x >= ax + AVENUE_W && nx < ax + AVENUE_W + 1) nx = ax + AVENUE_W + 1;
+        if (e.kind === 'vehicle' || e.kind === 'responder') {
+          if (e.incident === 'crash' || e.incident === 'stalled') {
+            // parked where it broke down — no movement while the incident stands
+          } else {
+            let nx = a.x + a.dir * a.speed * dt;
+            // red light: stop at the avenue stop line instead of entering the crossing
+            if (hasAvenue && !green) {
+              if (a.dir === 1 && a.x + 5 <= ax && nx + 5 > ax - 1) nx = ax - 6;
+              if (a.dir === -1 && a.x >= ax + AVENUE_W && nx < ax + AVENUE_W + 1) nx = ax + AVENUE_W + 1;
+            }
+            a.x = nx;
+            if (a.x > width + 6) a.x = -6;
+            if (a.x < -6) a.x = width + 6;
           }
-          a.x = nx;
-          if (a.x > width + 6) a.x = -6;
-          if (a.x < -6) a.x = width + 6;
         } else if (e.kind === 'walker') {
           if (a.pausedFor > 0) {
             a.pausedFor -= dt;
@@ -377,16 +404,43 @@ const MachiHub = (() => {
         }
       }
 
-      // chimney smoke from busy buildings
+      // chimney smoke from busy buildings; heavier, darker smoke from fires
       if (!this._hiddenKinds.has('building')) {
         for (const b of this.hitboxes) {
-          if (b.entity.activity > 0.6 && Math.random() < dt * 0.5 && this._smoke.length < 80) {
+          if (b.entity.incident === 'fire' && Math.random() < dt * 2.2 && this._smoke.length < 140) {
+            this._smoke.push({ x: b.x + Math.random() * b.w, y: b.y - 1, age: 0, life: 1.2 + Math.random(), heavy: true });
+          } else if (!b.entity.incident && b.entity.activity > 0.6 && Math.random() < dt * 0.5 && this._smoke.length < 140) {
             this._smoke.push({ x: b.x + 2 + Math.random() * 2, y: b.y - 1, age: 0, life: 1.8 + Math.random() });
           }
         }
       }
-      for (const s of this._smoke) { s.age += dt; s.y -= 2.5 * dt; s.x += Math.sin(this._time * 2 + s.y) * dt; }
+      // smoke from crashed vehicles
+      for (const e of this.entities) {
+        if (e.incident !== 'crash' || this._hiddenKinds.has(e.kind)) continue;
+        const a = this._actors.get(e.id);
+        if (a && Math.random() < dt * 3 && this._smoke.length < 140) {
+          const baseline = TOP_SKY + a.row * ROW_H + BUILD_ZONE;
+          this._smoke.push({ x: a.x + Math.random() * 5, y: baseline - 1, age: 0, life: 0.9 + Math.random() * 0.6, heavy: true });
+        }
+      }
+      for (const s of this._smoke) { s.age += dt; s.y -= (s.heavy ? 3.5 : 2.5) * dt; s.x += Math.sin(this._time * 2 + s.y) * dt; }
       this._smoke = this._smoke.filter((s) => s.age < s.life);
+
+      // rain: particle count tracks weather level, always falling when present
+      const targetRain = Math.floor(this._weather * 50);
+      while (this._rain.length < targetRain) {
+        this._rain.push({ x: Math.random() * width, y: Math.random() * height, speed: 30 + Math.random() * 20 });
+      }
+      if (this._rain.length > targetRain) this._rain.length = targetRain;
+      for (const d of this._rain) {
+        d.y += d.speed * dt;
+        if (d.y > height) { d.y = -2; d.x = Math.random() * width; }
+      }
+      // clouds drift regardless of weather so they're already in position when it picks up
+      for (const c of this._clouds) {
+        c.x -= c.speed * dt;
+        if (c.x < -c.w) c.x = width + c.w;
+      }
 
       // fireworks: frequency scales with celebration level
       if (this._celebration > 0) {
@@ -419,11 +473,30 @@ const MachiHub = (() => {
       ctx.fillStyle = '#1c2130';
       ctx.fillRect(0, 0, width, height);
 
-      // stars — slow sine twinkle
+      // stars — slow sine twinkle, dimmed as weather rolls in
+      const starDim = 1 - this._weather * 0.7;
       for (const s of this._stars) {
-        const tw = 0.35 + 0.65 * Math.abs(Math.sin(this._time / s.period + s.phase));
+        const tw = (0.35 + 0.65 * Math.abs(Math.sin(this._time / s.period + s.phase))) * starDim;
         ctx.fillStyle = `rgba(220,228,255,${tw.toFixed(2)})`;
         ctx.fillRect(s.x, s.y, 1, 1);
+      }
+
+      // clouds — visible once weather picks up
+      if (this._weather > 0.05) {
+        const cloudAlpha = (0.25 + this._weather * 0.45).toFixed(2);
+        ctx.fillStyle = `rgba(60,64,76,${cloudAlpha})`;
+        for (const c of this._clouds) {
+          ctx.fillRect(Math.round(c.x), Math.round(c.y), c.w, 3);
+          ctx.fillRect(Math.round(c.x) + 2, Math.round(c.y) - 1, c.w - 4, 1);
+        }
+      }
+
+      // rain — short falling streaks, density tracks weather
+      if (this._rain.length) {
+        ctx.fillStyle = 'rgba(180,200,230,0.45)';
+        for (const d of this._rain) {
+          ctx.fillRect(Math.round(d.x), Math.round(d.y), 1, 2);
+        }
       }
 
       // fireworks — expanding pixel ring with fade
@@ -521,11 +594,16 @@ const MachiHub = (() => {
         }
       }
 
-      // chimney smoke (behind buildings' roofs visually is fine — drawn before buildings adds depth)
+      // smoke — chimney puffs are pale + tiny; fire/crash smoke is dark + thicker
       for (const s of this._smoke) {
-        const alpha = (0.35 * (1 - s.age / s.life)).toFixed(2);
-        ctx.fillStyle = `rgba(200,204,216,${alpha})`;
-        ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+        const fade = 1 - s.age / s.life;
+        if (s.heavy) {
+          ctx.fillStyle = `rgba(60,58,56,${(0.55 * fade).toFixed(2)})`;
+          ctx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+        } else {
+          ctx.fillStyle = `rgba(200,204,216,${(0.35 * fade).toFixed(2)})`;
+          ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+        }
       }
 
       // buildings
@@ -555,16 +633,19 @@ const MachiHub = (() => {
         }
       }
 
-      // vehicles on roads
-      if (show('vehicle')) {
+      // vehicles + responders on roads (separately toggleable kinds)
+      {
         for (const e of this.entities) {
-          if (e.kind !== 'vehicle') continue;
+          if (e.kind !== 'vehicle' && e.kind !== 'responder') continue;
+          if (!show(e.kind)) continue;
           const a = this._actors.get(e.id);
           if (!a) continue;
           const baseline = TOP_SKY + a.row * ROW_H + BUILD_ZONE;
           const laneY = baseline + SIDEWALK_H + (a.lane === 0 ? 1 : ROAD_H - 4);
           const vx = Math.round(a.x);
-          const col = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
+          const isResponder = e.kind === 'responder';
+          const col = isResponder ? '#e8ecf5' : (e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default);
+
           ctx.fillStyle = col;
           ctx.fillRect(vx, laneY + 1, 5, 2);                    // body
           ctx.fillRect(vx + 1, laneY, 3, 1);                    // cabin
@@ -573,7 +654,27 @@ const MachiHub = (() => {
           ctx.fillRect(vx + 3, laneY + 3, 1, 1);
           ctx.fillStyle = '#ffe07a';
           ctx.fillRect(vx + (a.dir === 1 ? 4 : 0), laneY + 1, 1, 1); // headlight
-          this._actorBoxes.push({ entity: e, x: vx - 1, y: laneY - 1, w: 7, h: 6 });
+
+          if (isResponder) {
+            // flashing red/blue light bar — always alert, that's the point of a responder
+            ctx.fillStyle = Math.floor(this._time * 4) % 2 === 0 ? '#ff5b5b' : '#5b8cff';
+            ctx.fillRect(vx + 2, laneY - 1, 1, 1);
+          } else if (e.incident === 'stalled') {
+            // hazard blinkers at both ends
+            if (Math.floor(this._time * 3) % 2 === 0) {
+              ctx.fillStyle = '#ffb84d';
+              ctx.fillRect(vx, laneY + 1, 1, 1);
+              ctx.fillRect(vx + 4, laneY + 1, 1, 1);
+            }
+          } else if (e.incident === 'crash') {
+            // tilted wreck + warning triangle
+            ctx.fillStyle = '#ffb84d';
+            ctx.fillRect(vx + 2, laneY - 2, 1, 1); // warning marker above
+            ctx.fillStyle = '#3a1f1f';
+            ctx.fillRect(vx + 1, laneY + 1, 3, 1); // scorch mark
+          }
+
+          this._actorBoxes.push({ entity: e, x: vx - 1, y: laneY - 2, w: 7, h: 7 });
         }
       }
 
@@ -638,6 +739,24 @@ const MachiHub = (() => {
       badges.forEach((_, i) => {
         ctx.fillRect(x + 1 + i * 3, y - 3, 2, 2);
       });
+
+      if (e.incident === 'fire') {
+        // flickering flame pixels along the top of the building, replacing badges/flag visually
+        const rand = seedFrom(e.id + '-fire-' + Math.floor(this._time * 6));
+        const flameCols = ['#ffb84d', '#ff5b3d', '#ffe07a'];
+        for (let i = 0; i < Math.max(2, Math.floor(w / 3)); i++) {
+          if (rand() < 0.7) {
+            ctx.fillStyle = flameCols[Math.floor(rand() * flameCols.length)];
+            ctx.fillRect(x + 1 + i * 3, y - 1 - Math.floor(rand() * 2), 2, 2);
+          }
+        }
+      } else if (e.incident === 'crane') {
+        // simple construction crane on the roof: mast + swaying arm
+        const sway = Math.sin(this._time * 0.8) * 2;
+        ctx.fillStyle = '#d9d9d9';
+        ctx.fillRect(x + w - 2, y - 9, 1, 9);                          // mast
+        ctx.fillRect(x + w - 2, y - 9, Math.max(1, Math.round(4 + sway)), 1); // arm
+      }
     }
 
     #drawLabels() {
