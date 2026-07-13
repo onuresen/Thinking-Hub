@@ -3829,10 +3829,13 @@
       'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
       'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
       'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-      'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1',
+      'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1',
       'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
       'argument-hub-v1', 'hub-tags-v1',
     ];
+    // scrum-hub-v1 removed 2026-07-13 — the tool was deleted (P50) and this loop writes
+    // every key unconditionally (JSON.parse(null) === null), so a dead key here means a
+    // literal "scrum-hub-v1": null entry in every synced backup file forever.
 
     async function pickMcpFolder() {
       try {
@@ -4064,7 +4067,6 @@
       'matrix-hub-v1': 'priority_matrix',
       'stakeholder-hub-v1': 'stakeholders',
       'retro-hub-v1': 'retrospectives',
-      'scrum-hub-v1': 'scrum_board',
       'focus-hub-v1': 'focus_sessions',
       'log-hub-v1': 'daily_log',
       'canvas-v1': 'canvas',
@@ -4117,7 +4119,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'scrum-hub-v1', 'canvas-v1',
+        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
         'tool-portfolio-v1', 'argument-hub-v1', 'hub-tags-v1',
       ],

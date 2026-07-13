@@ -33,7 +33,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
-| `focus-hub.html` | Pomodoro focus timer, task session log |
+| `focus-hub.html` | Pomodoro focus timer, task session log. ⚠ Real-usage review (2026-07-13): near-zero actual use (Pomodoro-style timing doesn't seem to be Onur's working style) — but *not* retired, unlike Matrix/Assumptions/Review/Log. It's woven into 6 other files (Project Hub's `⏱ Xm` task badges, index.html's Today dashboard, achievements-hub XP, Journal/Review Hub reads, hub-search, hub-links routing), so removal risk outweighs the benefit of cutting an unused feature. Kept as-is; flagged as a candidate to *repurpose* later (same session-log data model, different framing) rather than delete. |
 | `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
 | `reflection-hub.html` | Reflection Board — Signal / Friction / Question / Action board; replaces KMQT + Retro; cross-column SVG links, snapshots, reactions, drag-drop, inline editing |
