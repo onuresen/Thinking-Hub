@@ -18,7 +18,7 @@ const MachiHub = (() => {
   }
 
   // Deterministic pseudo-random from a string seed, so a given entity's static features
-  // (star field, initial window pattern) are stable across reloads instead of reshuffling.
+  // (star field, initial window pattern, spawn positions) are stable across reloads.
   function seedFrom(str) {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) {
@@ -54,13 +54,16 @@ const MachiHub = (() => {
    * @typedef {Object} MachiEntity
    * @property {string} id
    * @property {string} name
+   * @property {string} [kind]         'building' (default) | 'vehicle' | 'walker' | 'sky'.
+   * @property {string} [district]     Buildings only: groups rows into labeled districts.
    * @property {string} [category]     Free-form; unrecognized values fall back to a neutral color.
-   * @property {number} [tier]         1-5, maps to building footprint/height. Default 2.
-   * @property {number} [activity]     0-1, recency/intensity of work. Drives lit windows. Default 0.
-   * @property {number} [staleness]    0-1, how neglected. Drives desaturation + overgrowth. Default 0.
-   * @property {boolean} [shipped]     Draws a flag on the roof. Default false.
-   * @property {Array<{id:string,label:string,icon:string}>} [achievements] Gold badge pixels above the roof.
-   * @property {Object} [meta]         Host-specific passthrough (e.g. a vault note path). Untouched here.
+   * @property {string} [color]        Optional hex override; wins over the category color.
+   * @property {number} [tier]         1-5. Buildings: footprint/height. Other kinds: ignored.
+   * @property {number} [activity]     0-1. Buildings: lit windows. Vehicles: speed. Default 0.
+   * @property {number} [staleness]    0-1. Buildings: desaturation + overgrowth. Default 0.
+   * @property {boolean} [shipped]     Buildings: flag on the roof. Default false.
+   * @property {Array<{id:string,label:string,icon:string}>} [achievements] Badge pixels (buildings).
+   * @property {Object} [meta]         Host-specific passthrough. Untouched here.
    */
 
   /** Fills defaults and clamps ranges. Throws if id/name are missing — those are the only required fields. */
@@ -71,7 +74,10 @@ const MachiHub = (() => {
     return {
       id: String(partial.id),
       name: String(partial.name),
+      kind: partial.kind || 'building',
+      district: partial.district || '',
       category: partial.category || 'default',
+      color: partial.color || null,
       tier: Math.max(1, Math.min(5, partial.tier ?? 2)),
       activity: clamp01(partial.activity),
       staleness: clamp01(partial.staleness),
@@ -87,12 +93,13 @@ const MachiHub = (() => {
   const SIDEWALK_H = 2;
   const ROAD_H = 9;
   const ROW_H = BUILD_ZONE + SIDEWALK_H + ROAD_H;
-  const TOP_SKY = 24;       // plane + star territory
+  const TOP_SKY = 24;       // plane + blimp + star territory
   const AVENUE_W = 12;      // vertical road through the middle of the town
   const MARGIN_X = 8;
 
   const FLICKER_MS = 450;   // how often window lights get resampled
   const PLANE_SPEED = 7;    // buffer px per second — slow drift
+  const BLIMP_SPEED = 2.5;
 
   class Town {
     constructor(canvas, opts = {}) {
@@ -100,7 +107,9 @@ const MachiHub = (() => {
       this.scale = opts.scale || 4;
       this.maxPerRow = opts.maxPerRow || 6;
       this.entities = [];
-      this.hitboxes = []; // buffer-space rects, filled on layout; used by entityAt()
+      this.hitboxes = [];      // buildings: buffer-space rects, filled on layout
+      this._actorBoxes = [];   // moving actors: rebuilt every drawn frame
+      this._hiddenKinds = new Set();
       this.buffer = document.createElement('canvas');
       this.bctx = this.buffer.getContext('2d');
       this.ctx = canvas.getContext('2d');
@@ -114,37 +123,78 @@ const MachiHub = (() => {
       this._nextPlaneIn = 2 + Math.random() * 5; // first plane arrives quickly
       this._stars = [];
       this._time = 0;
+      this._actors = new Map();   // entity id → movement state for vehicle/walker/sky
+      this._celebration = 0;      // 0..1 → fireworks frequency
+      this._fireworks = [];
+      this._nextFireworkIn = 4;
     }
 
     setEntities(entities) {
       this.entities = entities.map(createEntity);
       this._windows.clear();
+      this._actors.clear();
       return this;
     }
 
-    /** Computes grid positions, sizes the canvases, seeds stars. Call via render(). */
+    /** Show/hide a whole kind ('vehicle', 'walker', 'sky', 'building'). Hidden kinds skip draw + hits. */
+    setKindVisible(kind, visible) {
+      if (visible) this._hiddenKinds.delete(kind);
+      else this._hiddenKinds.add(kind);
+      if (!this._raf) this.#drawFrame(); // reflect immediately when static
+      return this;
+    }
+
+    /** 0..1 — how often celebratory fireworks burst over the town (0 = never). */
+    setCelebration(level) {
+      this._celebration = clamp01(level);
+      return this;
+    }
+
+    get buildings() { return this.entities.filter((e) => e.kind === 'building'); }
+
+    /** Computes district-grouped grid positions, sizes the canvases, seeds stars + actor spawns. */
     #layout() {
-      const n = this.entities.length;
-      const cols = Math.max(1, Math.min(this.maxPerRow, n));
-      const rows = Math.ceil(n / cols);
-      // vertical avenue only when a row is wide enough to feel like a city block
+      const buildings = this.buildings;
+      const cols = Math.max(1, Math.min(this.maxPerRow, Math.max(1, buildings.length)));
+
+      // group buildings by district, preserving first-seen district order
+      const districts = [];
+      const byDistrict = new Map();
+      for (const b of buildings) {
+        if (!byDistrict.has(b.district)) {
+          byDistrict.set(b.district, []);
+          districts.push(b.district);
+        }
+        byDistrict.get(b.district).push(b);
+      }
+      if (districts.length === 0) districts.push('');
+
       const avenueAfter = cols >= 4 ? Math.ceil(cols / 2) : Infinity;
       const hasAvenue = avenueAfter !== Infinity;
-
       const width = MARGIN_X * 2 + cols * CELL_W + (hasAvenue ? AVENUE_W : 0);
+
+      // assign rows sequentially, district by district
+      this.hitboxes = [];
+      this._districtLabels = [];
+      let row = 0;
+      for (const d of districts) {
+        const list = byDistrict.get(d) || [];
+        if (d) this._districtLabels.push({ name: d, row });
+        list.forEach((e, i) => {
+          const c = i % cols;
+          const r = row + Math.floor(i / cols);
+          const x = MARGIN_X + c * CELL_W + (c >= avenueAfter ? AVENUE_W : 0) + 3;
+          const w = 8 + e.tier * 2;
+          const h = 8 + e.tier * 5;
+          const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
+          this.hitboxes.push({ entity: e, x, y: baseline - h, w, h, baseline, row: r });
+        });
+        row += Math.max(1, Math.ceil(list.length / cols));
+      }
+      const rows = Math.max(1, row);
       const height = TOP_SKY + rows * ROW_H;
 
       this.grid = { cols, rows, avenueAfter, hasAvenue, width, height };
-
-      this.hitboxes = this.entities.map((e, i) => {
-        const c = i % cols;
-        const r = Math.floor(i / cols);
-        const x = MARGIN_X + c * CELL_W + (c >= avenueAfter ? AVENUE_W : 0) + 3;
-        const w = 8 + e.tier * 2;
-        const h = 8 + e.tier * 5;
-        const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
-        return { entity: e, x, y: baseline - h, w, h, baseline, row: r };
-      });
 
       this.buffer.width = width;
       this.buffer.height = height;
@@ -160,6 +210,42 @@ const MachiHub = (() => {
         phase: srand() * Math.PI * 2,
         period: 1.5 + srand() * 3,
       }));
+
+      // seed movement state for actors (vehicles/walkers/sky), spread across rows
+      let vi = 0, wi = 0, si = 0;
+      for (const e of this.entities) {
+        if (e.kind === 'vehicle') {
+          const rand = seedFrom(e.id);
+          const r = vi % rows;
+          const lane = vi % 2; // 0: →, 1: ←
+          this._actors.set(e.id, {
+            row: r, lane,
+            x: rand() * width,
+            speed: 4 + e.activity * 10,
+            dir: lane === 0 ? 1 : -1,
+          });
+          vi++;
+        } else if (e.kind === 'walker') {
+          const rand = seedFrom(e.id);
+          this._actors.set(e.id, {
+            row: wi % rows,
+            x: MARGIN_X + rand() * (width - MARGIN_X * 2),
+            speed: 1.2 + rand() * 1.6,
+            dir: rand() < 0.5 ? 1 : -1,
+            pauseIn: 2 + rand() * 6,
+            pausedFor: 0,
+          });
+          wi++;
+        } else if (e.kind === 'sky') {
+          const rand = seedFrom(e.id);
+          this._actors.set(e.id, {
+            x: rand() * width,
+            y: 4 + (si % 2) * 7 + rand() * 3,
+            dir: rand() < 0.5 ? 1 : -1,
+          });
+          si++;
+        }
+      }
     }
 
     /** Lazily creates + returns the persistent lit/dark state for a building's windows. */
@@ -180,7 +266,7 @@ const MachiHub = (() => {
       return this;
     }
 
-    /** Starts the ambient animation loop (window flicker, lamps, stars, planes). */
+    /** Starts the ambient animation loop (window flicker, lamps, stars, planes, actors, fireworks). */
     start() {
       if (this._raf) return this;
       const step = (ts) => {
@@ -203,13 +289,14 @@ const MachiHub = (() => {
 
     #tick(dt) {
       this._time += dt;
+      const { width, rows } = this.grid;
 
       // window flicker: resample a couple of windows per building at a slow tick,
       // biased by activity so busy buildings feel lively and stale ones stay dark
       this._flickerAcc += dt * 1000;
       if (this._flickerAcc >= FLICKER_MS) {
         this._flickerAcc = 0;
-        for (const e of this.entities) {
+        for (const e of this.buildings) {
           const st = this._windows.get(e.id);
           if (!st) continue;
           const toggles = 1 + (e.activity > 0.5 ? 1 : 0);
@@ -225,14 +312,61 @@ const MachiHub = (() => {
       if (this._nextPlaneIn <= 0) {
         const dir = Math.random() < 0.5 ? 1 : -1;
         this._planes.push({
-          x: dir === 1 ? -6 : this.grid.width + 6,
+          x: dir === 1 ? -6 : width + 6,
           y: 3 + Math.random() * (TOP_SKY - 12),
           dir,
         });
         this._nextPlaneIn = 12 + Math.random() * 20;
       }
       for (const p of this._planes) p.x += p.dir * PLANE_SPEED * dt;
-      this._planes = this._planes.filter((p) => p.x > -10 && p.x < this.grid.width + 10);
+      this._planes = this._planes.filter((p) => p.x > -10 && p.x < width + 10);
+
+      // moving actors
+      for (const e of this.entities) {
+        const a = this._actors.get(e.id);
+        if (!a) continue;
+        if (e.kind === 'vehicle') {
+          a.x += a.dir * a.speed * dt;
+          if (a.x > width + 6) a.x = -6;
+          if (a.x < -6) a.x = width + 6;
+        } else if (e.kind === 'walker') {
+          if (a.pausedFor > 0) {
+            a.pausedFor -= dt;
+          } else {
+            a.x += a.dir * a.speed * dt;
+            a.pauseIn -= dt;
+            if (a.pauseIn <= 0) {
+              a.pausedFor = 1 + Math.random() * 3;
+              a.pauseIn = 3 + Math.random() * 8;
+              if (Math.random() < 0.4) a.dir *= -1;
+            }
+            if (a.x < MARGIN_X) { a.x = MARGIN_X; a.dir = 1; }
+            if (a.x > width - MARGIN_X) { a.x = width - MARGIN_X; a.dir = -1; }
+          }
+        } else if (e.kind === 'sky') {
+          a.x += a.dir * BLIMP_SPEED * dt;
+          if (a.x > width + 10) a.x = -10;
+          if (a.x < -10) a.x = width + 10;
+        }
+      }
+
+      // fireworks: frequency scales with celebration level
+      if (this._celebration > 0) {
+        this._nextFireworkIn -= dt;
+        if (this._nextFireworkIn <= 0) {
+          const rand = Math.random;
+          this._fireworks.push({
+            x: MARGIN_X + rand() * (width - MARGIN_X * 2),
+            y: 6 + rand() * (TOP_SKY + 20),
+            age: 0,
+            life: 0.9,
+            hue: Math.floor(rand() * 360),
+          });
+          this._nextFireworkIn = 20 - 18 * this._celebration + rand() * 4;
+        }
+      }
+      for (const f of this._fireworks) f.age += dt;
+      this._fireworks = this._fireworks.filter((f) => f.age < f.life);
 
       this.#drawFrame();
     }
@@ -240,6 +374,8 @@ const MachiHub = (() => {
     #drawFrame() {
       const ctx = this.bctx;
       const { width, height, cols, rows, avenueAfter, hasAvenue } = this.grid;
+      const show = (kind) => !this._hiddenKinds.has(kind);
+      this._actorBoxes = [];
 
       // sky backdrop
       ctx.fillStyle = '#1c2130';
@@ -250,6 +386,18 @@ const MachiHub = (() => {
         const tw = 0.35 + 0.65 * Math.abs(Math.sin(this._time / s.period + s.phase));
         ctx.fillStyle = `rgba(220,228,255,${tw.toFixed(2)})`;
         ctx.fillRect(s.x, s.y, 1, 1);
+      }
+
+      // fireworks — expanding pixel ring with fade
+      for (const f of this._fireworks) {
+        const t = f.age / f.life;
+        const r = 1 + t * 6;
+        const alpha = (1 - t).toFixed(2);
+        ctx.fillStyle = `hsla(${f.hue},90%,70%,${alpha})`;
+        for (let i = 0; i < 10; i++) {
+          const ang = (i / 10) * Math.PI * 2;
+          ctx.fillRect(Math.round(f.x + Math.cos(ang) * r), Math.round(f.y + Math.sin(ang) * r), 1, 1);
+        }
       }
 
       // planes — pixel body + blinking beacon
@@ -264,6 +412,27 @@ const MachiHub = (() => {
         }
       }
 
+      // sky actors (blimps)
+      if (show('sky')) {
+        for (const e of this.entities) {
+          if (e.kind !== 'sky') continue;
+          const a = this._actors.get(e.id);
+          if (!a) continue;
+          const bx = Math.round(a.x), by = Math.round(a.y);
+          const col = e.color || '#b28ae8';
+          ctx.fillStyle = col;
+          ctx.fillRect(bx, by, 8, 3);                       // envelope
+          ctx.fillRect(bx + (a.dir === 1 ? -1 : 8), by + 1, 1, 1); // nose
+          ctx.fillStyle = '#565c6b';
+          ctx.fillRect(bx + 3, by + 3, 2, 1);               // gondola
+          if (Math.floor(this._time * 2) % 2 === 0) {
+            ctx.fillStyle = '#ffd24d';
+            ctx.fillRect(bx + (a.dir === 1 ? 7 : 0), by + 1, 1, 1);
+          }
+          this._actorBoxes.push({ entity: e, x: bx - 1, y: by - 1, w: 10, h: 6 });
+        }
+      }
+
       // vertical avenue, running the full height of the blocks
       if (hasAvenue) {
         const ax = MARGIN_X + avenueAfter * CELL_W;
@@ -275,7 +444,7 @@ const MachiHub = (() => {
         }
       }
 
-      // rows: sidewalk + road + lamps + buildings
+      // rows: sidewalk + road + lamps
       for (let r = 0; r < rows; r++) {
         const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
 
@@ -288,25 +457,70 @@ const MachiHub = (() => {
         const midY = baseline + SIDEWALK_H + Math.floor(ROAD_H / 2);
         for (let x = 2; x < width; x += 6) ctx.fillRect(x, midY, 3, 1);
 
-        // street lamps at each slot boundary in this row
-        const rowCount = Math.min(cols, this.entities.length - r * cols);
-        for (let c = 0; c <= rowCount; c++) {
+        // street lamps at slot boundaries
+        for (let c = 0; c <= cols; c++) {
           const lx = MARGIN_X + c * CELL_W + (c > avenueAfter || (c === avenueAfter && c !== 0) ? AVENUE_W : 0) - 1;
           if (lx < 1 || lx > width - 2) continue;
-          const lampOn = Math.random() > 0.005; // very rare blink keeps them alive
+          const lampOn = Math.random() > 0.005;
           ctx.fillStyle = '#565c6b';
-          ctx.fillRect(lx, baseline - 5, 1, 5); // pole
+          ctx.fillRect(lx, baseline - 5, 1, 5);
           if (lampOn) {
             ctx.fillStyle = '#ffd98a';
-            ctx.fillRect(lx, baseline - 6, 1, 1); // bulb
-            ctx.fillStyle = 'rgba(255,217,138,0.18)'; // soft pool of light
+            ctx.fillRect(lx, baseline - 6, 1, 1);
+            ctx.fillStyle = 'rgba(255,217,138,0.18)';
             ctx.fillRect(lx - 2, baseline - 6, 5, 3);
           }
         }
       }
 
-      // buildings (drawn after roads so nothing overlaps them)
-      for (const b of this.hitboxes) this.#drawBuilding(ctx, b);
+      // buildings
+      if (show('building')) {
+        for (const b of this.hitboxes) this.#drawBuilding(ctx, b);
+      }
+
+      // walkers on sidewalks
+      if (show('walker')) {
+        for (const e of this.entities) {
+          if (e.kind !== 'walker') continue;
+          const a = this._actors.get(e.id);
+          if (!a) continue;
+          const baseline = TOP_SKY + a.row * ROW_H + BUILD_ZONE;
+          const wx = Math.round(a.x), wy = baseline - 3;
+          const col = e.color || '#d8c9a8';
+          ctx.fillStyle = col;
+          ctx.fillRect(wx, wy + 1, 1, 2);         // body
+          ctx.fillStyle = '#e8d5c0';
+          ctx.fillRect(wx, wy, 1, 1);             // head
+          // simple 2-frame stride while moving
+          if (a.pausedFor <= 0 && Math.floor(this._time * 4) % 2 === 0) {
+            ctx.fillStyle = col;
+            ctx.fillRect(wx + (a.dir === 1 ? 1 : -1), wy + 2, 1, 1);
+          }
+          this._actorBoxes.push({ entity: e, x: wx - 1, y: wy - 1, w: 3, h: 5 });
+        }
+      }
+
+      // vehicles on roads
+      if (show('vehicle')) {
+        for (const e of this.entities) {
+          if (e.kind !== 'vehicle') continue;
+          const a = this._actors.get(e.id);
+          if (!a) continue;
+          const baseline = TOP_SKY + a.row * ROW_H + BUILD_ZONE;
+          const laneY = baseline + SIDEWALK_H + (a.lane === 0 ? 1 : ROAD_H - 4);
+          const vx = Math.round(a.x);
+          const col = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
+          ctx.fillStyle = col;
+          ctx.fillRect(vx, laneY + 1, 5, 2);                    // body
+          ctx.fillRect(vx + 1, laneY, 3, 1);                    // cabin
+          ctx.fillStyle = '#10131c';
+          ctx.fillRect(vx + 1, laneY + 3, 1, 1);                // wheels
+          ctx.fillRect(vx + 3, laneY + 3, 1, 1);
+          ctx.fillStyle = '#ffe07a';
+          ctx.fillRect(vx + (a.dir === 1 ? 4 : 0), laneY + 1, 1, 1); // headlight
+          this._actorBoxes.push({ entity: e, x: vx - 1, y: laneY - 1, w: 7, h: 6 });
+        }
+      }
 
       // blit to screen at scale, then labels in screen space
       this.ctx.imageSmoothingEnabled = false;
@@ -318,9 +532,9 @@ const MachiHub = (() => {
     #drawBuilding(ctx, b) {
       const e = b.entity;
       const { x, y, w, h } = b;
-      const base = CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
+      const base = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
 
-      ctx.fillStyle = e.staleness > 0.5 ? mix(base, '#6b6f76', (e.staleness - 0.5) * 2) : base;
+      ctx.fillStyle = e.staleness > 0.5 ? mix(base.startsWith('#') ? base : '#7a86a3', '#6b6f76', (e.staleness - 0.5) * 2) : base;
       ctx.fillRect(x, y, w, h);
 
       // windows from persistent animated state
@@ -363,24 +577,36 @@ const MachiHub = (() => {
 
     #drawLabels() {
       const ctx = this.ctx;
+      ctx.textAlign = 'center';
       ctx.font = '9px monospace';
       ctx.fillStyle = '#c9cfdb';
-      ctx.textAlign = 'center';
       const maxWidth = (CELL_W - 2) * this.scale;
-      for (const b of this.hitboxes) {
-        const cx = (b.x + b.w / 2) * this.scale;
-        const ly = (b.baseline + SIDEWALK_H + ROAD_H - 2) * this.scale;
-        ctx.fillText(truncate(ctx, b.entity.name, maxWidth), cx, ly);
+      if (!this._hiddenKinds.has('building')) {
+        for (const b of this.hitboxes) {
+          const cx = (b.x + b.w / 2) * this.scale;
+          const ly = (b.baseline + SIDEWALK_H + ROAD_H - 2) * this.scale;
+          ctx.fillText(truncate(ctx, b.entity.name, maxWidth), cx, ly);
+        }
+      }
+      // district names, top-left of each district's first row
+      ctx.textAlign = 'left';
+      ctx.font = `700 ${Math.max(10, this.scale * 2)}px monospace`;
+      ctx.fillStyle = 'rgba(201,207,219,0.5)';
+      for (const d of this._districtLabels || []) {
+        const y = (TOP_SKY + d.row * ROW_H + 6) * this.scale;
+        ctx.fillText(d.name.toUpperCase(), MARGIN_X * this.scale, y);
       }
     }
 
-    /** Entity whose building contains the given canvas-pixel point, or null. */
+    /** Entity at the given canvas-pixel point, or null. Moving actors win over buildings. */
     entityAt(canvasX, canvasY) {
       const bx = canvasX / this.scale;
       const by = canvasY / this.scale;
-      const hit = this.hitboxes.find(
-        (b) => bx >= b.x && bx < b.x + b.w && by >= b.y && by < b.y + b.h
-      );
+      const inBox = (b) => bx >= b.x && bx < b.x + b.w && by >= b.y && by < b.y + b.h;
+      const actor = this._actorBoxes.find(inBox);
+      if (actor) return actor.entity;
+      if (this._hiddenKinds.has('building')) return null;
+      const hit = this.hitboxes.find(inBox);
       return hit ? hit.entity : null;
     }
 

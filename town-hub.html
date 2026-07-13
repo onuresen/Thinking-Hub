@@ -27,8 +27,17 @@
     .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
 
-    .content { padding: 22px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
-    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 18px; max-width: 760px; }
+    .content { padding: 22px; max-width: 1200px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
+    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 820px; }
+
+    .lens-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .lens-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 999px;
+      color: var(--text2); font-family: var(--font-body); font-size: 12px; font-weight: 600;
+      padding: 6px 14px; cursor: pointer; user-select: none;
+    }
+    .lens-chip.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
     .town-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
     .town-scroll { max-width: 100%; overflow-x: auto; }
@@ -37,7 +46,7 @@
     .legend span::before { content: "■ "; }
 
     #detail {
-      display: none; width: 460px; max-width: 92vw;
+      display: none; width: 480px; max-width: 92vw;
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
       padding: 14px 16px; font-size: 13px; line-height: 1.5;
     }
@@ -49,7 +58,7 @@
     #detail .d-tags span {
       font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px;
     }
-    #detail .d-actions { display: flex; gap: 10px; align-items: center; }
+    #detail .d-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     #detail button {
       background: var(--accent); color: var(--accent-contrast, #fff); border: none; border-radius: var(--r-sm);
       font-family: var(--font-body); font-size: 12px; font-weight: 600; padding: 7px 12px; cursor: pointer;
@@ -66,19 +75,23 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR TOOL STACK AS A LIVING CITY</span></div>
+    <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
   </div>
 
   <div class="content">
     <p class="intro">
-      Every tool in your <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a> is a building.
-      Height = mastery, lit windows = how recently you used it, overgrowth = neglect, flag = adopted.
-      Click a building, then hit <strong>Used it now</strong> — watch the lights come back on.
+      One connected city, four lenses. <strong>Buildings</strong> are tools — the Portfolio district holds your
+      <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>, the Hub Pages district holds
+      Thinking Hub's own tools, lit by real opens. <strong>Cars</strong> are your active projects (busier = faster).
+      <strong>Pedestrians</strong> are your people. The <strong>blimp</strong> carries your badge count — and the more
+      achievements you earn, the more the city celebrates with fireworks. Click anything.
     </p>
+
+    <div class="lens-bar" id="lens-bar"></div>
 
     <div class="town-wrap">
       <div class="town-scroll"><canvas id="town"></canvas></div>
-      <div class="legend">
+      <div class="legend" id="legend">
         <span style="color:#5bd67a">adopt</span>
         <span style="color:#5b8cff">trial</span>
         <span style="color:#ff9f5b">assess</span>
@@ -86,8 +99,9 @@
       </div>
       <div id="detail"></div>
       <div class="empty-state" id="empty" style="display:none">
-        No tools in your portfolio yet.<br>
-        Add some in the <a href="tool-portfolio.html">Tool Portfolio</a> and the town will grow.
+        Nothing to show — every lens is off or empty.<br>
+        Add tools in the <a href="tool-portfolio.html">Tool Portfolio</a>, projects in
+        <a href="project-hub.html">Project Hub</a>, or just use the Hub — pages you open become buildings.
       </div>
     </div>
   </div>
@@ -95,71 +109,224 @@
   <script>
     HubBootstrap.start('town-hub');
 
-    // ── Thinking Hub adapter ────────────────────────────────────────────────
-    // Maps tool-portfolio-v1 records into MachiEntity objects. This is the
-    // host-specific layer; machi-engine.js stays host-agnostic.
-    const STORAGE_KEY = 'tool-portfolio-v1';
-
-    const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
-
+    // ── Shared helpers ──────────────────────────────────────────────────────
     function daysSince(iso) {
       if (!iso) return null;
       return (Date.now() - new Date(iso).getTime()) / 86400000;
     }
+    function activityFrom(days) { return days === null ? 0 : 1 / (1 + days / 10); }
+    function stalenessFrom(days) { return days === null ? 1 : Math.min(1, days / 60); }
 
-    function toEntity(t) {
-      const days = daysSince(t.lastUsedAt);
-      return MachiHub.createEntity({
-        id: t.id,
-        name: t.name,
-        category: RING_TO_CATEGORY[t.ring] || 'default',
-        tier: 1 + Math.min(3, Math.max(0, t.mastery ?? 0)),   // mastery 0-3 → tier 1-4
-        activity: days === null ? 0 : 1 / (1 + days / 10),    // same decay curve as the vault host
-        staleness: days === null ? 1 : Math.min(1, days / 60), // never used = fully overgrown
-        shipped: t.ring === 'adopt',
-        meta: {
-          icon: t.icon, ring: t.ring, status: t.status, note: t.note,
-          useCount: t.useCount || 0, mastery: t.mastery ?? 0,
-          lastUsedAt: t.lastUsedAt, category: t.category,
-        },
+    // ── Lens 1: Tool Portfolio district (buildings) ─────────────────────────
+    const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
+
+    function portfolioEntities() {
+      const tools = HubStorage.get('tool-portfolio-v1') || [];
+      return tools.map((t) => {
+        const days = daysSince(t.lastUsedAt);
+        return {
+          id: 'tp-' + t.id,
+          name: t.name,
+          kind: 'building',
+          district: 'Portfolio',
+          category: RING_TO_CATEGORY[t.ring] || 'default',
+          tier: 1 + Math.min(3, Math.max(0, t.mastery ?? 0)),
+          activity: activityFrom(days),
+          staleness: stalenessFrom(days),
+          shipped: t.ring === 'adopt',
+          meta: {
+            lens: 'portfolio', toolId: t.id,
+            icon: t.icon, ring: t.ring, status: t.status, note: t.note,
+            useCount: t.useCount || 0, mastery: t.mastery ?? 0, lastUsedAt: t.lastUsedAt,
+          },
+        };
       });
     }
 
-    // Host rules on top of the defaults — these read meta, which default rules never touch.
+    // ── Lens 2: Hub Pages district (buildings, lit by real page opens) ──────
+    // Mirror of index.html's APPS registry (id → label/icon/file/group).
+    const HUB_PAGES = {
+      'project-hub': ['Project Hub', '◈', 'Daily Work'], 'schedule': ['Schedule', '▦', 'Daily Work'],
+      'meetings-hub': ['Meeting Hub', '▣', 'Daily Work'], 'capture-hub': ['Capture Hub', '⊞', 'Daily Work'],
+      'journal-hub': ['Journal Hub', '◷', 'Daily Work'],
+      'graph-hub': ['Dependency Graph', '🕸', 'People & Network'], 'people-hub': ['People Hub', '◉', 'People & Network'],
+      'stakeholder-hub': ['Stakeholder Map', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
+      'town-hub': ['Machi Town', '🏙', 'People & Network'],
+      'learning-hub': ['Learning Hub', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
+      'canvas-hub': ['Spatial Canvas', '✏', 'Learning & Ideas'],
+      'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
+      'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'argument-hub': ['Argument Hub', '△', 'Strategy & Decisions'],
+      'reflection-hub': ['Reflection Board', '⟲', 'Reflection & Methods'], 'frameworks-hub': ['Frameworks', '▾', 'Reflection & Methods'],
+      'focus-hub': ['Focus Timer', '◉', 'Tools & Focus'], 'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
+      'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
+      'kmqt-board': ['KMQT Board', '⊡', 'Strategy & Decisions'], 'log-hub': ['Log Hub', '≡', 'Daily Work'],
+      'review-hub': ['Review Hub', '☑', 'Reflection & Methods'], 'retro-hub': ['Retro Hub', '⟲', 'Reflection & Methods'],
+      'assumptions-hub': ['Assumptions', '?', 'Strategy & Decisions'], 'matrix-hub': ['Matrix Hub', '▤', 'Strategy & Decisions'],
+      'blocked-depth': ['Blocked Depth', '▽', 'Reflection & Methods'],
+    };
+    const GROUP_COLORS = {
+      'Daily Work': '#5b8cff', 'People & Network': '#ff9f5b', 'Learning & Ideas': '#5bd67a',
+      'Strategy & Decisions': '#b28ae8', 'Reflection & Methods': '#8a8f9c', 'Tools & Focus': '#ffd24d',
+    };
+
+    function hubUsage() {
+      const data = HubStorage.get('hub-activity-v1') || { log: [] };
+      const per = {};
+      for (const entry of data.log || []) {
+        if (!entry || !entry.appId) continue;
+        const p = per[entry.appId] || (per[entry.appId] = { count: 0, last: null });
+        p.count++;
+        if (!p.last || entry.ts > p.last) p.last = entry.ts;
+      }
+      return per;
+    }
+
+    function hubPageEntities() {
+      const usage = hubUsage();
+      const ids = Object.keys(usage);
+      if (!ids.length) return [];
+      return ids.map((appId) => {
+        const [label, icon, group] = HUB_PAGES[appId] ||
+          [appId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), '🛠', 'Tools & Focus'];
+        const u = usage[appId];
+        const days = daysSince(u.last);
+        const tier = u.count >= 50 ? 4 : u.count >= 20 ? 3 : u.count >= 5 ? 2 : 1;
+        return {
+          id: 'hub-' + appId,
+          name: label,
+          kind: 'building',
+          district: 'Hub Pages',
+          color: GROUP_COLORS[group] || '#8a8f9c',
+          tier,
+          activity: activityFrom(days),
+          staleness: stalenessFrom(days),
+          meta: { lens: 'hub-page', appId, icon, group, useCount: u.count, lastUsedAt: u.last },
+        };
+      });
+    }
+
+    // ── Lens 3: Projects as cars ────────────────────────────────────────────
+    function projectEntities() {
+      const data = HubStorage.get('project-hub-v1') || {};
+      return (data.projects || []).map((p) => {
+        const tasks = p.tasks || [];
+        const open = tasks.filter((t) => !t.done).length;
+        return {
+          id: 'proj-' + p.id,
+          name: p.name,
+          kind: 'vehicle',
+          color: p.color || '#5b8cff',
+          activity: Math.min(1, open / 8), // busier project → faster car
+          meta: {
+            lens: 'project', desc: p.desc, status: p.status,
+            openTasks: open, doneTasks: tasks.length - open,
+            milestones: (p.milestones || []).length, members: (p.members || []).length,
+          },
+        };
+      });
+    }
+
+    // ── Lens 4: People as pedestrians ───────────────────────────────────────
+    function peopleEntities() {
+      const ph = HubStorage.get('project-hub-v1') || {};
+      const peopleHub = HubStorage.get('people-hub-v1') || {};
+      const seen = new Map();
+      for (const m of (ph.members || []).concat(peopleHub.members || [])) {
+        if (m && m.id && !seen.has(m.id)) seen.set(m.id, m);
+      }
+      const openByAssignee = {};
+      for (const p of ph.projects || []) {
+        for (const t of p.tasks || []) {
+          if (!t.done && t.assigneeId) openByAssignee[t.assigneeId] = (openByAssignee[t.assigneeId] || 0) + 1;
+        }
+      }
+      return [...seen.values()].map((m) => ({
+        id: 'person-' + m.id,
+        name: m.name,
+        kind: 'walker',
+        color: (m.color || '#d8c9a8').split(',')[0],
+        meta: { lens: 'person', role: m.role || '', openTasks: openByAssignee[m.id] || 0 },
+      }));
+    }
+
+    // ── Lens 5: Achievements in the sky ─────────────────────────────────────
+    function skyEntities() {
+      const data = HubStorage.get('hub-activity-v1') || {};
+      const unlocked = (data.seenAchievements || []).length;
+      return [{
+        id: 'sky-achievements',
+        name: 'Achievement Blimp',
+        kind: 'sky',
+        color: '#b28ae8',
+        meta: { lens: 'sky', unlocked, total: 32 },
+      }];
+    }
+
+    function celebrationLevel() {
+      const data = HubStorage.get('hub-activity-v1') || {};
+      return ((data.seenAchievements || []).length) / 32;
+    }
+
+    // ── Achievement rules (buildings) ───────────────────────────────────────
     const hubRules = MachiAchievements.DEFAULT_RULES.concat([
       { id: 'power-user', label: 'Power user — top mastery', icon: '🥋', test: (e) => e.meta.mastery === 3 },
-      { id: 'well-worn', label: 'Well-worn — used 20+ times', icon: '🔁', test: (e) => e.meta.useCount >= 20 },
+      { id: 'well-worn', label: 'Well-worn — used 20+ times', icon: '🔁', test: (e) => (e.meta.useCount || 0) >= 20 },
     ]);
+
+    // ── Lenses registry + state ─────────────────────────────────────────────
+    const LENSES = [
+      { id: 'portfolio', label: '🧰 Tool Portfolio', build: portfolioEntities },
+      { id: 'hub-pages', label: '🏢 Hub Pages', build: hubPageEntities },
+      { id: 'projects', label: '🚗 Projects', build: projectEntities },
+      { id: 'people', label: '🚶 People', build: peopleEntities },
+      { id: 'sky', label: '🎈 Achievements', build: skyEntities },
+    ];
+    const lensOn = Object.fromEntries(LENSES.map((l) => [l.id, true]));
 
     // ── Host UI ─────────────────────────────────────────────────────────────
     const canvas = document.getElementById('town');
     const detail = document.getElementById('detail');
     const empty = document.getElementById('empty');
     let town = null;
-    let selectedId = null;
 
-    function loadTools() {
-      return HubStorage.get(STORAGE_KEY) || [];
+    function renderLensBar() {
+      const bar = document.getElementById('lens-bar');
+      bar.replaceChildren();
+      for (const l of LENSES) {
+        const chip = document.createElement('span');
+        chip.className = 'lens-chip' + (lensOn[l.id] ? ' on' : '');
+        chip.textContent = l.label;
+        chip.addEventListener('click', () => {
+          lensOn[l.id] = !lensOn[l.id];
+          renderLensBar();
+          rebuild();
+        });
+        bar.appendChild(chip);
+      }
     }
 
-    // Same write path as Tool Portfolio's logToolUsage — HubStorage.set notifies
-    // any subscribed tool, so the two views stay in sync.
+    // All text goes in via textContent — never innerHTML with data values.
+    function line(parent, cls, text) {
+      if (!text) return;
+      const el = document.createElement(cls === 'd-note' ? 'p' : 'div');
+      el.className = cls;
+      el.textContent = text;
+      parent.appendChild(el);
+    }
+
     function markUsedNow(toolId) {
-      const tools = loadTools();
+      const tools = HubStorage.get('tool-portfolio-v1') || [];
       const t = tools.find((x) => x.id === toolId);
       if (!t) return;
       t.lastUsedAt = new Date().toISOString();
       t.useCount = (t.useCount || 0) + 1;
-      HubStorage.set(STORAGE_KEY, tools);
-      rebuild();
-      const e = town && town.entities.find((x) => x.id === toolId);
+      HubStorage.set('tool-portfolio-v1', tools); // same write path as Tool Portfolio's logToolUsage
+      const e = town && town.entities.find((x) => x.id === 'tp-' + toolId);
       if (e) showDetail(e);
       if (window.HubToast) HubToast.show('Logged — the lights are on ✨');
     }
 
-    // All text goes in via textContent — never innerHTML with data values.
     function showDetail(e) {
-      selectedId = e.id;
       detail.replaceChildren();
       const m = e.meta || {};
 
@@ -167,20 +334,27 @@
       h2.textContent = (m.icon ? m.icon + ' ' : '') + e.name;
       detail.appendChild(h2);
 
-      const status = document.createElement('div');
-      status.className = 'd-status';
       const days = daysSince(m.lastUsedAt);
-      const lastTxt = m.lastUsedAt ? `last used ${Math.floor(days)}d ago` : 'never used';
-      status.textContent = [m.ring, m.status, `${m.useCount}× used`, lastTxt].filter(Boolean).join(' · ');
-      detail.appendChild(status);
+      const lastTxt = m.lastUsedAt ? `last ${Math.floor(days)}d ago` : null;
 
-      if (m.note) {
-        const p = document.createElement('p');
-        p.className = 'd-note';
-        p.textContent = m.note;
-        detail.appendChild(p);
+      if (m.lens === 'portfolio') {
+        line(detail, 'd-status', [m.ring, m.status, `${m.useCount}× used`, lastTxt || 'never used'].filter(Boolean).join(' · '));
+        line(detail, 'd-note', m.note);
+      } else if (m.lens === 'hub-page') {
+        line(detail, 'd-status', [m.group, `opened ${m.useCount}×`, lastTxt].filter(Boolean).join(' · '));
+      } else if (m.lens === 'project') {
+        line(detail, 'd-status', [m.status, `${m.openTasks} open / ${m.doneTasks} done tasks`, `${m.milestones} milestones`, `${m.members} members`].filter(Boolean).join(' · '));
+        line(detail, 'd-note', m.desc);
+      } else if (m.lens === 'person') {
+        line(detail, 'd-status', [m.role, `${m.openTasks} open tasks assigned`].filter(Boolean).join(' · '));
+      } else if (m.lens === 'sky') {
+        line(detail, 'd-status', `${m.unlocked} of ${m.total} badges unlocked`);
+        line(detail, 'd-note', m.unlocked
+          ? 'The city celebrates what you finish — more badges, more fireworks.'
+          : 'No badges seen yet — visit your Profile to start earning; the fireworks are waiting.');
       }
-      if (e.achievements && e.achievements.length) {
+
+      if (e.achievements && e.achievements.length && (m.lens === 'portfolio' || m.lens === 'hub-page')) {
         const ach = document.createElement('div');
         ach.className = 'd-tags';
         e.achievements.forEach((a) => {
@@ -193,44 +367,62 @@
 
       const actions = document.createElement('div');
       actions.className = 'd-actions';
-      const btn = document.createElement('button');
-      btn.textContent = '✓ Used it now';
-      btn.addEventListener('click', () => markUsedNow(e.id));
-      actions.appendChild(btn);
-      const link = document.createElement('a');
-      link.href = 'tool-portfolio.html';
-      link.textContent = 'Open in Tool Portfolio →';
-      actions.appendChild(link);
+      if (m.lens === 'portfolio') {
+        const btn = document.createElement('button');
+        btn.textContent = '✓ Used it now';
+        btn.addEventListener('click', () => markUsedNow(m.toolId));
+        actions.appendChild(btn);
+      }
+      const links = {
+        'portfolio': ['tool-portfolio.html', 'Open in Tool Portfolio →'],
+        'hub-page': [(HUB_PAGES[m.appId] ? m.appId + '.html' : '#'), 'Open this tool →'],
+        'project': ['project-hub.html', 'Open in Project Hub →'],
+        'person': ['people-hub.html', 'Open in People Hub →'],
+        'sky': ['achievements-hub.html', 'Open Profile →'],
+      };
+      const [href, label] = links[m.lens] || [];
+      if (href) {
+        const a = document.createElement('a');
+        a.href = href;
+        a.textContent = label;
+        actions.appendChild(a);
+      }
       detail.appendChild(actions);
-
       detail.classList.add('open');
     }
 
     function rebuild() {
-      const tools = loadTools();
-      if (!tools.length) {
-        empty.style.display = '';
-        canvas.style.display = 'none';
-        return;
+      let entities = [];
+      for (const l of LENSES) {
+        if (lensOn[l.id]) entities = entities.concat(l.build());
       }
-      empty.style.display = 'none';
-      canvas.style.display = '';
+      // buildings need achievement evaluation; other kinds pass through untouched
+      entities = MachiAchievements.evaluate(entities.map(MachiHub.createEntity), hubRules);
 
-      const entities = MachiAchievements.evaluate(tools.map(toEntity), hubRules);
+      const hasAnything = entities.length > 0;
+      empty.style.display = hasAnything ? 'none' : '';
+      canvas.style.display = hasAnything ? '' : 'none';
+      if (!hasAnything) return;
+
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: 5, maxPerRow: 6 })
           .setEntities(entities)
+          .setCelebration(celebrationLevel())
           .render()
           .enableInteraction({ onClick: showDetail });
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
+        window._machiTown = town; // debugging/testing handle
       } else {
-        town.setEntities(entities).render();
+        town.setEntities(entities).setCelebration(celebrationLevel()).render();
       }
     }
 
-    // Re-render live if another tab/tool updates the portfolio.
-    HubStorage.subscribe(STORAGE_KEY, rebuild);
+    // Live re-render when other tabs/tools change the underlying data.
+    for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1']) {
+      HubStorage.subscribe(key, rebuild);
+    }
 
+    renderLensBar();
     rebuild();
   </script>
 </body>
