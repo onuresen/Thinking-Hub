@@ -27,8 +27,8 @@
     .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
 
-    .content { padding: 22px; max-width: 1200px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
-    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 820px; }
+    .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
+    .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
 
     .lens-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .lens-chip {
@@ -40,18 +40,26 @@
     .lens-chip.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
     .town-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .town-scroll { max-width: 100%; overflow-x: auto; }
+    .town-scroll { max-width: 100%; overflow-x: auto; position: relative; }
     canvas { border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
     .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
     .legend span::before { content: "■ "; }
 
+    /* popover anchored next to the clicked building/car/person */
     #detail {
-      display: none; width: 480px; max-width: 92vw;
+      display: none; position: absolute; z-index: 30;
+      width: max-content; min-width: 240px; max-width: 340px;
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
-      padding: 14px 16px; font-size: 13px; line-height: 1.5;
+      padding: 12px 14px; font-size: 13px; line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0,0,0,.45);
     }
     #detail.open { display: block; }
-    #detail h2 { font-family: var(--font-display); font-size: 16px; margin: 0 0 2px; }
+    #detail h2 { font-family: var(--font-display); font-size: 15px; margin: 0 22px 2px 0; }
+    #detail .d-close {
+      position: absolute; top: 8px; right: 10px; cursor: pointer;
+      color: var(--text3); font-size: 14px; line-height: 1; background: none; border: none; padding: 2px;
+    }
+    #detail .d-close:hover { color: var(--text); }
     #detail .d-status { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-bottom: 8px; }
     #detail .d-note { color: var(--text2); margin: 0 0 10px; }
     #detail .d-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
@@ -59,7 +67,7 @@
       font-size: 10px; color: var(--text3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px;
     }
     #detail .d-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    #detail button {
+    #detail button.d-use {
       background: var(--accent); color: var(--accent-contrast, #fff); border: none; border-radius: var(--r-sm);
       font-family: var(--font-body); font-size: 12px; font-weight: 600; padding: 7px 12px; cursor: pointer;
     }
@@ -80,24 +88,23 @@
 
   <div class="content">
     <p class="intro">
-      One connected city, four lenses. <strong>Buildings</strong> are tools — the Portfolio district holds your
-      <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>, the Hub Pages district holds
-      Thinking Hub's own tools, lit by real opens. <strong>Cars</strong> are your active projects (busier = faster).
-      <strong>Pedestrians</strong> are your people. The <strong>blimp</strong> carries your badge count — and the more
-      achievements you earn, the more the city celebrates with fireworks. Click anything.
+      One connected city, five lenses. <strong>Buildings</strong> are tools — the Hub Pages district holds
+      Thinking Hub's own tools (lit by real opens), the Portfolio district holds your
+      <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>. <strong>Cars</strong> are your
+      active projects (busier = faster). <strong>Pedestrians</strong> are your people. The <strong>blimp</strong>
+      carries your badge count — the more you earn, the more the city celebrates with fireworks. Click anything.
     </p>
 
     <div class="lens-bar" id="lens-bar"></div>
 
     <div class="town-wrap">
-      <div class="town-scroll"><canvas id="town"></canvas></div>
+      <div class="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
       <div class="legend" id="legend">
         <span style="color:#5bd67a">adopt</span>
         <span style="color:#5b8cff">trial</span>
         <span style="color:#ff9f5b">assess</span>
         <span style="color:#8a8f9c">hold</span>
       </div>
-      <div id="detail"></div>
       <div class="empty-state" id="empty" style="display:none">
         Nothing to show — every lens is off or empty.<br>
         Add tools in the <a href="tool-portfolio.html">Tool Portfolio</a>, projects in
@@ -274,9 +281,10 @@
     ]);
 
     // ── Lenses registry + state ─────────────────────────────────────────────
+    // Hub Pages first — it's the higher-priority district, so it gets the top block.
     const LENSES = [
-      { id: 'portfolio', label: '🧰 Tool Portfolio', build: portfolioEntities },
       { id: 'hub-pages', label: '🏢 Hub Pages', build: hubPageEntities },
+      { id: 'portfolio', label: '🧰 Tool Portfolio', build: portfolioEntities },
       { id: 'projects', label: '🚗 Projects', build: projectEntities },
       { id: 'people', label: '🚶 People', build: peopleEntities },
       { id: 'sky', label: '🎈 Achievements', build: skyEntities },
@@ -321,14 +329,41 @@
       t.lastUsedAt = new Date().toISOString();
       t.useCount = (t.useCount || 0) + 1;
       HubStorage.set('tool-portfolio-v1', tools); // same write path as Tool Portfolio's logToolUsage
-      const e = town && town.entities.find((x) => x.id === 'tp-' + toolId);
-      if (e) showDetail(e);
+      const hit = town && town.hitboxes.find((b) => b.entity.id === 'tp-' + toolId);
+      if (hit) showDetail(hit.entity, hit);
       if (window.HubToast) HubToast.show('Logged — the lights are on ✨');
     }
 
-    function showDetail(e) {
+    function closeDetail() { detail.classList.remove('open'); }
+
+    // box = the clicked entity's current buffer-space rect from the engine —
+    // used to anchor the popover right next to the building/car/person.
+    function positionDetail(box) {
+      if (!box) return;
+      const s = town ? town.scale : 5;
+      const anchorX = (box.x + box.w / 2) * s;
+      const aboveY = box.y * s;
+      detail.style.left = '0px'; detail.style.top = '0px'; // reset before measuring
+      requestAnimationFrame(() => {
+        const w = detail.offsetWidth, h = detail.offsetHeight;
+        const maxX = canvas.width;
+        let left = Math.min(Math.max(anchorX - w / 2, 6), Math.max(6, maxX - w - 6));
+        let top = aboveY - h - 10;
+        if (top < 4) top = (box.y + box.h) * s + 10; // no room above → flip below
+        detail.style.left = left + 'px';
+        detail.style.top = top + 'px';
+      });
+    }
+
+    function showDetail(e, box) {
       detail.replaceChildren();
       const m = e.meta || {};
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'd-close';
+      closeBtn.textContent = '✕';
+      closeBtn.addEventListener('click', closeDetail);
+      detail.appendChild(closeBtn);
 
       const h2 = document.createElement('h2');
       h2.textContent = (m.icon ? m.icon + ' ' : '') + e.name;
@@ -369,6 +404,7 @@
       actions.className = 'd-actions';
       if (m.lens === 'portfolio') {
         const btn = document.createElement('button');
+        btn.className = 'd-use';
         btn.textContent = '✓ Used it now';
         btn.addEventListener('click', () => markUsedNow(m.toolId));
         actions.appendChild(btn);
@@ -389,6 +425,19 @@
       }
       detail.appendChild(actions);
       detail.classList.add('open');
+      positionDetail(box);
+    }
+
+    // Fit as many buildings per row as the container allows, so the town is
+    // wide rather than tall. LAYOUT constants come from the engine.
+    const SCALE = 5;
+    function colsForContainer() {
+      // Measure .content (a stable full-width parent), NOT .town-scroll — the
+      // scroller shrinks to its canvas, so measuring it would be circular.
+      const host = document.querySelector('.content');
+      const avail = ((host.clientWidth || 1000) - 44) / SCALE; // 44 ≈ content padding
+      const { CELL_W, MARGIN_X, AVENUE_W } = MachiHub.LAYOUT;
+      return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
     }
 
     function rebuild() {
@@ -403,19 +452,36 @@
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
       if (!hasAnything) return;
+      closeDetail();
 
       if (!town) {
-        town = new MachiHub.Town(canvas, { scale: 5, maxPerRow: 6 })
+        town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
           .setEntities(entities)
           .setCelebration(celebrationLevel())
           .render()
           .enableInteraction({ onClick: showDetail });
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
+        // clicking empty ground/sky dismisses the popover
+        canvas.addEventListener('click', (ev) => {
+          const rect = canvas.getBoundingClientRect();
+          if (!town.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
+        });
         window._machiTown = town; // debugging/testing handle
       } else {
-        town.setEntities(entities).setCelebration(celebrationLevel()).render();
+        town.setMaxPerRow(colsForContainer())
+          .setEntities(entities)
+          .setCelebration(celebrationLevel())
+          .render();
       }
     }
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (town && colsForContainer() !== town.maxPerRow) rebuild();
+      }, 250);
+    });
 
     // Live re-render when other tabs/tools change the underlying data.
     for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1']) {

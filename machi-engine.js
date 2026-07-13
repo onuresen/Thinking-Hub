@@ -59,7 +59,7 @@ const MachiHub = (() => {
    * @property {string} [category]     Free-form; unrecognized values fall back to a neutral color.
    * @property {string} [color]        Optional hex override; wins over the category color.
    * @property {number} [tier]         1-5. Buildings: footprint/height. Other kinds: ignored.
-   * @property {number} [activity]     0-1. Buildings: lit windows. Vehicles: speed. Default 0.
+   * @property {number} [activity]     0-1. Buildings: lit windows + chimney smoke. Vehicles: speed.
    * @property {number} [staleness]    0-1. Buildings: desaturation + overgrowth. Default 0.
    * @property {boolean} [shipped]     Buildings: flag on the roof. Default false.
    * @property {Array<{id:string,label:string,icon:string}>} [achievements] Badge pixels (buildings).
@@ -100,6 +100,11 @@ const MachiHub = (() => {
   const FLICKER_MS = 450;   // how often window lights get resampled
   const PLANE_SPEED = 7;    // buffer px per second — slow drift
   const BLIMP_SPEED = 2.5;
+  const LIGHT_CYCLE = 11;   // traffic light: seconds per full green+red cycle
+  const LIGHT_GREEN = 7;    // seconds of green within the cycle
+
+  // Layout knobs exposed so hosts can size the canvas to their container.
+  const LAYOUT = { CELL_W, MARGIN_X, AVENUE_W };
 
   class Town {
     constructor(canvas, opts = {}) {
@@ -127,12 +132,21 @@ const MachiHub = (() => {
       this._celebration = 0;      // 0..1 → fireworks frequency
       this._fireworks = [];
       this._nextFireworkIn = 4;
+      this._smoke = [];
+      this._hoveredId = null;
     }
 
     setEntities(entities) {
       this.entities = entities.map(createEntity);
       this._windows.clear();
       this._actors.clear();
+      this._smoke = [];
+      return this;
+    }
+
+    /** Change how many buildings fit per row (host decides from its container width). */
+    setMaxPerRow(n) {
+      this.maxPerRow = Math.max(2, Math.floor(n) || this.maxPerRow);
       return this;
     }
 
@@ -287,9 +301,16 @@ const MachiHub = (() => {
       return this;
     }
 
+    /** Traffic light state at the avenue crossings — shared cycle for the whole town. */
+    #lightIsGreen() {
+      return (this._time % LIGHT_CYCLE) < LIGHT_GREEN;
+    }
+
     #tick(dt) {
       this._time += dt;
-      const { width, rows } = this.grid;
+      const { width, hasAvenue, avenueAfter } = this.grid;
+      const ax = hasAvenue ? MARGIN_X + avenueAfter * CELL_W : -999;
+      const green = this.#lightIsGreen();
 
       // window flicker: resample a couple of windows per building at a slow tick,
       // biased by activity so busy buildings feel lively and stale ones stay dark
@@ -326,7 +347,13 @@ const MachiHub = (() => {
         const a = this._actors.get(e.id);
         if (!a) continue;
         if (e.kind === 'vehicle') {
-          a.x += a.dir * a.speed * dt;
+          let nx = a.x + a.dir * a.speed * dt;
+          // red light: stop at the avenue stop line instead of entering the crossing
+          if (hasAvenue && !green) {
+            if (a.dir === 1 && a.x + 5 <= ax && nx + 5 > ax - 1) nx = ax - 6;
+            if (a.dir === -1 && a.x >= ax + AVENUE_W && nx < ax + AVENUE_W + 1) nx = ax + AVENUE_W + 1;
+          }
+          a.x = nx;
           if (a.x > width + 6) a.x = -6;
           if (a.x < -6) a.x = width + 6;
         } else if (e.kind === 'walker') {
@@ -349,6 +376,17 @@ const MachiHub = (() => {
           if (a.x < -10) a.x = width + 10;
         }
       }
+
+      // chimney smoke from busy buildings
+      if (!this._hiddenKinds.has('building')) {
+        for (const b of this.hitboxes) {
+          if (b.entity.activity > 0.6 && Math.random() < dt * 0.5 && this._smoke.length < 80) {
+            this._smoke.push({ x: b.x + 2 + Math.random() * 2, y: b.y - 1, age: 0, life: 1.8 + Math.random() });
+          }
+        }
+      }
+      for (const s of this._smoke) { s.age += dt; s.y -= 2.5 * dt; s.x += Math.sin(this._time * 2 + s.y) * dt; }
+      this._smoke = this._smoke.filter((s) => s.age < s.life);
 
       // fireworks: frequency scales with celebration level
       if (this._celebration > 0) {
@@ -444,7 +482,8 @@ const MachiHub = (() => {
         }
       }
 
-      // rows: sidewalk + road + lamps
+      // rows: sidewalk + road + lamps + traffic lights
+      const green = this.#lightIsGreen();
       for (let r = 0; r < rows; r++) {
         const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
 
@@ -471,6 +510,22 @@ const MachiHub = (() => {
             ctx.fillRect(lx - 2, baseline - 6, 5, 3);
           }
         }
+
+        // traffic light where this road crosses the avenue
+        if (hasAvenue) {
+          const ax = MARGIN_X + avenueAfter * CELL_W;
+          ctx.fillStyle = '#565c6b';
+          ctx.fillRect(ax - 2, baseline - 4, 1, 4 + SIDEWALK_H);
+          ctx.fillStyle = green ? '#5bd67a' : '#e34d4d';
+          ctx.fillRect(ax - 2, baseline - 5, 1, 1);
+        }
+      }
+
+      // chimney smoke (behind buildings' roofs visually is fine — drawn before buildings adds depth)
+      for (const s of this._smoke) {
+        const alpha = (0.35 * (1 - s.age / s.life)).toFixed(2);
+        ctx.fillStyle = `rgba(200,204,216,${alpha})`;
+        ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
       }
 
       // buildings
@@ -519,6 +574,16 @@ const MachiHub = (() => {
           ctx.fillStyle = '#ffe07a';
           ctx.fillRect(vx + (a.dir === 1 ? 4 : 0), laneY + 1, 1, 1); // headlight
           this._actorBoxes.push({ entity: e, x: vx - 1, y: laneY - 1, w: 7, h: 6 });
+        }
+      }
+
+      // hover highlight — white outline around whatever the cursor is on
+      if (this._hoveredId) {
+        const box = this.#boxById(this._hoveredId);
+        if (box) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(box.x - 1.5, box.y - 1.5, box.w + 3, box.h + 3);
         }
       }
 
@@ -598,22 +663,34 @@ const MachiHub = (() => {
       }
     }
 
-    /** Entity at the given canvas-pixel point, or null. Moving actors win over buildings. */
-    entityAt(canvasX, canvasY) {
+    /** Current buffer-space box for an entity id (moving actors included), or null. */
+    #boxById(id) {
+      return this._actorBoxes.find((b) => b.entity.id === id) ||
+             this.hitboxes.find((b) => b.entity.id === id && !this._hiddenKinds.has('building')) || null;
+    }
+
+    /** Box (buffer space) at the given canvas-pixel point, or null. Moving actors win over buildings. */
+    boxAt(canvasX, canvasY) {
       const bx = canvasX / this.scale;
       const by = canvasY / this.scale;
       const inBox = (b) => bx >= b.x && bx < b.x + b.w && by >= b.y && by < b.y + b.h;
       const actor = this._actorBoxes.find(inBox);
-      if (actor) return actor.entity;
+      if (actor) return actor;
       if (this._hiddenKinds.has('building')) return null;
-      const hit = this.hitboxes.find(inBox);
-      return hit ? hit.entity : null;
+      return this.hitboxes.find(inBox) || null;
+    }
+
+    /** Entity at the given canvas-pixel point, or null. */
+    entityAt(canvasX, canvasY) {
+      const box = this.boxAt(canvasX, canvasY);
+      return box ? box.entity : null;
     }
 
     /**
-     * Wires click + hover on the canvas. The engine only reports which entity
-     * was hit — what happens next (detail panel, navigation) is the host's job.
-     * @param {{onClick?: (entity) => void, onHover?: (entity|null) => void}} handlers
+     * Wires click + hover on the canvas. The engine only reports which entity was hit
+     * (plus its current buffer-space box, so hosts can anchor popovers) — what happens
+     * next is the host's job. Hovered entities get a white outline drawn by the engine.
+     * @param {{onClick?: (entity, box) => void, onHover?: (entity|null, box|null) => void}} handlers
      */
     enableInteraction(handlers = {}) {
       const toLocal = (ev) => {
@@ -621,26 +698,30 @@ const MachiHub = (() => {
         // account for CSS scaling of the canvas element, if any
         const sx = this.canvas.width / rect.width;
         const sy = this.canvas.height / rect.height;
-        return this.entityAt((ev.clientX - rect.left) * sx, (ev.clientY - rect.top) * sy);
+        return this.boxAt((ev.clientX - rect.left) * sx, (ev.clientY - rect.top) * sy);
       };
       this.canvas.addEventListener('click', (ev) => {
-        const e = toLocal(ev);
-        if (e && handlers.onClick) handlers.onClick(e);
+        const box = toLocal(ev);
+        if (box && handlers.onClick) handlers.onClick(box.entity, box);
       });
       this.canvas.addEventListener('mousemove', (ev) => {
-        const e = toLocal(ev);
-        this.canvas.style.cursor = e ? 'pointer' : 'default';
-        if (handlers.onHover) handlers.onHover(e);
+        const box = toLocal(ev);
+        this.canvas.style.cursor = box ? 'pointer' : 'default';
+        this._hoveredId = box ? box.entity.id : null;
+        if (!this._raf) this.#drawFrame(); // show/clear the outline even when static
+        if (handlers.onHover) handlers.onHover(box ? box.entity : null, box);
       });
       this.canvas.addEventListener('mouseleave', () => {
         this.canvas.style.cursor = 'default';
-        if (handlers.onHover) handlers.onHover(null);
+        this._hoveredId = null;
+        if (!this._raf) this.#drawFrame();
+        if (handlers.onHover) handlers.onHover(null, null);
       });
       return this;
     }
   }
 
-  return { createEntity, Town, CATEGORY_COLORS };
+  return { createEntity, Town, CATEGORY_COLORS, LAYOUT };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = MachiHub;
