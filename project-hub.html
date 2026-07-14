@@ -30,6 +30,10 @@
     .cm-ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
     .cm-ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: #0b0b0d; }
     .cm-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+    .cm-seed-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+    .cm-seed-label { font-size: 12px; color: var(--text3); margin-right: 2px; }
+    .cm-seed-chip { font-family: var(--font-body); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px; cursor: pointer; border: 1px dashed var(--border2); background: none; color: var(--text2); transition: all .12s; }
+    .cm-seed-chip:hover { border-color: var(--accent); border-style: solid; color: var(--accent); }
     .cm-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow-x: auto; }
     .cm-table { border-collapse: collapse; min-width: 100%; }
     .cm-proj-th { height: 110px; width: 48px; min-width: 48px; max-width: 48px; padding: 0; vertical-align: bottom; position: relative; }
@@ -2143,21 +2147,9 @@
         <label class="form-label">Milestone Name</label>
         <input class="form-input" id="ms-name" placeholder="e.g. Design Approval">
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Target Date</label>
-          <input class="form-input" type="date" id="ms-date">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Color</label>
-          <select class="form-select" id="ms-color">
-            <option value="#c8f03e">Lime</option>
-            <option value="#3ecdf0">Cyan</option>
-            <option value="#f03e6e">Red</option>
-            <option value="#f0b43e">Amber</option>
-            <option value="#9b3ef0">Purple</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label class="form-label">Target Date</label>
+        <input class="form-input" type="date" id="ms-date">
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('modal-milestone')">Cancel</button>
@@ -3556,8 +3548,8 @@
           const pct = msTasks.length ? Math.round((doneCount / msTasks.length) * 100) : 0;
           wrap.innerHTML += `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div class="milestone-header"><div class="milestone-dot" style="background:${ms.color}"></div><div class="milestone-name">${ms.name}</div><div class="milestone-date">${formatDate(ms.date)}</div></div>
-          <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${ms.color}"></div></div>
+          <div class="milestone-header"><div class="milestone-dot" style="background:${proj.color}"></div><div class="milestone-name">${ms.name}</div><div class="milestone-date">${formatDate(ms.date)}</div></div>
+          <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${proj.color}"></div></div>
           <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
         </div>`;
         });
@@ -3728,13 +3720,13 @@
           el.innerHTML = `
         <div class="milestone-header" style="display:flex;align-items:center;gap:6px">
           <span class="ph-drag-handle">⠿</span>
-          <div class="milestone-dot" style="background:${ms.color}"></div>
+          <div class="milestone-dot" style="background:${proj.color}"></div>
           <div class="milestone-name" style="flex:1">${ms.name}</div>
           <div class="milestone-date">${formatDate(ms.date)}</div>
           <button class="task-action-btn edit" title="Edit milestone" style="margin-left:4px" onclick="openEditMilestone('${ms.id}','${projId}')">✎</button>
           <button class="task-action-btn del" title="Delete milestone" onclick="deleteMilestone('${ms.id}','${projId}')">✕</button>
         </div>
-        <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${ms.color}"></div></div>
+        <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${proj.color}"></div></div>
         <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
         ${msTasks.map(t => taskHTML({ ...t, projectId: projId })).join('')}
       `;
@@ -4162,7 +4154,6 @@
       _editingMsId = null; _editingMsProjId = null;
       document.getElementById('ms-name').value = '';
       document.getElementById('ms-date').value = '';
-      document.getElementById('ms-color').value = '#c8f03e';
       document.querySelector('#modal-milestone .modal-title').textContent = 'New Milestone';
       document.querySelector('#modal-milestone .modal-sub').textContent = 'Define a key milestone for this project';
       document.querySelector('#modal-milestone .btn-primary').textContent = 'Add Milestone';
@@ -4175,7 +4166,6 @@
       _editingMsId = msId; _editingMsProjId = projId;
       document.getElementById('ms-name').value = ms.name;
       document.getElementById('ms-date').value = ms.date;
-      document.getElementById('ms-color').value = ms.color;
       document.querySelector('#modal-milestone .modal-title').textContent = 'Edit Milestone';
       document.querySelector('#modal-milestone .modal-sub').textContent = 'Update this milestone';
       document.querySelector('#modal-milestone .btn-primary').textContent = 'Save Changes';
@@ -4188,11 +4178,11 @@
       const proj = getProject(projId); if (!proj) return;
       if (_editingMsId) {
         const ms = proj.milestones.find(m => m.id === _editingMsId);
-        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; ms.color = document.getElementById('ms-color').value; }
+        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; }
         _editingMsId = null; _editingMsProjId = null;
         saveState(); closeModal('modal-milestone'); showToast('Milestone updated');
       } else {
-        proj.milestones.push({ id: uid(), name, date: document.getElementById('ms-date').value, color: document.getElementById('ms-color').value });
+        proj.milestones.push({ id: uid(), name, date: document.getElementById('ms-date').value });
         saveState(); closeModal('modal-milestone'); showToast('Milestone added');
       }
       renderContent(); if (state.selectedProject) renderPanel(projId);
@@ -4434,8 +4424,41 @@
     function loadMx() { mxData = HubStorage.get(MX_KEY) || { items: [] }; if (!mxData.items) mxData.items = []; }
     function saveMx() { HubStorage.set(MX_KEY, mxData); updateBadges(); }
 
+    // Keeps the matrix in sync with real Project Hub tasks — no manual import step.
+    // Items with a taskId mirror their source task's title/done state and get dropped
+    // if the task is deleted; each open task not yet represented gets auto-added into
+    // Schedule (untriaged) once. Manually-added items (no taskId, via "+ Item") are
+    // never touched here.
+    function syncMxWithTasks() {
+      const liveTasks = new Map();
+      state.projects.forEach(p => (p.tasks || []).forEach(t => liveTasks.set(t.id, { ...t, _projectName: p.name, _projectId: p.id })));
+
+      mxData.items = mxData.items.filter(it => !it.taskId || liveTasks.has(it.taskId));
+      mxData.items.forEach(it => {
+        if (!it.taskId) return;
+        const t = liveTasks.get(it.taskId);
+        it.title = t.title;
+        it.done = t.done;
+        it.projectName = t._projectName;
+        it.projectId = t._projectId;
+      });
+
+      const known = new Set(mxData.items.filter(it => it.taskId).map(it => it.taskId));
+      liveTasks.forEach((t, id) => {
+        if (known.has(id) || t.done) return;
+        mxData.items.push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          taskId: id, title: t.title, notes: '', projectName: t._projectName, projectId: t._projectId,
+          quadrant: 'schedule', done: false, createdAt: new Date().toISOString(),
+        });
+      });
+
+      saveMx();
+    }
+
     function renderMxView(container) {
       loadMx();
+      syncMxWithTasks();
       container.style.display = 'flex';
       container.style.flexDirection = 'column';
       container.style.overflow = 'hidden';
@@ -4447,7 +4470,6 @@
         <label class="mx-show-done">
           <input type="checkbox" id="mx-show-done-chk" ${mxShowDone ? 'checked' : ''} onchange="mxShowDone=this.checked;renderContent()"> Show done
         </label>
-        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="openMxImportModal()">↓ Import tasks</button>
       `;
       container.appendChild(toolbar);
 
@@ -4499,9 +4521,9 @@
           ? items.map(it => `<div class="mx-card${it.done ? ' done-card' : ''}" id="mxc-${it.id}" draggable="true" ondragstart="onMxDragStart(event,'${it.id}')" ondragend="onMxDragEnd(event)">
               <div class="mx-check${it.done ? ' done' : ''}" onclick="toggleMxDone('${it.id}')"></div>
               <div class="mx-card-body">
-                <div class="mx-card-title${it.done ? ' done' : ''}">${_esc(it.title)}</div>
-                ${it.notes ? `<div class="mx-card-meta">${_esc(it.notes.slice(0, 60))}</div>` : ''}
-                ${it.projectName ? `<div class="mx-card-meta">${_esc(it.projectName)}</div>` : ''}
+                <div class="mx-card-title${it.done ? ' done' : ''}">${HubUtils.esc(it.title)}</div>
+                ${it.notes ? `<div class="mx-card-meta">${HubUtils.esc(it.notes.slice(0, 60))}</div>` : ''}
+                ${it.projectName ? `<div class="mx-card-meta">${HubUtils.esc(it.projectName)}</div>` : ''}
               </div>
               <button class="mx-edit-btn" onclick="openMxModal('${it.quadrant}','${it.id}')" title="Edit">✎</button>
             </div>`).join('')
@@ -4567,29 +4589,6 @@
       if (!mxEditId) return;
       mxData.items = mxData.items.filter(it => it.id !== mxEditId);
       saveMx(); closeMxModal(); renderMxCards();
-    }
-
-    function openMxImportModal() {
-      loadMx();
-      const tasks = (() => { try { return state.projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _projectName: p.name, _projectId: p.id }))); } catch { return []; } })();
-      const existing = new Set(mxData.items.filter(it => it.taskId).map(it => it.taskId));
-      const available = tasks.filter(t => !t.done && !existing.has(t.id));
-      const list = document.getElementById('mx-import-list');
-      list.innerHTML = available.length
-        ? available.map(t => `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-sm);cursor:pointer">
-            <input type="checkbox" value="${_esc(t.id)}" data-title="${_esc(t.title)}" data-project="${_esc(t._projectName || '')}" data-pid="${_esc(t._projectId || '')}" style="accent-color:var(--accent);cursor:pointer">
-            <span style="font-size:13px;flex:1">${_esc(t.title)}</span>
-            <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">${_esc(t._projectName || '')}</span>
-          </label>`).join('')
-        : '<div style="font-size:13px;color:var(--text3);padding:12px 10px">No new open tasks found.</div>';
-      document.getElementById('mx-import-overlay').classList.add('is-open');
-    }
-    function closeMxImportModal() { document.getElementById('mx-import-overlay').classList.remove('is-open'); }
-    function doMxImport() {
-      document.querySelectorAll('#mx-import-list input[type=checkbox]:checked').forEach(chk => {
-        mxData.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), taskId: chk.value, title: chk.dataset.title, notes: '', projectName: chk.dataset.project || null, projectId: chk.dataset.pid || null, quadrant: 'do-now', done: false, createdAt: new Date().toISOString() });
-      });
-      saveMx(); closeMxImportModal(); renderMxCards();
     }
 
     // ─── CONCEPT MATRIX ──────────────────────────────────────────────────────────
@@ -4692,6 +4691,7 @@
                 <div class="cm-leg"><span class="cm-leg-dot0"></span>None — click to cycle</div>
               </div>
             </div>
+            ${renderCmSeedRow(concepts)}
             <div class="cm-table-wrap">
               <table class="cm-table">
                 <thead><tr>${colHeadersHtml}</tr></thead>
@@ -4704,6 +4704,30 @@
         </div>`;
 
       attachCmCellEvents();
+    }
+
+    // Starter suggestions so the matrix doesn't open to a blank table with no sense of
+    // what a "concept" even is — grounded in Onur's actual recurring work themes. Only
+    // unused ones show, so this fades out naturally as real concepts get added.
+    const CONCEPT_SEEDS = [
+      'BIM Coordination', 'AI Tooling', 'MCP Integration', 'Automation',
+      'Decision Intelligence', 'Knowledge Reuse', 'Client Communication', 'Data Standards',
+    ];
+    function renderCmSeedRow(concepts) {
+      const have = new Set(concepts.map(c => c.name.trim().toLowerCase()));
+      const unused = CONCEPT_SEEDS.filter(s => !have.has(s.toLowerCase()));
+      if (!unused.length) return '';
+      return `<div class="cm-seed-row">
+        <span class="cm-seed-label">Quick add:</span>
+        ${unused.map(s => `<button class="cm-seed-chip" onclick="quickAddConcept('${s.replace(/'/g, "\\'")}')">+ ${HubUtils.esc(s)}</button>`).join('')}
+      </div>`;
+    }
+    function quickAddConcept(name) {
+      if (!state.concepts) state.concepts = [];
+      if (state.concepts.some(c => c.name.trim().toLowerCase() === name.toLowerCase())) return;
+      state.concepts.push({ id: 'cpt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, desc: '', vals: {} });
+      saveState();
+      renderContent();
     }
 
     function buildCmInsights(projects, concepts) {
@@ -4888,18 +4912,6 @@
       </div>
     </div>
   </div>
-  <div class="ui-modal-overlay" id="mx-import-overlay" onclick="if(event.target===this)closeMxImportModal()" style="z-index:300">
-    <div class="ui-modal" onclick="event.stopPropagation()" style="width:440px">
-      <div class="modal-title">Import from Project Hub</div>
-      <div style="font-size:12px;color:var(--text3);margin:8px 0">Select tasks to add to the matrix. Already-imported tasks are skipped.</div>
-      <div id="mx-import-list" style="max-height:300px;overflow-y:auto;margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" onclick="doMxImport()">Import selected</button>
-        <button class="btn btn-ghost" onclick="closeMxImportModal()">Cancel</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Concept Matrix modal -->
   <div class="ui-modal-overlay" id="cm-modal-overlay" onclick="if(event.target===this)closeConceptModal()" style="display:none;z-index:300">
     <div class="ui-modal" onclick="event.stopPropagation()" style="width:400px">

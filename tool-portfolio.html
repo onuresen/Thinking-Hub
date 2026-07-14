@@ -274,6 +274,9 @@
         .ring-pill-btn.active-trial   { background: rgba(56,189,248,0.12);   color: #38bdf8;             border-color: #38bdf8; }
         .ring-pill-btn.active-assess  { background: rgba(245,158,11,0.12);   color: var(--accent-super); border-color: var(--accent-super); }
         .ring-pill-btn.active-hold    { background: rgba(239,68,68,0.10);    color: var(--accent-nope);  border-color: var(--accent-nope); }
+        .ring-pill-btn.active-sor { background: rgba(34,197,94,0.12); color: #22c55e; border-color: #22c55e; }
+        .ring-pill-btn.active-soe { background: rgba(56,189,248,0.12); color: #38bdf8; border-color: #38bdf8; }
+        .ring-pill-btn.active-soi { background: rgba(245,158,11,0.12); color: var(--accent-super); border-color: var(--accent-super); }
 
         /* ── Main ───────────────────────────── */
         .main {
@@ -415,6 +418,15 @@
         .tp-chip-purple { background: var(--node-purple); border-color: var(--border-purple); }
         .tp-chip-red    { background: var(--node-red);    border-color: var(--border-red); }
 
+        .soi-map-hint { font-size: 12px; color: var(--text3); margin: 10px 0; }
+        .soi-map-wrap { position: relative; height: 500px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); }
+        .soi-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .soi-pole-label { position: absolute; font-size: 13px; font-weight: 700; text-align: center; width: 160px; pointer-events: none; }
+        .soi-pole-label .cap { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 800; }
+        .soi-pole-label .def { display: block; font-weight: 500; color: var(--text3); font-size: 12px; margin-top: 2px; }
+        .soi-map-dot { width: 17px; height: 17px; border-radius: 50%; position: absolute; transform: translate(-50%,-50%); cursor: pointer; box-shadow: 0 0 0 2px var(--surface), 0 2px 6px rgba(0,0,0,.3); transition: transform .1s; }
+        .soi-map-dot:hover { transform: translate(-50%,-50%) scale(1.5); z-index: 6; }
+
         .tp-popover-backdrop { position: fixed; inset: 0; z-index: 50; background: transparent; }
         .tp-popover { position: absolute; z-index: 51; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 12px; width: 220px; }
         .tp-popover-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
@@ -448,6 +460,7 @@
         <div class="tp-tab-bar">
             <button class="tp-tab active" data-view="list" onclick="switchTpView('list')">📋 List</button>
             <button class="tp-tab" data-view="matrix" onclick="switchTpView('matrix')">▦ Matrix</button>
+            <button class="tp-tab" data-view="map" onclick="switchTpView('map')">🔺 SoR·SoE·SoI Map</button>
         </div>
         <div class="stats-bar" id="stats-bar"></div>
 
@@ -455,6 +468,7 @@
             <div class="empty">Select a tool or add a new one.</div>
         </div>
         <div id="matrix-view" style="display:none;padding:0 16px 16px;"></div>
+        <div id="map-view" style="display:none;padding:0 16px 16px;"></div>
     </div>
 
     <script>
@@ -473,8 +487,10 @@
             tpView = view;
             document.getElementById('content').style.display = view === 'list' ? '' : 'none';
             document.getElementById('matrix-view').style.display = view === 'matrix' ? '' : 'none';
+            document.getElementById('map-view').style.display = view === 'map' ? '' : 'none';
             document.querySelectorAll('.tp-tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
             if (view === 'matrix') renderMatrix();
+            if (view === 'map') renderSoiMap();
         }
 
         function normCat(s) {
@@ -540,6 +556,71 @@
             });
             html += '</div>';
             el.innerHTML = html;
+        }
+
+        // SoR/SoE/SoI weights come from the 3 checkboxes: each checked pole gets an equal
+        // share (1 checked -> sits at that vertex, 2 -> the edge midpoint between them,
+        // 3 -> centroid). Barycentric placement + conic-gradient dot adapted directly from
+        // PortaLogic's SoR/SoE/SoI map (Vibe_Coding/PortaLogic/portable-logic-v2.html).
+        const SOI_TRI = { r: { x: 70, y: 430 }, e: { x: 570, y: 430 }, i: { x: 320, y: 40 } };
+        const SOI_COLOR = { r: '#22c55e', e: '#38bdf8', i: 'var(--accent-super)' };
+
+        function soiWeights(t) {
+            const on = [t.sor && 'r', t.soe && 'e', t.soi && 'i'].filter(Boolean);
+            if (!on.length) return null;
+            const share = 1 / on.length;
+            return { r: on.includes('r') ? share : 0, e: on.includes('e') ? share : 0, i: on.includes('i') ? share : 0 };
+        }
+
+        function soiPos(w) {
+            return {
+                x: w.r * SOI_TRI.r.x + w.e * SOI_TRI.e.x + w.i * SOI_TRI.i.x,
+                y: w.r * SOI_TRI.r.y + w.e * SOI_TRI.e.y + w.i * SOI_TRI.i.y,
+            };
+        }
+
+        function renderSoiMap() {
+            const el = document.getElementById('map-view');
+            if (!tools.length) {
+                el.innerHTML = '<div class="empty">No tools yet — add one from the List tab.</div>';
+                return;
+            }
+
+            const placed = tools.map(t => ({ t, w: soiWeights(t) })).filter(x => x.w);
+            const unplaced = tools.length - placed.length;
+
+            const poles = [
+                { key: 'r', pos: SOI_TRI.r, cap: 'SoR', def: 'System of Record', transform: 'translate(-2%,10px)' },
+                { key: 'e', pos: SOI_TRI.e, cap: 'SoE', def: 'System of Engagement', transform: 'translate(-98%,10px)' },
+                { key: 'i', pos: SOI_TRI.i, cap: 'SoI', def: 'System of Insight', transform: 'translate(-50%,-115%)' },
+            ];
+
+            const poleLabelsHtml = poles.map(p => {
+                const pct = { x: p.pos.x / 640 * 100, y: p.pos.y / 480 * 100 };
+                return `<div class="soi-pole-label" style="left:${pct.x}%;top:${pct.y}%;transform:${p.transform};color:${SOI_COLOR[p.key]}">
+                    <span class="cap">${p.cap}</span><span class="def">${p.def}</span>
+                </div>`;
+            }).join('');
+
+            const dotsHtml = placed.map(({ t, w }) => {
+                const pos = soiPos(w);
+                const pct = { x: pos.x / 640 * 100, y: pos.y / 480 * 100 };
+                const gradient = `conic-gradient(${SOI_COLOR.r} 0 ${w.r * 360}deg, ${SOI_COLOR.e} 0 ${(w.r + w.e) * 360}deg, ${SOI_COLOR.i} 0 360deg)`;
+                return `<div class="soi-map-dot" style="left:${pct.x}%;top:${pct.y}%;background:${gradient}" title="${escapeAttr(t.name)}" onclick="openTool('${escapeAttr(t.id)}');switchTpView('list')"></div>`;
+            }).join('');
+
+            el.innerHTML = `
+                <div class="soi-map-hint">${unplaced ? `${unplaced} tool${unplaced === 1 ? '' : 's'} not yet placed — check SoR/SoE/SoI in the tool's detail panel to add ${unplaced === 1 ? 'it' : 'them'} to the map.` : 'Positioned by SoR/SoE/SoI blend — click a dot to open that tool.'}</div>
+                <div class="soi-map-wrap">
+                    <svg class="soi-map-svg" viewBox="0 0 640 480">
+                        <polygon points="${SOI_TRI.r.x},${SOI_TRI.r.y} ${SOI_TRI.e.x},${SOI_TRI.e.y} ${SOI_TRI.i.x},${SOI_TRI.i.y}" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+                        <line x1="${SOI_TRI.r.x}" y1="${SOI_TRI.r.y}" x2="${(SOI_TRI.e.x+SOI_TRI.i.x)/2}" y2="${(SOI_TRI.e.y+SOI_TRI.i.y)/2}" stroke="var(--border)" stroke-width="1" opacity=".5"/>
+                        <line x1="${SOI_TRI.e.x}" y1="${SOI_TRI.e.y}" x2="${(SOI_TRI.r.x+SOI_TRI.i.x)/2}" y2="${(SOI_TRI.r.y+SOI_TRI.i.y)/2}" stroke="var(--border)" stroke-width="1" opacity=".5"/>
+                        <line x1="${SOI_TRI.i.x}" y1="${SOI_TRI.i.y}" x2="${(SOI_TRI.r.x+SOI_TRI.e.x)/2}" y2="${(SOI_TRI.r.y+SOI_TRI.e.y)/2}" stroke="var(--border)" stroke-width="1" opacity=".5"/>
+                    </svg>
+                    ${poleLabelsHtml}
+                    ${dotsHtml}
+                </div>`;
         }
 
         function closeChipPopover() {
@@ -676,7 +757,9 @@
                 url: '',
                 status: 'exploring',
                 ring: 'assess',
-                archLayer: '',
+                sor: false,
+                soe: false,
+                soi: false,
                 category: '',
                 note: '',
                 projectIds: [],
@@ -771,6 +854,16 @@
                     promptRingDecision(t, oldRing, value);
                 }
             }
+        }
+
+        // SoR/SoE/SoI are independent toggles (a tool can be more than one), unlike the
+        // single-select ring — flip in place and re-render so the pill state updates.
+        function toggleArchTag(key) {
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+            t[key] = !t[key];
+            save();
+            renderDetail();
         }
 
         // Normalize sequential order for a category (1..n)
@@ -1076,7 +1169,7 @@
                     ['Category',   t.category  || ''],
                     ['Status',     t.status    ? `<span style="color:${statusColors[t.status]||'var(--text3)'}">${t.status}</span>` : ''],
                     ['Radar Ring', t.ring      ? `<span style="color:${ringColors[t.ring]||'var(--text3)'}">${ringLabels[t.ring]||t.ring}</span>` : ''],
-                    ['TOGAF Layer',t.archLayer || ''],
+                    ['SoR · SoE · SoI', [t.sor && 'SoR', t.soe && 'SoE', t.soi && 'SoI'].filter(Boolean).join(' · ')],
                     ['URL',        t.url       ? `<a href="${escapeHtml(t.url)}" target="_blank" style="color:var(--accent);font-size:12px">${escapeHtml(t.url)}</a>` : ''],
                     ['Projects',   linkedProjects.length ? linkedProjects.map(n=>`<span style="font-size:12px;background:var(--surface3);border-radius:3px;padding:1px 5px">${escapeHtml(n)}</span>`).join(' ') : ''],
                     ['Notes',      t.note      || ''],
@@ -1180,15 +1273,13 @@
           </div>
 
           <div class="field">
-            <div class="field-label">TOGAF Architecture Layer</div>
-            <select class="select" onchange="updateField('archLayer', this.value)">
-              <option value="" ${!t.archLayer ? 'selected' : ''}>— Not assigned —</option>
-              <option value="business" ${t.archLayer === 'business' ? 'selected' : ''}>Business — processes, roles, org structure</option>
-              <option value="data" ${t.archLayer === 'data' ? 'selected' : ''}>Data — information assets &amp; flows</option>
-              <option value="application" ${t.archLayer === 'application' ? 'selected' : ''}>Application — software systems &amp; integrations</option>
-              <option value="technology" ${t.archLayer === 'technology' ? 'selected' : ''}>Technology — hardware, networks, platforms</option>
-            </select>
-            <div class="field-hint">TOGAF ADM domain — helps map tools to your enterprise architecture</div>
+            <div class="field-label">SoR · SoE · SoI <span style="color:var(--text3);font-size:10px;font-weight:400">(check all that apply)</span></div>
+            <div class="ring-pill-row">
+              <button class="ring-pill-btn${t.sor ? ' active-sor' : ''}" onclick="toggleArchTag('sor')" title="System of Record — the source of truth for this data">SoR</button>
+              <button class="ring-pill-btn${t.soe ? ' active-soe' : ''}" onclick="toggleArchTag('soe')" title="System of Engagement — day-to-day user interaction">SoE</button>
+              <button class="ring-pill-btn${t.soi ? ' active-soi' : ''}" onclick="toggleArchTag('soi')" title="System of Insight — analysis, prediction, decision support">SoI</button>
+            </div>
+            <div class="field-hint">DX department's framework, in place of TOGAF layers — see the Map tab for where this tool sits</div>
           </div>
           <div class="field">
             <div class="field-label">Category</div>
