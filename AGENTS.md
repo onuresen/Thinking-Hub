@@ -1459,6 +1459,34 @@ warnings/errors. No storage keys or shared engine contracts changed.
 
 ---
 
+### ~~Priority 83C — Machi knowledge-world layers~~ ✓ Done `[group: machi-vault-data]`
+Standalone Machi now adds five curated aggregate landmarks across Knowledge Quarter, Civic Quarter, and
+Old Town, plus an independently toggleable Routes overlay for the twelve strongest project-to-project
+vault relationships. City uses subtle blue routes; Fantasy uses gold dashed paths.
+
+**Key decisions:**
+- **Decision:** Aggregate research, concepts, ideas, decisions, and shipped history into five semantic
+  landmarks. **Why:** hundreds of note buildings would make the town unreadable and expose private note
+  identity. **Confidence:** high.
+- **Decision:** Limit routes to the strongest twelve project-level links and expose no note paths.
+  **Why:** the town shows real structure without becoming a 4,565-edge graph visualization.
+  **Confidence:** high.
+- **Decision:** Draw routes beneath buildings with a separate overlay toggle. **Why:** architecture and
+  hit-testing remain unchanged in both visual worlds. **Confidence:** high.
+- **Decision:** Exclude landmarks from project milestone celebrations. **Why:** generated civic/history
+  places are context, not newly achieved projects. **Confidence:** high.
+
+**Verified:** generator and JS syntax checks; 18 projects, 5 landmarks, 12 valid project-only routes;
+byte-identical snapshots; engine render-path test with routes under a Canvas mock; no private note paths in
+route output. Local browser verification was blocked by the in-app browser URL policy after the preview
+server restarted, so no alternate browser surface was used. No storage keys changed.
+
+**Files:** `esen-vault/scripts/build_machi_data.py`, `demos/machi-vault-v2.json`,
+`projects/Machi-Hub.md`; `Vibe_Coding/MachiHub/machi-vault-v2.json`, `machi-engine.js`,
+`vault-adapter.js`, `index.html`, `README.md`, `CLAUDE.md`; `Thinking-Hub/AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
