@@ -37,6 +37,27 @@
     .mayor-hud .stat.warn b { color: #ffb84d; }
     .mayor-hud .stat.storm b { color: #ff5b5b; }
 
+    /* Town crier — scrolling marquee of real facts, not decoration */
+    .ticker-bar {
+      overflow: hidden; white-space: nowrap; border-bottom: 1px solid var(--border);
+      background: var(--surface2); flex-shrink: 0;
+    }
+    .ticker-track {
+      display: inline-flex; white-space: nowrap; padding: 6px 0;
+      animation: ticker-scroll 30s linear infinite;
+    }
+    .ticker-item {
+      font-family: var(--font-mono); font-size: 12px; color: var(--text2); padding: 0 24px;
+      border-right: 1px solid var(--border);
+    }
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ticker-track { animation: none; }
+    }
+
     .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
     .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
 
@@ -101,6 +122,10 @@
   <div class="topbar">
     <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
     <div class="mayor-hud" id="mayor-hud"></div>
+  </div>
+
+  <div class="ticker-bar" id="ticker-bar" style="display:none">
+    <div class="ticker-track" id="ticker-track"></div>
   </div>
 
   <div class="content">
@@ -366,6 +391,10 @@
       return Math.min(1, (bad / relevant.length) * 2.5);
     }
 
+    function troubleCount(entities) {
+      return entities.filter((e) => e.incident === 'fire' || e.incident === 'crash' || e.incident === 'stalled').length;
+    }
+
     // ── Mayor's Dashboard — persistent glance-only city-health HUD ───────────
     function renderMayorHud(entities, weather) {
       const hud = document.getElementById('mayor-hud');
@@ -373,7 +402,7 @@
 
       const buildings = entities.filter((e) => e.kind === 'building');
       const vehicles = entities.filter((e) => e.kind === 'vehicle');
-      const trouble = entities.filter((e) => e.incident === 'fire' || e.incident === 'crash' || e.incident === 'stalled').length;
+      const trouble = troubleCount(entities);
       // A crane doesn't disqualify "healthy" — heavy active development is a good sign, not trouble.
       const healthy = buildings.filter((e) => e.incident !== 'fire' && e.staleness < 0.3).length;
 
@@ -395,6 +424,91 @@
         el.append(s.icon + ' ', b);
         hud.appendChild(el);
       }
+    }
+
+    // ── Town crier — scrolling headline ticker of real facts ────────────────
+    // Incidents/responders/weather come first (they're the news); achievement
+    // badges fill remaining space and get trimmed first if the list runs long.
+    function buildTickerHeadlines(entities, weather) {
+      const priority = [];
+      for (const e of entities) {
+        if (e.kind === 'building') {
+          if (e.incident === 'fire') priority.push(`🔥 ${e.name} has gone cold — untouched 60+ days`);
+          else if (e.incident === 'crane') priority.push(`🏗️ ${e.name} is under heavy active development`);
+        } else if (e.kind === 'vehicle') {
+          if (e.incident === 'crash') priority.push(`💥 ${e.name} is blocked`);
+          else if (e.incident === 'stalled') priority.push(`⚠️ ${e.name} is overdue`);
+        } else if (e.kind === 'responder') {
+          priority.push(`🚑 Responding to ${e.name}`);
+        }
+      }
+      priority.push(weather > 0.3 ? '🌩️ Storm brewing over Machi Town' : '☀️ Clear skies over Machi Town');
+
+      const achievements = [];
+      for (const e of entities) {
+        if (e.kind !== 'building') continue;
+        for (const a of (e.achievements || [])) {
+          if (a.id === 'shipped') continue; // the flag on the roof already says this
+          achievements.push(`${a.icon} ${e.name} — ${a.label}`);
+        }
+      }
+
+      return priority.concat(achievements).slice(0, 14);
+    }
+
+    function renderTicker(headlines) {
+      const bar = document.getElementById('ticker-bar');
+      const track = document.getElementById('ticker-track');
+      track.replaceChildren();
+      if (!headlines.length) { bar.style.display = 'none'; return; }
+      bar.style.display = '';
+
+      // Duplicated once so the -50% translate loops seamlessly.
+      for (let i = 0; i < 2; i++) {
+        for (const h of headlines) {
+          const span = document.createElement('span');
+          span.className = 'ticker-item';
+          span.textContent = h;
+          track.appendChild(span);
+        }
+      }
+      requestAnimationFrame(() => {
+        const singleWidth = track.scrollWidth / 2;
+        const pxPerSecond = 55;
+        track.style.animationDuration = Math.max(10, singleWidth / pxPerSecond) + 's';
+      });
+    }
+
+    // ── Milestone celebrations — one-time fireworks for genuine firsts ──────
+    // Gated behind fromDataChange so toggling a lens on/off (which changes which
+    // entities are counted without anything actually being fixed) never fires a
+    // false celebration. The trouble baseline still updates on every rebuild so
+    // the very first real fix after a page load is still detected.
+    let previousTrouble = null;
+    const MILESTONES_KEY = 'machi-milestones-v1';
+    const TOP_TIER = 4; // current adapters cap tier at 4 (mastery 3 / 50+ uses) — that's the real ceiling to "earn"
+
+    function checkMilestones(entities, trouble, fromDataChange) {
+      if (!fromDataChange) { previousTrouble = trouble; return; }
+
+      if (previousTrouble !== null && previousTrouble > 0 && trouble === 0) {
+        if (town) town.celebrate(20);
+        if (window.showToast) showToast('🎉 Zero incidents across Machi Town!');
+      }
+      previousTrouble = trouble;
+
+      const milestones = HubStorage.get(MILESTONES_KEY) || { tier5Seen: [] };
+      const seen = new Set(milestones.tier5Seen);
+      let changed = false;
+      for (const e of entities) {
+        if (e.kind === 'building' && e.tier >= TOP_TIER && !seen.has(e.id)) {
+          seen.add(e.id);
+          changed = true;
+          if (town) town.celebrate(20);
+          if (window.showToast) showToast(`🏆 ${e.name} reached the top tier!`);
+        }
+      }
+      if (changed) HubStorage.set(MILESTONES_KEY, { tier5Seen: [...seen] });
     }
 
     // ── Achievement rules (buildings) ───────────────────────────────────────
@@ -689,7 +803,7 @@
       return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
     }
 
-    function rebuild() {
+    function rebuild(fromDataChange = false) {
       let entities = [];
       for (const l of LENSES) {
         if (lensOn[l.id]) entities = entities.concat(l.build());
@@ -700,11 +814,18 @@
       const hasAnything = entities.length > 0;
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
-      if (!hasAnything) { renderMayorHud([], 0); return; }
+      if (!hasAnything) {
+        renderMayorHud([], 0);
+        renderTicker([]);
+        checkMilestones([], 0, fromDataChange);
+        return;
+      }
       closeDetail();
 
       const weather = weatherLevel(entities);
       renderMayorHud(entities, weather);
+      renderTicker(buildTickerHeadlines(entities, weather));
+      checkMilestones(entities, troubleCount(entities), fromDataChange);
 
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
@@ -740,8 +861,10 @@
     });
 
     // Live re-render when other tabs/tools change the underlying data.
+    // fromDataChange=true here (unlike lens toggles/resize) so milestone
+    // celebrations only fire when something real actually changed.
     for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1']) {
-      HubStorage.subscribe(key, rebuild);
+      HubStorage.subscribe(key, () => rebuild(true));
     }
 
     renderLensBar();

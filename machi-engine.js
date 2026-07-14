@@ -1,5 +1,6 @@
 /* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-engine.js (Machi Hub project).
    Edit there, then re-copy here. Do not edit this copy directly. */
+
 // machi-engine.js — portable core for Machi Hub.
 // Host-agnostic: knows nothing about vault / Thinking Hub / One+. Adapters live outside this file.
 // No DOM assumptions beyond a <canvas> element passed in by the caller.
@@ -188,6 +189,23 @@ const MachiHub = (() => {
     /** 0..1 — how often celebratory fireworks burst over the town (0 = never). */
     setCelebration(level) {
       this._celebration = clamp01(level);
+      return this;
+    }
+
+    /** One-time fireworks burst for a genuine milestone (distinct from the ambient setCelebration trickle). */
+    celebrate(count = 12) {
+      const { width } = this.grid || {};
+      if (!width) return this;
+      for (let i = 0; i < count; i++) {
+        this._fireworks.push({
+          x: MARGIN_X + Math.random() * (width - MARGIN_X * 2),
+          y: 6 + Math.random() * (TOP_SKY + 20),
+          age: 0,
+          life: 0.9 + Math.random() * 0.4,
+          hue: Math.floor(Math.random() * 360),
+        });
+      }
+      if (!this._raf && this.grid) this.#drawFrame();
       return this;
     }
 
