@@ -1367,6 +1367,34 @@ The standalone vault host now uses the canonical engine's `celebrate()` burst fo
 
 ---
 
+### ~~Priority 82A — Machi visual worlds: preserved City + Fantasy Realm~~ ✓ Done `[group: fantastic-town]`
+Machi Hub now treats visual worlds as parallel presentations over the same real entities. `Modern City` remains the unchanged default/fallback; the opt-in `Fantasy Realm` reuses the same layout, hitboxes, incidents, activity, seasons, milestones, filters, and popovers while rendering cobblestone roads, lanterns, signposts, deterministic cottages/guild halls/towers/castles, horse carts, ambient dragons, and timber scaffolding for busy projects. Both standalone MachiHub and Thinking Hub expose the selector; the choice is session-only.
+
+**Key decisions:**
+- **Decision:** Add `Town.setVisualTheme('city'|'fantasy')` instead of replacing or forking the town engine. **Why:** the existing City is already valuable, and all future worlds should remain interchangeable lenses over one honest entity contract. **Alternative:** rewrite the renderer as Fantasy-only — rejected because it would discard a polished working city and make future world modes harder. **Confidence:** high.
+- **Decision:** Keep City as the constructor default and make every Fantasy difference conditional at draw time. **Why:** old hosts and callers retain their exact path without opting in, while theme switching avoids data rebuilds and preserves hitboxes. **Confidence:** high.
+- **Decision:** Start Fantasy as deterministic procedural art before introducing generated assets. **Why:** this establishes architectural roles, palette behavior, and fallback rendering first; the later asset kit can enhance a stable contract instead of dictating it. **Confidence:** high.
+
+**Verified:** canonical/stamped engines and both host inline scripts compile. Live standalone browser testing loaded the real 18-project snapshot with City selected by default; switching to Fantasy preserved the 1180×1100 canvas, `18 / 6 healthy / 3 cold / 0 busy / 42% storm` HUD, and produced the new architecture/roads/ambient visuals with no console warnings/errors. Switching back restored City selection without changing dimensions or counts. Thinking Hub exposed the same keyboard-accessible selector and switched cleanly with no console warnings/errors.
+
+**Files:** `Vibe_Coding/MachiHub/machi-engine.js`, `index.html`, `README.md`, `CLAUDE.md`; `Thinking-Hub/machi-engine.js`, `town-hub.html`, `AGENTS.md`
+
+---
+
+### ~~Priority 82B — Fantastic Town: original optional asset atlas~~ ✓ Done `[group: fantastic-town]`
+Fantasy Realm now has a project-owned transparent 3×2 pixel-art atlas containing a cottage, guild hall, wizard tower, castle, market stall, and fountain/tree landmark. Four architecture frames enhance deterministic Fantasy buildings after the user selects that world; procedural Fantasy remains rendered underneath during loading or after failure, and Modern City never loads or depends on the atlas.
+
+**Key decisions:**
+- **Decision:** Use one coherent generated atlas rather than separate unrelated images. **Why:** a shared 3×2 sheet preserves scale, palette, lighting, and art direction while reducing requests and asset-loading complexity. **Confidence:** high.
+- **Decision:** Make `setAssetAtlas(url)` optional and host-triggered only on Fantasy selection. **Why:** City must remain fully asset-free, while Fantasy should appear instantly from procedural art and improve when the offline atlas becomes ready. **Alternative:** block rendering until the image loads — rejected because it would create a fragile blank state. **Confidence:** high.
+- **Decision:** Keep semantic overlays procedural above the atlas. **Why:** shipped flags, achievement pixels, overgrowth, fire, and scaffolding communicate real state and must remain legible regardless of the decorative architecture source. **Confidence:** high.
+
+**Verified:** chroma removal produced an RGBA `1536×1024` atlas with transparent corners and 602,235 visible pixels. Canonical/stamped engines and both host scripts compile. Live standalone testing loaded the real 18-project scene, selected Fantasy, preserved the `1180×1100` canvas and `18 / 6 healthy / 3 cold / 0 busy / 42% storm` HUD, displayed atlas-backed architecture, and reported no console warnings/errors. The procedural town renders before the asynchronous asset becomes ready and remains the engine's `onerror` fallback. No storage keys changed.
+
+**Files:** `Vibe_Coding/MachiHub/assets/fantastic-town/fantasy-atlas.png`, `machi-engine.js`, `index.html`, `README.md`, `CLAUDE.md`; `Thinking-Hub/assets/fantastic-town/fantasy-atlas.png`, `machi-engine.js`, `town-hub.html`, `AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

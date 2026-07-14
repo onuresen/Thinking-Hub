@@ -487,6 +487,7 @@
     let previousTrouble = null;
     const MILESTONES_KEY = 'machi-milestones-v1';
     const TOP_TIER = 4; // current adapters cap tier at 4 (mastery 3 / 50+ uses) — that's the real ceiling to "earn"
+    const FANTASY_ATLAS_URL = 'assets/fantastic-town/fantasy-atlas.png';
 
     function checkMilestones(entities, trouble, fromDataChange) {
       if (!fromDataChange) { previousTrouble = trouble; return; }
@@ -551,7 +552,8 @@
       }
     }
 
-    // ── Environment controls: time-of-day + season, both auto/manual, + PNG export ──
+    // ── World + environment controls: visual theme, time, season, + PNG export ──
+    let visualTheme = 'city'; // city remains the preserved default; fantasy is opt-in
     let timeMode = 'auto';   // 'auto' | number 0..1
     let seasonMode = 'auto'; // 'auto' | 'spring' | 'summer' | 'autumn' | 'winter'
     const SEASONS = [
@@ -571,7 +573,36 @@
       const bar = document.getElementById('env-bar');
       bar.replaceChildren();
 
-      // Row 1 — time of day
+      // Row 1 — world renderer. Both modes consume the same honest Hub entities.
+      const themeRow = document.createElement('div');
+      themeRow.className = 'env-row';
+      for (const theme of [
+        { id: 'city', label: '🏙 Modern City' },
+        { id: 'fantasy', label: '🏰 Fantasy Realm' },
+      ]) {
+        const chip = document.createElement('span');
+        chip.className = 'lens-chip' + (visualTheme === theme.id ? ' on' : '');
+        chip.textContent = theme.label;
+        chip.setAttribute('role', 'button');
+        chip.setAttribute('tabindex', '0');
+        chip.setAttribute('aria-pressed', String(visualTheme === theme.id));
+        const selectTheme = () => {
+          visualTheme = theme.id;
+          if (town) {
+            if (theme.id === 'fantasy') town.setAssetAtlas(FANTASY_ATLAS_URL);
+            town.setVisualTheme(theme.id);
+          }
+          renderEnvBar();
+        };
+        chip.addEventListener('click', selectTheme);
+        chip.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTheme(); }
+        });
+        themeRow.appendChild(chip);
+      }
+      bar.appendChild(themeRow);
+
+      // Row 2 — time of day
       const timeRow = document.createElement('div');
       timeRow.className = 'env-row';
 
@@ -612,14 +643,14 @@
       exportBtn.textContent = '⬇ Export PNG';
       exportBtn.addEventListener('click', () => {
         if (!town) return;
-        town.downloadPNG('machi-town-' + new Date().toISOString().slice(0, 10) + '.png');
+        town.downloadPNG(`machi-town-${visualTheme}-` + new Date().toISOString().slice(0, 10) + '.png');
       });
       timeRow.appendChild(exportBtn);
 
       bar.appendChild(timeRow);
       renderTimeLabel();
 
-      // Row 2 — season. Same auto/manual shape as time: an Auto chip that follows the
+      // Row 3 — season. Same auto/manual shape as time: an Auto chip that follows the
       // real calendar month, plus one chip per season for a manual override.
       const seasonRow = document.createElement('div');
       seasonRow.className = 'env-row';
@@ -833,6 +864,7 @@
           .setCelebration(celebrationLevel())
           .setWeather(weather)
           .render()
+          .setVisualTheme(visualTheme)
           .setTimeOfDay(timeMode)
           .setSeason(seasonMode)
           .enableInteraction({ onClick: showDetail });
@@ -843,6 +875,7 @@
           if (!town.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
         });
         window._machiTown = town; // debugging/testing handle
+        if (visualTheme === 'fantasy') town.setAssetAtlas(FANTASY_ATLAS_URL);
       } else {
         town.setMaxPerRow(colsForContainer())
           .setEntities(entities)

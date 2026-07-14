@@ -25,6 +25,14 @@ const MachiHub = (() => {
     winter: { ground: '#c9d3de', weed: '#8a95a3', daySky: '#c3d9e8', particle: 'snow' },
   };
   const SEASON_PARTICLE_TARGET = { spring: 16, summer: 10, autumn: 16, winter: 26 };
+  const FANTASY_ATLAS_FRAMES = {
+    cottage: { x: 64, y: 96, w: 408, h: 392 },
+    guild: { x: 550, y: 18, w: 460, h: 500 },
+    tower: { x: 1125, y: 18, w: 330, h: 500 },
+    castle: { x: 62, y: 532, w: 420, h: 430 },
+    market: { x: 570, y: 632, w: 390, h: 330 },
+    fountain: { x: 1018, y: 620, w: 478, h: 342 },
+  };
 
   function clamp01(n) {
     return Math.max(0, Math.min(1, Number.isFinite(n) ? n : 0));
@@ -162,6 +170,10 @@ const MachiHub = (() => {
       this._lastSeason = null;
       this._seasonParticles = [];
       this._seasonTheme = SEASON_THEME.summer; // overwritten every #drawFrame(); this is just a safe default
+      this._visualTheme = opts.visualTheme === 'fantasy' ? 'fantasy' : 'city';
+      this._assetAtlas = null;
+      this._assetAtlasUrl = '';
+      this._assetAtlasReady = false;
     }
 
     setEntities(entities) {
@@ -175,6 +187,36 @@ const MachiHub = (() => {
     /** Change how many buildings fit per row (host decides from its container width). */
     setMaxPerRow(n) {
       this.maxPerRow = Math.max(2, Math.floor(n) || this.maxPerRow);
+      return this;
+    }
+
+    /** Switches only the visual language. Entity data, layout, incidents, and hitboxes stay unchanged. */
+    setVisualTheme(value) {
+      this._visualTheme = value === 'fantasy' ? 'fantasy' : 'city';
+      if (!this._raf && this.grid) this.#drawFrame();
+      return this;
+    }
+
+    getVisualTheme() { return this._visualTheme; }
+
+    /** Optional offline Fantasy atlas. Procedural art remains the fallback while loading or on failure. */
+    setAssetAtlas(url) {
+      if (!url || typeof Image === 'undefined') return this;
+      if (this._assetAtlasUrl === url) return this;
+      this._assetAtlasUrl = url;
+      this._assetAtlasReady = false;
+      const image = new Image();
+      image.onload = () => {
+        this._assetAtlas = image;
+        this._assetAtlasReady = true;
+        if (this.grid) this.#drawFrame();
+      };
+      image.onerror = () => {
+        this._assetAtlas = null;
+        this._assetAtlasReady = false;
+        if (this.grid) this.#drawFrame();
+      };
+      image.src = url;
       return this;
     }
 
@@ -638,7 +680,9 @@ const MachiHub = (() => {
 
       // sky backdrop — blends night navy toward this season's day color (night looks like
       // night year-round; only the daytime endpoint carries the seasonal tint)
-      ctx.fillStyle = mix('#1c2130', theme.daySky, dayness);
+      const fantasy = this._visualTheme === 'fantasy';
+      const daySky = fantasy ? mix(theme.daySky, '#b28ae8', 0.3) : theme.daySky;
+      ctx.fillStyle = mix('#1c2130', daySky, dayness);
       ctx.fillRect(0, 0, width, height);
       if (goldenHour > 0.02) {
         ctx.fillStyle = `rgba(255,120,70,${(goldenHour * 0.4).toFixed(2)})`;
@@ -696,15 +740,25 @@ const MachiHub = (() => {
         }
       }
 
-      // planes — pixel body + blinking beacon
+      // planes in City; small dragons in Fantasy. Same ambient path, different visual language.
       for (const p of this._planes) {
         const px = Math.round(p.x), py = Math.round(p.y);
-        ctx.fillStyle = '#c8ccd8';
-        ctx.fillRect(px, py, 4, 1);
-        ctx.fillRect(px + (p.dir === 1 ? 0 : 3), py - 1, 1, 1); // tail fin at the back
-        if (Math.floor(this._time * 2.5) % 2 === 0) {
-          ctx.fillStyle = '#ff5b5b';
-          ctx.fillRect(px + (p.dir === 1 ? 4 : -1), py, 1, 1); // beacon at the nose
+        if (fantasy) {
+          const flap = Math.floor(this._time * 5) % 2;
+          ctx.fillStyle = '#b28ae8';
+          ctx.fillRect(px, py, 4, 1);
+          ctx.fillRect(px + (p.dir === 1 ? 3 : 0), py - 1, 2, 1);
+          ctx.fillRect(px + 1, py + (flap ? 1 : -1), 2, 1);
+          ctx.fillStyle = '#ffd98a';
+          ctx.fillRect(px + (p.dir === 1 ? 4 : -1), py, 1, 1);
+        } else {
+          ctx.fillStyle = '#c8ccd8';
+          ctx.fillRect(px, py, 4, 1);
+          ctx.fillRect(px + (p.dir === 1 ? 0 : 3), py - 1, 1, 1); // tail fin at the back
+          if (Math.floor(this._time * 2.5) % 2 === 0) {
+            ctx.fillStyle = '#ff5b5b';
+            ctx.fillRect(px + (p.dir === 1 ? 4 : -1), py, 1, 1); // beacon at the nose
+          }
         }
       }
 
@@ -732,11 +786,12 @@ const MachiHub = (() => {
       // vertical avenue, running the full height of the blocks
       if (hasAvenue) {
         const ax = MARGIN_X + avenueAfter * CELL_W;
-        ctx.fillStyle = '#262b36';
+        ctx.fillStyle = fantasy ? '#6b5a3a' : '#262b36';
         ctx.fillRect(ax, TOP_SKY, AVENUE_W, height - TOP_SKY);
-        ctx.fillStyle = '#4a5162';
+        ctx.fillStyle = fantasy ? '#c9a878' : '#4a5162';
         for (let y = TOP_SKY + 2; y < height; y += 6) {
-          ctx.fillRect(ax + Math.floor(AVENUE_W / 2), y, 1, 3);
+          if (fantasy) ctx.fillRect(ax + 1 + ((y / 6) % 2) * 3, y, AVENUE_W - 3, 1);
+          else ctx.fillRect(ax + Math.floor(AVENUE_W / 2), y, 1, 3);
         }
       }
 
@@ -748,11 +803,17 @@ const MachiHub = (() => {
         ctx.fillStyle = theme.ground; // sidewalk / verge — seasonal
         ctx.fillRect(0, baseline, width, SIDEWALK_H);
 
-        ctx.fillStyle = '#262b36'; // asphalt
+        ctx.fillStyle = fantasy ? '#6b5a3a' : '#262b36'; // cobbles / asphalt
         ctx.fillRect(0, baseline + SIDEWALK_H, width, ROAD_H);
-        ctx.fillStyle = '#4a5162'; // dashed centerline
+        ctx.fillStyle = fantasy ? '#c9a878' : '#4a5162'; // cobble joints / dashed centerline
         const midY = baseline + SIDEWALK_H + Math.floor(ROAD_H / 2);
-        for (let x = 2; x < width; x += 6) ctx.fillRect(x, midY, 3, 1);
+        for (let x = 2; x < width; x += 6) {
+          if (fantasy) {
+            ctx.fillRect(x, baseline + SIDEWALK_H + 2 + ((x / 6) % 2) * 3, 4, 1);
+          } else {
+            ctx.fillRect(x, midY, 3, 1);
+          }
+        }
 
         // street lamps at slot boundaries — only worth lighting once it's dim enough to notice
         const lampsUseful = dayness < 0.4;
@@ -760,11 +821,12 @@ const MachiHub = (() => {
           const lx = MARGIN_X + c * CELL_W + (c > avenueAfter || (c === avenueAfter && c !== 0) ? AVENUE_W : 0) - 1;
           if (lx < 1 || lx > width - 2) continue;
           const lampOn = lampsUseful && Math.random() > 0.005;
-          ctx.fillStyle = '#565c6b';
+          ctx.fillStyle = fantasy ? '#5c3d1a' : '#565c6b';
           ctx.fillRect(lx, baseline - 5, 1, 5);
           if (lampOn) {
             ctx.fillStyle = '#ffd98a';
-            ctx.fillRect(lx, baseline - 6, 1, 1);
+            if (fantasy) ctx.fillRect(lx - 1, baseline - 7, 3, 2);
+            else ctx.fillRect(lx, baseline - 6, 1, 1);
             ctx.fillStyle = 'rgba(255,217,138,0.18)';
             ctx.fillRect(lx - 2, baseline - 6, 5, 3);
           }
@@ -773,10 +835,16 @@ const MachiHub = (() => {
         // traffic light where this road crosses the avenue
         if (hasAvenue) {
           const ax = MARGIN_X + avenueAfter * CELL_W;
-          ctx.fillStyle = '#565c6b';
-          ctx.fillRect(ax - 2, baseline - 4, 1, 4 + SIDEWALK_H);
-          ctx.fillStyle = green ? '#5bd67a' : '#e34d4d';
-          ctx.fillRect(ax - 2, baseline - 5, 1, 1);
+          if (fantasy) {
+            ctx.fillStyle = '#5c3d1a';
+            ctx.fillRect(ax - 3, baseline - 5, 1, 6);
+            ctx.fillRect(ax - 3, baseline - 5, green ? 4 : 3, 1); // animated direction sign
+          } else {
+            ctx.fillStyle = '#565c6b';
+            ctx.fillRect(ax - 2, baseline - 4, 1, 4 + SIDEWALK_H);
+            ctx.fillStyle = green ? '#5bd67a' : '#e34d4d';
+            ctx.fillRect(ax - 2, baseline - 5, 1, 1);
+          }
         }
       }
 
@@ -794,7 +862,10 @@ const MachiHub = (() => {
 
       // buildings
       if (show('building')) {
-        for (const b of this.hitboxes) this.#drawBuilding(ctx, b);
+        for (const b of this.hitboxes) {
+          if (fantasy) this.#drawFantasyBuilding(ctx, b);
+          else this.#drawBuilding(ctx, b);
+        }
       }
 
       // walkers on sidewalks
@@ -832,14 +903,24 @@ const MachiHub = (() => {
           const isResponder = e.kind === 'responder';
           const col = isResponder ? '#e8ecf5' : (e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default);
 
-          ctx.fillStyle = col;
-          ctx.fillRect(vx, laneY + 1, 5, 2);                    // body
-          ctx.fillRect(vx + 1, laneY, 3, 1);                    // cabin
-          ctx.fillStyle = '#10131c';
-          ctx.fillRect(vx + 1, laneY + 3, 1, 1);                // wheels
-          ctx.fillRect(vx + 3, laneY + 3, 1, 1);
-          ctx.fillStyle = '#ffe07a';
-          ctx.fillRect(vx + (a.dir === 1 ? 4 : 0), laneY + 1, 1, 1); // headlight
+          if (fantasy) {
+            ctx.fillStyle = col;
+            ctx.fillRect(vx + 1, laneY + 1, 4, 2);              // cart bed
+            ctx.fillStyle = '#5c3d1a';
+            ctx.fillRect(vx + 1, laneY + 3, 1, 1);
+            ctx.fillRect(vx + 4, laneY + 3, 1, 1);
+            ctx.fillStyle = '#c9a878';
+            ctx.fillRect(vx + (a.dir === 1 ? 5 : 0), laneY + 1, 1, 2); // horse
+          } else {
+            ctx.fillStyle = col;
+            ctx.fillRect(vx, laneY + 1, 5, 2);                    // body
+            ctx.fillRect(vx + 1, laneY, 3, 1);                    // cabin
+            ctx.fillStyle = '#10131c';
+            ctx.fillRect(vx + 1, laneY + 3, 1, 1);                // wheels
+            ctx.fillRect(vx + 3, laneY + 3, 1, 1);
+            ctx.fillStyle = '#ffe07a';
+            ctx.fillRect(vx + (a.dir === 1 ? 4 : 0), laneY + 1, 1, 1); // headlight
+          }
 
           if (isResponder) {
             // flashing red/blue light bar — always alert, that's the point of a responder
@@ -965,11 +1046,134 @@ const MachiHub = (() => {
       }
     }
 
+    #drawFantasyBuilding(ctx, b) {
+      const e = b.entity;
+      const { x, y, w, h } = b;
+      const rand = seedFrom(e.id + '-fantasy-architecture');
+      const style = e.tier >= 5 ? 'castle' : ['cottage', 'guild', 'tower'][Math.floor(rand() * 3)];
+      const rawBase = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
+      const wall = e.staleness > 0.5
+        ? mix(rawBase.startsWith('#') ? rawBase : '#7a86a3', '#6b6f76', (e.staleness - 0.5) * 2)
+        : mix(rawBase.startsWith('#') ? rawBase : '#7a86a3', '#d8c9a8', 0.35);
+      const roof = e.district.toLowerCase().includes('work') ? '#565c6b' : '#8f3311';
+      const timber = '#5c3d1a';
+
+      // shadow and irregular stone foundation add depth without changing the hitbox.
+      ctx.fillStyle = 'rgba(20,16,24,0.35)';
+      ctx.fillRect(x + 2, y + h, w, 2);
+      ctx.fillStyle = '#6b5a3a';
+      ctx.fillRect(x, y + h - 2, w, 2);
+
+      if (style === 'tower') {
+        const tw = Math.max(6, w - 4);
+        const tx = x + Math.floor((w - tw) / 2);
+        ctx.fillStyle = wall;
+        ctx.fillRect(tx, y + 2, tw, h - 2);
+        ctx.fillStyle = roof;
+        ctx.fillRect(tx - 2, y + 1, tw + 4, 2);
+        ctx.fillRect(tx, y - 2, tw, 3);
+      } else {
+        ctx.fillStyle = wall;
+        ctx.fillRect(x, y + 4, w, h - 4);
+        ctx.fillStyle = roof;
+        const roofRise = style === 'castle' ? 5 : 4;
+        for (let r = 0; r < roofRise; r++) {
+          const inset = Math.min(r, Math.floor((w - 4) / 2));
+          ctx.fillRect(x + inset, y + r, w - inset * 2, 1);
+        }
+        if (style === 'castle') {
+          ctx.fillStyle = wall;
+          ctx.fillRect(x, y, 3, 5);
+          ctx.fillRect(x + w - 3, y, 3, 5);
+          ctx.fillRect(x, y - 2, 1, 2);
+          ctx.fillRect(x + 2, y - 2, 1, 2);
+          ctx.fillRect(x + w - 3, y - 2, 1, 2);
+          ctx.fillRect(x + w - 1, y - 2, 1, 2);
+        }
+      }
+
+      // Timber framing, door, and animated warm windows.
+      ctx.fillStyle = timber;
+      ctx.fillRect(x + Math.floor(w / 2), y + 5, 1, Math.max(1, h - 7));
+      ctx.fillRect(x + 1, y + Math.floor(h * 0.6), w - 2, 1);
+      const windowCount = Math.max(2, Math.floor(w / 4));
+      const lights = this.#windowState(e, windowCount);
+      for (let i = 0; i < windowCount; i++) {
+        const wx = x + 2 + (i * Math.max(2, Math.floor((w - 3) / windowCount)));
+        ctx.fillStyle = lights[i] ? '#ffd98a' : '#10131c';
+        ctx.fillRect(Math.min(x + w - 2, wx), y + Math.max(6, Math.floor(h * 0.45)), 1, 2);
+      }
+      ctx.fillStyle = '#3a1f1f';
+      ctx.fillRect(x + Math.floor(w / 2) - 1, y + h - 5, 3, 5);
+
+      // Stable gardens, crates, or signboards give every project a small identity.
+      if (rand() > 0.45) {
+        ctx.fillStyle = this._seasonTheme.weed;
+        ctx.fillRect(x - 1, y + h - 2, 1, 2);
+        ctx.fillRect(x + w, y + h - 3, 1, 3);
+      }
+      if (style === 'guild') {
+        ctx.fillStyle = '#ffb84d';
+        ctx.fillRect(x + w - 2, y + 6, 3, 3);
+      }
+
+      // The optional atlas is the final architectural skin; semantic overlays remain visible below.
+      this.#drawFantasyAsset(ctx, b, style);
+
+      if (e.staleness > 0.3) {
+        const weeds = Math.floor(e.staleness * w);
+        ctx.fillStyle = this._seasonTheme.weed;
+        for (let i = 0; i < weeds; i++) ctx.fillRect(x + Math.floor(rand() * w), y + h - 1, 1, 1);
+      }
+
+      if (e.shipped) {
+        const wave = Math.floor(this._time * 2) % 2;
+        ctx.fillStyle = '#ffd24d';
+        ctx.fillRect(x + w - 1, y - 5, 1, 5);
+        ctx.fillRect(x + w - 1, y - 5 + wave, 3, 2);
+      }
+
+      const badges = (e.achievements || []).filter((a) => a.id !== 'shipped').slice(0, 3);
+      ctx.fillStyle = '#ffd24d';
+      badges.forEach((_, i) => ctx.fillRect(x + 1 + i * 3, y - 3, 2, 2));
+
+      if (e.incident === 'fire') {
+        const fireRand = seedFrom(e.id + '-fantasy-fire-' + Math.floor(this._time * 6));
+        const flameCols = ['#ffb84d', '#ff5b3d', '#ffe07a'];
+        for (let i = 0; i < Math.max(2, Math.floor(w / 3)); i++) {
+          if (fireRand() < 0.7) {
+            ctx.fillStyle = flameCols[Math.floor(fireRand() * flameCols.length)];
+            ctx.fillRect(x + 1 + i * 3, y - 1 - Math.floor(fireRand() * 2), 2, 2);
+          }
+        }
+      } else if (e.incident === 'crane') {
+        // Fantasy construction uses timber scaffolding instead of a modern crane.
+        ctx.fillStyle = '#c9a878';
+        ctx.fillRect(x + w - 2, y - 7, 1, 8);
+        ctx.fillRect(x + w - 6, y - 6, 5, 1);
+        ctx.fillRect(x + w - 5, y - 5, 1, 5);
+      }
+    }
+
+    #drawFantasyAsset(ctx, b, style) {
+      if (!this._assetAtlasReady || !this._assetAtlas) return;
+      const frame = FANTASY_ATLAS_FRAMES[style];
+      if (!frame) return;
+      const extraW = style === 'castle' ? 8 : 5;
+      const extraH = style === 'tower' || style === 'castle' ? 10 : 7;
+      const drawW = b.w + extraW;
+      const drawH = b.h + extraH;
+      const drawX = b.x - Math.floor(extraW / 2);
+      const drawY = b.y - extraH;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this._assetAtlas, frame.x, frame.y, frame.w, frame.h, drawX, drawY, drawW, drawH);
+    }
+
     #drawLabels() {
       const ctx = this.ctx;
       ctx.textAlign = 'center';
       ctx.font = '9px monospace';
-      ctx.fillStyle = '#c9cfdb';
+      ctx.fillStyle = this._visualTheme === 'fantasy' ? '#d8c9a8' : '#c9cfdb';
       const maxWidth = (CELL_W - 2) * this.scale;
       if (!this._hiddenKinds.has('building')) {
         for (const b of this.hitboxes) {
@@ -981,7 +1185,7 @@ const MachiHub = (() => {
       // district names, top-left of each district's first row
       ctx.textAlign = 'left';
       ctx.font = `700 ${Math.max(10, this.scale * 2)}px monospace`;
-      ctx.fillStyle = 'rgba(201,207,219,0.5)';
+      ctx.fillStyle = this._visualTheme === 'fantasy' ? 'rgba(240,223,191,0.65)' : 'rgba(201,207,219,0.5)';
       for (const d of this._districtLabels || []) {
         const y = (TOP_SKY + d.row * ROW_H + 6) * this.scale;
         ctx.fillText(d.name.toUpperCase(), MARGIN_X * this.scale, y);
