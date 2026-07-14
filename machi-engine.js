@@ -142,6 +142,8 @@ const MachiHub = (() => {
       this._weather = 0;    // 0..1 storm intensity, host-driven via setWeather()
       this._clouds = [];
       this._rain = [];
+      this._timeMode = 'auto'; // 'auto' (follows the real device clock) | number 0..1 (manual override)
+      this._manualTimeOfDay = 0.5;
     }
 
     setEntities(entities) {
@@ -162,7 +164,7 @@ const MachiHub = (() => {
     setKindVisible(kind, visible) {
       if (visible) this._hiddenKinds.delete(kind);
       else this._hiddenKinds.add(kind);
-      if (!this._raf) this.#drawFrame(); // reflect immediately when static
+      if (!this._raf && this.grid) this.#drawFrame(); // reflect immediately when static and already laid out
       return this;
     }
 
@@ -175,6 +177,47 @@ const MachiHub = (() => {
     /** 0..1 — overall system-health weather. 0 = clear starry sky. Higher = clouds + rain, driven by incident density. */
     setWeather(level) {
       this._weather = clamp01(level);
+      return this;
+    }
+
+    /**
+     * Sets the day/night cycle. Pass 'auto' to follow the real device clock (the default), or a
+     * number 0..1 (0/1 = midnight, 0.5 = noon) for a host-driven manual override — e.g. a scrub
+     * slider. The same auto/manual shape is meant to be reused by a future setSeason().
+     */
+    setTimeOfDay(value) {
+      if (value === 'auto') {
+        this._timeMode = 'auto';
+      } else {
+        this._timeMode = 'manual';
+        this._manualTimeOfDay = clamp01(value);
+      }
+      if (!this._raf && this.grid) this.#drawFrame(); // reflect immediately when static and already laid out
+      return this;
+    }
+
+    /** Current effective time-of-day fraction (0..1), whether auto or manual. */
+    getTimeOfDay() {
+      return this.#currentTimeOfDay();
+    }
+
+    #currentTimeOfDay() {
+      if (this._timeMode !== 'auto') return this._manualTimeOfDay;
+      const d = new Date();
+      return (d.getHours() * 60 + d.getMinutes()) / 1440;
+    }
+
+    /** Downloads the current frame as a PNG — e.g. a "share your town" button. */
+    downloadPNG(filename = 'machi-town.png') {
+      this.canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
       return this;
     }
 
@@ -469,12 +512,34 @@ const MachiHub = (() => {
       const show = (kind) => !this._hiddenKinds.has(kind);
       this._actorBoxes = [];
 
-      // sky backdrop
-      ctx.fillStyle = '#1c2130';
-      ctx.fillRect(0, 0, width, height);
+      // day/night: dayness 0 (midnight) .. 1 (noon), symmetric so dawn/dusk both land at 0.5
+      const tod = this.#currentTimeOfDay();
+      const dayness = (Math.cos((tod - 0.5) * 2 * Math.PI) + 1) / 2;
+      const goldenHour = clamp01(1 - Math.abs(dayness - 0.5) * 4); // peaks right at dawn/dusk
 
-      // stars — slow sine twinkle, dimmed as weather rolls in
-      const starDim = 1 - this._weather * 0.7;
+      // sky backdrop — blends night navy toward a muted day blue
+      ctx.fillStyle = mix('#1c2130', '#6fa8c9', dayness);
+      ctx.fillRect(0, 0, width, height);
+      if (goldenHour > 0.02) {
+        ctx.fillStyle = `rgba(255,120,70,${(goldenHour * 0.4).toFixed(2)})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      // sun/moon — one shared arc formula; the moon uses the same shape 12h out of phase
+      const sunProg = clamp01((tod - 0.2) / 0.6);
+      const moonProg = clamp01((((tod + 0.5) % 1) - 0.2) / 0.6);
+      const arcY = (prog) => 4 + (1 - Math.sin(prog * Math.PI)) * (TOP_SKY - 10);
+      if (dayness > 0.03) {
+        ctx.fillStyle = `rgba(255,230,150,${dayness.toFixed(2)})`;
+        ctx.fillRect(Math.round(sunProg * (width - 8) + 4), Math.round(arcY(sunProg)), 2, 2);
+      }
+      if (dayness < 0.97) {
+        ctx.fillStyle = `rgba(214,222,235,${(1 - dayness).toFixed(2)})`;
+        ctx.fillRect(Math.round(moonProg * (width - 8) + 4), Math.round(arcY(moonProg)), 2, 2);
+      }
+
+      // stars — slow sine twinkle, dimmed as weather rolls in or the sun's up
+      const starDim = (1 - this._weather * 0.7) * (1 - dayness);
       for (const s of this._stars) {
         const tw = (0.35 + 0.65 * Math.abs(Math.sin(this._time / s.period + s.phase))) * starDim;
         ctx.fillStyle = `rgba(220,228,255,${tw.toFixed(2)})`;
@@ -569,11 +634,12 @@ const MachiHub = (() => {
         const midY = baseline + SIDEWALK_H + Math.floor(ROAD_H / 2);
         for (let x = 2; x < width; x += 6) ctx.fillRect(x, midY, 3, 1);
 
-        // street lamps at slot boundaries
+        // street lamps at slot boundaries — only worth lighting once it's dim enough to notice
+        const lampsUseful = dayness < 0.4;
         for (let c = 0; c <= cols; c++) {
           const lx = MARGIN_X + c * CELL_W + (c > avenueAfter || (c === avenueAfter && c !== 0) ? AVENUE_W : 0) - 1;
           if (lx < 1 || lx > width - 2) continue;
-          const lampOn = Math.random() > 0.005;
+          const lampOn = lampsUseful && Math.random() > 0.005;
           ctx.fillStyle = '#565c6b';
           ctx.fillRect(lx, baseline - 5, 1, 5);
           if (lampOn) {

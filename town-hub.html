@@ -39,6 +39,10 @@
     }
     .lens-chip.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
+    .env-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .env-slider { width: 160px; accent-color: var(--accent); }
+    .env-time-label { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-width: 44px; }
+
     .town-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
     .town-scroll { max-width: 100%; overflow-x: auto; position: relative; }
     canvas { border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
@@ -101,6 +105,7 @@
     </p>
 
     <div class="lens-bar" id="lens-bar"></div>
+    <div class="env-bar" id="env-bar"></div>
 
     <div class="town-wrap">
       <div class="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
@@ -389,6 +394,75 @@
       }
     }
 
+    // ── Environment controls: time-of-day (auto/manual), + PNG export ────────
+    // Same auto/manual shape is meant to be reused by a future season control.
+    let timeMode = 'auto'; // 'auto' | number 0..1
+
+    function minutesFromMode() {
+      if (typeof timeMode === 'number') return Math.round(timeMode * 1440);
+      const eff = town ? town.getTimeOfDay() : 0.5;
+      return Math.round(eff * 1440);
+    }
+
+    function renderEnvBar() {
+      const bar = document.getElementById('env-bar');
+      bar.replaceChildren();
+
+      const autoChip = document.createElement('span');
+      autoChip.className = 'lens-chip' + (timeMode === 'auto' ? ' on' : '');
+      autoChip.textContent = '🌞 Auto time';
+      autoChip.addEventListener('click', () => {
+        timeMode = 'auto';
+        if (town) town.setTimeOfDay('auto');
+        renderEnvBar();
+      });
+      bar.appendChild(autoChip);
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'env-slider';
+      slider.min = '0';
+      slider.max = '1439';
+      slider.step = '5';
+      slider.value = String(minutesFromMode());
+      slider.title = 'Drag to preview any time of day';
+      slider.addEventListener('input', (e) => {
+        timeMode = Number(e.target.value) / 1440;
+        if (town) town.setTimeOfDay(timeMode);
+        renderTimeLabel();
+        autoChip.classList.remove('on');
+      });
+      bar.appendChild(slider);
+
+      const label = document.createElement('span');
+      label.className = 'env-time-label';
+      label.id = 'env-time-label';
+      bar.appendChild(label);
+      renderTimeLabel();
+
+      const exportBtn = document.createElement('button');
+      exportBtn.type = 'button';
+      exportBtn.className = 'lens-chip';
+      exportBtn.textContent = '⬇ Export PNG';
+      exportBtn.addEventListener('click', () => {
+        if (!town) return;
+        town.downloadPNG('machi-town-' + new Date().toISOString().slice(0, 10) + '.png');
+      });
+      bar.appendChild(exportBtn);
+    }
+
+    function renderTimeLabel() {
+      const label = document.getElementById('env-time-label');
+      if (!label) return;
+      const mins = minutesFromMode();
+      const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+      const mm = String(mins % 60).padStart(2, '0');
+      label.textContent = `${hh}:${mm}`;
+    }
+
+    // In auto mode the real clock keeps moving — refresh the readout periodically.
+    setInterval(() => { if (timeMode === 'auto') renderTimeLabel(); }, 30000);
+
     // All text goes in via textContent — never innerHTML with data values.
     function line(parent, cls, text) {
       if (!text) return;
@@ -554,6 +628,7 @@
           .setCelebration(celebrationLevel())
           .setWeather(weather)
           .render()
+          .setTimeOfDay(timeMode)
           .enableInteraction({ onClick: showDetail });
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
         // clicking empty ground/sky dismisses the popover
@@ -585,6 +660,7 @@
     }
 
     renderLensBar();
+    renderEnvBar();
     rebuild();
   </script>
 </body>
