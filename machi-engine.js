@@ -13,6 +13,18 @@ const MachiHub = (() => {
     default: '#7a86a3',
   };
 
+  // Palette + ambient-particle behavior per season. 'ground'/'weed' retint the
+  // sidewalk and stale-building overgrowth; 'daySky' replaces the noon endpoint
+  // the day/night cycle mixes toward (night navy is unaffected — night looks
+  // like night year-round; only daytime carries the seasonal color).
+  const SEASON_THEME = {
+    spring: { ground: '#4f7a52', weed: '#5f9a63', daySky: '#a7d8e8', particle: 'petal' },
+    summer: { ground: '#3a5a3a', weed: '#3f6b3f', daySky: '#6fa8c9', particle: 'firefly' },
+    autumn: { ground: '#6b5a3a', weed: '#8a6f3f', daySky: '#c9a878', particle: 'leaf' },
+    winter: { ground: '#c9d3de', weed: '#8a95a3', daySky: '#c3d9e8', particle: 'snow' },
+  };
+  const SEASON_PARTICLE_TARGET = { spring: 16, summer: 10, autumn: 16, winter: 26 };
+
   function clamp01(n) {
     return Math.max(0, Math.min(1, Number.isFinite(n) ? n : 0));
   }
@@ -144,6 +156,11 @@ const MachiHub = (() => {
       this._rain = [];
       this._timeMode = 'auto'; // 'auto' (follows the real device clock) | number 0..1 (manual override)
       this._manualTimeOfDay = 0.5;
+      this._seasonMode = 'auto';  // 'auto' (follows the real calendar month) | a SEASON_THEME key
+      this._manualSeason = 'spring';
+      this._lastSeason = null;
+      this._seasonParticles = [];
+      this._seasonTheme = SEASON_THEME.summer; // overwritten every #drawFrame(); this is just a safe default
     }
 
     setEntities(entities) {
@@ -205,6 +222,40 @@ const MachiHub = (() => {
       if (this._timeMode !== 'auto') return this._manualTimeOfDay;
       const d = new Date();
       return (d.getHours() * 60 + d.getMinutes()) / 1440;
+    }
+
+    #dayness(tod) {
+      return (Math.cos((tod - 0.5) * 2 * Math.PI) + 1) / 2;
+    }
+
+    /**
+     * Sets the season theme + ambient particles. Pass 'auto' to follow the real calendar month
+     * (Northern-hemisphere mapping), or one of 'spring'/'summer'/'autumn'/'winter' for a host-driven
+     * manual override — same auto/manual shape as setTimeOfDay(), meant for a matching UI control.
+     */
+    setSeason(value) {
+      if (value === 'auto') {
+        this._seasonMode = 'auto';
+      } else if (SEASON_THEME[value]) {
+        this._seasonMode = 'manual';
+        this._manualSeason = value;
+      }
+      if (!this._raf && this.grid) this.#drawFrame();
+      return this;
+    }
+
+    /** Current effective season ('spring'/'summer'/'autumn'/'winter'), whether auto or manual. */
+    getSeason() {
+      return this.#currentSeason();
+    }
+
+    #currentSeason() {
+      if (this._seasonMode !== 'auto') return this._manualSeason;
+      const m = new Date().getMonth(); // 0 = January
+      if (m >= 2 && m <= 4) return 'spring';
+      if (m >= 5 && m <= 7) return 'summer';
+      if (m >= 8 && m <= 10) return 'autumn';
+      return 'winter';
     }
 
     /** Downloads the current frame as a PNG — e.g. a "share your town" button. */
@@ -503,7 +554,51 @@ const MachiHub = (() => {
       for (const f of this._fireworks) f.age += dt;
       this._fireworks = this._fireworks.filter((f) => f.age < f.life);
 
+      this.#tickSeasonParticles(dt, width, height);
       this.#drawFrame();
+    }
+
+    // Ambient, always-on seasonal particles — independent of the incident-driven weather
+    // system above. Falling kinds (petal/leaf/snow) drift down and sway; fireflies wander
+    // and only glow at night, so summer's signature only shows up after dark.
+    #tickSeasonParticles(dt, width, height) {
+      const season = this.#currentSeason();
+      if (season !== this._lastSeason) {
+        this._seasonParticles = [];
+        this._lastSeason = season;
+      }
+      const kind = SEASON_THEME[season].particle;
+      const target = SEASON_PARTICLE_TARGET[season] || 0;
+
+      if (kind === 'firefly') {
+        while (this._seasonParticles.length < target) {
+          this._seasonParticles.push({
+            kind, x: Math.random() * width, y: TOP_SKY + Math.random() * (height - TOP_SKY),
+            vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, phase: Math.random() * Math.PI * 2,
+          });
+        }
+        for (const p of this._seasonParticles) {
+          p.vx = Math.max(-8, Math.min(8, p.vx + (Math.random() - 0.5) * 2 * dt));
+          p.vy = Math.max(-8, Math.min(8, p.vy + (Math.random() - 0.5) * 2 * dt));
+          p.x = Math.max(0, Math.min(width, p.x + p.vx * dt));
+          p.y = Math.max(TOP_SKY, Math.min(height, p.y + p.vy * dt));
+        }
+      } else if (target > 0) {
+        while (this._seasonParticles.length < target) {
+          this._seasonParticles.push({
+            kind, x: Math.random() * width, y: -Math.random() * height,
+            speed: (season === 'winter' ? 3 : 5) + Math.random() * 4,
+            swaySeed: Math.random() * Math.PI * 2, colorIdx: Math.floor(Math.random() * 3),
+          });
+        }
+        for (const p of this._seasonParticles) {
+          p.y += p.speed * dt;
+          p.x += Math.sin(this._time * 1.5 + p.swaySeed) * dt * 6;
+          if (p.y > height) { p.y = -2; p.x = Math.random() * width; }
+        }
+      } else {
+        this._seasonParticles = [];
+      }
     }
 
     #drawFrame() {
@@ -512,13 +607,20 @@ const MachiHub = (() => {
       const show = (kind) => !this._hiddenKinds.has(kind);
       this._actorBoxes = [];
 
+      // season theme — cached on the instance so #drawBuilding (called per-building below) can
+      // read it without every caller needing to thread it through as an argument
+      const season = this.#currentSeason();
+      const theme = SEASON_THEME[season];
+      this._seasonTheme = theme;
+
       // day/night: dayness 0 (midnight) .. 1 (noon), symmetric so dawn/dusk both land at 0.5
       const tod = this.#currentTimeOfDay();
-      const dayness = (Math.cos((tod - 0.5) * 2 * Math.PI) + 1) / 2;
+      const dayness = this.#dayness(tod);
       const goldenHour = clamp01(1 - Math.abs(dayness - 0.5) * 4); // peaks right at dawn/dusk
 
-      // sky backdrop — blends night navy toward a muted day blue
-      ctx.fillStyle = mix('#1c2130', '#6fa8c9', dayness);
+      // sky backdrop — blends night navy toward this season's day color (night looks like
+      // night year-round; only the daytime endpoint carries the seasonal tint)
+      ctx.fillStyle = mix('#1c2130', theme.daySky, dayness);
       ctx.fillRect(0, 0, width, height);
       if (goldenHour > 0.02) {
         ctx.fillStyle = `rgba(255,120,70,${(goldenHour * 0.4).toFixed(2)})`;
@@ -625,7 +727,7 @@ const MachiHub = (() => {
       for (let r = 0; r < rows; r++) {
         const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
 
-        ctx.fillStyle = '#3a4a3a'; // sidewalk / verge
+        ctx.fillStyle = theme.ground; // sidewalk / verge — seasonal
         ctx.fillRect(0, baseline, width, SIDEWALK_H);
 
         ctx.fillStyle = '#262b36'; // asphalt
@@ -744,6 +846,26 @@ const MachiHub = (() => {
         }
       }
 
+      // seasonal ambient particles drift in front of the town — sakura/leaves/snow always
+      // visible, fireflies only glow once it's dark enough to notice
+      for (const p of this._seasonParticles) {
+        if (p.kind === 'firefly') {
+          const glow = clamp01(1 - dayness * 2.5);
+          if (glow <= 0.02) continue;
+          const blink = 0.4 + 0.6 * Math.abs(Math.sin(this._time * 3 + p.phase));
+          ctx.fillStyle = `rgba(214,255,140,${(glow * blink).toFixed(2)})`;
+        } else if (p.kind === 'petal') {
+          ctx.fillStyle = ['#ffc2d9', '#ffe0ea', '#ff9fc4'][p.colorIdx];
+        } else if (p.kind === 'leaf') {
+          ctx.fillStyle = ['#b8451f', '#8f3311', '#5c3d1a'][p.colorIdx]; // darker than the day sky for contrast
+        } else if (p.kind === 'snow') {
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        } else {
+          continue;
+        }
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+      }
+
       // hover highlight — white outline around whatever the cursor is on
       if (this._hoveredId) {
         const box = this.#boxById(this._hoveredId);
@@ -784,8 +906,8 @@ const MachiHub = (() => {
       if (e.staleness > 0.3) {
         const rand = seedFrom(e.id + '-weeds');
         const speckles = Math.floor(e.staleness * w);
+        ctx.fillStyle = this._seasonTheme.weed;
         for (let s = 0; s < speckles; s++) {
-          ctx.fillStyle = '#3f6b3f';
           ctx.fillRect(x + Math.floor(rand() * w), y + h - 1, 1, 1);
         }
       }

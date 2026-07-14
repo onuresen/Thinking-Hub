@@ -39,7 +39,8 @@
     }
     .lens-chip.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
-    .env-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .env-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .env-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .env-slider { width: 160px; accent-color: var(--accent); }
     .env-time-label { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-width: 44px; }
 
@@ -394,9 +395,15 @@
       }
     }
 
-    // ── Environment controls: time-of-day (auto/manual), + PNG export ────────
-    // Same auto/manual shape is meant to be reused by a future season control.
-    let timeMode = 'auto'; // 'auto' | number 0..1
+    // ── Environment controls: time-of-day + season, both auto/manual, + PNG export ──
+    let timeMode = 'auto';   // 'auto' | number 0..1
+    let seasonMode = 'auto'; // 'auto' | 'spring' | 'summer' | 'autumn' | 'winter'
+    const SEASONS = [
+      { id: 'spring', label: '🌸 Spring' },
+      { id: 'summer', label: '🎐 Summer' },
+      { id: 'autumn', label: '🍁 Autumn' },
+      { id: 'winter', label: '❄️ Winter' },
+    ];
 
     function minutesFromMode() {
       if (typeof timeMode === 'number') return Math.round(timeMode * 1440);
@@ -408,6 +415,10 @@
       const bar = document.getElementById('env-bar');
       bar.replaceChildren();
 
+      // Row 1 — time of day
+      const timeRow = document.createElement('div');
+      timeRow.className = 'env-row';
+
       const autoChip = document.createElement('span');
       autoChip.className = 'lens-chip' + (timeMode === 'auto' ? ' on' : '');
       autoChip.textContent = '🌞 Auto time';
@@ -416,7 +427,7 @@
         if (town) town.setTimeOfDay('auto');
         renderEnvBar();
       });
-      bar.appendChild(autoChip);
+      timeRow.appendChild(autoChip);
 
       const slider = document.createElement('input');
       slider.type = 'range';
@@ -432,13 +443,12 @@
         renderTimeLabel();
         autoChip.classList.remove('on');
       });
-      bar.appendChild(slider);
+      timeRow.appendChild(slider);
 
       const label = document.createElement('span');
       label.className = 'env-time-label';
       label.id = 'env-time-label';
-      bar.appendChild(label);
-      renderTimeLabel();
+      timeRow.appendChild(label);
 
       const exportBtn = document.createElement('button');
       exportBtn.type = 'button';
@@ -448,7 +458,38 @@
         if (!town) return;
         town.downloadPNG('machi-town-' + new Date().toISOString().slice(0, 10) + '.png');
       });
-      bar.appendChild(exportBtn);
+      timeRow.appendChild(exportBtn);
+
+      bar.appendChild(timeRow);
+      renderTimeLabel();
+
+      // Row 2 — season. Same auto/manual shape as time: an Auto chip that follows the
+      // real calendar month, plus one chip per season for a manual override.
+      const seasonRow = document.createElement('div');
+      seasonRow.className = 'env-row';
+
+      const seasonAutoChip = document.createElement('span');
+      seasonAutoChip.className = 'lens-chip' + (seasonMode === 'auto' ? ' on' : '');
+      seasonAutoChip.textContent = '📅 Auto season';
+      seasonAutoChip.addEventListener('click', () => {
+        seasonMode = 'auto';
+        if (town) town.setSeason('auto');
+        renderEnvBar();
+      });
+      seasonRow.appendChild(seasonAutoChip);
+
+      for (const s of SEASONS) {
+        const chip = document.createElement('span');
+        chip.className = 'lens-chip' + (seasonMode === s.id ? ' on' : '');
+        chip.textContent = s.label;
+        chip.addEventListener('click', () => {
+          seasonMode = s.id;
+          if (town) town.setSeason(s.id);
+          renderEnvBar();
+        });
+        seasonRow.appendChild(chip);
+      }
+      bar.appendChild(seasonRow);
     }
 
     function renderTimeLabel() {
@@ -629,6 +670,7 @@
           .setWeather(weather)
           .render()
           .setTimeOfDay(timeMode)
+          .setSeason(seasonMode)
           .enableInteraction({ onClick: showDetail });
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
         // clicking empty ground/sky dismisses the popover
