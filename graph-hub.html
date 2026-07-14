@@ -2071,33 +2071,66 @@
     }
 
     // ── Bottleneck detection ─────────────────────────────────────
-    // Reuses Impact Analysis's forward adjacency (above) — a node's "blast radius"
-    // is just the size of its own impact trace. No new schema, no new panel by
-    // default: the per-node reading appears in the existing node panel (same spot
-    // Critical Path shows Float, in showNodePanel below), and the canvas-wide ring
-    // is opt-in via one toggle button mirroring the Orphans/Critical Path pattern —
-    // nothing sits on screen until it's clicked.
+    // Deliberately NARROWER than Impact Analysis's adjacency (above). That trace is
+    // built to be broad on purpose (P77: includes tag/host context edges so "why
+    // does this exist" is never silently incomplete) — but that breadth is exactly
+    // wrong for "is this a single point of failure": a shared tag or a shared
+    // project isn't a dependency, so counting those edges made nearly every
+    // well-tagged item look like a false-positive bottleneck, and tag nodes
+    // themselves (which fan out to everything wearing that tag) worst of all.
+    // Bottleneck blast radius only walks genuine causal links — 'blocks' /
+    // 'depends-on' / 'leads-to' — the same relTypes Critical Path already treats
+    // as directional predecessor→successor edges. Auto context edges and
+    // undirected 'relates' links are excluded entirely.
     const BOTTLENECK_MIN_IMPACT = 3;
 
+    function _bottleneckAdjacency() {
+      const forward = new Map(); // nodeId -> [downstream nodeId, ...]
+      function link(fromId, toId) {
+        if (!forward.has(fromId)) forward.set(fromId, []);
+        forward.get(fromId).push(toId);
+      }
+      if (!edgesDS) return forward;
+      const relTypeById = new Map(HubLinks.getAll().map(l => [l.id, l.relType]));
+      edgesDS.forEach(e => {
+        if (e._auto) return; // structural/tag edges aren't causal dependencies
+        const relType = relTypeById.get(e._linkId) || 'relates';
+        if (relType === 'blocks' || relType === 'leads-to') link(e.from, e.to);
+        else if (relType === 'depends-on') link(e.to, e.from);
+        // 'relates' has no causal direction — not a dependency, excluded
+      });
+      return forward;
+    }
+
+    function _bottleneckBlastRadius(nodeId, forward) {
+      const visited = new Set([nodeId]);
+      let frontier = [nodeId], depth = 0;
+      while (frontier.length && depth < 6) {
+        depth++;
+        const next = [];
+        for (const cur of frontier) {
+          for (const to of (forward.get(cur) || [])) {
+            if (visited.has(to)) continue;
+            visited.add(to);
+            next.push(to);
+          }
+        }
+        frontier = next;
+      }
+      return visited.size - 1;
+    }
+
+    // Single-node lookup for the node panel — rebuilds the (cheap) adjacency on
+    // demand, same pattern traceFromNode uses for _impactAdjacency().
+    function bottleneckBlastRadiusOf(nodeId) {
+      return _bottleneckBlastRadius(nodeId, _bottleneckAdjacency());
+    }
+
     function computeBottlenecks() {
-      const { forward } = _impactAdjacency();
+      const forward = _bottleneckAdjacency();
       const map = new Map(); // nodeId -> downstream-affected count
       nodesMap.forEach((node, id) => {
-        const visited = new Set([id]);
-        let frontier = [id], depth = 0;
-        while (frontier.length && depth < 6) {
-          depth++;
-          const next = [];
-          for (const cur of frontier) {
-            for (const { to } of (forward.get(cur) || [])) {
-              if (visited.has(to)) continue;
-              visited.add(to);
-              next.push(to);
-            }
-          }
-          frontier = next;
-        }
-        const count = visited.size - 1;
+        const count = _bottleneckBlastRadius(id, forward);
         if (count >= BOTTLENECK_MIN_IMPACT) map.set(id, count);
       });
       return map;
@@ -2406,7 +2439,7 @@
       document.getElementById('np-label').textContent = node.label;
 
       const meta = fetchNodeMeta(node.tool, node.itemId);
-      const blast = traceFromNode(nodeId, 'impact').length;
+      const blast = bottleneckBlastRadiusOf(nodeId);
       if (blast >= BOTTLENECK_MIN_IMPACT) {
         meta.push({ k: '⚠ Bottleneck', v: `breaks ${blast} downstream item${blast === 1 ? '' : 's'}` });
       }
