@@ -74,7 +74,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57), `machi-milestones-v1` (ephemeral Machi celebration dedupe; excluded from backup/sync)
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -1324,6 +1324,46 @@ The canonical Vibe Coding host still rendered the Phase 5 fixed-width project pr
 **Verified:** real HTTP path returned the host, engine, and 18-project snapshot; inline host and adapter scripts compile; seeded adapter cases cover fresh/cold/busy/shipped/personal mappings; the in-app browser rendered both districts with weather, toggled each lens and the both-off empty state, opened an anchored ONES detail with its Obsidian link, and reported no console warnings/errors. At 390×844 the body stayed within 375px while the 660px town scrolled internally. No storage keys or shared-engine files changed.
 
 **Files:** `Vibe_Coding/MachiHub/index.html`, `vault-adapter.js`, `serve.js`, `README.md`, `CLAUDE.md`; `Thinking-Hub/AGENTS.md`
+
+---
+
+### ~~Priority 81A — Standalone MachiHub: environment controls~~ ✓ Done `[group: machi-town-parity]`
+The standalone vault-town host now exposes the shared engine's existing environment features: automatic or manually previewed time of day, automatic or manually selected season, and PNG export of the current canvas.
+
+**Key decisions:**
+- **Decision:** Keep time and season as host-session state, independent of the Work/Personal project lenses. **Why:** changing data visibility or resizing the town should preserve the user's visual preview without adding a new persistent storage contract. **Confidence:** high.
+- **Decision:** Use the canonical engine APIs directly rather than duplicating visual logic in `index.html`. **Why:** `setTimeOfDay`, `setSeason`, and `downloadPNG` already define the portable behavior shared with Thinking Hub. **Confidence:** high.
+
+**Verified:** the deployed standalone file contains both environment rows and wires them to `setTimeOfDay`, `setSeason`, and `downloadPNG`; new-town construction reapplies the selected modes after lens or responsive rebuilds. No storage keys, adapters, or shared-engine files changed.
+
+**Files:** `Vibe_Coding/MachiHub/index.html`; `Thinking-Hub/AGENTS.md`
+
+---
+
+### ~~Priority 81B — Standalone MachiHub: city-status HUD and town crier~~ ✓ Done `[group: machi-town-parity]`
+The standalone vault town now presents the same glanceable city-status layer as Thinking Hub, adapted to evidence the vault snapshot actually contains. The header reports total projects, healthy projects, cold projects, busy construction sites, and incident-driven storm intensity. A reduced-motion-aware ticker prioritizes cold/busy project news and weather before achievement headlines.
+
+**Key decisions:**
+- **Decision:** Replace Thinking Hub's active-vehicle count with a busy-site count. **Why:** standalone MachiHub represents vault projects as buildings and has no vehicle/project-road model, while crane incidents are genuine adapter-derived evidence of active work. **Confidence:** high.
+- **Decision:** Recompute the HUD and ticker from the currently visible Work/Personal lenses. **Why:** the summary should describe the town the user is looking at, and both-off mode should clear rather than retain stale counts. **Confidence:** high.
+
+**Verified:** the standalone inline script compiles. Live browser testing against the 18-project snapshot produced 6 healthy / 3 cold / 0 busy / 42% storm; disabling Personal recalculated all visible-town totals, and disabling both lenses cleared the HUD/ticker and hid the canvas. All dynamic text enters through `textContent`; reduced-motion disables ticker animation. No adapters or shared-engine files changed.
+
+**Files:** `Vibe_Coding/MachiHub/index.html`; `Thinking-Hub/AGENTS.md`
+
+---
+
+### ~~Priority 81C — Standalone MachiHub: genuine milestone celebrations~~ ✓ Done `[group: machi-town-parity]`
+The standalone vault host now uses the canonical engine's `celebrate()` burst for two evidence-backed firsts: the live snapshot recovering from one or more cold projects to zero, and a live project first appearing at the reachable top tier. A transient text notice makes the milestone understandable even when reduced motion prevents the animation loop from running.
+
+**Key decisions:**
+- **Decision:** Persist only milestone dedupe/baseline state in `machi-milestones-v1`; do not persist environment controls. **Why:** recovery detection must compare live snapshots across page loads, while time/season are temporary visual previews. The key remains excluded from backup/sync as ephemeral UI state. **Confidence:** high.
+- **Decision:** Never read or write milestone state for fallback sample data. **Why:** a blocked `file://` fetch must not create fictional accomplishments or contaminate the next real vault run. **Confidence:** high.
+- **Decision:** Lens toggles and responsive rebuilds never run milestone evaluation. **Why:** visibility changes are not project-state changes and must not cause false recovery fireworks. **Confidence:** high.
+
+**Verified:** the completed standalone inline script compiles; milestone evaluation is called only by a successful live-snapshot boot; both storage reads and writes fail safely; celebration notices use `textContent`. Live browser testing showed first-observation top-tier notices, then no repeat notice after reload, with no console warnings/errors. README and CLAUDE describe the environment, status, and milestone layers. No adapter or shared-engine files changed.
+
+**Files:** `Vibe_Coding/MachiHub/index.html`, `README.md`, `CLAUDE.md`; `Thinking-Hub/AGENTS.md`
 
 ---
 

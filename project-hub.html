@@ -3242,7 +3242,7 @@
           const { bg, fg } = assignee ? avatarColors(assignee.color) : { bg: '#333', fg: '#999' };
           const overdue = !t.done && isOverdue(t.due);
           card.innerHTML = `
-        <div class="kanban-card-title ${t.done ? 'done' : ''}">${t.title}</div>
+        <div class="kanban-card-title ${t.done ? 'done' : ''}">${HubUtils.esc(t.title)}</div>
         <div class="kanban-card-meta">
           <span class="task-priority ${priorityClass(t.priority)}">${t.priority}</span>
           <span class="kanban-card-proj" style="border-left:2px solid ${t.projectColor};padding-left:5px">${t.projectName}</span>
@@ -3323,7 +3323,7 @@
       <span class="ph-drag-handle">⠿</span>
       <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(event,'${task.id}','${task.projectId || ''}')">${task.done ? '✓' : ''}</div>
       <div class="task-body">
-        <div class="task-title ${task.done ? 'done' : ''}">${task.title}</div>
+        <div class="task-title ${task.done ? 'done' : ''}">${HubUtils.esc(task.title)}</div>
         <div class="task-meta">
           <span class="task-priority ${priorityClass(task.priority)}">${task.priority}</span>
           ${statusBadge}
@@ -3856,12 +3856,12 @@
         wrap.innerHTML = `
         <div class="form-group">
           <label class="form-label">Project Name</label>
-          <input class="form-input" id="ps-name" value="${proj.name}">
+          <input class="form-input" id="ps-name" value="${HubUtils.esc(proj.name)}">
         </div>
 
         <div class="form-group">
           <label class="form-label">Description</label>
-          <textarea class="form-textarea" id="ps-desc">${proj.desc}</textarea>
+          <textarea class="form-textarea" id="ps-desc">${HubUtils.esc(proj.desc)}</textarea>
         </div>
 
         <div class="form-row">
