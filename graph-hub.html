@@ -796,6 +796,7 @@
       <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
       <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
       <button class="btn" id="cpath-btn" onclick="toggleCriticalPath()" title="Highlight the longest chain of 'Blocks'/'Depends on' links between dated tasks">⛓ Critical Path</button>
+      <button class="btn" id="bottlenecks-btn" onclick="toggleBottlenecks()" title="Ring nodes whose failure would break 3+ downstream items">⚠ Bottlenecks</button>
       <select id="cluster-select" class="btn" style="padding:6px 8px" title="Collapse nodes into groups"
         onchange="setClusterMode(this.value)">
         <option value="none">No clustering</option>
@@ -1030,6 +1031,10 @@
     // ── Critical Path (CPM-lite) ────────────────────────────────
     let criticalPathEnabled = false;
     let criticalPathFloat = new Map(); // nodeId -> float in days (only for nodes on a tracked chain)
+
+    // ── Bottleneck detection ─────────────────────────────────────
+    let bottlenecksEnabled = false;
+    let bottleneckMap = new Map(); // nodeId -> downstream-affected count (only when toggle is on)
 
     // ── View options (animations + sizing) ─────────────────────
     let ambientDriftEnabled = true;
@@ -1706,6 +1711,7 @@
       }, 0);
       updateStats();
       if (criticalPathEnabled) applyCriticalPath(true);
+      if (bottlenecksEnabled) applyBottlenecks(true);
     }
 
     // ── Leaves filter ─────────────────────────────────────────
@@ -2064,6 +2070,71 @@
       body.innerHTML = rows + `<div class="cpath-summary">"${HubUtils.esc(node?.label || nodeId)}" ${verb} ${result.length} item${result.length === 1 ? '' : 's'}.</div>`;
     }
 
+    // ── Bottleneck detection ─────────────────────────────────────
+    // Reuses Impact Analysis's forward adjacency (above) — a node's "blast radius"
+    // is just the size of its own impact trace. No new schema, no new panel by
+    // default: the per-node reading appears in the existing node panel (same spot
+    // Critical Path shows Float, in showNodePanel below), and the canvas-wide ring
+    // is opt-in via one toggle button mirroring the Orphans/Critical Path pattern —
+    // nothing sits on screen until it's clicked.
+    const BOTTLENECK_MIN_IMPACT = 3;
+
+    function computeBottlenecks() {
+      const { forward } = _impactAdjacency();
+      const map = new Map(); // nodeId -> downstream-affected count
+      nodesMap.forEach((node, id) => {
+        const visited = new Set([id]);
+        let frontier = [id], depth = 0;
+        while (frontier.length && depth < 6) {
+          depth++;
+          const next = [];
+          for (const cur of frontier) {
+            for (const { to } of (forward.get(cur) || [])) {
+              if (visited.has(to)) continue;
+              visited.add(to);
+              next.push(to);
+            }
+          }
+          frontier = next;
+        }
+        const count = visited.size - 1;
+        if (count >= BOTTLENECK_MIN_IMPACT) map.set(id, count);
+      });
+      return map;
+    }
+
+    function toggleBottlenecks() {
+      bottlenecksEnabled = !bottlenecksEnabled;
+      document.getElementById('bottlenecks-btn').classList.toggle('frozen', bottlenecksEnabled);
+      if (bottlenecksEnabled) applyBottlenecks(false);
+      else clearBottlenecks();
+    }
+
+    function applyBottlenecks(silent) {
+      if (!nodesDS || !edgesDS) { if (!silent) showToast('No graph to analyze'); return; }
+      bottleneckMap = computeBottlenecks();
+      if (!bottleneckMap.size) {
+        if (!silent) showToast(`No bottlenecks found — nothing crosses ${BOTTLENECK_MIN_IMPACT}+ downstream items yet`);
+        return;
+      }
+      const warnColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-nope').trim() || '#e8455a';
+      const nodeUpdates = [];
+      bottleneckMap.forEach((count, id) => {
+        const node = nodesMap.get(id);
+        if (!node) return;
+        nodeUpdates.push({
+          id, borderWidth: 3,
+          color: { ...node.color, border: warnColor, highlight: { ...node.color.highlight, border: warnColor } }
+        });
+      });
+      if (nodeUpdates.length) nodesDS.update(nodeUpdates);
+    }
+
+    function clearBottlenecks() {
+      bottleneckMap = new Map();
+      buildGraph();
+    }
+
     function renderCriticalPathPanel(result) {
       const body = document.getElementById('cpath-body');
       if (!result) { body.innerHTML = `<div class="cpath-summary">No blocking chain found among dated tasks.</div>`; return; }
@@ -2335,6 +2406,10 @@
       document.getElementById('np-label').textContent = node.label;
 
       const meta = fetchNodeMeta(node.tool, node.itemId);
+      const blast = traceFromNode(nodeId, 'impact').length;
+      if (blast >= BOTTLENECK_MIN_IMPACT) {
+        meta.push({ k: '⚠ Bottleneck', v: `breaks ${blast} downstream item${blast === 1 ? '' : 's'}` });
+      }
       document.getElementById('np-meta').innerHTML = meta
         .map(m => `<span class="np-meta-key">${m.k}:</span> ${m.v}`)
         .join('<br>');
