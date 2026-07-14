@@ -1395,6 +1395,21 @@ Fantasy Realm now has a project-owned transparent 3×2 pixel-art atlas containin
 
 ---
 
+### ~~Priority 82C — Fantastic Town: living city and permanent history~~ ✓ Done `[group: fantastic-town]`
+Fantasy Realm now feels inhabited while remaining evidence-backed. Active non-burning buildings attract deterministic villagers; the busiest sufficiently active project in each row hosts a market; average row activity drives generic supply-cart traffic; real shipped/top-tier state earns a permanent fountain monument; and shipped projects gain celebration garlands plus extra gathering when fireworks are active. The market and fountain use the atlas when available and procedural pixel fallbacks otherwise.
+
+**Key decisions:**
+- **Decision:** Derive ambient life directly from activity/shipped/tier state inside the renderer, with no new stored actor data. **Why:** the town stays synchronized with real entities and cannot accumulate stale fictional citizens or scenes. **Confidence:** high.
+- **Decision:** Treat carts as anonymous row ambience, not project-to-project deliveries. **Why:** the current vault snapshot has no dependency/relationship edges; animated movement may express overall activity but must not imply a specific link. **Revisit when:** an explicit relationship feed is available. **Confidence:** high.
+- **Decision:** Fire evacuates villagers, while shipped celebration can gather extras. **Why:** ambient population should reinforce the existing incident/milestone language instead of visually contradicting it. **Confidence:** high.
+- **Decision:** Keep every life-layer animation tied to the engine clock. **Why:** hosts already suppress `Town.start()` under `prefers-reduced-motion`; no independent animation loop means reduced-motion mode remains static automatically. **Confidence:** high.
+
+**Verified:** canonical/stamped engines compile and remain synchronized. Live browser testing opened City as the default, then switched the real 18-project snapshot to Fantasy with markets, villagers, supply traffic, fountain monument, atlas architecture, and semantic overlays visible. Canvas size (`1180×1100`) and HUD (`18 / 6 healthy / 3 cold / 0 busy / 42% storm`) were unchanged and no console warnings/errors occurred. City does not execute the Fantasy life draw path; no storage keys or host schemas changed.
+
+**Files:** `Vibe_Coding/MachiHub/machi-engine.js`, `README.md`, `CLAUDE.md`; `Thinking-Hub/machi-engine.js`, `AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

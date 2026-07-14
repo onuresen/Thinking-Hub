@@ -865,6 +865,9 @@ const MachiHub = (() => {
         }
       }
 
+      // Fantasy's ambient life is derived from the visible buildings; it does not invent links.
+      if (fantasy && show('building')) this.#drawFantasyLife(ctx);
+
       // walkers on sidewalks
       if (show('walker')) {
         for (const e of this.entities) {
@@ -1162,8 +1165,104 @@ const MachiHub = (() => {
       const drawH = b.h + extraH;
       const drawX = b.x - Math.floor(extraW / 2);
       const drawY = b.y - extraH;
+      this.#drawAtlasFrame(ctx, style, drawX, drawY, drawW, drawH);
+    }
+
+    #drawAtlasFrame(ctx, name, x, y, w, h) {
+      if (!this._assetAtlasReady || !this._assetAtlas) return false;
+      const frame = FANTASY_ATLAS_FRAMES[name];
+      if (!frame) return false;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this._assetAtlas, frame.x, frame.y, frame.w, frame.h, drawX, drawY, drawW, drawH);
+      ctx.drawImage(this._assetAtlas, frame.x, frame.y, frame.w, frame.h, x, y, w, h);
+      return true;
+    }
+
+    #drawFantasyLife(ctx) {
+      if (!this.hitboxes.length) return;
+      const { width, rows, hasAvenue, avenueAfter } = this.grid;
+      const celebration = this._fireworks.length > 0 || this._celebration > 0.2;
+
+      // One market per lively row, attached to the busiest real project in that row.
+      for (let row = 0; row < rows; row++) {
+        const rowBuildings = this.hitboxes.filter((box) => box.row === row && box.entity.incident !== 'fire');
+        if (!rowBuildings.length) continue;
+        const busiest = rowBuildings.reduce((best, box) => box.entity.activity > best.entity.activity ? box : best);
+        if (busiest.entity.activity > 0.55) {
+          const marketX = Math.min(width - 9, busiest.x + busiest.w + 1);
+          const marketY = busiest.baseline - 8;
+          if (!this.#drawAtlasFrame(ctx, 'market', marketX, marketY, 9, 8)) {
+            ctx.fillStyle = '#8f3311';
+            ctx.fillRect(marketX, marketY, 8, 2);
+            ctx.fillStyle = '#d8c9a8';
+            ctx.fillRect(marketX + 1, marketY + 2, 6, 4);
+            ctx.fillStyle = '#5c3d1a';
+            ctx.fillRect(marketX, marketY + 6, 8, 2);
+          }
+        }
+
+        // Ambient supply cart: activity controls speed, but no project-to-project link is implied.
+        const averageActivity = rowBuildings.reduce((sum, box) => sum + box.entity.activity, 0) / rowBuildings.length;
+        if (averageActivity > 0.25) {
+          const direction = row % 2 === 0 ? 1 : -1;
+          const travel = (this._time * (3 + averageActivity * 5) + row * 19) % (width + 10);
+          const cartX = Math.round(direction === 1 ? travel - 6 : width - travel);
+          const cartY = TOP_SKY + row * ROW_H + BUILD_ZONE + SIDEWALK_H + 2;
+          ctx.fillStyle = '#c9a878';
+          ctx.fillRect(cartX + (direction === 1 ? 5 : 0), cartY, 1, 2);
+          ctx.fillStyle = '#5c3d1a';
+          ctx.fillRect(cartX + 1, cartY, 4, 2);
+          ctx.fillStyle = '#10131c';
+          ctx.fillRect(cartX + 1, cartY + 2, 1, 1);
+          ctx.fillRect(cartX + 4, cartY + 2, 1, 1);
+        }
+      }
+
+      // A permanent fountain marks a town that has genuinely shipped something or earned a top tier.
+      const monumentSource = this.hitboxes.find((box) => box.entity.shipped || box.entity.tier >= 5);
+      if (monumentSource) {
+        const firstBaseline = TOP_SKY + BUILD_ZONE;
+        const monumentX = hasAvenue ? MARGIN_X + avenueAfter * CELL_W + 1 : Math.max(1, width - 11);
+        const monumentY = firstBaseline - 8;
+        if (!this.#drawAtlasFrame(ctx, 'fountain', monumentX, monumentY, 10, 8)) {
+          ctx.fillStyle = '#8a95a3';
+          ctx.fillRect(monumentX + 1, monumentY + 4, 8, 3);
+          ctx.fillStyle = '#5b8cff';
+          ctx.fillRect(monumentX + 2, monumentY + 4, 6, 1);
+          ctx.fillStyle = '#c9d3de';
+          ctx.fillRect(monumentX + 4, monumentY, 2, 5);
+        }
+      }
+
+      // Villagers gather around active buildings; fire evacuates them, celebration attracts more.
+      for (const box of this.hitboxes) {
+        const e = box.entity;
+        if (e.incident === 'fire' || e.activity < 0.18) continue;
+        const rand = seedFrom(e.id + '-fantasy-villagers');
+        const count = Math.min(3, 1 + (e.activity > 0.58 ? 1 : 0) + (celebration && e.shipped ? 1 : 0));
+        for (let i = 0; i < count; i++) {
+          const phase = rand() * Math.PI * 2;
+          const range = 3 + rand() * Math.max(2, box.w / 2);
+          const walk = Math.sin(this._time * (0.7 + rand()) + phase) * range;
+          const personX = Math.round(Math.max(1, Math.min(width - 2, box.x + box.w / 2 + walk)));
+          const personY = box.baseline - 3;
+          ctx.fillStyle = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
+          ctx.fillRect(personX, personY + 1, 1, 2);
+          ctx.fillStyle = '#e8d5c0';
+          ctx.fillRect(personX, personY, 1, 1);
+          if (Math.floor(this._time * 4 + phase) % 2 === 0) {
+            ctx.fillStyle = '#5c3d1a';
+            ctx.fillRect(personX + (walk >= 0 ? 1 : -1), personY + 2, 1, 1);
+          }
+        }
+
+        if (e.shipped) {
+          ctx.fillStyle = '#ffd24d';
+          const garlandY = box.y + 5;
+          for (let gx = box.x + 1; gx < box.x + box.w - 1; gx += 3) {
+            ctx.fillRect(gx, garlandY + ((gx - box.x) % 2), 1, 1);
+          }
+        }
+      }
     }
 
     #drawLabels() {
