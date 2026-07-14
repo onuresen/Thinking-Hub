@@ -27,6 +27,16 @@
     .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .topbar-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); letter-spacing: .03em; }
 
+    /* Mayor's Dashboard — persistent city-health HUD, glance-only, no click targets */
+    .mayor-hud {
+      margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-family: var(--font-mono); font-size: 12px; color: var(--text2);
+    }
+    .mayor-hud .stat { display: flex; align-items: center; gap: 4px; cursor: default; }
+    .mayor-hud .stat b { color: var(--text); font-weight: 700; }
+    .mayor-hud .stat.warn b { color: #ffb84d; }
+    .mayor-hud .stat.storm b { color: #ff5b5b; }
+
     .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
     .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
 
@@ -90,6 +100,7 @@
 <body>
   <div class="topbar">
     <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
+    <div class="mayor-hud" id="mayor-hud"></div>
   </div>
 
   <div class="content">
@@ -353,6 +364,37 @@
       if (!relevant.length) return 0;
       const bad = relevant.filter((e) => e.incident === 'fire' || e.incident === 'crash' || e.incident === 'stalled').length;
       return Math.min(1, (bad / relevant.length) * 2.5);
+    }
+
+    // ── Mayor's Dashboard — persistent glance-only city-health HUD ───────────
+    function renderMayorHud(entities, weather) {
+      const hud = document.getElementById('mayor-hud');
+      if (!entities.length) { hud.replaceChildren(); return; }
+
+      const buildings = entities.filter((e) => e.kind === 'building');
+      const vehicles = entities.filter((e) => e.kind === 'vehicle');
+      const trouble = entities.filter((e) => e.incident === 'fire' || e.incident === 'crash' || e.incident === 'stalled').length;
+      // A crane doesn't disqualify "healthy" — heavy active development is a good sign, not trouble.
+      const healthy = buildings.filter((e) => e.incident !== 'fire' && e.staleness < 0.3).length;
+
+      const stats = [
+        { icon: '🏙️', value: buildings.length, title: 'Buildings tracked (tools + hub pages)' },
+        { icon: '🟢', value: healthy, title: 'Healthy — no incident, recently touched', cls: '' },
+        { icon: '⚠️', value: trouble, title: 'In trouble — fire, blocked, or overdue', cls: trouble > 0 ? 'warn' : '' },
+        { icon: '🚗', value: vehicles.length, title: 'Active projects on the road' },
+        { icon: '🌦️', value: Math.round(weather * 100) + '%', title: 'Storm intensity, driven by incident density', cls: weather > 0.3 ? 'storm' : '' },
+      ];
+
+      hud.replaceChildren();
+      for (const s of stats) {
+        const el = document.createElement('span');
+        el.className = 'stat' + (s.cls ? ' ' + s.cls : '');
+        el.title = s.title;
+        const b = document.createElement('b');
+        b.textContent = String(s.value);
+        el.append(s.icon + ' ', b);
+        hud.appendChild(el);
+      }
     }
 
     // ── Achievement rules (buildings) ───────────────────────────────────────
@@ -658,10 +700,11 @@
       const hasAnything = entities.length > 0;
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
-      if (!hasAnything) return;
+      if (!hasAnything) { renderMayorHud([], 0); return; }
       closeDetail();
 
       const weather = weatherLevel(entities);
+      renderMayorHud(entities, weather);
 
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
