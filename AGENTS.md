@@ -1410,6 +1410,55 @@ Fantasy Realm now feels inhabited while remaining evidence-backed. Active non-bu
 
 ---
 
+### ~~Priority 83A — Machi enriched vault data foundation~~ ✓ Done `[group: machi-vault-data]`
+Standalone Machi now prefers a generated `machi-vault-v2.json` snapshot produced by
+`esen-vault/scripts/build_machi_data.py`. The stable 18-project portfolio is enriched with aggregate
+task, goal, decision, shipped, related-note, and wikilink metrics; legacy `vault-status.json` remains an
+automatic fallback. The generator excludes private task/decision/person/note-path text from the public
+stamp.
+
+**Key decisions:**
+- **Decision:** Keep projects as buildings and aggregate smaller vault records. **Why:** The town remains
+  readable while gaining truthful depth from the larger vault graph. **Confidence:** high.
+- **Decision:** Stamp only aggregate Thinking Hub signals into Vibe_Coding. **Why:** The source export
+  contains confidential work content and identifiable people. **Confidence:** high.
+- **Decision:** Make the adapter dual-schema rather than migrating destructively. **Why:** Existing v1
+  snapshots and local setups remain functional. **Confidence:** high.
+
+**Verified:** deterministic generator output; 18/18 original projects retained, 11 Thinking Hub matches,
+960 graph nodes and 4,565 graph edges covered; v2 and v1 adapter paths compile. No storage keys, theme
+tokens, or shared engine contracts changed.
+
+**Files:** `esen-vault/scripts/build_machi_data.py`, `esen-vault/demos/machi-vault-v2.json`;
+`Vibe_Coding/MachiHub/machi-vault-v2.json`, `vault-adapter.js`, `README.md`, `CLAUDE.md`; `AGENTS.md`
+
+---
+
+### ~~Priority 83B — Machi visible vault depth~~ ✓ Done `[group: machi-vault-data]`
+Standalone Machi now makes the v2 data visible: composite building tiers, a nine-metric Vault Depth
+popover grid, enriched HUD totals, and ticker headlines for blocked/overdue work and shipped history.
+The generator also supplies recent-note, research-note, and concept-note aggregate counts.
+
+**Key decisions:**
+- **Decision:** Use a bounded multi-signal tier formula. **Why:** prose-rich and knowledge-heavy projects
+  gain honest presence without allowing link volume alone to dominate the skyline. **Confidence:** high.
+- **Decision:** Preserve fire as staleness and crane as fresh heavy work; render blocked/overdue work as
+  separate attention warnings. **Why:** incident weather and recovery semantics remain trustworthy.
+  **Confidence:** high.
+- **Decision:** Keep all richer UI aggregate-only. **Why:** public standalone Machi must not reveal titles,
+  people, internal IDs, or note paths from the private Thinking Hub export. **Confidence:** high.
+
+**Verified:** generator and adapter syntax checks; v1 fallback; composite-tier test; byte-identical vault
+and standalone snapshots; live City/Fantasy browser smoke test with `18 projects / 42 tasks / 67 notes /
+1,098 connections / 20 open / 5 attention`; nine popover metrics and overdue warning rendered; no browser
+warnings/errors. No storage keys or shared engine contracts changed.
+
+**Files:** `esen-vault/scripts/build_machi_data.py`, `demos/machi-vault-v2.json`,
+`projects/Machi-Hub.md`; `Vibe_Coding/MachiHub/machi-vault-v2.json`, `vault-adapter.js`, `index.html`,
+`README.md`, `CLAUDE.md`; `Thinking-Hub/AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
