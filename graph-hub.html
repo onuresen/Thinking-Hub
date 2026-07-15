@@ -803,17 +803,16 @@
         <option value="project">Cluster by project</option>
         <option value="tool">Cluster by tool</option>
       </select>
-      <button class="btn" id="view-opts-btn" onclick="toggleViewOptsPanel()">View ▾</button>
       <button class="btn" onclick="exportGraphPNG()">⬇ PNG</button>
       <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
     </div>
 
     <div class="legend" id="legend"></div>
 
-    <div class="view-opts" id="view-opts">
-      <div class="legend-title" onclick="this.closest('.view-opts').classList.toggle('collapsed')"
+    <div class="view-opts visible collapsed" id="view-opts">
+      <div class="legend-title" onclick="const p = this.closest('.view-opts'); p.classList.toggle('collapsed'); document.getElementById('view-opts-arrow').textContent = p.classList.contains('collapsed') ? '▸' : '▾';"
         style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span>VIEW OPTIONS</span><span class="legend-toggle" id="view-opts-arrow">▾</span>
+        <span>VIEW OPTIONS</span><span class="legend-toggle" id="view-opts-arrow">▸</span>
       </div>
       <div class="view-opts-body">
         <label class="view-opt-row">
@@ -1056,11 +1055,6 @@
         minVelocity: ambientDrift ? 0.5 : 2.5,
         solver: 'forceAtlas2Based'
       };
-    }
-
-    function toggleViewOptsPanel() {
-      const panel = document.getElementById('view-opts');
-      panel.classList.toggle('visible');
     }
 
     function toggleAmbientDrift(checked) {
