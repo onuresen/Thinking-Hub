@@ -69,6 +69,7 @@ window.HubLinks = (() => {
     if (dupe) return false;
     const link = { id: 'lk-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), a, b, createdAt: new Date().toISOString() };
     if (opts.relType) link.relType = opts.relType;
+    if (opts.note) link.note = opts.note;
     links.push(link);
     _saveAll(links);
     return true;
