@@ -1603,10 +1603,6 @@
       buildFilterBar(tools);
       buildLegend(tools);
 
-      if (network) { network.destroy(); network = null; }
-      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
-      activeClusterIds = [];
-
       if (degreeSizingEnabled) {
         const degree = new Map();
         edges.forEach(e => {
@@ -1625,6 +1621,17 @@
           n.font = { ...n.font, size: Math.round(12 * (0.85 + ratio * 0.6)) };
         });
       }
+
+      // First build (or recovering from the empty state) needs a real vis.Network.
+      // Every call after that goes through the incremental diff instead — no
+      // destroy/recreate, so existing node positions and the camera view survive.
+      if (!network) createNetwork(nodes, edges);
+      else updateNetworkIncremental(nodes, edges);
+    }
+
+    function createNetwork(nodes, edges) {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      activeClusterIds = [];
 
       nodesDS = new vis.DataSet(nodes);
       edgesDS = new vis.DataSet(edges);
@@ -1703,6 +1710,34 @@
         network.redraw();
         network.fit({ animation: false });
       }, 0);
+      updateStats();
+      if (criticalPathEnabled) applyCriticalPath(true);
+      if (bottlenecksEnabled) applyBottlenecks(true);
+    }
+
+    // In-place diff against the existing network — add/remove only the node and
+    // edge ids that actually changed, and merge new data into the rest. vis-network
+    // keys node positions off id inside the live network instance (not the
+    // DataSet item), so an update() that doesn't touch x/y leaves a node exactly
+    // where it was. No network.fit() here on purpose — the camera stays put.
+    function updateNetworkIncremental(nodes, edges) {
+      const wasClustered = clusterMode !== 'none';
+      if (wasClustered) openAllClusters();
+
+      const newNodeIds = new Set(nodes.map(n => n.id));
+      const staleNodeIds = nodesDS.getIds().filter(id => !newNodeIds.has(id));
+      if (staleNodeIds.length) nodesDS.remove(staleNodeIds);
+      nodesDS.update(nodes); // upsert: adds new nodes, merges the rest (position untouched)
+
+      const newEdgeIds = new Set(edges.map(e => e.id));
+      const staleEdgeIds = edgesDS.getIds().filter(id => !newEdgeIds.has(id));
+      if (staleEdgeIds.length) edgesDS.remove(staleEdgeIds);
+      edgesDS.update(edges);
+
+      activeClusterIds = [];
+      if (wasClustered) applyClustering();
+      if (newSinceCutoff > 0) applyFilters();
+
       updateStats();
       if (criticalPathEnabled) applyCriticalPath(true);
       if (bottlenecksEnabled) applyBottlenecks(true);
