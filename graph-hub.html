@@ -951,10 +951,10 @@
         <select class="gh-select" id="nl-rel-type" style="flex:1;margin:0;padding:6px 8px">
           <option value="relates">↔ Relates to (undirected)</option>
           <option value="depends-on">→ Depends on</option>
-          <option value="blocks">→ Blocks</option>
-          <option value="leads-to">→ Leads to</option>
+          <option value="blocks">→ Blocks / leads to</option>
         </select>
       </div>
+      <textarea class="edge-note-input" id="nl-note" placeholder="Why are these connected? (optional)" rows="2" style="margin-top:8px"></textarea>
       <div class="gh-modal-footer">
         <button class="gh-btn" onclick="closeLinkModal()">Cancel</button>
         <button class="gh-btn gh-btn-primary" onclick="confirmNewLink()">Create Link</button>
@@ -1697,8 +1697,16 @@
         showContextMenu(params.event.clientX, params.event.clientY, nodeId ? nodesMap.get(nodeId) : null);
       });
 
+      network.on('dragStart', params => {
+        // Pause physics for the duration of the drag — otherwise nearby nodes keep
+        // reacting to real-time repulsion and dodge away as you drag toward them,
+        // making it near-impossible to actually drop onto a target node.
+        if (params.nodes.length) network.setOptions({ physics: { enabled: false } });
+      });
+
       network.on('dragEnd', params => {
         if (!params.nodes.length) return;
+        network.setOptions({ physics: physicsOptionsFor(physicsEnabled, ambientDriftEnabled) });
         const target = getNearbyNode(params.nodes[0], params.pointer.DOM);
         if (target) setTimeout(() => showDragLinkPrompt(params.nodes[0], target), 80);
       });
@@ -2225,6 +2233,7 @@
     function openNewLinkModal(preselect) {
       const overlay = document.getElementById('link-overlay');
       document.getElementById('nl-rel-type').value = 'relates';
+      document.getElementById('nl-note').value = '';
       ['a', 'b'].forEach(side => {
         const toolSel = document.getElementById(`nl-tool-${side}`);
         toolSel.innerHTML = LINKABLE_TOOLS.map(t =>
@@ -2336,10 +2345,11 @@
       const labelA = selA.options[selA.selectedIndex]?.dataset.label || selA.options[selA.selectedIndex]?.text || '';
       const labelB = selB.options[selB.selectedIndex]?.dataset.label || selB.options[selB.selectedIndex]?.text || '';
       const relType = document.getElementById('nl-rel-type').value;
+      const note = document.getElementById('nl-note').value.trim();
       HubLinks.addLink(
         { tool: toolA, itemId: selA.value, label: labelA },
         { tool: toolB, itemId: selB.value, label: labelB },
-        { relType }
+        { relType, note }
       );
       closeLinkModal();
     }
@@ -2563,15 +2573,23 @@
     let _dlbTimer = null;
 
     function getNearbyNode(draggedId, domPos) {
-      const offsets = [-22, 0, 22];
-      for (const dx of offsets) {
-        for (const dy of offsets) {
-          if (dx === 0 && dy === 0) continue;
-          const id = network.getNodeAt({ x: domPos.x + dx, y: domPos.y + dy });
-          if (id && id !== draggedId) return id;
-        }
-      }
-      return null;
+      // Nearest-node-within-radius instead of sampling a sparse 8-point grid at the
+      // exact drop pixel — more forgiving, and both getPositions() and DOMtoCanvas()
+      // are in the same canvas coordinate space, so this naturally scales correctly
+      // with zoom instead of needing a manual DOM-pixel correction.
+      if (!network || !nodesDS) return null;
+      const dropPos = network.DOMtoCanvas(domPos);
+      const ids = nodesDS.getIds().filter(id => id !== draggedId && !nodesDS.get(id).hidden);
+      if (!ids.length) return null;
+      const positions = network.getPositions(ids);
+      let nearestId = null, nearestDist = Infinity;
+      ids.forEach(id => {
+        const p = positions[id];
+        if (!p) return;
+        const d = Math.hypot(p.x - dropPos.x, p.y - dropPos.y);
+        if (d < nearestDist) { nearestDist = d; nearestId = id; }
+      });
+      return nearestDist <= 90 ? nearestId : null;
     }
 
     function _hideDragBanner() {
