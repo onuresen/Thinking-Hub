@@ -1753,17 +1753,17 @@
     .mx-grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
     .mx-grid-row + .mx-grid-row { margin-top: 8px; }
     .mx-quadrant { flex: 1; border-radius: var(--r); border: 2px solid; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0; transition: opacity 0.15s; }
-    .mx-quadrant.do-now   { border-color: #ef4444; background: rgba(239,68,68,0.04); }
-    .mx-quadrant.schedule { border-color: var(--accent); background: var(--accent-dim); }
-    .mx-quadrant.delegate { border-color: #f59e0b; background: rgba(245,158,11,0.04); }
-    .mx-quadrant.eliminate { border-color: var(--border); background: transparent; }
+    .mx-quadrant.quick-win     { border-color: var(--border-green); background: var(--node-green); }
+    .mx-quadrant.major-project { border-color: var(--border-blue); background: var(--node-blue); }
+    .mx-quadrant.fill-in       { border-color: var(--border-gray); background: var(--node-gray); }
+    .mx-quadrant.thankless     { border-color: var(--border-red); background: var(--node-red); }
     .mx-quadrant.drag-over { opacity: 0.7; }
     .mx-q-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     .mx-q-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
-    .mx-q-title.do-now   { color: #ef4444; }
-    .mx-q-title.schedule { color: var(--accent); }
-    .mx-q-title.delegate { color: #f59e0b; }
-    .mx-q-title.eliminate { color: var(--text3); }
+    .mx-q-title.quick-win     { color: var(--border-green); }
+    .mx-q-title.major-project { color: var(--border-blue); }
+    .mx-q-title.fill-in       { color: var(--text3); }
+    .mx-q-title.thankless     { color: var(--border-red); }
     .mx-q-count { font-size: 10px; font-family: var(--font-mono); color: var(--text3); }
     .mx-q-spacer { flex: 1; }
     .mx-q-add { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; line-height: 1; padding: 0 2px; transition: color 0.12s; }
@@ -4414,21 +4414,37 @@
 
     // ─── PRIORITY MATRIX ──────────────────────────────────────────────────────────
     const MX_KEY = 'matrix-hub-v1';
-    const MX_QUADRANTS = ['do-now', 'schedule', 'delegate', 'eliminate'];
-    const MX_LABELS = { 'do-now': 'Do Now', 'schedule': 'Schedule', 'delegate': 'Delegate', 'eliminate': 'Eliminate' };
+    const MX_QUADRANTS = ['quick-win', 'major-project', 'fill-in', 'thankless'];
+    const MX_LABELS = { 'quick-win': 'Quick Win', 'major-project': 'Major Project', 'fill-in': 'Fill-in', 'thankless': 'Thankless Task' };
+    // Eisenhower's Urgent/Important (do-now/schedule/delegate/eliminate) assumed a team to
+    // delegate to and a manager's daily inbox — a poor fit for solo strategic/project work.
+    // Swapped for the Action Priority Matrix (Impact x Effort), a real named framework with
+    // no quadrant that assumes anyone but you. Legacy items are migrated below.
+    const MX_LEGACY_MIGRATION = { 'do-now': 'quick-win', 'schedule': 'major-project', 'delegate': 'fill-in', 'eliminate': 'thankless' };
     let mxData = { items: [] };
     let mxEditId = null;
     let mxDragId = null;
     let mxShowDone = false;
 
-    function loadMx() { mxData = HubStorage.get(MX_KEY) || { items: [] }; if (!mxData.items) mxData.items = []; }
+    function loadMx() {
+      mxData = HubStorage.get(MX_KEY) || { items: [] };
+      if (!mxData.items) mxData.items = [];
+      // One-time, idempotent migration from the old Urgent/Important quadrants — only
+      // writes if a legacy value is actually found.
+      let migrated = false;
+      mxData.items.forEach(it => {
+        if (MX_LEGACY_MIGRATION[it.quadrant]) { it.quadrant = MX_LEGACY_MIGRATION[it.quadrant]; migrated = true; }
+      });
+      if (migrated) HubStorage.set(MX_KEY, mxData);
+    }
     function saveMx() { HubStorage.set(MX_KEY, mxData); updateBadges(); }
 
     // Keeps the matrix in sync with real Project Hub tasks — no manual import step.
     // Items with a taskId mirror their source task's title/done state and get dropped
     // if the task is deleted; each open task not yet represented gets auto-added into
-    // Schedule (untriaged) once. Manually-added items (no taskId, via "+ Item") are
-    // never touched here.
+    // Fill-in (untriaged) once — the least presumptuous quadrant, since an unreviewed
+    // task's real impact/effort isn't known yet. Manually-added items (no taskId, via
+    // "+ Item") are never touched here.
     function syncMxWithTasks() {
       const liveTasks = new Map();
       state.projects.forEach(p => (p.tasks || []).forEach(t => liveTasks.set(t.id, { ...t, _projectName: p.name, _projectId: p.id })));
@@ -4449,7 +4465,7 @@
         mxData.items.push({
           id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           taskId: id, title: t.title, notes: '', projectName: t._projectName, projectId: t._projectId,
-          quadrant: 'schedule', done: false, createdAt: new Date().toISOString(),
+          quadrant: 'fill-in', done: false, createdAt: new Date().toISOString(),
         });
       });
 
@@ -4477,30 +4493,30 @@
       const wrap = document.createElement('div');
       wrap.className = 'mx-wrap';
       wrap.innerHTML = `
-        <div class="mx-y-label">Urgency →</div>
+        <div class="mx-y-label">Impact →</div>
         <div class="mx-inner">
           <div class="mx-x-row">
-            <div class="mx-x-label">Not Important</div>
-            <div class="mx-x-label">Important</div>
+            <div class="mx-x-label">Low Effort</div>
+            <div class="mx-x-label">High Effort</div>
           </div>
           <div class="mx-grid-row">
-            <div class="mx-quadrant delegate" id="mxq-delegate" ondragover="onMxDragOver(event,'delegate')" ondrop="onMxDrop(event,'delegate')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title delegate">Delegate</div><div class="mx-q-count" id="mxcnt-delegate"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('delegate')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-delegate"></div>
+            <div class="mx-quadrant quick-win" id="mxq-quick-win" ondragover="onMxDragOver(event,'quick-win')" ondrop="onMxDrop(event,'quick-win')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title quick-win">Quick Win</div><div class="mx-q-count" id="mxcnt-quick-win"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('quick-win')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-quick-win"></div>
             </div>
-            <div class="mx-quadrant do-now" id="mxq-do-now" ondragover="onMxDragOver(event,'do-now')" ondrop="onMxDrop(event,'do-now')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title do-now">Do Now</div><div class="mx-q-count" id="mxcnt-do-now"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('do-now')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-do-now"></div>
+            <div class="mx-quadrant major-project" id="mxq-major-project" ondragover="onMxDragOver(event,'major-project')" ondrop="onMxDrop(event,'major-project')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title major-project">Major Project</div><div class="mx-q-count" id="mxcnt-major-project"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('major-project')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-major-project"></div>
             </div>
           </div>
           <div class="mx-grid-row">
-            <div class="mx-quadrant eliminate" id="mxq-eliminate" ondragover="onMxDragOver(event,'eliminate')" ondrop="onMxDrop(event,'eliminate')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title eliminate">Eliminate</div><div class="mx-q-count" id="mxcnt-eliminate"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('eliminate')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-eliminate"></div>
+            <div class="mx-quadrant fill-in" id="mxq-fill-in" ondragover="onMxDragOver(event,'fill-in')" ondrop="onMxDrop(event,'fill-in')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title fill-in">Fill-in</div><div class="mx-q-count" id="mxcnt-fill-in"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('fill-in')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-fill-in"></div>
             </div>
-            <div class="mx-quadrant schedule" id="mxq-schedule" ondragover="onMxDragOver(event,'schedule')" ondrop="onMxDrop(event,'schedule')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title schedule">Schedule</div><div class="mx-q-count" id="mxcnt-schedule"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('schedule')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-schedule"></div>
+            <div class="mx-quadrant thankless" id="mxq-thankless" ondragover="onMxDragOver(event,'thankless')" ondrop="onMxDrop(event,'thankless')" ondragleave="onMxDragLeave(event)">
+              <div class="mx-q-header"><div class="mx-q-title thankless">Thankless Task</div><div class="mx-q-count" id="mxcnt-thankless"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('thankless')" title="Add">+</button></div>
+              <div class="mx-cards" id="mxcards-thankless"></div>
             </div>
           </div>
         </div>`;
@@ -4568,7 +4584,7 @@
       document.getElementById('mx-modal-title').textContent = item ? 'Edit Item' : 'New Item';
       document.getElementById('mx-am-title').value = item ? item.title : '';
       document.getElementById('mx-am-notes').value = item ? (item.notes || '') : '';
-      document.getElementById('mx-am-quadrant').value = item ? item.quadrant : (defaultQ || 'do-now');
+      document.getElementById('mx-am-quadrant').value = item ? item.quadrant : (defaultQ || 'quick-win');
       document.getElementById('mx-am-delete').style.display = item ? '' : 'none';
       document.getElementById('mx-modal-overlay').classList.add('is-open');
       setTimeout(() => document.getElementById('mx-am-title').focus(), 50);
@@ -4896,10 +4912,10 @@
         <div><div class="label">Title</div><input class="input" id="mx-am-title" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter')saveMxItem()"></div>
         <div><div class="label">Quadrant</div>
           <select class="select" id="mx-am-quadrant">
-            <option value="do-now">Do Now — Urgent &amp; Important</option>
-            <option value="schedule">Schedule — Important, Not Urgent</option>
-            <option value="delegate">Delegate — Urgent, Not Important</option>
-            <option value="eliminate">Eliminate — Not Urgent, Not Important</option>
+            <option value="quick-win">Quick Win — High Impact, Low Effort</option>
+            <option value="major-project">Major Project — High Impact, High Effort</option>
+            <option value="fill-in">Fill-in — Low Impact, Low Effort</option>
+            <option value="thankless">Thankless Task — Low Impact, High Effort</option>
           </select>
         </div>
         <div><div class="label">Notes (optional)</div><textarea class="textarea" id="mx-am-notes" rows="2" placeholder="Context, links, details…"></textarea></div>
