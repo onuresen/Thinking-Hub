@@ -10,7 +10,7 @@
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <script src="machi-engine.js"></script>
-  <script src="machi-neon.js"></script>
+  <script src="machi-hires.js"></script>
   <script src="machi-achievements.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,7 +152,7 @@
 
     <div class="main-tab-bar" id="main-tab-bar">
       <button class="main-tab on" data-view="town" onclick="switchMainView('town')">🏙 Town</button>
-      <button class="main-tab" data-view="neon" onclick="switchMainView('neon')">🌆 Neon District</button>
+      <button class="main-tab" data-view="hires" onclick="switchMainView('hires')">🔍 Hi-Res Town</button>
     </div>
 
     <div class="lens-bar" id="lens-bar"></div>
@@ -177,17 +177,20 @@
       </div>
     </div>
 
-    <div id="view-neon" class="view-panel" style="display:none">
+    <div id="view-hires" class="view-panel" style="display:none">
       <p class="intro" style="margin-bottom:10px">
-        Same city, same data — buildings/cars/people mean exactly what they do on the Town tab,
-        just skinned as a neon-lit district with flying traffic instead of streets.
+        Same city, same data, same style — just redrawn at a finer pixel grid (denser windows,
+        facade shading/seams, crosswalk striping) to see whether the extra detail is worth
+        carrying into the main Town view. No day/night, weather, or season here on purpose, so
+        the comparison stays about sprite detail alone.
       </p>
       <div class="town-wrap">
-        <div class="town-scroll" id="neon-scroll"><canvas id="neon"></canvas></div>
-        <div class="legend" id="legend-neon">
-          <span style="color:#ff2fd0">glowing facade = tool/page</span>
-          <span style="color:#2ff2ff">flying traffic = active projects</span>
-          <span>🚑 red/blue beacon = risk response</span>
+        <div class="town-scroll" id="hires-scroll"><canvas id="hires"></canvas></div>
+        <div class="legend" id="legend-hires">
+          <span style="color:#5bd67a">adopt</span>
+          <span style="color:#5b8cff">trial</span>
+          <span style="color:#ff9f5b">assess</span>
+          <span style="color:#8a8f9c">hold</span>
         </div>
       </div>
     </div>
@@ -519,7 +522,6 @@
     let previousTrouble = null;
     const MILESTONES_KEY = 'machi-milestones-v1';
     const TOP_TIER = 4; // current adapters cap tier at 4 (mastery 3 / 50+ uses) — that's the real ceiling to "earn"
-    const FANTASY_ATLAS_URL = 'assets/fantastic-town/fantasy-atlas.png';
 
     function checkMilestones(entities, trouble, fromDataChange) {
       if (!fromDataChange) { previousTrouble = trouble; return; }
@@ -568,56 +570,55 @@
     const empty = document.getElementById('empty');
     let town = null;
 
-    // ── Neon District (separate tab + separate renderer, see machi-neon.js) ──
-    let neon = null;
-    let activeView = 'town'; // 'town' | 'neon' — drives which engine positionDetail()/markUsedNow() target
+    // ── Hi-Res Town (separate tab + separate renderer, see machi-hires.js) ───
+    let hires = null;
+    let activeView = 'town'; // 'town' | 'hires' — drives which engine positionDetail()/markUsedNow() target
     let _lastEntities = [];
-    let _lastWeather = 0;
+    const HIRES_SCALE = 4; // hi-res buffer is ~1.8x denser, so a lower blit multiplier keeps on-screen size close to Town
 
-    function activeEngine() { return activeView === 'neon' ? neon : town; }
-    function activeCanvasEl() { return activeView === 'neon' ? document.getElementById('neon') : canvas; }
+    function activeEngine() { return activeView === 'hires' ? hires : town; }
+    function activeCanvasEl() { return activeView === 'hires' ? document.getElementById('hires') : canvas; }
 
-    function colsForNeonContainer() {
+    function colsForHiresContainer() {
       const host = document.querySelector('.content');
-      const avail = ((host.clientWidth || 1000) - 44) / NEON_SCALE;
-      const { CELL_W, MARGIN_X, AVENUE_W } = MachiNeon.LAYOUT;
+      const avail = ((host.clientWidth || 1000) - 44) / HIRES_SCALE;
+      const { CELL_W, MARGIN_X, AVENUE_W } = MachiHiRes.LAYOUT;
       return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
     }
 
-    function ensureNeonInit() {
-      const neonCanvas = document.getElementById('neon');
-      if (neon) {
-        if (!neon._raf && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) neon.start();
+    function ensureHiresInit() {
+      const hiresCanvas = document.getElementById('hires');
+      if (hires) {
+        if (!hires._raf && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) hires.start();
         return;
       }
-      neon = new MachiNeon.District(neonCanvas, { scale: NEON_SCALE, maxPerRow: colsForNeonContainer() })
+      hires = new MachiHiRes.District(hiresCanvas, { scale: HIRES_SCALE, maxPerRow: colsForHiresContainer() })
         .setEntities(_lastEntities)
-        .setWeather(_lastWeather)
         .render()
         .enableInteraction({ onClick: showDetail });
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) neon.start();
-      window._machiNeon = neon; // debugging/testing handle, matches window._machiTown
-      neonCanvas.addEventListener('click', (ev) => {
-        const rect = neonCanvas.getBoundingClientRect();
-        if (!neon.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) hires.start();
+      window._machiHiRes = hires; // debugging/testing handle, matches window._machiTown
+      hiresCanvas.addEventListener('click', (ev) => {
+        const rect = hiresCanvas.getBoundingClientRect();
+        if (!hires.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
       });
     }
 
     function switchMainView(view) {
       activeView = view;
       document.getElementById('view-town').style.display = view === 'town' ? '' : 'none';
-      document.getElementById('view-neon').style.display = view === 'neon' ? '' : 'none';
+      document.getElementById('view-hires').style.display = view === 'hires' ? '' : 'none';
       document.querySelectorAll('.main-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === view));
       closeDetail();
       // reparent the single shared detail popover into whichever tab is now visible
-      const scroll = document.getElementById(view === 'neon' ? 'neon-scroll' : 'town-scroll');
+      const scroll = document.getElementById(view === 'hires' ? 'hires-scroll' : 'town-scroll');
       scroll.appendChild(detail);
-      if (view === 'neon') {
-        ensureNeonInit();
+      if (view === 'hires') {
+        ensureHiresInit();
         if (town) town.stop();
       } else if (town && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         town.start();
-        if (neon) neon.stop();
+        if (hires) hires.stop();
       }
     }
 
@@ -637,8 +638,7 @@
       }
     }
 
-    // ── World + environment controls: visual theme, time, season, + PNG export ──
-    let visualTheme = 'city'; // city remains the preserved default; fantasy is opt-in
+    // ── World + environment controls: time, season, + PNG export ──
     let timeMode = 'auto';   // 'auto' | number 0..1
     let seasonMode = 'auto'; // 'auto' | 'spring' | 'summer' | 'autumn' | 'winter'
     const SEASONS = [
@@ -658,36 +658,7 @@
       const bar = document.getElementById('env-bar');
       bar.replaceChildren();
 
-      // Row 1 — world renderer. Both modes consume the same honest Hub entities.
-      const themeRow = document.createElement('div');
-      themeRow.className = 'env-row';
-      for (const theme of [
-        { id: 'city', label: '🏙 Modern City' },
-        { id: 'fantasy', label: '🏰 Fantasy Realm' },
-      ]) {
-        const chip = document.createElement('span');
-        chip.className = 'lens-chip' + (visualTheme === theme.id ? ' on' : '');
-        chip.textContent = theme.label;
-        chip.setAttribute('role', 'button');
-        chip.setAttribute('tabindex', '0');
-        chip.setAttribute('aria-pressed', String(visualTheme === theme.id));
-        const selectTheme = () => {
-          visualTheme = theme.id;
-          if (town) {
-            if (theme.id === 'fantasy') town.setAssetAtlas(FANTASY_ATLAS_URL);
-            town.setVisualTheme(theme.id);
-          }
-          renderEnvBar();
-        };
-        chip.addEventListener('click', selectTheme);
-        chip.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTheme(); }
-        });
-        themeRow.appendChild(chip);
-      }
-      bar.appendChild(themeRow);
-
-      // Row 2 — time of day
+      // Time of day
       const timeRow = document.createElement('div');
       timeRow.className = 'env-row';
 
@@ -728,7 +699,7 @@
       exportBtn.textContent = '⬇ Export PNG';
       exportBtn.addEventListener('click', () => {
         if (!town) return;
-        town.downloadPNG(`machi-town-${visualTheme}-` + new Date().toISOString().slice(0, 10) + '.png');
+        town.downloadPNG(`machi-town-` + new Date().toISOString().slice(0, 10) + '.png');
       });
       timeRow.appendChild(exportBtn);
 
@@ -913,7 +884,6 @@
     // Fit as many buildings per row as the container allows, so the town is
     // wide rather than tall. LAYOUT constants come from the engine.
     const SCALE = 5;
-    const NEON_SCALE = 4; // Neon District's buffer is already ~1.8x denser, so a lower blit multiplier keeps it roughly the same on-screen size as the Town tab
     function colsForContainer() {
       // Measure .content (a stable full-width parent), NOT .town-scroll — the
       // scroller shrinks to its canvas, so measuring it would be circular.
@@ -934,7 +904,8 @@
       const hasAnything = entities.length > 0;
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
-      document.getElementById('neon').style.display = hasAnything ? '' : 'none';
+      const hiresCanvas = document.getElementById('hires');
+      if (hiresCanvas) hiresCanvas.style.display = hasAnything ? '' : 'none';
       _lastEntities = entities;
       if (!hasAnything) {
         renderMayorHud([], 0);
@@ -945,12 +916,11 @@
       closeDetail();
 
       const weather = weatherLevel(entities);
-      _lastWeather = weather;
       renderMayorHud(entities, weather);
       renderTicker(buildTickerHeadlines(entities, weather));
       checkMilestones(entities, troubleCount(entities), fromDataChange);
 
-      if (neon) neon.setMaxPerRow(colsForNeonContainer()).setEntities(entities).setWeather(weather).render();
+      if (hires) hires.setMaxPerRow(colsForHiresContainer()).setEntities(entities).render();
 
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
@@ -958,7 +928,6 @@
           .setCelebration(celebrationLevel())
           .setWeather(weather)
           .render()
-          .setVisualTheme(visualTheme)
           .setTimeOfDay(timeMode)
           .setSeason(seasonMode)
           .enableInteraction({ onClick: showDetail });
@@ -969,7 +938,6 @@
           if (!town.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
         });
         window._machiTown = town; // debugging/testing handle
-        if (visualTheme === 'fantasy') town.setAssetAtlas(FANTASY_ATLAS_URL);
       } else {
         town.setMaxPerRow(colsForContainer())
           .setEntities(entities)
@@ -984,8 +952,8 @@
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         const townStale = town && colsForContainer() !== town.maxPerRow;
-        const neonStale = neon && colsForNeonContainer() !== neon.maxPerRow;
-        if (townStale || neonStale) rebuild();
+        const hiresStale = hires && colsForHiresContainer() !== hires.maxPerRow;
+        if (townStale || hiresStale) rebuild();
       }, 250);
     });
 

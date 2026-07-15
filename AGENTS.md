@@ -1555,6 +1555,104 @@ source with byte-identical surgical diffs.
 
 ---
 
+### ~~Priority 84 follow-up — Retired Neon District + Fantasy from the live Thinking-Hub app~~ ✓ Done `[group: machi-town]`
+Tried the Neon District tab in real use immediately after building it (Priority 84, same session) and
+the plain Town view held up better — user's call: "our normal town seems best." Retired both Neon
+District and the pre-existing Fantasy Realm theme from Thinking-Hub's `town-hub.html`, leaving only the
+single Town/City view — same tab-less, theme-toggle-less layout the page had before either experiment.
+
+**What was removed from Thinking-Hub specifically:** the "🏙 Town / 🌆 Neon District" tab bar and
+`#view-neon` panel; `machi-neon.js` (deleted — file, not just unlinked); the "🏙 Modern City / 🏰 Fantasy
+Realm" theme-toggle row in the env bar; `FANTASY_ATLAS_URL` and the `setAssetAtlas()` call;
+`assets/fantastic-town/fantasy-atlas.png` (deleted, now genuinely unreferenced by any Thinking-Hub code);
+all neon-specific state/functions (`neon`, `activeView`, `activeEngine()`, `activeCanvasEl()`,
+`ensureNeonInit()`, `switchMainView()`, `colsForNeonContainer()`); `positionDetail()`/`markUsedNow()`
+reverted to referencing `town`/`canvas` directly instead of the now-deleted engine-switching indirection.
+
+**Key decisions:**
+- **Decision:** Delete `machi-neon.js` from Thinking-Hub outright, but keep it as the canonical/backup copy
+  in `Vibe_Coding/MachiHub/machi-neon.js` untouched. **Why:** explicit ask — "copy similar neon style to
+  vibe coding's machi hub so there will be backup then delete." The Neon District renderer was built
+  isolated from `Town` specifically so it could be removed later with zero risk to the engine everyone
+  actually uses; that isolation paid off immediately. **Confidence:** high.
+- **Decision:** Remove the Fantasy theme-toggle *UI* from Thinking-Hub, but leave `machi-engine.js`'s
+  Fantasy support (`setVisualTheme('fantasy')`, `#drawFantasyBuilding`, `setAssetAtlas()`) completely
+  untouched in both the Thinking-Hub stamped copy and the Vibe_Coding canonical source. **Why:**
+  `machi-engine.js` is shared infrastructure — the separate "standalone Machi" deployment (Priority
+  83A-83C, reading `esen-vault` data via `vault-adapter.js`) also uses this same canonical engine and may
+  still expose Fantasy there. Stripping Fantasy out of the *engine* would risk regressing that other
+  consumer for a request that was specifically about Thinking-Hub's own `town-hub.html`. Removing only the
+  toggle button achieves "no fantasy in our Machi Hub" from the user's actual vantage point (they'll never
+  see or reach it) with zero blast radius on shared code — and keeps the stamped-copy/canonical files
+  byte-identical, so the "edit canonical, re-copy here" workflow stays trustworthy for future changes.
+  **Alternative rejected:** delete Fantasy from the shared engine too — bigger, riskier change to code with
+  an consumer outside this conversation's scope, for a request that named "our" Machi Hub specifically.
+  **Confidence:** high. **Revisit when:** if the standalone Machi deployment also drops Fantasy for its own
+  reasons, the dead code in the shared engine could be cleaned up then.
+- **Decision:** Deleted `assets/fantastic-town/fantasy-atlas.png` from Thinking-Hub (grepped first to
+  confirm no other Thinking-Hub file referenced it). **Why:** with the toggle gone, it was genuinely dead
+  weight in this repo specifically; the shared/canonical copy in Vibe_Coding is untouched. **Confidence:**
+  high.
+- **Decision:** A higher-logical-resolution *redesign of the Town sprites themselves* (same aesthetic,
+  crisper facades) was floated as a possible next step but explicitly not committed to ("that one is maybe
+  though") — deliberately not built this session. **Revisit when:** the user decides to actually pursue it;
+  don't build speculatively.
+
+**Verified:** real headless-browser render (Playwright) after the cleanup — no tab bar, no neon
+view/canvas, no `machi-neon.js` network request, env bar shows only time/season/export controls (no theme
+row), Town canvas renders and is visible with zero console/page errors. Confirmed via `grep` that no
+`neon`/`fantasy`/`visualTheme` reference remains anywhere in `town-hub.html`.
+
+**Files:** `town-hub.html`; deleted `machi-neon.js`, `assets/fantastic-town/fantasy-atlas.png`; `AGENTS.md`
+*(Vibe_Coding untouched by this follow-up — `machi-neon.js` and Fantasy support both remain there as-is)*
+
+---
+
+### ~~Priority 85 — Machi Hub: Hi-Res Town tab (sprite-detail experiment, isolated)~~ ✓ Done `[group: machi-town]`
+User wanted to actually try the higher-logical-resolution sprite redesign floated (and explicitly not
+committed to) at the end of Priority 84's follow-up — "it'll shape my thinking about pixel town visuals
+for future updates." Built it the same isolated-tab way Neon District was built, since that isolation is
+exactly what let Neon be tried and discarded with zero cost to the real Town view — the same payoff applies
+here regardless of whether this one sticks either.
+
+New file `machi-hires.js` exports `MachiHiRes.District` — a second new top-level tab ("🏙 Town" /
+"🔍 Hi-Res Town"), sharing nothing at the code level with `Town`, only entity data. Unlike Neon, this one
+is deliberately **not** a new aesthetic — same City color language (`CATEGORY_COLORS`, `e.color`), same
+grid/road/building composition — just redrawn at the same ~1.8x logical pixel density Neon uses, to
+isolate the sprite-detail variable specifically: denser window grid (6px cells vs. the original 3px),
+a two-tone vertical facade gradient + subtle panel-seam strokes for material depth, a roofline trim cap,
+sidewalk paving-seam texture, and real crosswalk striping across the avenue intersection (rather than a
+plain stop line). Ground vehicles/walkers/the badge blimp are redrawn bigger at the same fidelity bump,
+staying on the ground/sidewalk (unlike Neon's flying traffic) since this isn't a new-world reinterpretation.
+
+**Key decisions:**
+- **Decision:** No day/night cycle, weather, or season in this pass — a single fixed pleasant-daytime sky.
+  **Why:** the entire point of this tab is isolating "is the finer pixel grid worth it," and replicating
+  Town's full environmental system would both cost a lot of net-new code and reintroduce variables (lighting,
+  particles) that would confuse a pure sprite-detail comparison. **Confidence:** high. **Revisit when:** if
+  the hi-res redesign is judged worth carrying into Town, day/night/weather/season already exist there and
+  don't need to be rebuilt.
+- **Decision:** Same isolated-module architecture as Neon (separate file/class, entity-shape-only sharing,
+  lazy init on first tab visit, animation loop paused while inactive), not a fourth branch inside `Town`.
+  **Why:** identical reasoning to Priority 84 — and this session already proved the payoff once (Neon came
+  out cleanly with a two-file, zero-Town-risk deletion). **Confidence:** high.
+- **Decision:** `machi-hires.js` follows the same STAMPED COPY convention — canonical source
+  `Vibe_Coding/MachiHub/machi-hires.js`, edited there first, re-copied here. **Why:** consistency with
+  `machi-engine.js`/`machi-achievements.js`/`machi-neon.js`, all sharing one canonical source of truth.
+  **Confidence:** high.
+
+**Verified:** real headless-browser render — Hi-Res Town renders with zero console/page errors; buildings
+show visible facade gradient + panel seams + denser windows; a stale (120-day-unused) building correctly
+renders very dark plus its fire incident; a ground vehicle and the badge blimp render and move; clicking a
+building resolves the correct entity and opens the real, correctly-reparented detail popover; switching
+back to the Town tab shows zero visual regression (contact-shadow polish from the earlier engine fix still
+intact).
+
+**Files:** `machi-hires.js` (new), `town-hub.html`; `Vibe_Coding/MachiHub/machi-hires.js` (new, canonical);
+`AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
