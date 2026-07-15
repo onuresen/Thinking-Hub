@@ -589,6 +589,17 @@
             const placed = tools.map(t => ({ t, w: soiWeights(t) })).filter(x => x.w);
             const unplaced = tools.length - placed.length;
 
+            // Tools with an identical sor/soe/soi combo share one barycentric point and
+            // would otherwise render exactly on top of each other (e.g. every SoE-only
+            // tool lands on the SoE vertex) — group them and spread each group into a
+            // small ring around that point so every tool stays individually visible/clickable.
+            const groups = new Map();
+            placed.forEach(p => {
+                const key = `${p.w.r}|${p.w.e}|${p.w.i}`;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(p);
+            });
+
             const poles = [
                 { key: 'r', pos: SOI_TRI.r, cap: 'SoR', def: 'System of Record', transform: 'translate(-2%,10px)' },
                 { key: 'e', pos: SOI_TRI.e, cap: 'SoE', def: 'System of Engagement', transform: 'translate(-98%,10px)' },
@@ -602,17 +613,27 @@
                 </div>`;
             }).join('');
 
-            const dotsHtml = placed.map(({ t, w }) => {
-                const pos = soiPos(w);
-                const pct = { x: pos.x / 640 * 100, y: pos.y / 480 * 100 };
-                const gradient = `conic-gradient(${SOI_COLOR.r} 0 ${w.r * 360}deg, ${SOI_COLOR.e} 0 ${(w.r + w.e) * 360}deg, ${SOI_COLOR.i} 0 360deg)`;
-                return `<div class="soi-map-dot" style="left:${pct.x}%;top:${pct.y}%;background:${gradient}" title="${escapeAttr(t.name)}" onclick="openTool('${escapeAttr(t.id)}');switchTpView('list')"></div>`;
-            }).join('');
+            const dotsArr = [];
+            groups.forEach(group => {
+                const basePos = soiPos(group[0].w);
+                const n = group.length;
+                const radius = n > 1 ? 16 + Math.sqrt(n) * 10 : 0;
+                group.forEach(({ t, w }, i) => {
+                    const angle = (i / n) * 2 * Math.PI;
+                    const pos = n > 1
+                        ? { x: basePos.x + Math.cos(angle) * radius, y: basePos.y + Math.sin(angle) * radius }
+                        : basePos;
+                    const pct = { x: pos.x / 640 * 100, y: pos.y / 480 * 100 };
+                    const gradient = `conic-gradient(${SOI_COLOR.r} 0 ${w.r * 360}deg, ${SOI_COLOR.e} 0 ${(w.r + w.e) * 360}deg, ${SOI_COLOR.i} 0 360deg)`;
+                    dotsArr.push(`<div class="soi-map-dot" style="left:${pct.x}%;top:${pct.y}%;background:${gradient}" title="${escapeAttr(t.name)}" onclick="openTool('${escapeAttr(t.id)}');switchTpView('list')"></div>`);
+                });
+            });
+            const dotsHtml = dotsArr.join('');
 
             el.innerHTML = `
                 <div class="soi-map-hint">${unplaced ? `${unplaced} tool${unplaced === 1 ? '' : 's'} not yet placed — check SoR/SoE/SoI in the tool's detail panel to add ${unplaced === 1 ? 'it' : 'them'} to the map.` : 'Positioned by SoR/SoE/SoI blend — click a dot to open that tool.'}</div>
                 <div class="soi-map-wrap">
-                    <svg class="soi-map-svg" viewBox="0 0 640 480">
+                    <svg class="soi-map-svg" viewBox="0 0 640 480" preserveAspectRatio="none">
                         <polygon points="${SOI_TRI.r.x},${SOI_TRI.r.y} ${SOI_TRI.e.x},${SOI_TRI.e.y} ${SOI_TRI.i.x},${SOI_TRI.i.y}" fill="none" stroke="var(--border)" stroke-width="1.5"/>
                         <line x1="${SOI_TRI.r.x}" y1="${SOI_TRI.r.y}" x2="${(SOI_TRI.e.x+SOI_TRI.i.x)/2}" y2="${(SOI_TRI.e.y+SOI_TRI.i.y)/2}" stroke="var(--border)" stroke-width="1" opacity=".5"/>
                         <line x1="${SOI_TRI.e.x}" y1="${SOI_TRI.e.y}" x2="${(SOI_TRI.r.x+SOI_TRI.i.x)/2}" y2="${(SOI_TRI.r.y+SOI_TRI.i.y)/2}" stroke="var(--border)" stroke-width="1" opacity=".5"/>
