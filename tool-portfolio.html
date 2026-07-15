@@ -1175,7 +1175,7 @@
                     ['Notes',      t.note      || ''],
                 ].map(([label, val]) => `
                     <div class="compare-row">
-                        <div class="compare-row-label">${label}</div>
+                        <div class="compare-row-label"${label.startsWith('SoR') ? ' style="text-transform:none"' : ''}>${label}</div>
                         <div class="compare-row-value ${val ? '' : 'compare-row-empty'}">${val || '—'}</div>
                     </div>`).join('');
 
@@ -1273,13 +1273,13 @@
           </div>
 
           <div class="field">
-            <div class="field-label">SoR · SoE · SoI <span style="color:var(--text3);font-size:10px;font-weight:400">(check all that apply)</span></div>
+            <div class="field-label" style="text-transform:none">SoR · SoE · SoI <span style="color:var(--text3);font-size:10px;font-weight:400;text-transform:uppercase">(check all that apply)</span></div>
             <div class="ring-pill-row">
               <button class="ring-pill-btn${t.sor ? ' active-sor' : ''}" onclick="toggleArchTag('sor')" title="System of Record — the source of truth for this data">SoR</button>
               <button class="ring-pill-btn${t.soe ? ' active-soe' : ''}" onclick="toggleArchTag('soe')" title="System of Engagement — day-to-day user interaction">SoE</button>
               <button class="ring-pill-btn${t.soi ? ' active-soi' : ''}" onclick="toggleArchTag('soi')" title="System of Insight — analysis, prediction, decision support">SoI</button>
             </div>
-            <div class="field-hint">DX department's framework, in place of TOGAF layers — see the Map tab for where this tool sits</div>
+            <div class="field-hint">SoR = source of truth for this data. SoE = day-to-day user interaction. SoI = analysis, prediction, decision support. A tool can be more than one — see the Map tab for where it sits.</div>
           </div>
           <div class="field">
             <div class="field-label">Category</div>
