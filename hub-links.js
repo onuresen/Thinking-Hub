@@ -52,6 +52,19 @@ window.HubLinks = (() => {
     HubStorage.set(STORAGE_KEY, links);
   }
 
+  // 'leads-to' was merged into 'blocks' in Graph Hub's link-creation UI (they were already
+  // treated identically by the graph engine's traversal logic) — migrate any links still
+  // carrying the old value so 3 relationship types is consistent everywhere, not 3 for new
+  // links and 4 for old ones. Idempotent: only writes if something actually needed changing.
+  (function _migrateLegacyRelTypes() {
+    const links = getAll();
+    let changed = false;
+    links.forEach(l => {
+      if (l.relType === 'leads-to') { l.relType = 'blocks'; changed = true; }
+    });
+    if (changed) _saveAll(links);
+  })();
+
   function getLinksFor(toolId, itemId) {
     return getAll().filter(l =>
       (l.a.tool === toolId && l.a.itemId === itemId) ||
