@@ -796,7 +796,7 @@
       <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
       <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
       <button class="btn" id="cpath-btn" onclick="toggleCriticalPath()" title="Highlight the longest chain of 'Blocks'/'Depends on' links between dated tasks">⛓ Critical Path</button>
-      <button class="btn" id="bottlenecks-btn" onclick="toggleBottlenecks()" title="Ring nodes whose failure would break 2+ downstream items (via 'Blocks'/'Depends on'/'Leads to' links only)">⚠ Bottlenecks</button>
+      <button class="btn" id="bottlenecks-btn" onclick="toggleBottlenecks()" title="Ring nodes whose failure would break 2+ downstream items (via 'Blocks'/'Depends on' links only)">⚠ Bottlenecks</button>
       <select id="cluster-select" class="btn" style="padding:6px 8px" title="Collapse nodes into groups"
         onchange="setClusterMode(this.value)">
         <option value="none">No clustering</option>
@@ -875,8 +875,7 @@
         style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
         <option value="relates">↔ Relates</option>
         <option value="depends-on">→ Depends on</option>
-        <option value="blocks">→ Blocks</option>
-        <option value="leads-to">→ Leads to</option>
+        <option value="blocks">→ Blocks / leads to</option>
       </select>
     </div>
     <div class="edge-endpoints" id="edge-endpoints"></div>
@@ -898,7 +897,7 @@
       <button class="gh-btn" id="np-link-btn">+ Link</button>
       <button class="gh-btn" onclick="closeNodePanel()">✕</button>
     </div>
-    <div class="edge-panel-actions" style="margin-top:2px" title="Walk 'Depends on'/'Blocks'/'Leads to' links (plus tag/host context edges) from this item">
+    <div class="edge-panel-actions" style="margin-top:2px" title="Walk 'Depends on'/'Blocks' links (plus tag/host context edges) from this item">
       <button class="gh-btn" style="flex:1" id="np-reasoning-btn">⤺ Reasoning Path</button>
       <button class="gh-btn" style="flex:1" id="np-impact-btn">⤻ Impact Analysis</button>
     </div>
@@ -1014,7 +1013,6 @@
       'relates': { label: '', arrowTo: false, arrowFrom: false, hue: null },
       'depends-on': { label: 'depends on', arrowTo: true, arrowFrom: false, hue: '#5580cc' },
       'blocks': { label: 'blocks', arrowTo: true, arrowFrom: false, hue: '#cc4444' },
-      'leads-to': { label: 'leads to', arrowTo: true, arrowFrom: false, hue: '#44aa66' },
     };
 
     let network = null;
@@ -1997,7 +1995,7 @@
     // selected node and the whole edge set (manual links + auto tag/host edges), not
     // just dated project-hub tasks on 'blocks'/'depends-on'. Direction matters and is
     // NOT the same as raw edge direction for every relType — same caveat ONEXUS's
-    // `what_if` MCP tool documents: 'blocks'/'leads-to' impact flows with the edge
+    // `what_if` MCP tool documents: 'blocks' impact flows with the edge
     // (a blocks b -> if a slips, b is affected); 'depends-on' impact flows AGAINST it
     // (a depends-on b -> if b changes, a is affected, not the reverse). Auto edges
     // (tags, task->project host) and 'relates' have no causal direction, so they're
@@ -2019,7 +2017,7 @@
       edgesDS.forEach(e => {
         if (e._auto) { link(e.from, e.to, e.id, 'auto'); link(e.to, e.from, e.id, 'auto'); return; }
         const relType = relTypeById.get(e._linkId) || 'relates';
-        if (relType === 'blocks' || relType === 'leads-to') link(e.from, e.to, e.id, relType);
+        if (relType === 'blocks') link(e.from, e.to, e.id, relType);
         else if (relType === 'depends-on') link(e.to, e.from, e.id, relType);
         else { link(e.from, e.to, e.id, relType); link(e.to, e.from, e.id, relType); }
       });
@@ -2116,9 +2114,9 @@
     // well-tagged item look like a false-positive bottleneck, and tag nodes
     // themselves (which fan out to everything wearing that tag) worst of all.
     // Bottleneck blast radius only walks genuine causal links — 'blocks' /
-    // 'depends-on' / 'leads-to' — the same relTypes Critical Path already treats
-    // as directional predecessor→successor edges. Auto context edges and
-    // undirected 'relates' links are excluded entirely.
+    // 'depends-on' — the same relTypes Critical Path already treats as directional
+    // predecessor→successor edges. Auto context edges and undirected 'relates'
+    // links are excluded entirely.
     const BOTTLENECK_MIN_IMPACT = 2;
 
     function _bottleneckAdjacency() {
@@ -2132,7 +2130,7 @@
       edgesDS.forEach(e => {
         if (e._auto) return; // structural/tag edges aren't causal dependencies
         const relType = relTypeById.get(e._linkId) || 'relates';
-        if (relType === 'blocks' || relType === 'leads-to') link(e.from, e.to);
+        if (relType === 'blocks') link(e.from, e.to);
         else if (relType === 'depends-on') link(e.to, e.from);
         // 'relates' has no causal direction — not a dependency, excluded
       });
