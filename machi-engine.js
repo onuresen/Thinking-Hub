@@ -783,13 +783,15 @@ const MachiHub = (() => {
         }
       }
 
-      // vertical avenue, running the full height of the blocks
+      // vertical avenue — starts at the first row's street line, not TOP_SKY, so it
+      // never pokes up above the town's own skyline into open sky with nothing around it.
       if (hasAvenue) {
         const ax = MARGIN_X + avenueAfter * CELL_W;
+        const avenueTop = TOP_SKY + BUILD_ZONE;
         ctx.fillStyle = fantasy ? '#6b5a3a' : '#262b36';
-        ctx.fillRect(ax, TOP_SKY, AVENUE_W, height - TOP_SKY);
+        ctx.fillRect(ax, avenueTop, AVENUE_W, height - avenueTop);
         ctx.fillStyle = fantasy ? '#c9a878' : '#4a5162';
-        for (let y = TOP_SKY + 2; y < height; y += 6) {
+        for (let y = avenueTop + 2; y < height; y += 6) {
           if (fantasy) ctx.fillRect(ax + 1 + ((y / 6) % 2) * 3, y, AVENUE_W - 3, 1);
           else ctx.fillRect(ax + Math.floor(AVENUE_W / 2), y, 1, 3);
         }
@@ -801,7 +803,16 @@ const MachiHub = (() => {
         const baseline = TOP_SKY + r * ROW_H + BUILD_ZONE;
 
         ctx.fillStyle = theme.ground; // sidewalk / verge — seasonal
-        ctx.fillRect(0, baseline, width, SIDEWALK_H);
+        // Skip the avenue's own column — otherwise the verge paints straight across the
+        // intersection on top of the road crossing, showing as a strip of grass cutting
+        // through the pavement instead of a clean road-on-road crossing.
+        if (hasAvenue) {
+          const ax = MARGIN_X + avenueAfter * CELL_W;
+          ctx.fillRect(0, baseline, ax, SIDEWALK_H);
+          ctx.fillRect(ax + AVENUE_W, baseline, width - (ax + AVENUE_W), SIDEWALK_H);
+        } else {
+          ctx.fillRect(0, baseline, width, SIDEWALK_H);
+        }
 
         ctx.fillStyle = fantasy ? '#6b5a3a' : '#262b36'; // cobbles / asphalt
         ctx.fillRect(0, baseline + SIDEWALK_H, width, ROAD_H);
