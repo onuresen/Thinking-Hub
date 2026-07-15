@@ -1001,6 +1001,11 @@ const MachiHub = (() => {
       const { x, y, w, h } = b;
       const base = e.color || CATEGORY_COLORS[e.category] || CATEGORY_COLORS.default;
 
+      // soft contact shadow at the base — same depth cue the fantasy theme already uses,
+      // so city buildings don't read as flat cutouts pasted onto the sidewalk.
+      ctx.fillStyle = 'rgba(20,16,24,0.35)';
+      ctx.fillRect(x + 2, y + h, w, 2);
+
       ctx.fillStyle = e.staleness > 0.5 ? mix(base.startsWith('#') ? base : '#7a86a3', '#6b6f76', (e.staleness - 0.5) * 2) : base;
       ctx.fillRect(x, y, w, h);
 
