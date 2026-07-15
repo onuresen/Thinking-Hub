@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Machi Town</title>
+  <title>Machi Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -120,7 +120,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="topbar-title">🏙 Machi Town <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
+    <div class="topbar-title">🏙 Machi Hub <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
     <div class="mayor-hud" id="mayor-hud"></div>
   </div>
 
@@ -242,7 +242,7 @@
       'journal-hub': ['Journal Hub', '◷', 'Daily Work'],
       'graph-hub': ['Dependency Graph', '🕸', 'People & Network'], 'people-hub': ['People Hub', '◉', 'People & Network'],
       'stakeholder-hub': ['Stakeholder Map', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
-      'town-hub': ['Machi Town', '🏙', 'People & Network'],
+      'town-hub': ['Machi Hub', '🏙', 'People & Network'],
       'learning-hub': ['Learning Hub', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
       'canvas-hub': ['Spatial Canvas', '✏', 'Learning & Ideas'],
       'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
@@ -442,7 +442,7 @@
           priority.push(`🚑 Responding to ${e.name}`);
         }
       }
-      priority.push(weather > 0.3 ? '🌩️ Storm brewing over Machi Town' : '☀️ Clear skies over Machi Town');
+      priority.push(weather > 0.3 ? '🌩️ Storm brewing over the town' : '☀️ Clear skies over the town');
 
       const achievements = [];
       for (const e of entities) {
@@ -494,7 +494,7 @@
 
       if (previousTrouble !== null && previousTrouble > 0 && trouble === 0) {
         if (town) town.celebrate(20);
-        if (window.showToast) showToast('🎉 Zero incidents across Machi Town!');
+        if (window.showToast) showToast('🎉 Zero incidents across the town!');
       }
       previousTrouble = trouble;
 
