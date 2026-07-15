@@ -796,7 +796,7 @@
       <button class="btn" id="orphans-btn" onclick="toggleOrphans()">Orphans</button>
       <button class="btn frozen" id="auto-btn" onclick="toggleAutoLinks()">Auto Links</button>
       <button class="btn" id="cpath-btn" onclick="toggleCriticalPath()" title="Highlight the longest chain of 'Blocks'/'Depends on' links between dated tasks">⛓ Critical Path</button>
-      <button class="btn" id="bottlenecks-btn" onclick="toggleBottlenecks()" title="Ring nodes whose failure would break 3+ downstream items">⚠ Bottlenecks</button>
+      <button class="btn" id="bottlenecks-btn" onclick="toggleBottlenecks()" title="Ring nodes whose failure would break 2+ downstream items (via 'Blocks'/'Depends on'/'Leads to' links only)">⚠ Bottlenecks</button>
       <select id="cluster-select" class="btn" style="padding:6px 8px" title="Collapse nodes into groups"
         onchange="setClusterMode(this.value)">
         <option value="none">No clustering</option>
@@ -2076,7 +2076,7 @@
     // 'depends-on' / 'leads-to' — the same relTypes Critical Path already treats
     // as directional predecessor→successor edges. Auto context edges and
     // undirected 'relates' links are excluded entirely.
-    const BOTTLENECK_MIN_IMPACT = 3;
+    const BOTTLENECK_MIN_IMPACT = 2;
 
     function _bottleneckAdjacency() {
       const forward = new Map(); // nodeId -> [downstream nodeId, ...]
