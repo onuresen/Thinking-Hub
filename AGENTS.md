@@ -1487,6 +1487,74 @@ server restarted, so no alternate browser surface was used. No storage keys chan
 
 ---
 
+### ~~Priority 84 — Machi Hub: Neon District tab (cyberpunk skin, isolated renderer)~~ ✓ Done `[group: machi-town]`
+Second visual world for Machi Hub, added as its own top-level tab ("🏙 Town" / "🌆 Neon District") rather
+than a third `setVisualTheme()` branch inside the existing `Town` class — the user explicitly wanted the
+already-good City/Fantasy town shielded from any risk while a bigger, higher-resolution redesign happened
+alongside it. New file `machi-neon.js` exports `MachiNeon.District`, a self-contained renderer that shares
+nothing at the code level with `machi-engine.js`'s `Town` class — only the entity shape
+(`MachiHub.createEntity` output) is shared, so buildings/cars/people/etc. keep the exact same meaning as
+the Town tab, just skinned differently. Layout runs at ~1.8x the logical pixel density of the Town engine
+(`CELL_W` 26→48, `BUILD_ZONE` 38→74) for real facade/window detail, not just a bigger blit scale.
+
+**Visual language:** dark gradient sky with soft colored glow haze (implying a lit skyline beyond frame);
+buildings get a dark facade + two-layer neon outline glow (wide/faint then tight/bright) keyed off a hash
+of the entity id into one of five neon hues; denser neon-flicker window grid; rooftop antenna + blinking
+beacon; a wet-street sheen gradient + per-building reflection smear under each building; ambient neon
+rain (always a light drizzle, scales up with the existing weather signal). Vehicles + risk responders
+(previously ground cars) become **flying traffic** on two fixed altitude lanes with a fading light-trail —
+responders alternate red/blue like an emergency beacon. The sky/badge-count entity becomes a pulsing
+holographic ad-panel instead of a blimp. Walkers are small neon glyphs pacing the sidewalk.
+
+**Key decisions:**
+- **Decision:** Build `MachiNeon.District` as a fully separate class/file, not a third theme branch in
+  `Town`. **Why:** the explicit ask was risk isolation — a bigger, more experimental redesign must not be
+  able to regress the tested City/Fantasy rendering path. Sharing only the entity data (not the drawing
+  code) makes that guarantee structural, not just a testing discipline. **Alternative rejected:** a third
+  `setVisualTheme('cyberpunk')` branch inside `Town` — touches shared code every future Town change has to
+  reason about being color-agnostic across three skins instead of two. **Confidence:** high.
+- **Decision:** Reuse the exact same entities/lenses and the exact same `#detail` popover + `showDetail()`
+  for both tabs (reparenting the single shared DOM node into whichever tab's scroll container is active on
+  switch), rather than a looser/decorative mapping or a duplicated detail UI. **Why:** user's explicit
+  choice — "same entities, same meaning" — clicking a building should open the identical real tool/project
+  info regardless of which skin you're looking at. Reparenting one node is far less code than duplicating
+  the ~80-line `showDetail()` render logic. `positionDetail()`/`markUsedNow()` were generalized to read
+  from an `activeEngine()`/`activeCanvasEl()` pair instead of hardcoding the Town globals. **Confidence:**
+  high.
+- **Decision:** Vehicles/responders fly (two fixed-altitude lanes spanning the full district) instead of
+  driving the streets, matching the "flying cars" ask literally rather than decoratively. **Why:** this
+  reuses real project/risk data as the flying traffic instead of adding purely decorative flying cars on
+  top — the data-driven entity keeps carrying its meaning in the new skin. **Confidence:** med — a genuine
+  3D depth-sorted "weave between buildings" version would look better but is materially more complex than
+  a v1 pass warranted.
+- **Decision:** Neon District's animation loop is started/stopped on tab switch (`town.stop()` /
+  `neon.start()` and vice versa), and the district itself is lazily constructed on first visit to the tab.
+  **Why:** avoids paying for two simultaneous `requestAnimationFrame` loops (one of them always invisible)
+  and avoids the cost of a second canvas/render pipeline for users who never open the tab — same
+  lazy-load-on-first-open precedent as Priority 49's Scrum tab. **Confidence:** high.
+- **Decision:** `machi-neon.js` follows the same "STAMPED COPY" convention as `machi-engine.js` /
+  `machi-achievements.js` — canonical source lives in `Vibe_Coding/MachiHub/machi-neon.js`, edited there
+  first, then re-copied here with the stamp header. **Why:** consistency with the existing two-file
+  precedent; keeps one canonical source of truth instead of two independently-editable copies drifting
+  apart (which had already happened once to `machi-engine.js` before this session — `relationships`/
+  `setRelationships` and three entity colors existed in the canonical source but not the stamped copy; left
+  untouched/unreconciled here since it's a separate pre-existing issue, not part of this task).
+  **Confidence:** high.
+
+**Verified:** real headless-browser render (Playwright + local static server, not just code review) —
+Neon District tab renders without console/page errors; buildings show correct neon-glow facades, a flying
+vehicle with a light trail, and a pulsing holo-ad panel; clicking a building resolves the correct entity
+via `boxAt()` and opens the real, correctly-reparented detail popover with full content (status line,
+achievements, "Open in Tool Portfolio" action); switching back to the Town tab re-renders it with zero
+visual regression. Confirmed the same-turn Town-engine fixes (avenue-in-the-sky, verge-through-intersection,
+city-theme contact shadow) were applied to both the Thinking-Hub stamped copy and the Vibe_Coding canonical
+source with byte-identical surgical diffs.
+
+**Files:** `machi-neon.js` (new), `town-hub.html`; `Vibe_Coding/MachiHub/machi-neon.js` (new, canonical);
+`AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

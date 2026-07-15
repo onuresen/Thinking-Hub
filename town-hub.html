@@ -10,6 +10,7 @@
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <script src="machi-engine.js"></script>
+  <script src="machi-neon.js"></script>
   <script src="machi-achievements.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,6 +61,14 @@
 
     .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
     .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
+
+    .main-tab-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+    .main-tab {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 700;
+      padding: 8px 16px; cursor: pointer;
+    }
+    .main-tab.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
     .lens-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .lens-chip {
@@ -141,29 +150,52 @@
       sky turns to storm. Click anything.
     </p>
 
+    <div class="main-tab-bar" id="main-tab-bar">
+      <button class="main-tab on" data-view="town" onclick="switchMainView('town')">🏙 Town</button>
+      <button class="main-tab" data-view="neon" onclick="switchMainView('neon')">🌆 Neon District</button>
+    </div>
+
     <div class="lens-bar" id="lens-bar"></div>
     <div class="env-bar" id="env-bar"></div>
 
-    <div class="town-wrap">
-      <div class="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
-      <div class="legend" id="legend">
-        <span style="color:#5bd67a">adopt</span>
-        <span style="color:#5b8cff">trial</span>
-        <span style="color:#ff9f5b">assess</span>
-        <span style="color:#8a8f9c">hold</span>
+    <div id="view-town" class="view-panel">
+      <div class="town-wrap">
+        <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
+        <div class="legend" id="legend">
+          <span style="color:#5bd67a">adopt</span>
+          <span style="color:#5b8cff">trial</span>
+          <span style="color:#ff9f5b">assess</span>
+          <span style="color:#8a8f9c">hold</span>
+        </div>
+        <div class="legend" id="legend-events">
+          <span>🔥 dead tool</span>
+          <span>🏗️ heavy dev</span>
+          <span>⚠️ overdue project</span>
+          <span>💥 blocked project</span>
+          <span>🚑 risk response</span>
+        </div>
       </div>
-      <div class="legend" id="legend-events">
-        <span>🔥 dead tool</span>
-        <span>🏗️ heavy dev</span>
-        <span>⚠️ overdue project</span>
-        <span>💥 blocked project</span>
-        <span>🚑 risk response</span>
+    </div>
+
+    <div id="view-neon" class="view-panel" style="display:none">
+      <p class="intro" style="margin-bottom:10px">
+        Same city, same data — buildings/cars/people mean exactly what they do on the Town tab,
+        just skinned as a neon-lit district with flying traffic instead of streets.
+      </p>
+      <div class="town-wrap">
+        <div class="town-scroll" id="neon-scroll"><canvas id="neon"></canvas></div>
+        <div class="legend" id="legend-neon">
+          <span style="color:#ff2fd0">glowing facade = tool/page</span>
+          <span style="color:#2ff2ff">flying traffic = active projects</span>
+          <span>🚑 red/blue beacon = risk response</span>
+        </div>
       </div>
-      <div class="empty-state" id="empty" style="display:none">
-        Nothing to show — every lens is off or empty.<br>
-        Add tools in the <a href="tool-portfolio.html">Tool Portfolio</a>, projects in
-        <a href="project-hub.html">Project Hub</a>, or just use the Hub — pages you open become buildings.
-      </div>
+    </div>
+
+    <div class="empty-state" id="empty" style="display:none">
+      Nothing to show — every lens is off or empty.<br>
+      Add tools in the <a href="tool-portfolio.html">Tool Portfolio</a>, projects in
+      <a href="project-hub.html">Project Hub</a>, or just use the Hub — pages you open become buildings.
     </div>
   </div>
 
@@ -536,6 +568,59 @@
     const empty = document.getElementById('empty');
     let town = null;
 
+    // ── Neon District (separate tab + separate renderer, see machi-neon.js) ──
+    let neon = null;
+    let activeView = 'town'; // 'town' | 'neon' — drives which engine positionDetail()/markUsedNow() target
+    let _lastEntities = [];
+    let _lastWeather = 0;
+
+    function activeEngine() { return activeView === 'neon' ? neon : town; }
+    function activeCanvasEl() { return activeView === 'neon' ? document.getElementById('neon') : canvas; }
+
+    function colsForNeonContainer() {
+      const host = document.querySelector('.content');
+      const avail = ((host.clientWidth || 1000) - 44) / NEON_SCALE;
+      const { CELL_W, MARGIN_X, AVENUE_W } = MachiNeon.LAYOUT;
+      return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
+    }
+
+    function ensureNeonInit() {
+      const neonCanvas = document.getElementById('neon');
+      if (neon) {
+        if (!neon._raf && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) neon.start();
+        return;
+      }
+      neon = new MachiNeon.District(neonCanvas, { scale: NEON_SCALE, maxPerRow: colsForNeonContainer() })
+        .setEntities(_lastEntities)
+        .setWeather(_lastWeather)
+        .render()
+        .enableInteraction({ onClick: showDetail });
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) neon.start();
+      window._machiNeon = neon; // debugging/testing handle, matches window._machiTown
+      neonCanvas.addEventListener('click', (ev) => {
+        const rect = neonCanvas.getBoundingClientRect();
+        if (!neon.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
+      });
+    }
+
+    function switchMainView(view) {
+      activeView = view;
+      document.getElementById('view-town').style.display = view === 'town' ? '' : 'none';
+      document.getElementById('view-neon').style.display = view === 'neon' ? '' : 'none';
+      document.querySelectorAll('.main-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === view));
+      closeDetail();
+      // reparent the single shared detail popover into whichever tab is now visible
+      const scroll = document.getElementById(view === 'neon' ? 'neon-scroll' : 'town-scroll');
+      scroll.appendChild(detail);
+      if (view === 'neon') {
+        ensureNeonInit();
+        if (town) town.stop();
+      } else if (town && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        town.start();
+        if (neon) neon.stop();
+      }
+    }
+
     function renderLensBar() {
       const bar = document.getElementById('lens-bar');
       bar.replaceChildren();
@@ -716,7 +801,8 @@
       t.lastUsedAt = new Date().toISOString();
       t.useCount = (t.useCount || 0) + 1;
       HubStorage.set('tool-portfolio-v1', tools); // same write path as Tool Portfolio's logToolUsage
-      const hit = town && town.hitboxes.find((b) => b.entity.id === 'tp-' + toolId);
+      const eng = activeEngine();
+      const hit = eng && eng.hitboxes.find((b) => b.entity.id === 'tp-' + toolId);
       if (hit) showDetail(hit.entity, hit);
       if (window.HubToast) HubToast.show('Logged — the lights are on ✨');
     }
@@ -724,16 +810,18 @@
     function closeDetail() { detail.classList.remove('open'); }
 
     // box = the clicked entity's current buffer-space rect from the engine —
-    // used to anchor the popover right next to the building/car/person.
+    // used to anchor the popover right next to the building/car/person. Reads
+    // whichever engine/canvas is active so it works identically from either tab.
     function positionDetail(box) {
       if (!box) return;
-      const s = town ? town.scale : 5;
+      const eng = activeEngine();
+      const s = eng ? eng.scale : 5;
       const anchorX = (box.x + box.w / 2) * s;
       const aboveY = box.y * s;
       detail.style.left = '0px'; detail.style.top = '0px'; // reset before measuring
       requestAnimationFrame(() => {
         const w = detail.offsetWidth, h = detail.offsetHeight;
-        const maxX = canvas.width;
+        const maxX = activeCanvasEl().width;
         let left = Math.min(Math.max(anchorX - w / 2, 6), Math.max(6, maxX - w - 6));
         let top = aboveY - h - 10;
         if (top < 4) top = (box.y + box.h) * s + 10; // no room above → flip below
@@ -825,6 +913,7 @@
     // Fit as many buildings per row as the container allows, so the town is
     // wide rather than tall. LAYOUT constants come from the engine.
     const SCALE = 5;
+    const NEON_SCALE = 4; // Neon District's buffer is already ~1.8x denser, so a lower blit multiplier keeps it roughly the same on-screen size as the Town tab
     function colsForContainer() {
       // Measure .content (a stable full-width parent), NOT .town-scroll — the
       // scroller shrinks to its canvas, so measuring it would be circular.
@@ -845,6 +934,8 @@
       const hasAnything = entities.length > 0;
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
+      document.getElementById('neon').style.display = hasAnything ? '' : 'none';
+      _lastEntities = entities;
       if (!hasAnything) {
         renderMayorHud([], 0);
         renderTicker([]);
@@ -854,9 +945,12 @@
       closeDetail();
 
       const weather = weatherLevel(entities);
+      _lastWeather = weather;
       renderMayorHud(entities, weather);
       renderTicker(buildTickerHeadlines(entities, weather));
       checkMilestones(entities, troubleCount(entities), fromDataChange);
+
+      if (neon) neon.setMaxPerRow(colsForNeonContainer()).setEntities(entities).setWeather(weather).render();
 
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
@@ -889,7 +983,9 @@
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        if (town && colsForContainer() !== town.maxPerRow) rebuild();
+        const townStale = town && colsForContainer() !== town.maxPerRow;
+        const neonStale = neon && colsForNeonContainer() !== neon.maxPerRow;
+        if (townStale || neonStale) rebuild();
       }, 250);
     });
 
