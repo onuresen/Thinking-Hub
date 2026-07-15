@@ -869,21 +869,31 @@
 
   <!-- Edge info panel -->
   <div class="edge-panel" id="edge-panel">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <div class="edge-panel-title">Link</div>
-      <select class="gh-select" id="edge-rel-type"
-        style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
-        <option value="relates">↔ Relates</option>
-        <option value="depends-on">→ Depends on</option>
-        <option value="blocks">→ Blocks / leads to</option>
-      </select>
+    <div id="edge-editable">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div class="edge-panel-title">Link</div>
+        <select class="gh-select" id="edge-rel-type"
+          style="font-size:10.5px;padding:2px 5px;margin:0;width:auto;flex-shrink:0">
+          <option value="relates">↔ Relates</option>
+          <option value="depends-on">→ Depends on</option>
+          <option value="blocks">→ Blocks / leads to</option>
+        </select>
+      </div>
+      <div class="edge-endpoints" id="edge-endpoints"></div>
+      <textarea class="edge-note-input" id="edge-note" placeholder="Add a note to this link…" rows="3"></textarea>
+      <div class="edge-panel-actions">
+        <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveEdgeNote()">Save</button>
+        <button class="gh-btn gh-btn-danger" onclick="deleteCurrentEdge()">Delete</button>
+        <button class="gh-btn" onclick="closeEdgePanel()">✕</button>
+      </div>
     </div>
-    <div class="edge-endpoints" id="edge-endpoints"></div>
-    <textarea class="edge-note-input" id="edge-note" placeholder="Add a note to this link…" rows="3"></textarea>
-    <div class="edge-panel-actions">
-      <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveEdgeNote()">Save</button>
-      <button class="gh-btn gh-btn-danger" onclick="deleteCurrentEdge()">Delete</button>
-      <button class="gh-btn" onclick="closeEdgePanel()">✕</button>
+    <div id="edge-auto-info" style="display:none">
+      <div class="edge-panel-title">Auto-generated relationship</div>
+      <div class="edge-endpoints" id="edge-auto-desc" style="margin-top:6px"></div>
+      <div class="legend-hint" style="margin-top:8px">Derived from the underlying data (a tag, a project link, etc) — not a stored link, so there's nothing here to edit. Change the source item instead (e.g. remove the tag in Tags Hub, or change the project on the risk/decision/meeting).</div>
+      <div class="edge-panel-actions">
+        <button class="gh-btn" style="flex:1" onclick="closeEdgePanel()">✕ Close</button>
+      </div>
     </div>
   </div>
 
@@ -1670,7 +1680,9 @@
         if (!params.edges.length) return;
         const edgeId = params.edges[0];
         const edge = edgesDS.get(edgeId);
-        if (edge && edge._linkId) showEdgePanel(edge._linkId);
+        if (!edge) return;
+        if (edge._linkId) showEdgePanel(edge._linkId);
+        else if (edge._auto) showAutoEdgePanel(edge);
       });
 
       network.on('deselectEdge', () => {
@@ -1807,6 +1819,26 @@
       if (network) network.unselectAll();
     }
 
+    // Auto-generated edges (tags, task→project host, decision/risk/goal/meeting→project,
+    // etc) aren't hub-links-v1 records — there's no relType/note to save. Clicking one
+    // used to do nothing visible, which read as broken; now it opens the same panel in a
+    // read-only mode explaining what the relationship is and where it comes from.
+    function showAutoEdgePanel(edge) {
+      closeNodePanel();
+      _currentEdgeId = null;
+      document.getElementById('edge-editable').style.display = 'none';
+      document.getElementById('edge-auto-info').style.display = 'block';
+      const toolLabel = t => TOOL_LABELS[t] || t;
+      const fromNode = nodesMap.get(edge.from);
+      const toNode = nodesMap.get(edge.to);
+      const endpointHtml = n => n
+        ? `<span class="edge-endpoint-tag">${HubUtils.esc(toolLabel(n.tool))}</span> ${HubUtils.esc((n.label || 'Untitled').slice(0, 36))}`
+        : '';
+      document.getElementById('edge-auto-desc').innerHTML =
+        `${endpointHtml(fromNode)}<br>↓ <i>${HubUtils.esc(edge.title || 'related')}</i><br>${endpointHtml(toNode)}`;
+      document.getElementById('edge-panel').classList.add('visible');
+    }
+
     function saveEdgeNote() {
       if (!_currentEdgeId) return;
       const note = document.getElementById('edge-note').value.trim();
@@ -1833,6 +1865,8 @@
       const links = HubStorage.get('hub-links-v1') || [];
       const link = links.find(l => l.id === edgeId);
       if (!link) return;
+      document.getElementById('edge-editable').style.display = '';
+      document.getElementById('edge-auto-info').style.display = 'none';
       _currentEdgeId = edgeId;
 
       const toolLabel = t => TOOL_LABELS[t] || t;
