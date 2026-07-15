@@ -1608,6 +1608,51 @@ row), Town canvas renders and is visible with zero console/page errors. Confirme
 
 ---
 
+### ~~Priority 85 — Machi Hub: Hi-Res Town tab (sprite-detail experiment, isolated)~~ ✓ Done `[group: machi-town]`
+User wanted to actually try the higher-logical-resolution sprite redesign floated (and explicitly not
+committed to) at the end of Priority 84's follow-up — "it'll shape my thinking about pixel town visuals
+for future updates." Built it the same isolated-tab way Neon District was built, since that isolation is
+exactly what let Neon be tried and discarded with zero cost to the real Town view — the same payoff applies
+here regardless of whether this one sticks either.
+
+New file `machi-hires.js` exports `MachiHiRes.District` — a second new top-level tab ("🏙 Town" /
+"🔍 Hi-Res Town"), sharing nothing at the code level with `Town`, only entity data. Unlike Neon, this one
+is deliberately **not** a new aesthetic — same City color language (`CATEGORY_COLORS`, `e.color`), same
+grid/road/building composition — just redrawn at the same ~1.8x logical pixel density Neon uses, to
+isolate the sprite-detail variable specifically: denser window grid (6px cells vs. the original 3px),
+a two-tone vertical facade gradient + subtle panel-seam strokes for material depth, a roofline trim cap,
+sidewalk paving-seam texture, and real crosswalk striping across the avenue intersection (rather than a
+plain stop line). Ground vehicles/walkers/the badge blimp are redrawn bigger at the same fidelity bump,
+staying on the ground/sidewalk (unlike Neon's flying traffic) since this isn't a new-world reinterpretation.
+
+**Key decisions:**
+- **Decision:** No day/night cycle, weather, or season in this pass — a single fixed pleasant-daytime sky.
+  **Why:** the entire point of this tab is isolating "is the finer pixel grid worth it," and replicating
+  Town's full environmental system would both cost a lot of net-new code and reintroduce variables (lighting,
+  particles) that would confuse a pure sprite-detail comparison. **Confidence:** high. **Revisit when:** if
+  the hi-res redesign is judged worth carrying into Town, day/night/weather/season already exist there and
+  don't need to be rebuilt.
+- **Decision:** Same isolated-module architecture as Neon (separate file/class, entity-shape-only sharing,
+  lazy init on first tab visit, animation loop paused while inactive), not a fourth branch inside `Town`.
+  **Why:** identical reasoning to Priority 84 — and this session already proved the payoff once (Neon came
+  out cleanly with a two-file, zero-Town-risk deletion). **Confidence:** high.
+- **Decision:** `machi-hires.js` follows the same STAMPED COPY convention — canonical source
+  `Vibe_Coding/MachiHub/machi-hires.js`, edited there first, re-copied here. **Why:** consistency with
+  `machi-engine.js`/`machi-achievements.js`/`machi-neon.js`, all sharing one canonical source of truth.
+  **Confidence:** high.
+
+**Verified:** real headless-browser render — Hi-Res Town renders with zero console/page errors; buildings
+show visible facade gradient + panel seams + denser windows; a stale (120-day-unused) building correctly
+renders very dark plus its fire incident; a ground vehicle and the badge blimp render and move; clicking a
+building resolves the correct entity and opens the real, correctly-reparented detail popover; switching
+back to the Town tab shows zero visual regression (contact-shadow polish from the earlier engine fix still
+intact).
+
+**Files:** `machi-hires.js` (new), `town-hub.html`; `Vibe_Coding/MachiHub/machi-hires.js` (new, canonical);
+`AGENTS.md`
+
+---
+
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions

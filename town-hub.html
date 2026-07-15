@@ -10,6 +10,7 @@
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <script src="machi-engine.js"></script>
+  <script src="machi-hires.js"></script>
   <script src="machi-achievements.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,6 +61,14 @@
 
     .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
     .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
+
+    .main-tab-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+    .main-tab {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 700;
+      padding: 8px 16px; cursor: pointer;
+    }
+    .main-tab.on { background: var(--accent); color: var(--accent-contrast, #111); border-color: var(--accent); }
 
     .lens-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .lens-chip {
@@ -141,23 +150,48 @@
       sky turns to storm. Click anything.
     </p>
 
+    <div class="main-tab-bar" id="main-tab-bar">
+      <button class="main-tab on" data-view="town" onclick="switchMainView('town')">🏙 Town</button>
+      <button class="main-tab" data-view="hires" onclick="switchMainView('hires')">🔍 Hi-Res Town</button>
+    </div>
+
     <div class="lens-bar" id="lens-bar"></div>
     <div class="env-bar" id="env-bar"></div>
 
-    <div class="town-wrap">
-      <div class="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
-      <div class="legend" id="legend">
-        <span style="color:#5bd67a">adopt</span>
-        <span style="color:#5b8cff">trial</span>
-        <span style="color:#ff9f5b">assess</span>
-        <span style="color:#8a8f9c">hold</span>
+    <div id="view-town" class="view-panel">
+      <div class="town-wrap">
+        <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
+        <div class="legend" id="legend">
+          <span style="color:#5bd67a">adopt</span>
+          <span style="color:#5b8cff">trial</span>
+          <span style="color:#ff9f5b">assess</span>
+          <span style="color:#8a8f9c">hold</span>
+        </div>
+        <div class="legend" id="legend-events">
+          <span>🔥 dead tool</span>
+          <span>🏗️ heavy dev</span>
+          <span>⚠️ overdue project</span>
+          <span>💥 blocked project</span>
+          <span>🚑 risk response</span>
+        </div>
       </div>
-      <div class="legend" id="legend-events">
-        <span>🔥 dead tool</span>
-        <span>🏗️ heavy dev</span>
-        <span>⚠️ overdue project</span>
-        <span>💥 blocked project</span>
-        <span>🚑 risk response</span>
+    </div>
+
+    <div id="view-hires" class="view-panel" style="display:none">
+      <p class="intro" style="margin-bottom:10px">
+        Same city, same data, same style — just redrawn at a finer pixel grid (denser windows,
+        facade shading/seams, crosswalk striping) to see whether the extra detail is worth
+        carrying into the main Town view. No day/night, weather, or season here on purpose, so
+        the comparison stays about sprite detail alone.
+      </p>
+      <div class="town-wrap">
+        <div class="town-scroll" id="hires-scroll"><canvas id="hires"></canvas></div>
+        <div class="legend" id="legend-hires">
+          <span style="color:#5bd67a">adopt</span>
+          <span style="color:#5b8cff">trial</span>
+          <span style="color:#ff9f5b">assess</span>
+          <span style="color:#8a8f9c">hold</span>
+        </div>
       </div>
     </div>
 
@@ -536,6 +570,58 @@
     const empty = document.getElementById('empty');
     let town = null;
 
+    // ── Hi-Res Town (separate tab + separate renderer, see machi-hires.js) ───
+    let hires = null;
+    let activeView = 'town'; // 'town' | 'hires' — drives which engine positionDetail()/markUsedNow() target
+    let _lastEntities = [];
+    const HIRES_SCALE = 4; // hi-res buffer is ~1.8x denser, so a lower blit multiplier keeps on-screen size close to Town
+
+    function activeEngine() { return activeView === 'hires' ? hires : town; }
+    function activeCanvasEl() { return activeView === 'hires' ? document.getElementById('hires') : canvas; }
+
+    function colsForHiresContainer() {
+      const host = document.querySelector('.content');
+      const avail = ((host.clientWidth || 1000) - 44) / HIRES_SCALE;
+      const { CELL_W, MARGIN_X, AVENUE_W } = MachiHiRes.LAYOUT;
+      return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
+    }
+
+    function ensureHiresInit() {
+      const hiresCanvas = document.getElementById('hires');
+      if (hires) {
+        if (!hires._raf && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) hires.start();
+        return;
+      }
+      hires = new MachiHiRes.District(hiresCanvas, { scale: HIRES_SCALE, maxPerRow: colsForHiresContainer() })
+        .setEntities(_lastEntities)
+        .render()
+        .enableInteraction({ onClick: showDetail });
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) hires.start();
+      window._machiHiRes = hires; // debugging/testing handle, matches window._machiTown
+      hiresCanvas.addEventListener('click', (ev) => {
+        const rect = hiresCanvas.getBoundingClientRect();
+        if (!hires.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
+      });
+    }
+
+    function switchMainView(view) {
+      activeView = view;
+      document.getElementById('view-town').style.display = view === 'town' ? '' : 'none';
+      document.getElementById('view-hires').style.display = view === 'hires' ? '' : 'none';
+      document.querySelectorAll('.main-tab').forEach((t) => t.classList.toggle('on', t.dataset.view === view));
+      closeDetail();
+      // reparent the single shared detail popover into whichever tab is now visible
+      const scroll = document.getElementById(view === 'hires' ? 'hires-scroll' : 'town-scroll');
+      scroll.appendChild(detail);
+      if (view === 'hires') {
+        ensureHiresInit();
+        if (town) town.stop();
+      } else if (town && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        town.start();
+        if (hires) hires.stop();
+      }
+    }
+
     function renderLensBar() {
       const bar = document.getElementById('lens-bar');
       bar.replaceChildren();
@@ -686,7 +772,8 @@
       t.lastUsedAt = new Date().toISOString();
       t.useCount = (t.useCount || 0) + 1;
       HubStorage.set('tool-portfolio-v1', tools); // same write path as Tool Portfolio's logToolUsage
-      const hit = town && town.hitboxes.find((b) => b.entity.id === 'tp-' + toolId);
+      const eng = activeEngine();
+      const hit = eng && eng.hitboxes.find((b) => b.entity.id === 'tp-' + toolId);
       if (hit) showDetail(hit.entity, hit);
       if (window.HubToast) HubToast.show('Logged — the lights are on ✨');
     }
@@ -694,16 +781,18 @@
     function closeDetail() { detail.classList.remove('open'); }
 
     // box = the clicked entity's current buffer-space rect from the engine —
-    // used to anchor the popover right next to the building/car/person.
+    // used to anchor the popover right next to the building/car/person. Reads
+    // whichever engine/canvas is active so it works identically from either tab.
     function positionDetail(box) {
       if (!box) return;
-      const s = town ? town.scale : 5;
+      const eng = activeEngine();
+      const s = eng ? eng.scale : 5;
       const anchorX = (box.x + box.w / 2) * s;
       const aboveY = box.y * s;
       detail.style.left = '0px'; detail.style.top = '0px'; // reset before measuring
       requestAnimationFrame(() => {
         const w = detail.offsetWidth, h = detail.offsetHeight;
-        const maxX = canvas.width;
+        const maxX = activeCanvasEl().width;
         let left = Math.min(Math.max(anchorX - w / 2, 6), Math.max(6, maxX - w - 6));
         let top = aboveY - h - 10;
         if (top < 4) top = (box.y + box.h) * s + 10; // no room above → flip below
@@ -815,6 +904,9 @@
       const hasAnything = entities.length > 0;
       empty.style.display = hasAnything ? 'none' : '';
       canvas.style.display = hasAnything ? '' : 'none';
+      const hiresCanvas = document.getElementById('hires');
+      if (hiresCanvas) hiresCanvas.style.display = hasAnything ? '' : 'none';
+      _lastEntities = entities;
       if (!hasAnything) {
         renderMayorHud([], 0);
         renderTicker([]);
@@ -827,6 +919,8 @@
       renderMayorHud(entities, weather);
       renderTicker(buildTickerHeadlines(entities, weather));
       checkMilestones(entities, troubleCount(entities), fromDataChange);
+
+      if (hires) hires.setMaxPerRow(colsForHiresContainer()).setEntities(entities).render();
 
       if (!town) {
         town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
@@ -857,7 +951,9 @@
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        if (town && colsForContainer() !== town.maxPerRow) rebuild();
+        const townStale = town && colsForContainer() !== town.maxPerRow;
+        const hiresStale = hires && colsForHiresContainer() !== hires.maxPerRow;
+        if (townStale || hiresStale) rebuild();
       }, 250);
     });
 
