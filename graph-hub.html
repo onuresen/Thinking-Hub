@@ -2538,7 +2538,6 @@
       if (node) {
         const toolName = TOOL_LABELS[node.tool] || node.tool;
         items.push({ label: `Open in ${toolName}`, action: () => HubLinks.navigateTo(node.tool, node.itemId) });
-        items.push({ label: 'Add link from here…', action: () => openNewLinkModal({ side: 'a', tool: node.tool, itemId: node.itemId }) });
         items.push({ sep: true });
         items.push({ label: `Hide ${toolName} nodes`, action: () => toggleToolVisibility(node.tool) });
       } else {
