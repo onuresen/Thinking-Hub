@@ -52,6 +52,10 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg) and V-Model. (Scrum Board tab removed 2026-06-13, Priority 50.) |
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
 | `tags-hub.html` | Tags — central tag/topic registry; rename/merge duplicates and add topic-only tags, applies everywhere via `hub-tags.js` |
+| `manifest.json` | PWA manifest — installable app metadata + icons (P80) |
+| `sw.js` | Service worker — precaches all app assets, stale-while-revalidate offline support (P80). ⚠ New app files must be added to its `PRECACHE` list. |
+| `vendor/` | Self-hosted pinned libraries: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1 (P80 — no CDN dependency) |
+| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -74,14 +78,14 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57), `hub-last-backup-v1` (ephemeral — last-full-backup + nudge timestamps, P80; excluded from backup/sync)
 
 ## External dependencies
 | Lib | Used in | Version |
 |-----|---------|---------|
-| Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest |
-| vis-network | graph-hub.html | **9.1.9** (pinned) |
-| html2canvas | canvas-hub.html | **1.4.1** (pinned) |
+| Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest (runtime-cached by `sw.js` for offline) |
+| vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
+| html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
 | @supabase/supabase-js | hub-storage.js (dynamic) | **@2** |
 
 ## What NOT to do
@@ -1311,6 +1315,29 @@ User feedback: the Eisenhower Urgent/Important matrix's "Delegate" and "Eliminat
 **Verified:** real headless-browser test — seeded one legacy item per old quadrant (`do-now`/`schedule`/`delegate`/`eliminate`) plus one untriaged task, reloaded, opened the Priority Matrix view: all four items migrated to the correct new quadrant in storage and rendered under the correct new quadrant heading; the untriaged task auto-synced into Fill-in; axis labels read "Impact →" / "Low Effort" / "High Effort"; the add-item modal defaulted to Quick Win with all four new options present. Zero errors from the matrix code path (one unrelated pre-existing error surfaced from incomplete seed data in an unrelated sidebar member-list function, not from this change).
 
 **Files:** `project-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 80 — World-class platform Group A: PWA + offline + self-hosted libs + storage safety~~ ✓ Done `[group: platform-foundation]`
+First group of the "world top class platform" roadmap (Groups B–D pending: hygiene/CI, AI layer, mobile+graph polish). Makes Thinking Hub an installable, fully offline-capable PWA and closes the P76-deferred CDN dependency.
+
+- **PWA install** — `manifest.json` (standalone display, dark `#0b0b0d` theme) + `icons/` (192/512/maskable-512 PNGs rendered from the sidebar "TH" logo mark in real Syne 800 — lime tile, coral corner dot, matching `.sidebar-logo-mark` exactly). `<link rel="manifest">` + `<meta name="theme-color">` added to `index.html` head. Existing `favicon.svg` (lightbulb) left unchanged — swapping it for the TH mark is a separate branding call.
+- **Offline support** — `sw.js` at repo root: precaches all 54 app assets (every tool HTML, all shared JS, theme.css, vendor libs, icons); same-origin GETs use stale-while-revalidate with `ignoreSearch` matching (handles the `?v=APP_LOAD_TS` iframe cache-busters); bare `/` navigations fall back to cached `index.html`; Google Fonts get a cache-first runtime cache; all other origins (Supabase, Anthropic API, favicon services) pass through untouched. Registered from `index.html` on http/https only — `file://` opens keep working without it.
+- **Self-hosted pinned libs** — `vendor/vis-network.min.js` (9.1.9) + `vendor/html2canvas.min.js` (1.4.1), extracted from official npm registry tarballs; `graph-hub.html` / `canvas-hub.html` script tags swapped from unpkg. Zero CDN references remain anywhere (P76 deferred item #2 closed).
+- **Storage quota guard** — `HubStorage.usage()` (bytes / ~5 MB quota / percent, UTF-16-accurate) + `_checkQuota()` in `set()`: warns via toast once per session (30s-throttled scan) when usage crosses 80%; a `QuotaExceededError` on write now shows an explicit "change was NOT saved" error toast instead of failing silently.
+- **Backup freshness** — usage meter bar (accent → amber ≥70% → red ≥90%) + "Last full backup: X" line in the ⚙ Data & Backup pane; Full Backup export stamps `hub-last-backup-v1` (ephemeral key, excluded from exports/sync); gentle stale-backup toast on load when data >100 KB and last backup >30d (or never), at most every 3 days.
+
+**Key decisions:**
+- **Decision:** Stale-while-revalidate for same-origin assets, not cache-first with versioned cache names. **Why:** no build step means no way to bump a cache version per deploy — SWR serves instantly from cache and refreshes in the background, so code updates land one reload later with zero deploy ceremony. **Alternative rejected:** network-first (loses the instant-load and offline-first benefit); versioned precache (requires manual version bumps every edit — guaranteed to be forgotten). **Confidence:** high.
+- **Decision:** SW cache stores under search-stripped URLs and matches with `ignoreSearch`. **Why:** the shell loads every tool iframe as `file.html?v=<timestamp>` (fresh per session) — without this, every session would cache-miss and every old entry would be garbage. **Confidence:** high.
+- **Decision:** Vendor libs pulled from npm registry tarballs, not unpkg. **Why:** same bytes, and the npm registry is the canonical source; also the only reachable one in the dev sandbox. **Confidence:** high.
+- **Decision:** Quota warning threshold 80% with a hard-failure toast as backstop, not proactive blocking. **Why:** blocking writes near quota would lose data *now* to prevent losing it *later*; warning early + loud failure keeps the user in control. **Confidence:** med.
+- **Decision:** `hub-last-backup-v1` is ephemeral (excluded from exports) like `hub-resurface-v1`. **Why:** restoring a backup shouldn't resurrect a stale "you backed up recently" state — freshness must reflect this browser's reality. **Confidence:** high.
+- **Maintenance rule introduced:** any new app file must be added to `sw.js`'s `PRECACHE` list (noted in the file map).
+
+**Verified** (Playwright against a local server, 21 checks, all passing): SW registers and precaches 54 entries; page becomes SW-controlled; full offline reload of the shell works; tool pages serve offline despite `?v=` busters; manifest + all 3 icons + vendor libs fetch 200; graph-hub renders its vis-network canvas from the vendored lib with seeded data, no JS errors; usage meter populates; Full Backup export stamps `hub-last-backup-v1` and flips the line to "today"; quota toast fires at 86% fill on a fresh session; no real JS errors in the shell (sandbox-only font-fetch noise excluded).
+
+**Files:** `manifest.json` (new), `sw.js` (new), `vendor/vis-network.min.js` (new), `vendor/html2canvas.min.js` (new), `icons/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` (new), `index.html`, `graph-hub.html`, `canvas-hub.html`, `hub-storage.js`, `CLAUDE.md`
 
 ---
 
