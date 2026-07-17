@@ -4518,7 +4518,8 @@
           aHtml = _renderAiCaptureResult(result, text);
           plainText = '';
         } else {
-          const answer = await HubAI.query(text);
+          const history = _aiTurns.filter(t => t.plainText).map(t => ({ q: t.q, a: t.plainText }));
+          const answer = await HubAI.query(text, history);
           plainText = answer;
           aHtml = _renderAiQueryResult(answer, true);
         }

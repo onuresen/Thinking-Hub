@@ -10,6 +10,7 @@
   <script src="hub-data.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="hub-ai.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -357,9 +358,14 @@
 
       <!-- Capture -->
       <div class="rh-col">
-        <div class="rh-col-header">
-          <div class="rh-col-title capture-color">◎ Capture</div>
-          <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
+        <div class="rh-col-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div class="rh-col-title capture-color">◎ Capture</div>
+            <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
+          </div>
+          <button class="btn btn-ghost" id="rh-ai-draft-btn" onclick="rhAiDraft()"
+            title="Draft this review from the week's real activity (fills only empty fields)"
+            style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0">✦ Draft with AI</button>
         </div>
         <div class="rh-col-body">
           <div class="rh-capture-section">
@@ -782,6 +788,127 @@
     if (notes) wd.notes = notes.value;
     clearTimeout(rhSaveTimer);
     rhSaveTimer = setTimeout(rhSaveAll, 1200);
+  }
+
+  // ── AI weekly review draft ──────────────────────────────────────────────────
+  // Builds a digest of the displayed week's REAL activity and asks HubAI to
+  // draft wins / learnings / blockers. Fills only EMPTY fields — never
+  // overwrites anything the user wrote.
+
+  function rhBuildAiDigest(monStr, sunStr) {
+    const L = [];
+    try {
+      const ph = HubStorage.get('project-hub-v1') || {};
+      const done = [];
+      (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => {
+        if (t.status !== 'done') return;
+        const at = t.completedAt || t.updatedAt || '';
+        if (at >= monStr && at <= sunStr + 'T23:59:59') done.push(`"${t.title}" (${p.name})`);
+      }));
+      if (done.length) L.push(`Tasks completed (${done.length}): ` + done.slice(0, 12).join('; '));
+    } catch {}
+    try {
+      const dh = HubStorage.get('decision-hub-v1') || [];
+      const decs = (Array.isArray(dh) ? dh : []).filter(d => {
+        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      });
+      if (decs.length) L.push('Decisions logged: ' + decs.slice(0, 8).map(d => `"${d.title}"`).join('; '));
+    } catch {}
+    try {
+      const mh = HubStorage.get('meetings-hub-v1') || {};
+      const met = [];
+      ((mh.meetings) || []).forEach(m => {
+        if (m.recurring && Array.isArray(m.occurrenceDates)) {
+          m.occurrenceDates.forEach(o => { if (o.date >= monStr && o.date <= sunStr) met.push(`"${m.title}" (${o.date})`); });
+        } else if (m.date >= monStr && m.date <= sunStr) met.push(`"${m.title}" (${m.date})`);
+      });
+      if (met.length) L.push('Meetings held: ' + met.slice(0, 10).join('; '));
+    } catch {}
+    try {
+      const rh2 = HubStorage.get('risk-hub-v1') || [];
+      const risks = (Array.isArray(rh2) ? rh2 : []).filter(r => (r.createdAt || '').slice(0, 10) >= monStr && (r.createdAt || '').slice(0, 10) <= sunStr);
+      if (risks.length) L.push('New risks: ' + risks.slice(0, 5).map(r => `"${r.title}"`).join('; '));
+    } catch {}
+    try {
+      const fh = HubStorage.get('focus-hub-v1') || {};
+      const sess = (fh.sessions || []).filter(s => {
+        const at = (s.startedAt || '').slice(0, 10);
+        return at >= monStr && at <= sunStr;
+      });
+      if (sess.length) {
+        const mins = sess.reduce((sum, s) => sum + (s.durationMin || 0), 0);
+        L.push(`Focus: ${sess.length} sessions, ${mins} min` + (sess.some(s => s.taskTitle) ? ' on: ' + [...new Set(sess.map(s => s.taskTitle).filter(Boolean))].slice(0, 6).join(', ') : ''));
+      }
+    } catch {}
+    try {
+      const lh = HubStorage.get('log-hub-v1') || {};
+      const days = Object.keys(lh.entries || {}).filter(d => d >= monStr && d <= sunStr).sort();
+      days.forEach(d => {
+        const e = lh.entries[d];
+        const bits = [];
+        if (e.text) bits.push(String(e.text).slice(0, 220));
+        if (e.learning) bits.push('learned: ' + String(e.learning).slice(0, 120));
+        if (e.mood) bits.push(`mood ${e.mood}/5`);
+        if (bits.length) L.push(`Journal ${d}: ${bits.join(' · ')}`);
+      });
+    } catch {}
+    return L;
+  }
+
+  async function rhAiDraft() {
+    if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
+      showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
+      return;
+    }
+    const monday = rhGetMonday(rhWeekOffset);
+    const monStr = rhIsoDate(monday);
+    const sun = new Date(monday); sun.setDate(sun.getDate() + 6);
+    const sunStr = rhIsoDate(sun);
+
+    const digest = rhBuildAiDigest(monStr, sunStr);
+    if (!digest.length) {
+      showToast('No recorded activity found for this week — nothing to draft from');
+      return;
+    }
+
+    const btn = document.getElementById('rh-ai-draft-btn');
+    btn.disabled = true;
+    const origLabel = btn.textContent;
+    btn.textContent = '✦ Drafting…';
+    try {
+      const system = `You draft weekly review notes for a personal productivity app. You are given a digest of what ACTUALLY happened this week (${monStr} to ${sunStr}). Write in first person, grounded ONLY in the digest — never invent events. Return ONLY valid JSON:
+{"wins": "2-4 short lines, one win per line", "learn": "1-3 short lines of genuine learnings", "block": "1-2 short lines of blockers/friction, or empty string if none evident"}`;
+      const raw = await HubAI.chat('Week digest:\n' + digest.join('\n'), system);
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse AI response');
+      const draft = JSON.parse(jsonMatch[0]);
+
+      const fields = [
+        { id: 'rh-cap-wins', val: draft.wins },
+        { id: 'rh-cap-learn', val: draft.learn },
+        { id: 'rh-cap-block', val: draft.block },
+      ];
+      let filled = 0, skipped = 0;
+      fields.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (!el || !f.val) return;
+        if (el.value.trim()) { skipped++; return; }
+        el.value = f.val;
+        filled++;
+      });
+      if (filled) {
+        rhAutosave();
+        showToast(`Draft filled ${filled} field${filled > 1 ? 's' : ''}${skipped ? ` (${skipped} kept — already had your text)` : ''} — edit freely`, 'success');
+      } else {
+        showToast('All fields already have your text — nothing overwritten');
+      }
+    } catch (err) {
+      showToast('AI draft failed: ' + (err.message || err), 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
   }
 
   function rhBuildActivityHTML(monStr, sunStr) {

@@ -132,6 +132,118 @@ const HubAI = (() => {
       });
     } catch {}
 
+    // Meetings (series-aware: one line per meeting record, next occurrence for series)
+    try {
+      const raw = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+      const meetings = (raw.meetings || []).slice(-10);
+      if (meetings.length) lines.push('\nMeetings:');
+      meetings.forEach(m => {
+        items.push({ id: m.id, tool: 'meetings-hub', label: m.title, type: 'meeting' });
+        let when = m.date || '';
+        if (m.recurring && Array.isArray(m.occurrenceDates) && m.occurrenceDates.length) {
+          const next = m.occurrenceDates.map(o => o.date).filter(d => d >= today).sort()[0];
+          when = `weekly series, next: ${next || 'ended'}`;
+        }
+        const acts = m.recurring
+          ? (m.log || []).flatMap(l => l.actionItems || [])
+          : (m.actionItems || []);
+        const open = acts.filter(a => !a.done);
+        lines.push(`Meeting "${m.title}" [id:${m.id}] ${when}${open.length ? ` — ${open.length} open actions` : ''}`);
+        open.slice(0, 4).forEach(a => lines.push(`  Action: ${a.text}${a.dueDate ? ' due:' + a.dueDate : ''}`));
+      });
+    } catch {}
+
+    // Schedule (next 14 days)
+    try {
+      const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{}');
+      const horizon = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+      const upcoming = (raw.items || [])
+        .filter(it => it.start && it.start >= today && it.start <= horizon)
+        .sort((a, b) => a.start.localeCompare(b.start)).slice(0, 8);
+      if (upcoming.length) lines.push('\nSchedule (next 14 days):');
+      upcoming.forEach(it => lines.push(`  ${it.start} ${it.type || 'item'}: "${it.title}"`));
+    } catch {}
+
+    // Learning log
+    try {
+      const raw = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
+      const learning = (raw.items || []).slice(-6);
+      if (learning.length) lines.push('\nLearning log:');
+      learning.forEach(it => {
+        items.push({ id: it.id, tool: 'learning-hub', label: it.title, type: 'learning' });
+        lines.push(`  "${it.title}" [id:${it.id}] (${it.status || 'active'})${it.keyInsight ? ' — insight: ' + String(it.keyInsight).slice(0, 100) : ''}`);
+      });
+    } catch {}
+
+    // Reflection Board (latest board, per-column)
+    try {
+      const raw = JSON.parse(localStorage.getItem('reflection-hub-v1') || '{}');
+      const board = (raw.boards || [])[raw.boards ? raw.boards.length - 1 : 0];
+      if (board && board.columns) {
+        const colLines = [];
+        ['signal', 'friction', 'question', 'action'].forEach(col => {
+          (board.columns[col] || []).slice(0, 4).forEach(it => colLines.push(`  ${col}: ${String(it.text || '').slice(0, 90)}`));
+        });
+        if (colLines.length) { lines.push('\nReflection Board:'); lines.push(...colLines); }
+      }
+    } catch {}
+
+    // Assumptions (unresolved)
+    try {
+      const raw = JSON.parse(localStorage.getItem('assumptions-hub-v1') || '{}');
+      const open = (raw.assumptions || []).filter(a => a.status === 'assumed' || a.status === 'testing').slice(0, 6);
+      if (open.length) lines.push('\nOpen assumptions:');
+      open.forEach(a => lines.push(`  [${a.status}] ${String(a.statement || '').slice(0, 100)}`));
+    } catch {}
+
+    // Stakeholders (grouped by org)
+    try {
+      const raw = JSON.parse(localStorage.getItem('stakeholder-hub-v1') || '{}');
+      const byOrg = {};
+      (raw.stakeholders || []).forEach(s => {
+        const org = s.org || '(no org)';
+        (byOrg[org] = byOrg[org] || []).push(s.name);
+      });
+      const orgs = Object.entries(byOrg).slice(0, 8);
+      if (orgs.length) lines.push('\nStakeholders: ' + orgs.map(([org, names]) => `${org} (${names.slice(0, 5).join(', ')})`).join('; '));
+    } catch {}
+
+    // People roster
+    try {
+      const raw = JSON.parse(localStorage.getItem('people-hub-v1') || '{}');
+      const ppl = (raw.members || []).slice(0, 10);
+      if (ppl.length) lines.push('\nPeople: ' + ppl.map(m => m.role ? `${m.name} (${m.role})` : m.name).join(', '));
+    } catch {}
+
+    // Journal (last 3 daily entries) + this week's review rocks
+    try {
+      const raw = JSON.parse(localStorage.getItem('log-hub-v1') || '{}');
+      const dates = Object.keys(raw.entries || {}).sort().slice(-3);
+      if (dates.length) lines.push('\nRecent journal entries:');
+      dates.forEach(d => {
+        const e = raw.entries[d];
+        lines.push(`  ${d}${e.mood ? ' mood:' + e.mood + '/5' : ''}: ${String(e.text || '').slice(0, 120)}`);
+      });
+    } catch {}
+
+    // Focus sessions (last 7 days, summary only)
+    try {
+      const raw = JSON.parse(localStorage.getItem('focus-hub-v1') || '{}');
+      const cutoff = Date.now() - 7 * 86400000;
+      const recent = (raw.sessions || []).filter(s => s.startedAt && new Date(s.startedAt).getTime() >= cutoff);
+      if (recent.length) {
+        const mins = recent.reduce((sum, s) => sum + (s.durationMin || 0), 0);
+        lines.push(`\nFocus (last 7d): ${recent.length} sessions, ${mins} min total`);
+      }
+    } catch {}
+
+    // Capture inbox (unprocessed brain-dump items)
+    try {
+      const raw = JSON.parse(localStorage.getItem('capture-hub-v1') || '{}');
+      const inbox = (raw.inbox || []).slice(0, 5);
+      if (inbox.length) lines.push('\nCapture inbox (' + (raw.inbox || []).length + ' items): ' + inbox.map(it => `"${String(it.text || '').slice(0, 60)}"`).join('; '));
+    } catch {}
+
     // Existing links (with IDs for remove_link)
     try {
       const links = JSON.parse(localStorage.getItem('hub-links-v1') || '[]');
@@ -299,7 +411,7 @@ Rules:
 
   // ── Query ─────────────────────────────────────────────────────────────────────
 
-  async function query(userMessage) {
+  async function query(userMessage, history) {
     const client = await _getClient();
     const { today, lines } = _getRichContext();
 
@@ -310,9 +422,18 @@ ${lines}
 
 Keep answers short and actionable. Use bullet points for lists. Where relevant, suggest what actions the user could take (they can ask you to do it).`;
 
+    // Prior conversation turns ({q, a} pairs) let follow-up questions work
+    const messages = [];
+    (history || []).slice(-4).forEach(t => {
+      if (t.q && t.a) {
+        messages.push({ role: 'user', content: t.q });
+        messages.push({ role: 'assistant', content: t.a });
+      }
+    });
+    messages.push({ role: 'user', content: userMessage });
+
     const msg = await client.messages.create({
-      model: MODEL, max_tokens: 800, system,
-      messages: [{ role: 'user', content: userMessage }]
+      model: MODEL, max_tokens: 800, system, messages
     });
     return msg.content?.[0]?.text || '';
   }
@@ -344,5 +465,5 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
     }
   }
 
-  return { getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey };
+  return { getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey, getRichContext: _getRichContext };
 })();

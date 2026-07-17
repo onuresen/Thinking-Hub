@@ -1367,6 +1367,25 @@ Second group of the world-class-platform roadmap. Protects everything else: auto
 
 ---
 
+### ~~Priority 82 — World-class platform Group C: AI as a platform layer~~ ✓ Done `[group: platform-ai]`
+Third group of the world-class-platform roadmap. The planned "Ask my Hub chat panel" turned out to **already exist** (the `#ai-drawer` in `index.html` with query/capture/act intents) — so this group fixed the two real gaps found on inspection: the AI could only see ~6 of the app's ~20 data sources, and the chat had no conversation memory.
+
+- **Full-hub AI context (`hub-ai.js`)** — `_getRichContext()` (used by both `query` and `act`) expanded from projects/decisions/risks/goals/KMQT/links to also cover: **meetings** (series-aware — next occurrence date + open action items flattened from per-week logs), **schedule** (next 14 days), **learning log** (with key insights), **reflection board** (latest board, per-column), **open assumptions**, **stakeholders grouped by org**, **people roster**, **recent journal entries** (last 3, with mood), **focus summary** (last 7d count+minutes), and **capture inbox**. Every section is tightly capped (4–10 items) and try/catch-isolated, so context stays token-frugal and one malformed key can't break the rest. Also newly exported as `HubAI.getRichContext()` for testability/reuse.
+- **Multi-turn chat memory** — `HubAI.query(userMessage, history)` now accepts prior `{q, a}` turns (last 4 sent as real user/assistant messages); the shell drawer passes its existing `_aiTurns` query history, so follow-up questions ("and what about next week?") finally work. Action/capture turns are excluded from history (their output is UI cards, not prose).
+- **AI Weekly Review draft (`journal-hub.html`)** — "✦ Draft with AI" button in the Weekly tab's Capture column header. `rhBuildAiDigest(monStr, sunStr)` collects the displayed week's REAL activity: tasks completed that week (`completedAt`), decisions logged, meetings held (series occurrences expanded), new risks, focus sessions (count/minutes/task titles), and daily journal entries (text + learning + mood). `rhAiDraft()` sends the digest to `HubAI.chat()` with a JSON-only prompt and fills **wins / learnings / blockers — only fields that are empty**; anything the user already wrote is never overwritten (toast reports filled vs. kept counts). No-key → hint toast; no activity → "nothing to draft from" toast, zero tokens spent. `hub-ai.js` added to journal-hub's script chain (established per-tool pattern from P47).
+
+**Key decisions:**
+- **Decision:** Expand the existing drawer's context rather than building a separate "Ask my Hub" panel. **Why:** the drawer already IS the ask-my-hub surface (query/capture/act since before this group) — a second chat UI would duplicate it; the actual deficiency was what the AI could see. **Confidence:** high.
+- **Decision:** AI draft fills only empty fields, never merges into non-empty ones. **Why:** a weekly review is a personal reflection ritual — silently mixing machine text into the user's own words is the one unforgivable failure mode here; skipped fields are reported in the toast so nothing is mysterious. **Alternative rejected:** append below user text with a separator — still pollutes the field the user considers "theirs". **Confidence:** high.
+- **Decision:** History capped at last 4 query turns, sent as real message pairs (not stuffed into the system prompt). **Why:** real turns let the model use its native conversation handling; 4 turns bounds token growth in a context that already carries the workspace digest. **Confidence:** med.
+- **Decision:** Draft digest is built from the *displayed* week (respects `rhWeekOffset`), not always the current week. **Why:** back-filling last week's review is exactly when a draft helps most. **Confidence:** high.
+
+**Verified** (24 Playwright checks + full smoke suite, all passing): all 13 new context sections render correct lines from seeded data (incl. series next-occurrence and flattened per-week action items); drawer's first query sends empty history and the second carries the first turn's q/a; the journal draft digest contains the seeded done-task/decision/meeting/journal lines; wins/block fill from a stubbed AI response while a pre-filled learn field is left untouched; the draft persists to `review-hub-v1` after the debounced autosave.
+
+**Files:** `hub-ai.js`, `index.html`, `journal-hub.html`, `CLAUDE.md`
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
