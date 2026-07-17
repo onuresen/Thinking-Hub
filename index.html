@@ -3855,6 +3855,8 @@
       'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1',
       'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
       'argument-hub-v1', 'hub-tags-v1',
+      'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
+      'scrum-hub-v1', 'hub-warroom-v1',
     ];
     // scrum-hub-v1 removed 2026-07-13 — the tool was deleted (P50) and this loop writes
     // every key unconditionally (JSON.parse(null) === null), so a dead key here means a
@@ -4144,6 +4146,11 @@
       'tool-portfolio-v1': 'tool_portfolio',
       'argument-hub-v1': 'arguments',
       'hub-tags-v1': 'tag_registry',
+      'reflection-hub-v1': 'reflection_board',
+      'capture-hub-v1': 'capture_inbox',
+      'people-hub-v1': 'people',
+      'scrum-hub-v1': 'scrum_board',
+      'hub-warroom-v1': 'war_room',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -4170,6 +4177,9 @@
       'achievements-hub.html': ['hub-activity-v1'],
       'tool-portfolio.html': ['tool-portfolio-v1'],
       'tags-hub.html': ['hub-tags-v1'],
+      'reflection-hub.html': ['reflection-hub-v1'],
+      'capture-hub.html': ['capture-hub-v1'],
+      'people-hub.html': ['people-hub-v1'],
     };
 
     // Storage keys included in each scope
@@ -4179,7 +4189,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'tool-portfolio-v1',
+        'retro-hub-v1', 'tool-portfolio-v1', 'reflection-hub-v1', 'people-hub-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
@@ -4189,6 +4199,8 @@
         'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
         'tool-portfolio-v1', 'argument-hub-v1', 'hub-tags-v1',
+        'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
+        'scrum-hub-v1', 'hub-warroom-v1',
       ],
     };
 
