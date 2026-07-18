@@ -66,7 +66,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `vendor/` | Self-hosted pinned libraries: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1 (P80 — no CDN dependency) |
 | `styles/` | Extracted tool stylesheets (P85 B1) — the inline `<style>` blocks of the 5 largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) moved out for browser caching. Each is `<link>`ed right after `theme.css` (cascade order preserved). ⚠ New files here must be added to `sw.js` PRECACHE. |
 | `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
-| `tests/` | Dev-only smoke suite (Node + Playwright; the app itself stays no-build). `node smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). Run by CI on every PR (`.github/workflows/smoke.yml`) |
+| `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -1469,31 +1469,21 @@ Phase-2 Group C, plus a user-requested tweak: **mark every AI-key-consuming feat
 
 ---
 
-### Priority 87 — 📋 PLANNED (outline only): Group D — Fit & finish `[group: platform-finish]`
-**Status: NOT implemented. Outline for any model. Three independent items — safe to split across sessions.**
+### ~~Priority 87 — Group D: Fit & finish~~ ✓ Done `[group: platform-finish]`
+Final phase-2 group. Three independent items.
 
-**D1 — Real Fraunces 800**
-- Headings using `font-weight: 800` with `--font-display` currently render browser-synthesized bold (real 800 was never in any fonts URL — P76 finding). Fix: in the canonical Google Fonts URL present in 30 files (`family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700`), append `;9..144,800` → `…;9..144,700;9..144,800`.
-- ⚠ This is a 30-file mechanical sweep of ONE byte-identical string: use a Node script with a literal `String.replace` + per-file match-count check (never PowerShell `-replace` — standing file-safety rule). `capture-hub.html` has a DIFFERENT richer URL (italics/opsz) — update its Fraunces segment separately by hand.
-- This is a deliberate VISUAL change (headings get slightly different, true-drawn 800). Screenshot index.html hero + one tool before/after for the record.
-- **Verify:** `document.fonts.check('800 20px Fraunces')` returns true after load; all 31 pages still pass smoke.
-- Do NOT self-host/subset fonts in this pass — Google Fonts already serves unicode-range subsets, and `sw.js` runtime-caches them for offline; further subsetting is real work for marginal bytes (explicitly out of scope).
+- **D1 — Real Fraunces 800** — headings using `font-weight:800` with `--font-display` previously rendered browser-synthesized faux-bold (real 800 was never in any fonts URL — P76 finding). Appended `;9..144,800` to the canonical Google Fonts URL across 30 files via a Node script (literal `String.replace` + per-file match-count guard — never regex-replace, per the file-safety rule); `capture-hub.html`'s richer italic/opsz URL got roman `0,9..144,800` added by hand. Validated Google actually serves the Fraunces 800 face for the new URL (400/500/600/700/800 all present). Deliberate visual change — headings now draw true 800. (Did NOT self-host/subset fonts — Google serves unicode-range subsets and `sw.js` runtime-caches them; out of scope.)
+- **D2 — Accessibility pass** — `theme.css` gained a global `@media (prefers-reduced-motion: reduce)` block (near-instant animations/transitions, caps infinite loops like the load-bar, `scroll-behavior:auto`) — reaches every tool + shell via theme.css. `hub-utils.js` gained `HubUtils.trapFocus(modalEl)` (cycles Tab/Shift+Tab within a modal's focusables, returns an untrap fn), applied to `index.html`'s `#data-modal` and `hub-links.js`'s picker modal. `index.html`: active nav-item gets `aria-current="page"`, AI drawer panel gets `role="dialog" aria-label`. (The `#data-modal` role/aria-modal and icon-button aria-labels already existed.)
+- **D3 — CI interaction flows (`tests/flows.js`, new)** — three end-to-end behavior flows beyond smoke's "pages load": (1) **task lifecycle** — complete a task via Project Hub's real `.task-check`/`toggleTask`, and the shell Today view reacts to the storage change; (2) **export/import round-trip** — Full Backup export → wipe → `handleImportFile` restores every key byte-identically; (3) **link + graph** — a `hub-links` link becomes graph nodes + an edge and `computeShortestPath` connects them 1-hop. Wired into `.github/workflows/smoke.yml` as a step after the smoke suite; `tests/package.json` `test` script runs both.
 
-**D2 — Accessibility pass (shell first, tools opportunistically)**
-- `theme.css`: add a global `@media (prefers-reduced-motion: reduce)` block disabling `card-enter`, the body atmo gradients' animation, `progress-run`, and setting `scroll-behavior: auto`. Token-level, reaches all tools.
-- `hub-utils.js`: add `HubUtils.trapFocus(modalEl)` — keydown listener cycling Tab/Shift+Tab within focusable descendants, returns an untrap fn. Apply in index.html to `#data-modal` (openDataModal/closeDataModal already track `_modalTrigger` for focus return — keep that) and to hub-links' picker modal.
-- index.html: `aria-label` on icon-only buttons (⚙️ settings — already has one, verify; theme toggle, tour `?`, AI drawer tab), `role="dialog" aria-modal="true"` on `#data-modal` and the AI drawer panel, `aria-current="page"` on the active nav item in the sidebar builder.
-- **Verify:** Playwright — Tab from the last focusable element in the open data-modal lands on the first (trap works); Esc still closes; with `page.emulateMedia({ reducedMotion: 'reduce' })` the app-card `animation-name` computes to `none`.
+**Key decisions:**
+- **Decision:** Reduced-motion uses one universal `*{animation-duration:.001ms;animation-iteration-count:1;transition-duration:.001ms}` rule, not per-animation disables. **Why:** it's the industry-standard reduced-motion reset — catches every animation/transition/infinite-loop app-wide (including tool-local ones) with no enumeration to keep in sync. **Confidence:** high.
+- **Decision:** Flow 1 drives Project Hub's real task toggle (`.task-check` → `toggleTask`) for the tool side, but asserts the shell's reactivity at the storage level (mutate + `HubStorage.set` notify → re-check Today), rather than fighting the project-creation modal UI. **Why:** the outline's explicit guidance — behavior coverage, not UI pixel fidelity; the create-project modal is selector-archaeology, while `toggleTask` + storage reactivity are the load-bearing behaviors. **Confidence:** high.
+- **Decision:** Flow 2 stubs `location.reload` to a no-op so the round-trip can be asserted in-page after `handleImportFile`'s FileReader completes. **Why:** the real handler reloads 1s after import; the test needs to read restored keys before that. **Confidence:** high.
 
-**D3 — CI interaction flows (`tests/flows.js`, new + wire into `.github/workflows/smoke.yml`)**
-- Same embedded-server + chromium harness as `tests/smoke.js` (copy its scaffolding; fonts route-aborted). Three flows, all through real pages:
-  1. **Task lifecycle:** seed empty storage → open index.html → `openApp('project-hub')` → inside the iframe, create a project + task via the real UI (`frame.locator` on the actual inputs; consult project-hub.html for ids at write time), mark done → assert `project-hub-v1` reflects it AND the home "Open Tasks" stat updates after `HubStorage` notify.
-  2. **Export/import round-trip:** seed 3 tools' keys → call `exportHubData()` with scope full (intercept the download via `page.on('download')` or read the blob through a stubbed anchor click) → wipe localStorage → `handleImportFile` with the exported JSON → assert all seeded keys byte-identical.
-  3. **Link + graph:** seed two tasks + `HubLinks.addLink` between them → open graph-hub.html → assert both nodes + the edge exist in `nodesMap`/`edgesDS`, and `computeShortestPath` returns the 1-hop path.
-- Add as a second job (or step) in `smoke.yml` after the smoke step. Keep flows.js under ~200 lines; if a flow needs >30 min of selector archaeology, simplify to the storage-level assertion rather than fighting the DOM — the goal is behavior coverage, not UI pixel fidelity.
-- **Verify:** both jobs green in CI on the PR.
+**Verified** (D1: URL correctness validated against Google's live CSS + smoke; D2: 12 Playwright checks — reduced-motion duration/iteration, Tab + Shift+Tab wrap, aria-current, modal close/restore; D3: 11 flow checks, all green on first run; full smoke suite green throughout).
 
-**Files:** 30 tool HTML files (fonts URL), `capture-hub.html`, `theme.css`, `hub-utils.js`, `index.html`, `hub-links.js`, `tests/flows.js` (new), `.github/workflows/smoke.yml`, `CLAUDE.md`
+**Files:** 30 tool HTML files (fonts URL), `capture-hub.html`, `theme.css`, `hub-utils.js`, `index.html`, `hub-links.js`, `tests/flows.js` (new), `tests/package.json`, `.github/workflows/smoke.yml`, `CLAUDE.md`
 
 ---
 

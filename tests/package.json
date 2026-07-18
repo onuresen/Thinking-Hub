@@ -3,7 +3,9 @@
   "private": true,
   "description": "Dev-only smoke tests for Thinking Hub. The app itself has no build step and no runtime dependencies — this folder is tooling only.",
   "scripts": {
-    "test": "node smoke.js"
+    "test": "node smoke.js && node flows.js",
+    "smoke": "node smoke.js",
+    "flows": "node flows.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0"
