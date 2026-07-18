@@ -73,37 +73,75 @@ window.HubSearch = (() => {
     return results;
   }
 
+  // Quick actions: `task: …`, `capture: …`, `decide: …`, or bare `focus`.
+  // Parsed first and shown as a distinct row above search results.
+  function parseAction(query) {
+    const q = (query || '').trim();
+    const m = q.match(/^(task|capture|decide)\s*:\s*(.+)$/i);
+    if (m) return { type: m[1].toLowerCase(), text: m[2].trim() };
+    if (/^focus\s*:?\s*$/i.test(q)) return { type: 'focus', text: '' };
+    return null;
+  }
+
+  function _actionMeta(a) {
+    const t = _esc(a.text);
+    switch (a.type) {
+      case 'task': return { icon: '✓', label: `New task: “${t}”`, sub: '→ Capture Hub' };
+      case 'capture': return { icon: '⊕', label: `Capture: “${t}”`, sub: '→ Capture Hub' };
+      case 'decide': return { icon: '⊖', label: `Log decision: “${t}”`, sub: '→ Decision Hub' };
+      case 'focus': return { icon: '◷', label: 'Start Focus', sub: '→ Focus Timer' };
+      default: return { icon: '›', label: t, sub: '' };
+    }
+  }
+
   function renderResults(query) {
-    _results = doSearch(query);
+    const action = parseAction(query);
+    const searchResults = doSearch(query);
+    _results = action ? [{ _isAction: true, ...action }, ...searchResults] : searchResults;
+
     const list = document.getElementById('hub-search-list');
     list.innerHTML = '';
     _selectedIndex = _results.length > 0 ? 0 : -1;
 
-    if (!query) {
-      list.innerHTML = '<div class="hs-empty">Type to search projects, tasks, ideas, decisions...</div>';
+    if (!_results.length) {
+      list.innerHTML = !query
+        ? '<div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>'
+        : '<div class="hs-empty">No results found for "' + _esc(query) + '"</div>';
       return;
     }
 
-    if (_results.length === 0) {
-      list.innerHTML = '<div class="hs-empty">No results found for "' + _esc(query) + '"</div>';
-      return;
+    let globalIndex = 0;
+
+    // Action row first (distinct style)
+    if (_results[0] && _results[0]._isAction) {
+      const meta = _actionMeta(_results[0]);
+      const row = document.createElement('div');
+      row.className = 'hs-row hs-action-row selected';
+      row.dataset.index = globalIndex;
+      row.innerHTML = `
+        <div class="hs-row-label"><span class="hs-action-icon">${meta.icon}</span> ${meta.label}</div>
+        <div class="hs-row-sub">${_esc(meta.sub)}</div>
+      `;
+      const idx = globalIndex;
+      row.onmouseover = () => setSelection(idx);
+      row.onclick = () => selectItem(idx);
+      list.appendChild(row);
+      globalIndex++;
     }
 
-    // Group by tool
+    // Group the search results by tool (same TOOLS order as doSearch → index-aligned)
     const groups = {};
     _results.forEach(r => {
+      if (r._isAction) return;
       if (!groups[r.tool]) groups[r.tool] = [];
       groups[r.tool].push(r);
     });
 
-    let globalIndex = 0;
-
     for (const tool of TOOLS) {
       if (!groups[tool]) continue;
-      
+
       const groupHeader = document.createElement('div');
       groupHeader.className = 'hs-group-header';
-      // Use label from APPS array if available, else format nicely
       const appInfo = (typeof APPS !== 'undefined' ? APPS.find(a => a.id === tool) : null);
       groupHeader.textContent = appInfo ? `${appInfo.icon} ${appInfo.label}` : tool.replace('-', ' ').toUpperCase();
       list.appendChild(groupHeader);
@@ -116,11 +154,11 @@ window.HubSearch = (() => {
           <div class="hs-row-label">${_esc(item.label)}</div>
           <div class="hs-row-sub">${_esc(item.subtitle)}</div>
         `;
-        
+
         const idx = globalIndex;
         row.onmouseover = () => setSelection(idx);
         row.onclick = () => selectItem(idx);
-        
+
         list.appendChild(row);
         globalIndex++;
       });
@@ -141,16 +179,53 @@ window.HubSearch = (() => {
   function selectItem(index) {
     if (index < 0 || index >= _results.length) return;
     const item = _results[index];
+    if (item._isAction) { executeAction(item); return; }
     closeSearch();
-    if (typeof window.openApp === 'function') {
-      window.openApp(item.tool);
-      // Wait for app load
+    _navigate(item.tool, item.id);
+  }
+
+  function _navigate(tool, itemId) {
+    if (typeof window.openApp !== 'function') return;
+    window.openApp(tool);
+    if (itemId) {
       setTimeout(() => {
         const frame = document.getElementById('app-frame');
         if (frame && frame.contentWindow) {
-          frame.contentWindow.postMessage({ type: 'hub-highlight', itemId: item.id }, window.location.origin || '*');
+          frame.contentWindow.postMessage({ type: 'hub-highlight', itemId }, window.location.origin || '*');
         }
       }, 500);
+    }
+  }
+
+  function executeAction(action) {
+    closeSearch();
+    const ts = new Date().toISOString();
+    const toast = (m) => { if (typeof window.showToast === 'function') window.showToast(m); };
+    try {
+      if (action.type === 'task' || action.type === 'capture') {
+        const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
+        if (!Array.isArray(raw.inbox)) raw.inbox = [];
+        raw.inbox.unshift({
+          id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          text: action.text,
+          cat: action.type === 'task' ? 'task' : null,
+          capturedAt: ts,
+        });
+        HubStorage.set('capture-hub-v1', raw);
+        toast('Captured — route it in Capture Hub');
+      } else if (action.type === 'decide') {
+        const decisions = HubStorage.get('decision-hub-v1') || [];
+        const arr = Array.isArray(decisions) ? decisions : [];
+        const id = 'dh-' + Date.now();
+        arr.push({ id, title: action.text, summary: '', status: 'open', confidence: 'medium', projectId: null, createdAt: ts });
+        HubStorage.set('decision-hub-v1', arr);
+        toast('Decision logged');
+        _navigate('decision-hub', id);
+      } else if (action.type === 'focus') {
+        _navigate('focus-hub', null);
+      }
+    } catch (e) {
+      toast('Action failed: ' + (e.message || e));
     }
   }
 
@@ -168,7 +243,7 @@ window.HubSearch = (() => {
           <input type="text" id="hub-search-input" placeholder="Search Thinking Hub... (Cmd+K)" autocomplete="off" spellcheck="false">
         </div>
         <div id="hub-search-list">
-          <div class="hs-empty">Type to search projects, tasks, ideas, decisions...</div>
+          <div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>
         </div>
         <div class="hs-footer">
           Navigate with <span>↑</span> <span>↓</span> and press <span>Enter</span> to select
@@ -239,6 +314,12 @@ window.HubSearch = (() => {
         padding: 10px 16px; cursor: pointer; border-left: 3px solid transparent;
       }
       .hs-row.selected { background: var(--accent-dim); border-left-color: var(--accent); }
+      .hs-action-row { border-left-color: var(--accent); background: var(--accent-dim); }
+      .hs-action-row .hs-row-label { font-weight: 600; }
+      .hs-action-icon {
+        display: inline-block; width: 18px; text-align: center; color: var(--accent);
+        font-family: monospace; margin-right: 4px;
+      }
       .hs-row-label { font-size: 14px; color: #f0efe8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
       .hs-row-sub { font-size: 12px; color: #6d6c78; white-space: nowrap; margin-left: 10px; font-family: monospace; }
       .hs-footer {
