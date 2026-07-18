@@ -10,6 +10,8 @@
 
   <!-- Favicon -->
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0b0d">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -2058,7 +2060,19 @@
       <!-- ── Data & Backup pane ── -->
       <div class="settings-pane" id="spane-data">
 
-        <div class="data-size" id="data-size-str" style="margin-bottom:16px">0 KB in local storage</div>
+        <div class="data-size" id="data-size-str" style="margin-bottom:10px">0 KB in local storage</div>
+
+        <!-- Storage usage meter + backup freshness -->
+        <div id="storage-usage-wrap" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
+            <span>Browser storage used (~5 MB limit)</span>
+            <span id="storage-usage-label">—</span>
+          </div>
+          <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+            <div id="storage-usage-bar" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width .3s"></div>
+          </div>
+          <div class="sfield-hint" id="last-backup-line" style="margin-top:6px">Last full backup: never</div>
+        </div>
 
         <!-- MCP Sync -->
         <div id="mcp-sync-panel"
@@ -2363,6 +2377,15 @@
     }
 
     // ── App loading ───────────────────────────────────────────────────────────────
+
+    // Offline support: service worker precaches every app asset (see sw.js).
+    // Only registers on http/https — file:// opens keep working without it.
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .catch(err => console.warn('[SW] registration failed:', err));
+      });
+    }
 
     // Cache-bust tool iframes once per shell load — fixes stale cached tool HTML
     // surviving a code update across browser sessions, while still letting the
@@ -3832,6 +3855,8 @@
       'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1',
       'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
       'argument-hub-v1', 'hub-tags-v1',
+      'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
+      'scrum-hub-v1', 'hub-warroom-v1',
     ];
     // scrum-hub-v1 removed 2026-07-13 — the tool was deleted (P50) and this loop writes
     // every key unconditionally (JSON.parse(null) === null), so a dead key here means a
@@ -3969,8 +3994,52 @@
       document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
       document.getElementById('stab-' + tab).classList.add('active');
       document.getElementById('spane-' + tab).classList.add('active');
-      if (tab === 'data') updateExportSizeEstimate();
+      if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); }
     }
+
+    // ── Storage usage meter + backup freshness (Data & Backup pane) ──────────────
+
+    const LAST_BACKUP_KEY = 'hub-last-backup-v1'; // ephemeral — excluded from exports
+
+    function updateStorageUsageUI() {
+      const u = HubStorage.usage();
+      const label = document.getElementById('storage-usage-label');
+      const bar = document.getElementById('storage-usage-bar');
+      if (label) label.textContent = `${(u.bytes / 1024).toFixed(0)} KB · ${u.percent.toFixed(1)}%`;
+      if (bar) {
+        bar.style.width = Math.max(1, u.percent) + '%';
+        bar.style.background = u.percent >= 90 ? 'var(--accent-nope)'
+          : u.percent >= 70 ? 'var(--accent-super)' : 'var(--accent)';
+      }
+      const line = document.getElementById('last-backup-line');
+      if (line) {
+        const rec = HubStorage.get(LAST_BACKUP_KEY);
+        if (rec && rec.at) {
+          const days = Math.floor((Date.now() - new Date(rec.at).getTime()) / 86400000);
+          line.textContent = `Last full backup: ${days === 0 ? 'today' : days + 'd ago'} (${rec.at.slice(0, 10)})`;
+        } else {
+          line.textContent = 'Last full backup: never — export one below';
+        }
+      }
+    }
+
+    // Gentle stale-backup nudge on load: only when there is real data (>100 KB)
+    // and the last full backup is >30 days old (or never), at most every 3 days.
+    setTimeout(() => {
+      try {
+        const u = HubStorage.usage();
+        if (u.bytes < 102400) return;
+        const rec = HubStorage.get(LAST_BACKUP_KEY) || {};
+        const daysSinceBackup = rec.at ? (Date.now() - new Date(rec.at).getTime()) / 86400000 : Infinity;
+        const daysSinceNudge = rec.nudgedAt ? (Date.now() - new Date(rec.nudgedAt).getTime()) / 86400000 : Infinity;
+        if (daysSinceBackup > 30 && daysSinceNudge > 3) {
+          HubStorage.set(LAST_BACKUP_KEY, { ...rec, nudgedAt: new Date().toISOString() });
+          showToast(rec.at
+            ? `It's been ${Math.floor(daysSinceBackup)} days since your last backup — ⚙ Data & Backup`
+            : 'No backup yet — export one from ⚙ Data & Backup');
+        }
+      } catch (e) { }
+    }, 4000);
 
     // ── AI key helpers ────────────────────────────────────────────────────────────
 
@@ -4077,6 +4146,11 @@
       'tool-portfolio-v1': 'tool_portfolio',
       'argument-hub-v1': 'arguments',
       'hub-tags-v1': 'tag_registry',
+      'reflection-hub-v1': 'reflection_board',
+      'capture-hub-v1': 'capture_inbox',
+      'people-hub-v1': 'people',
+      'scrum-hub-v1': 'scrum_board',
+      'hub-warroom-v1': 'war_room',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -4103,6 +4177,9 @@
       'achievements-hub.html': ['hub-activity-v1'],
       'tool-portfolio.html': ['tool-portfolio-v1'],
       'tags-hub.html': ['hub-tags-v1'],
+      'reflection-hub.html': ['reflection-hub-v1'],
+      'capture-hub.html': ['capture-hub-v1'],
+      'people-hub.html': ['people-hub-v1'],
     };
 
     // Storage keys included in each scope
@@ -4112,7 +4189,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'tool-portfolio-v1',
+        'retro-hub-v1', 'tool-portfolio-v1', 'reflection-hub-v1', 'people-hub-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
@@ -4122,6 +4199,8 @@
         'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
         'tool-portfolio-v1', 'argument-hub-v1', 'hub-tags-v1',
+        'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
+        'scrum-hub-v1', 'hub-warroom-v1',
       ],
     };
 
@@ -4230,6 +4309,11 @@
       a.remove();
       URL.revokeObjectURL(url);
       const labels = { full: 'Full Backup', curated: 'AI Context', current: 'Current Tool' };
+      if (scope === 'full') {
+        const rec = HubStorage.get(LAST_BACKUP_KEY) || {};
+        HubStorage.set(LAST_BACKUP_KEY, { ...rec, at: new Date().toISOString() });
+        updateStorageUsageUI();
+      }
       showToast(`Exported — ${labels[scope]}`, 'success');
     }
 
@@ -4434,7 +4518,8 @@
           aHtml = _renderAiCaptureResult(result, text);
           plainText = '';
         } else {
-          const answer = await HubAI.query(text);
+          const history = _aiTurns.filter(t => t.plainText).map(t => ({ q: t.q, a: t.plainText }));
+          const answer = await HubAI.query(text, history);
           plainText = answer;
           aHtml = _renderAiQueryResult(answer, true);
         }

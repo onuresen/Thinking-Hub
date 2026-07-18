@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
-  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <script src="vendor/vis-network.min.js"></script>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-tags.js"></script>
@@ -911,6 +911,9 @@
       <button class="gh-btn" style="flex:1" id="np-reasoning-btn">⤺ Reasoning Path</button>
       <button class="gh-btn" style="flex:1" id="np-impact-btn">⤻ Impact Analysis</button>
     </div>
+    <div class="edge-panel-actions" style="margin-top:2px" title="Highlight the shortest connection between this item and another node">
+      <button class="gh-btn" style="flex:1" id="np-path-btn">⇢ Shortest Path to…</button>
+    </div>
   </div>
 
   <!-- Drag-to-connect banner -->
@@ -1691,6 +1694,11 @@
 
       network.on('selectNode', params => {
         if (params.nodes.length) {
+          // Path mode: second click completes the shortest-path pair
+          if (pathSourceId && params.nodes[0] !== pathSourceId) {
+            applyShortestPath(pathSourceId, params.nodes[0]);
+            return;
+          }
           showNodePanel(params.nodes[0]);
           applyNeighbourHighlight(params.nodes[0]);
         }
@@ -2139,6 +2147,103 @@
       body.innerHTML = rows + `<div class="cpath-summary">"${HubUtils.esc(node?.label || nodeId)}" ${verb} ${result.length} item${result.length === 1 ? '' : 's'}.</div>`;
     }
 
+    // ── Shortest Path (P67 deferred item) ────────────────────────
+    // Connectivity question, not a causal one — so the BFS walks the UNION of
+    // forward+backward adjacency (direction-agnostic), unlike the directional
+    // Reasoning/Impact traces above. Uses the same broad edge set (manual links
+    // + auto context edges) so any visible connection counts as a hop.
+    let pathSourceId = null;
+
+    function startShortestPath(nodeId) {
+      pathSourceId = nodeId;
+      closeNodePanel();
+      if (network) network.unselectAll();
+      showToast('Path mode: click the target node (Esc to cancel)');
+      document.addEventListener('keydown', _pathEscHandler);
+    }
+
+    function _pathEscHandler(e) {
+      if (e.key === 'Escape') cancelShortestPath();
+    }
+
+    function cancelShortestPath() {
+      pathSourceId = null;
+      document.removeEventListener('keydown', _pathEscHandler);
+    }
+
+    function computeShortestPath(a, b) {
+      const { forward, backward } = _impactAdjacency();
+      const neighbours = id => [...(forward.get(id) || []), ...(backward.get(id) || [])];
+      const parent = new Map([[a, null]]);
+      let frontier = [a];
+      while (frontier.length && !parent.has(b)) {
+        const next = [];
+        for (const cur of frontier) {
+          for (const { to, edgeId } of neighbours(cur)) {
+            if (parent.has(to)) continue;
+            parent.set(to, { from: cur, edgeId });
+            next.push(to);
+          }
+        }
+        frontier = next;
+      }
+      if (!parent.has(b)) return null;
+      const path = [];
+      let cur = b;
+      while (cur !== null) {
+        const p = parent.get(cur);
+        path.unshift({ id: cur, edgeId: p ? p.edgeId : null });
+        cur = p ? p.from : null;
+      }
+      return path; // [{id: a, edgeId: null}, {id, edgeId}, ..., {id: b, edgeId}]
+    }
+
+    function applyShortestPath(a, b) {
+      cancelShortestPath();
+      if (!nodesDS || !edgesDS) return;
+      const path = computeShortestPath(a, b);
+      buildGraph(); // clean baseline — wipes stale Critical Path / trace overlays
+
+      const aLabel = nodesMap.get(a)?.label || a;
+      const bLabel = nodesMap.get(b)?.label || b;
+      const body = document.getElementById('trace-body');
+      document.getElementById('trace-panel-title').textContent = 'SHORTEST PATH';
+
+      if (!path) {
+        body.innerHTML = `<div class="cpath-summary">No connection found between "${HubUtils.esc(aLabel)}" and "${HubUtils.esc(bLabel)}".</div>`;
+        document.getElementById('trace-panel').classList.add('visible');
+        return;
+      }
+
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b8f033';
+      const nodeIds = new Set(path.map(p => p.id));
+      const edgeIds = new Set(path.map(p => p.edgeId).filter(Boolean));
+
+      const nodeUpdates = [];
+      nodesMap.forEach((node, id) => {
+        if (!nodeIds.has(id)) return;
+        nodeUpdates.push({
+          id, borderWidth: (id === a || id === b) ? 4 : 3,
+          color: { ...node.color, border: accentColor, highlight: { ...node.color.highlight, border: accentColor } }
+        });
+      });
+      if (nodeUpdates.length) nodesDS.update(nodeUpdates);
+
+      const edgeUpdates = [];
+      edgesDS.forEach(e => {
+        if (edgeIds.has(e.id)) edgeUpdates.push({ id: e.id, width: 4, color: { ...e.color, color: accentColor } });
+      });
+      if (edgeUpdates.length) edgesDS.update(edgeUpdates);
+
+      const hops = path.length - 1;
+      body.innerHTML = path.map((p, i) => `
+        <div class="cpath-chain-item" onclick="focusCriticalPathNode('${p.id}')">
+          <span>${HubUtils.esc((nodesMap.get(p.id)?.label || p.id).slice(0, 24))}</span><span class="cpath-due">${i === 0 ? 'start' : i + (i === 1 ? ' hop' : ' hops')}</span>
+        </div>`).join('') +
+        `<div class="cpath-summary">"${HubUtils.esc(aLabel)}" → "${HubUtils.esc(bLabel)}" in ${hops} hop${hops === 1 ? '' : 's'}.</div>`;
+      document.getElementById('trace-panel').classList.add('visible');
+    }
+
     // ── Bottleneck detection ─────────────────────────────────────
     // Deliberately NARROWER than Impact Analysis's adjacency (above). That trace is
     // built to be broad on purpose (P77: includes tag/host context edges so "why
@@ -2529,6 +2634,7 @@
 
       document.getElementById('np-reasoning-btn').onclick = () => applyTrace(nodeId, 'reasoning');
       document.getElementById('np-impact-btn').onclick = () => applyTrace(nodeId, 'impact');
+      document.getElementById('np-path-btn').onclick = () => startShortestPath(nodeId);
 
       document.getElementById('node-panel').classList.add('visible');
     }

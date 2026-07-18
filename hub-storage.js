@@ -39,8 +39,49 @@ window.HubStorage = (() => {
       }
     } catch (e) {
       console.warn('[HubStorage] localStorage write failed:', e);
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        if (typeof window.showToast === 'function') {
+          window.showToast('⚠ Storage full — this change was NOT saved. Export a backup and clean up old data.', 'error');
+        }
+      }
     }
+    _checkQuota();
     _notifySubscribers(key, value);
+  }
+
+  // ── Storage quota guard ───────────────────────────────────────────────────
+  // localStorage is ~5 MB per origin in every major browser. usage() reports
+  // consumption; _checkQuota() warns (once per session, throttled scan) when
+  // usage crosses 80% so the user hears about it before writes start failing.
+  const QUOTA_BYTES = 5 * 1024 * 1024;
+  let _quotaWarned = false;
+  let _lastQuotaCheck = 0;
+
+  function usage() {
+    let bytes = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        const v = localStorage.getItem(k) || '';
+        bytes += (k.length + v.length) * 2; // UTF-16 code units
+      }
+    } catch {}
+    return { bytes, quota: QUOTA_BYTES, percent: Math.min(100, (bytes / QUOTA_BYTES) * 100) };
+  }
+
+  function _checkQuota() {
+    if (_quotaWarned) return;
+    const now = Date.now();
+    if (now - _lastQuotaCheck < 30000) return;
+    _lastQuotaCheck = now;
+    const u = usage();
+    if (u.percent >= 80) {
+      _quotaWarned = true;
+      console.warn('[HubStorage] localStorage at ' + u.percent.toFixed(0) + '% of ~5 MB quota');
+      if (typeof window.showToast === 'function') {
+        window.showToast('⚠ Local storage is ' + u.percent.toFixed(0) + '% full — export a backup and clean up old data soon.', 'error');
+      }
+    }
   }
 
   function subscribe(key, fn) {
@@ -74,6 +115,6 @@ window.HubStorage = (() => {
     _notifySubscribers(e.key, value);
   });
 
-  return { get, set, subscribe };
+  return { get, set, subscribe, usage };
 
 })();

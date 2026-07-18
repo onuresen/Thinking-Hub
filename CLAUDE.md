@@ -52,6 +52,17 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `frameworks-hub.html` | Frameworks — experiment sandbox; tabbed container for method tools: Blocked Depth (iceberg) and V-Model. (Scrum Board tab removed 2026-06-13, Priority 50.) |
 | `blocked-depth.html` | Blocked Depth — iceberg cascade view (now surfaced as a tab inside `frameworks-hub.html`); shows every task, milestone, and person frozen downstream of a blocked task |
 | `tags-hub.html` | Tags — central tag/topic registry; rename/merge duplicates and add topic-only tags, applies everywhere via `hub-tags.js` |
+| `capture-hub.html` | Capture Hub — brain-dump inbox with auto-routing of items to other tools. Storage `capture-hub-v1` |
+| `people-hub.html` | People Hub — member roster, org tree, load matrix, "Me View" (canonical `selfMemberId` reader). Storage `people-hub-v1` |
+| `town-hub.html` | Machi Hub — living pixel city rendering Hub activity, tools, projects, people, achievements and risk response (Codex-agent work; see "Machi Hub history" section). Reads other tools' keys; own storage `machi-milestones-v1` (ephemeral) |
+| `machi-engine.js` | Machi town renderer core — host-agnostic canvas engine. ⚠ STAMPED COPY: canonical source lives in `Vibe_Coding/MachiHub`; edit there and re-copy |
+| `machi-achievements.js` | Machi achievement rule engine (derives badges on town entities). ⚠ STAMPED COPY from `Vibe_Coding/MachiHub` |
+| `machi-hires.js` | Machi "Hi-Res Town" tab renderer — isolated sprite-detail experiment (Codex P85) |
+| `manifest.json` | PWA manifest — installable app metadata + icons (P80) |
+| `sw.js` | Service worker — precaches all app assets, stale-while-revalidate offline support (P80). ⚠ New app files must be added to its `PRECACHE` list. |
+| `vendor/` | Self-hosted pinned libraries: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1 (P80 — no CDN dependency) |
+| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
+| `tests/` | Dev-only smoke suite (Node + Playwright; the app itself stays no-build). `node smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). Run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -74,14 +85,14 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57), `hub-last-backup-v1` (ephemeral — last-full-backup + nudge timestamps, P80; excluded from backup/sync), `capture-hub-v1` (Capture Hub inbox), `people-hub-v1` (People Hub roster/org tree), `machi-milestones-v1` (ephemeral — Machi milestone dedupe/baseline state; deliberately excluded from backup/sync per Codex P81C decision), `rb-migration-done-v1` / `rb-reacted-v1` (ephemeral — Reflection Board migration flag + reaction state), `ai-drawer-pos-v1` (ephemeral — AI drawer position)
 
 ## External dependencies
 | Lib | Used in | Version |
 |-----|---------|---------|
-| Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest |
-| vis-network | graph-hub.html | **9.1.9** (pinned) |
-| html2canvas | canvas-hub.html | **1.4.1** (pinned) |
+| Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest (runtime-cached by `sw.js` for offline) |
+| vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
+| html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
 | @supabase/supabase-js | hub-storage.js (dynamic) | **@2** |
 
 ## What NOT to do
@@ -173,8 +184,8 @@ The ⚙️ Data & Backup modal in `index.html` has a scoped export with three ra
 
 | Scope | Storage keys | Filename | Restorable? |
 |-------|-------------|----------|-------------|
-| **Full Backup** | All 20 data keys (no cloud creds, no UI prefs) | `thinking-hub-backup-YYYY-MM-DD.json` | ✓ Yes |
-| **AI Context** | 13 high-signal keys (projects, goals, decisions, reviews, risks, meetings, assumptions, KMQT, schedule, learning, matrix, stakeholders, retros) | `thinking-hub-ai-context-YYYY-MM-DD.json` | ✗ Read-only |
+| **Full Backup** | All 28 data keys (no cloud creds, no UI prefs) — count fixed in P81 after an audit found reflection/capture/people/scrum/warroom keys silently missing | `thinking-hub-backup-YYYY-MM-DD.json` | ✓ Yes |
+| **AI Context** | 16 high-signal keys (projects, goals, decisions, reviews, risks, meetings, assumptions, KMQT, schedule, learning, matrix, stakeholders, retros, tool portfolio, reflection board, people) | `thinking-hub-ai-context-YYYY-MM-DD.json` | ✗ Read-only |
 | **Current Tool** | Active tool's key(s) only | `{tool-id}-export-YYYY-MM-DD.json` | ✗ Read-only |
 
 **Export format (v2):**
@@ -1311,6 +1322,97 @@ User feedback: the Eisenhower Urgent/Important matrix's "Delegate" and "Eliminat
 **Verified:** real headless-browser test — seeded one legacy item per old quadrant (`do-now`/`schedule`/`delegate`/`eliminate`) plus one untriaged task, reloaded, opened the Priority Matrix view: all four items migrated to the correct new quadrant in storage and rendered under the correct new quadrant heading; the untriaged task auto-synced into Fill-in; axis labels read "Impact →" / "Low Effort" / "High Effort"; the add-item modal defaulted to Quick Win with all four new options present. Zero errors from the matrix code path (one unrelated pre-existing error surfaced from incomplete seed data in an unrelated sidebar member-list function, not from this change).
 
 **Files:** `project-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 80 — World-class platform Group A: PWA + offline + self-hosted libs + storage safety~~ ✓ Done `[group: platform-foundation]`
+First group of the "world top class platform" roadmap (Groups B–D pending: hygiene/CI, AI layer, mobile+graph polish). Makes Thinking Hub an installable, fully offline-capable PWA and closes the P76-deferred CDN dependency.
+
+- **PWA install** — `manifest.json` (standalone display, dark `#0b0b0d` theme) + `icons/` (192/512/maskable-512 PNGs rendered from the sidebar "TH" logo mark in real Syne 800 — lime tile, coral corner dot, matching `.sidebar-logo-mark` exactly). `<link rel="manifest">` + `<meta name="theme-color">` added to `index.html` head. Existing `favicon.svg` (lightbulb) left unchanged — swapping it for the TH mark is a separate branding call.
+- **Offline support** — `sw.js` at repo root: precaches all 54 app assets (every tool HTML, all shared JS, theme.css, vendor libs, icons); same-origin GETs use stale-while-revalidate with `ignoreSearch` matching (handles the `?v=APP_LOAD_TS` iframe cache-busters); bare `/` navigations fall back to cached `index.html`; Google Fonts get a cache-first runtime cache; all other origins (Supabase, Anthropic API, favicon services) pass through untouched. Registered from `index.html` on http/https only — `file://` opens keep working without it.
+- **Self-hosted pinned libs** — `vendor/vis-network.min.js` (9.1.9) + `vendor/html2canvas.min.js` (1.4.1), extracted from official npm registry tarballs; `graph-hub.html` / `canvas-hub.html` script tags swapped from unpkg. Zero CDN references remain anywhere (P76 deferred item #2 closed).
+- **Storage quota guard** — `HubStorage.usage()` (bytes / ~5 MB quota / percent, UTF-16-accurate) + `_checkQuota()` in `set()`: warns via toast once per session (30s-throttled scan) when usage crosses 80%; a `QuotaExceededError` on write now shows an explicit "change was NOT saved" error toast instead of failing silently.
+- **Backup freshness** — usage meter bar (accent → amber ≥70% → red ≥90%) + "Last full backup: X" line in the ⚙ Data & Backup pane; Full Backup export stamps `hub-last-backup-v1` (ephemeral key, excluded from exports/sync); gentle stale-backup toast on load when data >100 KB and last backup >30d (or never), at most every 3 days.
+
+**Key decisions:**
+- **Decision:** Stale-while-revalidate for same-origin assets, not cache-first with versioned cache names. **Why:** no build step means no way to bump a cache version per deploy — SWR serves instantly from cache and refreshes in the background, so code updates land one reload later with zero deploy ceremony. **Alternative rejected:** network-first (loses the instant-load and offline-first benefit); versioned precache (requires manual version bumps every edit — guaranteed to be forgotten). **Confidence:** high.
+- **Decision:** SW cache stores under search-stripped URLs and matches with `ignoreSearch`. **Why:** the shell loads every tool iframe as `file.html?v=<timestamp>` (fresh per session) — without this, every session would cache-miss and every old entry would be garbage. **Confidence:** high.
+- **Decision:** Vendor libs pulled from npm registry tarballs, not unpkg. **Why:** same bytes, and the npm registry is the canonical source; also the only reachable one in the dev sandbox. **Confidence:** high.
+- **Decision:** Quota warning threshold 80% with a hard-failure toast as backstop, not proactive blocking. **Why:** blocking writes near quota would lose data *now* to prevent losing it *later*; warning early + loud failure keeps the user in control. **Confidence:** med.
+- **Decision:** `hub-last-backup-v1` is ephemeral (excluded from exports) like `hub-resurface-v1`. **Why:** restoring a backup shouldn't resurrect a stale "you backed up recently" state — freshness must reflect this browser's reality. **Confidence:** high.
+- **Maintenance rule introduced:** any new app file must be added to `sw.js`'s `PRECACHE` list (noted in the file map).
+
+**Verified** (Playwright against a local server, 21 checks, all passing): SW registers and precaches 54 entries; page becomes SW-controlled; full offline reload of the shell works; tool pages serve offline despite `?v=` busters; manifest + all 3 icons + vendor libs fetch 200; graph-hub renders its vis-network canvas from the vendored lib with seeded data, no JS errors; usage meter populates; Full Backup export stamps `hub-last-backup-v1` and flips the line to "today"; quota toast fires at 86% fill on a fresh session; no real JS errors in the shell (sandbox-only font-fetch noise excluded).
+
+**Files:** `manifest.json` (new), `sw.js` (new), `vendor/vis-network.min.js` (new), `vendor/html2canvas.min.js` (new), `icons/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` (new), `index.html`, `graph-hub.html`, `canvas-hub.html`, `hub-storage.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 81 — World-class platform Group B: engineering hygiene (tests + CI + doc consolidation + backup audit)~~ ✓ Done `[group: platform-hygiene]`
+Second group of the world-class-platform roadmap. Protects everything else: automated smoke tests on every PR, one source of truth for agent docs, and a data-safety audit that found (and fixed) real backup gaps.
+
+- **Backup key audit + fix (`index.html`)** — enumerated every storage key actually used across all files and diffed against the export/sync lists. **Found live user data silently missing from Full Backup:** `reflection-hub-v1` (Reflection Board — a headline tool), `capture-hub-v1`, `people-hub-v1`, plus `scrum-hub-v1`/`hub-warroom-v1` (which the P50 decision said were retained in backups — the doc was right, the code wasn't). All five added to `SCOPE_KEYS.full`, `MCP_SYNC_KEYS`, and `EXPORT_KEY_LABELS`; `reflection-hub-v1` + `people-hub-v1` also added to AI Context (curated); `APP_FILE_STORAGE_KEYS` gained reflection/capture/people rows. `machi-milestones-v1` deliberately NOT added — Codex P81C decided it's ephemeral.
+- **Doc consolidation** — `AGENTS.md` (a forked 229 KB parallel copy maintained by a Codex agent, with colliding priority numbers and the drifted lists that caused the backup bug) replaced with a short pointer declaring `CLAUDE.md` the single source of truth for all agents. Its unique content — the Machi Hub history (Codex P79–86) — was condensed into CLAUDE.md's "Machi Hub history" section; file map + storage-key list gained the previously-undocumented `capture-hub.html`, `people-hub.html`, `town-hub.html`, `machi-*.js`, `people-hub-v1`, `capture-hub-v1`, `machi-milestones-v1` entries.
+- **Repo cleanup** — deleted committed scratch files `.codex-inspect-machi.py` (local Windows-path inspection script) and `.codex-machi-engine.tmp` (stale working copy of machi-engine.js); git history preserves both.
+- **Smoke suite (`tests/smoke.js`)** — dev-only Node + Playwright (app itself stays no-build): embedded static server; **auto-discovers every root `*.html`** and fails on any real JS error (new tools are covered with no list to maintain); static check that every app file is in `sw.js`'s `PRECACHE` (enforces the P80 maintenance rule automatically); shell checks — sidebar builds, `HubStorage` round-trip, **Cmd+K opens the search overlay** (regression guard for the P57 silent breakage), service worker registers. `tests/node_modules/` gitignored; `package-lock.json` committed for CI.
+- **CI (`.github/workflows/smoke.yml`)** — runs the suite on every PR and push to main (setup-node 20, `npm ci`, `playwright install chromium`, `node smoke.js`).
+
+**Key decisions:**
+- **Decision:** Smoke tests auto-discover pages from the filesystem instead of a maintained list. **Why:** the P57 lesson — silent breakage lives exactly in the gap between "what exists" and "what someone remembered to list"; discovery can't drift. Same reasoning for the PRECACHE check being computed from the real file listing. **Confidence:** high.
+- **Decision:** AGENTS.md becomes a pointer, not a synced copy. **Why:** two 200 KB copies guarantee re-drift (it already caused colliding priority numbers and the backup bug); any agent can read CLAUDE.md directly. **Alternative rejected:** scripted sync between the two — machinery to maintain a redundancy. **Confidence:** high.
+- **Decision:** Respect the Codex decision that `machi-milestones-v1` stays out of backups, even while fixing the other missing keys. **Why:** it was an explicit, reasoned ephemerality call (recovery-milestone dedupe state), not drift — overriding it silently would be exactly the doc-vs-code divergence this group exists to end. **Confidence:** high.
+- **Decision:** Console "Failed to load resource" noise is filtered in tests; only `pageerror` and real console errors fail. **Why:** font/CDN fetches vary by sandbox and network; failing CI on network weather would train everyone to ignore red. **Confidence:** high.
+
+**Files:** `index.html`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`, `tests/package.json` (new), `tests/package-lock.json` (new), `tests/smoke.js` (new), `.github/workflows/smoke.yml` (new) · **Deleted:** `.codex-inspect-machi.py`, `.codex-machi-engine.tmp`
+
+---
+
+### ~~Priority 82 — World-class platform Group C: AI as a platform layer~~ ✓ Done `[group: platform-ai]`
+Third group of the world-class-platform roadmap. The planned "Ask my Hub chat panel" turned out to **already exist** (the `#ai-drawer` in `index.html` with query/capture/act intents) — so this group fixed the two real gaps found on inspection: the AI could only see ~6 of the app's ~20 data sources, and the chat had no conversation memory.
+
+- **Full-hub AI context (`hub-ai.js`)** — `_getRichContext()` (used by both `query` and `act`) expanded from projects/decisions/risks/goals/KMQT/links to also cover: **meetings** (series-aware — next occurrence date + open action items flattened from per-week logs), **schedule** (next 14 days), **learning log** (with key insights), **reflection board** (latest board, per-column), **open assumptions**, **stakeholders grouped by org**, **people roster**, **recent journal entries** (last 3, with mood), **focus summary** (last 7d count+minutes), and **capture inbox**. Every section is tightly capped (4–10 items) and try/catch-isolated, so context stays token-frugal and one malformed key can't break the rest. Also newly exported as `HubAI.getRichContext()` for testability/reuse.
+- **Multi-turn chat memory** — `HubAI.query(userMessage, history)` now accepts prior `{q, a}` turns (last 4 sent as real user/assistant messages); the shell drawer passes its existing `_aiTurns` query history, so follow-up questions ("and what about next week?") finally work. Action/capture turns are excluded from history (their output is UI cards, not prose).
+- **AI Weekly Review draft (`journal-hub.html`)** — "✦ Draft with AI" button in the Weekly tab's Capture column header. `rhBuildAiDigest(monStr, sunStr)` collects the displayed week's REAL activity: tasks completed that week (`completedAt`), decisions logged, meetings held (series occurrences expanded), new risks, focus sessions (count/minutes/task titles), and daily journal entries (text + learning + mood). `rhAiDraft()` sends the digest to `HubAI.chat()` with a JSON-only prompt and fills **wins / learnings / blockers — only fields that are empty**; anything the user already wrote is never overwritten (toast reports filled vs. kept counts). No-key → hint toast; no activity → "nothing to draft from" toast, zero tokens spent. `hub-ai.js` added to journal-hub's script chain (established per-tool pattern from P47).
+
+**Key decisions:**
+- **Decision:** Expand the existing drawer's context rather than building a separate "Ask my Hub" panel. **Why:** the drawer already IS the ask-my-hub surface (query/capture/act since before this group) — a second chat UI would duplicate it; the actual deficiency was what the AI could see. **Confidence:** high.
+- **Decision:** AI draft fills only empty fields, never merges into non-empty ones. **Why:** a weekly review is a personal reflection ritual — silently mixing machine text into the user's own words is the one unforgivable failure mode here; skipped fields are reported in the toast so nothing is mysterious. **Alternative rejected:** append below user text with a separator — still pollutes the field the user considers "theirs". **Confidence:** high.
+- **Decision:** History capped at last 4 query turns, sent as real message pairs (not stuffed into the system prompt). **Why:** real turns let the model use its native conversation handling; 4 turns bounds token growth in a context that already carries the workspace digest. **Confidence:** med.
+- **Decision:** Draft digest is built from the *displayed* week (respects `rhWeekOffset`), not always the current week. **Why:** back-filling last week's review is exactly when a draft helps most. **Confidence:** high.
+
+**Verified** (24 Playwright checks + full smoke suite, all passing): all 13 new context sections render correct lines from seeded data (incl. series next-occurrence and flattened per-week action items); drawer's first query sends empty history and the second carries the first turn's q/a; the journal draft digest contains the seeded done-task/decision/meeting/journal lines; wins/block fill from a stubbed AI response while a pre-filled learn field is left untouched; the draft persists to `review-hub-v1` after the debounced autosave.
+
+**Files:** `hub-ai.js`, `index.html`, `journal-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 83 — World-class platform Group D: shortest path + mobile overflow fixes~~ ✓ Done `[group: platform-polish]`
+Final group of the world-class-platform roadmap (A: PWA/offline, B: tests/CI/docs, C: AI layer).
+
+- **Graph Hub shortest-path highlighting (`graph-hub.html`)** — closes the P67 explicitly-deferred item. New "⇢ Shortest Path to…" button in the node panel arms path mode (`pathSourceId` + toast "click the target node", Esc cancels); the next `selectNode` click completes the pair. `computeShortestPath(a,b)` is a plain BFS with parent-pointer reconstruction over the **union** of `_impactAdjacency()`'s forward+backward maps — deliberately direction-agnostic, unlike the directional Reasoning/Impact traces, because "how are these two connected" is a connectivity question, not a causal one. Uses the same broad edge set (manual links + auto tag/host context edges) so any visible connection counts as a hop. Result renders in the existing `.trace-panel` (title "SHORTEST PATH", start → N-hops rows, each focusable) with the established accent-highlight idiom over a fresh `buildGraph()` baseline; disconnected nodes get an honest "No connection found" panel.
+- **Mobile overflow audit + fixes** — drove all 31 pages at 390×844 measuring `scrollWidth` overflow. **26 were already clean** (the shell and heavy tools had real mobile work from prior priorities); 5 overflowed: `reflection-hub` (+376px), `stakeholder-hub` (+163), `assumptions-hub` (+202), `retro-hub` (+113), `review-hub` (+138). Root causes: fixed-height non-wrapping topbars (all five) and reflection-hub's fixed 210px/240px side panels + `min-width:880px` board grid. Fixes are per-file media queries: topbars wrap (`height:auto; flex-wrap:wrap`) at ≤640px; reflection-hub additionally stacks its layout at ≤700px (`.rb-main` becomes block-flow with full-width panels, board grid collapses to one column). All 31 pages now measure zero horizontal overflow.
+
+**Key decisions:**
+- **Decision:** Shortest path walks the union of forward+backward adjacency (direction-agnostic), including auto context edges. **Why:** the question "how are A and B connected" doesn't care which way causality points — a `depends-on` chain traversed backward is still a real connection; excluding auto edges would wrongly report "no path" for items connected only through a shared project or tag. **Alternative rejected:** causal-only directional pathfinding — that's what Reasoning/Impact traces already do from a single node. **Confidence:** high.
+- **Decision:** Reuse the existing `.trace-panel` + accent highlight idiom rather than a new panel/color. **Why:** third feature sharing one visual language (Critical Path, traces, now path) — a new panel would add chrome without information; `buildGraph()` reset before applying guarantees no overlay stacking, same as P75/P77. **Confidence:** high.
+- **Decision:** Mobile fixes are per-file media queries, not a shared `theme.css` rule. **Why:** the offending selectors are tool-local (`.rb-topbar`, `.rb-main`, per-tool `.topbar` blocks with differing gaps/heights) — a global rule would need to know every tool's local class names anyway, and theme.css stays tool-agnostic by convention. **Confidence:** high.
+- **Decision:** Reflection Board stacks panels vertically on phones rather than hiding them. **Why:** the left panel holds quick-add and snapshots — hiding it would remove capability on mobile; stacking keeps everything reachable and measured usable in a real 390px screenshot. **Confidence:** med.
+
+**Verified** (14 Group-D Playwright checks + full 31-page mobile re-audit + smoke suite, all passing): BFS returns the exact t1→t2→d1 chain on a seeded graph and `null` for a disconnected island; path mode arms/clears correctly; the panel shows "SHORTEST PATH" with start/1 hop/2 hops rows; mid-path node border verified accent at width 3; the two-click completion flow works through the real selectNode path; all five previously-overflowing pages measure +0px at 390px and the stacked reflection-hub layout was visually confirmed.
+
+**Files:** `graph-hub.html`, `reflection-hub.html`, `stakeholder-hub.html`, `assumptions-hub.html`, `retro-hub.html`, `review-hub.html`, `CLAUDE.md`
+
+---
+
+## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
+A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
+
+- **What it is:** a living pixel-city visualization of real Hub data — six lenses (Hub page activity from `hub-activity-v1`, Tool Portfolio buildings, projects, people, achievements, risk response). Buildings catch fire only on *evidence* of neglect (a real `lastUsedAt` ≥60 days old — missing history is "unknown", never "neglected"). Sidebar group: People & Network.
+- **Architecture:** `machi-engine.js` is a host-agnostic canvas engine whose **canonical source is `Vibe_Coding/MachiHub`** — the copies here are stamped ("edit there, re-copy here"). `machi-achievements.js` same. Adapters/hosts own all Thinking-Hub-specific data mapping.
+- **Visual experiments retired:** a Neon District tab (`machi-neon.js`) and a Fantasy Realm theme (+ asset atlas) were built, tried in real use, and deleted from this repo same-session — "our normal town seems best." The Hi-Res Town tab (`machi-hires.js`) survives as an isolated experiment tab sharing only entity data with the main Town view. Isolation-by-tab is the established pattern for trying Machi visual redesigns at zero risk to the real view.
+- **`machi-milestones-v1` is deliberately ephemeral** (milestone dedupe/baseline state) — excluded from backup/sync per Codex P81C; do not add it to export key lists.
+
+**Also ported — Codex P86 (Dependency Graph fixes, `graph-hub.html` + `hub-links.js`):** bottleneck detection got its own narrow causal-only adjacency (`_bottleneckAdjacency()`, `blocks`/`depends-on` only — intentionally narrower than Impact Analysis's, permanently); View Options panel is always-visible-collapsed at `bottom:60px;left:20px` (repositioned after it silently absorbed canvas clicks at top-left); node-drag pauses physics so drag-to-quick-link works; "+ New Link" modal has a note textarea (`HubLinks.addLink(..., {note})`); relTypes consolidated 4→3 (`leads-to` merged into `blocks`, with an idempotent `_migrateLegacyRelTypes()` in `hub-links.js` rewriting stored data on load); auto-generated edges show a read-only info panel (`showAutoEdgePanel()`) instead of doing nothing.
 
 ---
 

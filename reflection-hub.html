@@ -116,6 +116,14 @@
       display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr));
       gap: 12px; align-items: start; min-width: 880px;
     }
+    @media (max-width: 700px) {
+      .rb-grid { grid-template-columns: 1fr; min-width: 0; }
+      .rb-topbar { height: auto; min-height: 54px; flex-wrap: wrap; padding: 8px 12px; row-gap: 8px; }
+      /* side panels can't fit beside the board on a phone — stack the layout */
+      .rb-main { display: block; overflow-y: auto; }
+      .panel-left { width: auto; min-width: 0; border-right: none; border-bottom: 1px solid var(--border); }
+      .panel-right { width: auto; min-width: 0; border-left: none; border-top: 1px solid var(--border); }
+    }
 
     /* ── Column ── */
     .rb-col {
