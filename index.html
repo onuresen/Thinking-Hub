@@ -452,8 +452,11 @@
     }
 
     function setActiveNav(id) {
-      document.querySelectorAll('.nav-item').forEach(el =>
-        el.classList.toggle('active', el.dataset.app === id));
+      document.querySelectorAll('.nav-item').forEach(el => {
+        const on = el.dataset.app === id;
+        el.classList.toggle('active', on);
+        if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+      });
     }
 
     // ── Home dashboard ────────────────────────────────────────────────────────────
@@ -2482,9 +2485,13 @@
 
     // ── openDataModal / closeDataModal ────────────────────────────────────────────
 
+    let _dataModalUntrap = null;
     function openDataModal(tab) {
       _modalTrigger = document.activeElement;
-      document.getElementById('data-modal').style.display = 'flex';
+      const modal = document.getElementById('data-modal');
+      modal.style.display = 'flex';
+      if (_dataModalUntrap) _dataModalUntrap();
+      _dataModalUntrap = HubUtils.trapFocus(modal);
 
       // Load settings values
       const s = HubStorage.get('hub-settings-v1') || {};
@@ -2513,6 +2520,7 @@
     function closeDataModal() {
       document.getElementById('data-modal').style.display = 'none';
       document.getElementById('import-file').value = '';
+      if (_dataModalUntrap) { _dataModalUntrap(); _dataModalUntrap = null; }
       if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
     }
 
@@ -3727,7 +3735,7 @@
     </div>
 
     <!-- Expanded panel -->
-    <div id="ai-panel">
+    <div id="ai-panel" role="dialog" aria-label="AI Assistant">
       <div id="ai-resize-handle"></div>
       <div id="ai-panel-header">
         <span class="ai-tab-icon">✦</span>
