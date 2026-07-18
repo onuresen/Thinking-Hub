@@ -1386,6 +1386,24 @@ Third group of the world-class-platform roadmap. The planned "Ask my Hub chat pa
 
 ---
 
+### ~~Priority 83 — World-class platform Group D: shortest path + mobile overflow fixes~~ ✓ Done `[group: platform-polish]`
+Final group of the world-class-platform roadmap (A: PWA/offline, B: tests/CI/docs, C: AI layer).
+
+- **Graph Hub shortest-path highlighting (`graph-hub.html`)** — closes the P67 explicitly-deferred item. New "⇢ Shortest Path to…" button in the node panel arms path mode (`pathSourceId` + toast "click the target node", Esc cancels); the next `selectNode` click completes the pair. `computeShortestPath(a,b)` is a plain BFS with parent-pointer reconstruction over the **union** of `_impactAdjacency()`'s forward+backward maps — deliberately direction-agnostic, unlike the directional Reasoning/Impact traces, because "how are these two connected" is a connectivity question, not a causal one. Uses the same broad edge set (manual links + auto tag/host context edges) so any visible connection counts as a hop. Result renders in the existing `.trace-panel` (title "SHORTEST PATH", start → N-hops rows, each focusable) with the established accent-highlight idiom over a fresh `buildGraph()` baseline; disconnected nodes get an honest "No connection found" panel.
+- **Mobile overflow audit + fixes** — drove all 31 pages at 390×844 measuring `scrollWidth` overflow. **26 were already clean** (the shell and heavy tools had real mobile work from prior priorities); 5 overflowed: `reflection-hub` (+376px), `stakeholder-hub` (+163), `assumptions-hub` (+202), `retro-hub` (+113), `review-hub` (+138). Root causes: fixed-height non-wrapping topbars (all five) and reflection-hub's fixed 210px/240px side panels + `min-width:880px` board grid. Fixes are per-file media queries: topbars wrap (`height:auto; flex-wrap:wrap`) at ≤640px; reflection-hub additionally stacks its layout at ≤700px (`.rb-main` becomes block-flow with full-width panels, board grid collapses to one column). All 31 pages now measure zero horizontal overflow.
+
+**Key decisions:**
+- **Decision:** Shortest path walks the union of forward+backward adjacency (direction-agnostic), including auto context edges. **Why:** the question "how are A and B connected" doesn't care which way causality points — a `depends-on` chain traversed backward is still a real connection; excluding auto edges would wrongly report "no path" for items connected only through a shared project or tag. **Alternative rejected:** causal-only directional pathfinding — that's what Reasoning/Impact traces already do from a single node. **Confidence:** high.
+- **Decision:** Reuse the existing `.trace-panel` + accent highlight idiom rather than a new panel/color. **Why:** third feature sharing one visual language (Critical Path, traces, now path) — a new panel would add chrome without information; `buildGraph()` reset before applying guarantees no overlay stacking, same as P75/P77. **Confidence:** high.
+- **Decision:** Mobile fixes are per-file media queries, not a shared `theme.css` rule. **Why:** the offending selectors are tool-local (`.rb-topbar`, `.rb-main`, per-tool `.topbar` blocks with differing gaps/heights) — a global rule would need to know every tool's local class names anyway, and theme.css stays tool-agnostic by convention. **Confidence:** high.
+- **Decision:** Reflection Board stacks panels vertically on phones rather than hiding them. **Why:** the left panel holds quick-add and snapshots — hiding it would remove capability on mobile; stacking keeps everything reachable and measured usable in a real 390px screenshot. **Confidence:** med.
+
+**Verified** (14 Group-D Playwright checks + full 31-page mobile re-audit + smoke suite, all passing): BFS returns the exact t1→t2→d1 chain on a seeded graph and `null` for a disconnected island; path mode arms/clears correctly; the panel shows "SHORTEST PATH" with start/1 hop/2 hops rows; mid-path node border verified accent at width 3; the two-click completion flow works through the real selectNode path; all five previously-overflowing pages measure +0px at 390px and the stacked reflection-hub layout was visually confirmed.
+
+**Files:** `graph-hub.html`, `reflection-hub.html`, `stakeholder-hub.html`, `assumptions-hub.html`, `retro-hub.html`, `review-hub.html`, `CLAUDE.md`
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
