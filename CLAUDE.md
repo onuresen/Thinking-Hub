@@ -64,6 +64,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `manifest.json` | PWA manifest — installable app metadata + icons (P80) |
 | `sw.js` | Service worker — precaches all app assets, stale-while-revalidate offline support (P80). ⚠ New app files must be added to its `PRECACHE` list. |
 | `vendor/` | Self-hosted pinned libraries: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1 (P80 — no CDN dependency) |
+| `styles/` | Extracted tool stylesheets (P85 B1) — the inline `<style>` blocks of the 5 largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) moved out for browser caching. Each is `<link>`ed right after `theme.css` (cascade order preserved). ⚠ New files here must be added to `sw.js` PRECACHE. |
 | `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
 | `tests/` | Dev-only smoke suite (Node + Playwright; the app itself stays no-build). `node smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). Run by CI on every PR (`.github/workflows/smoke.yml`) |
 
@@ -1427,33 +1428,22 @@ First group of the phase-2 roadmap, reshaped after the user ruled out cloud sync
 
 ---
 
-### Priority 85 — 📋 PLANNED (outline only): Group B — Speed & capture flow `[group: speed-capture]`
-**Status: NOT implemented. This is a detailed implementation outline written by a planning session (P84 era) so any model can execute it. Implement one item at a time, verify each with the smoke suite + a targeted Playwright check before moving on.**
+### ~~Priority 85 — Group B: Speed & capture flow~~ ✓ Done `[group: speed-capture]`
+Phase-2 Group B. Implemented on Opus with careful per-item verification (the user flagged B1 as risky and switched to Opus specifically for it).
 
-**B1 — Extract heavy inline CSS to external files** *(highest risk item in the phase — do it alone, verify hard)*
-- Targets, by measured inline `<style>` size: `project-hub.html` (54 KB), `idea-swiper.html` (47 KB), `index.html` (46 KB), `schedule.html` (27 KB), `meetings-hub.html` (22 KB). Do these five only; smaller tools aren't worth the churn.
-- For each file: move the entire `<style>…</style>` content verbatim into `styles/<name>.css` (new `styles/` dir). Replace the block with `<link rel="stylesheet" href="styles/<name>.css">` at the SAME position in `<head>` (after `theme.css` link — cascade order theme.css → tool css is load-bearing, do not reorder).
-- ⚠ `index.html`'s style block contains CSS custom-property uses but no `<script>` interleaving — safe to move wholesale. Do NOT touch the small `<style>` blocks that JS modules inject at runtime (hub-links/hub-search/hub-tutorial) — they are not part of this.
-- Add every new `styles/*.css` file to `sw.js` PRECACHE **and** extend `tests/smoke.js`'s `mustCache` array (currently html/js/theme.css/manifest/favicon) to include `styles/` contents so CI enforces it.
-- **Verify:** (1) smoke suite green; (2) screenshot-diff sanity: load project-hub + index before/after at 1280px and 390px, compare visually — zero layout change expected; (3) check one `[data-theme="light"]` and one `ink` render (theme overrides live in theme.css and must still win where they did before — cascade order preserved means they do); (4) computed-style spot check: `getComputedStyle` of `.task-item` background and `.sidebar-logo-mark` font-family unchanged vs. pre-change values.
-- **Guardrail:** if any page's rendering differs, revert that page's extraction — partial completion is acceptable, breakage is not.
+- **B1 — Extract heavy inline CSS to `styles/`** — moved the inline `<style>` blocks of the 5 largest tools (`project-hub` 52 KB, `idea-swiper` 46 KB, `index` 45 KB, `schedule` 25 KB, `meetings-hub` 22 KB) into `styles/<name>.css`, each `<link>`ed at the exact position of the old block (immediately after the `theme.css` link — cascade order preserved). project-hub and idea-swiper each had TWO back-to-back `<style>` blocks (tiny starter + big one); both were concatenated in order into one file. Now browser-cached across tool re-opens instead of re-parsed from HTML every switch. `sw.js` PRECACHE + `tests/smoke.js` `mustCache` extended to cover `styles/*.css` so CI enforces offline coverage (PRECACHE now 60 entries).
+- **B2 — Cmd+K quick actions (`hub-search.js`)** — typing `task: …`, `capture: …`, `decide: …`, or bare `focus` shows a distinct accent action row above search results; Enter executes. `task:`/`capture:` push to the `capture-hub-v1` inbox (exact Capture Hub item shape, `task:` sets `cat:'task'`); `decide:` creates a `dh-` decision record and navigates to Decision Hub; `focus` opens Focus Timer. Modeled as a synthetic first entry in `_results` so arrow-nav and index math are unchanged; plain queries (e.g. "task" without a colon) search exactly as before.
+- **B3 — PWA share-target + app shortcuts (`manifest.json`, `capture-hub.html`)** — manifest gains a `share_target` (GET → `capture-hub.html` with title/text/url params) and 3 `shortcuts` (Capture / Journal / Today). `capture-hub.html`'s `_ingestShareParams()` runs on load: if `title`/`text`/`url` are present it combines them (`title — text url`), pushes an inbox item, and `history.replaceState`s the query away so a refresh doesn't re-add. The shell's `?v=<ts>` cache-buster is correctly ignored (only fires on real share fields).
 
-**B2 — Cmd+K quick actions (`hub-search.js`)**
-- Current structure: `openSearch()` line ~41, `doSearch(query)` ~55, `renderResults(query)` ~76, input handlers ~186-190. All UI is injected by `injectUI()` (guard: `#hub-search-overlay`).
-- Add an `ACTIONS` table checked FIRST in `renderResults`: when the query matches `^(task|capture|decide|focus)\s*:\s*(.+)` (or bare `focus`), prepend a single action row (distinct style, e.g. accent left bar) above search results.
-  - `capture: <text>` and `task: <text>` → push into Capture Hub inbox: `raw.inbox.unshift({ id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2,6), text, cat: (task→'task', capture→null), capturedAt: new Date().toISOString() })` on key `capture-hub-v1` (shape copied from capture-hub.html:837 — keep field names exactly: `text`, `cat`, `capturedAt`). Toast "Captured — route it in Capture Hub". Do NOT build a project picker in the palette; routing to a real project task stays Capture Hub's job (v1 scope decision).
-  - `decide: <text>` → push `{ id: 'dh-' + Date.now(), title: text, summary: '', status: 'open', confidence: 'medium', projectId: null, createdAt: ISO }` to `decision-hub-v1` (same shape `_executeAction`'s `create_decision` uses in index.html:~4990), then navigate to decision-hub with highlight.
-  - `focus` → `HubSearch` posts the existing `hub-navigate` message to open `focus-hub`.
-- Enter on the action row executes it; Esc/other rows unchanged. Show hint text in the empty-state ("try task: … / capture: … / decide: … / focus").
-- **Verify:** Playwright — open palette, type `capture: buy cable`, Enter → `capture-hub-v1.inbox[0].text === 'buy cable'`; `decide: pick vendor` creates a `dh-` record and navigates; plain queries still search (regression: type "task" without colon still searches).
+**Key decisions:**
+- **Decision:** Concatenate the two adjacent `<style>` blocks (starter + main) into ONE `styles/*.css` rather than two files. **Why:** they're back-to-back with only whitespace between, so concatenation in source order preserves cascade exactly; one file per tool is cleaner than a tiny orphan file. A guard in the extraction script aborted if anything but whitespace sat between blocks. **Confidence:** high.
+- **Decision:** Verify B1 as visually lossless via before/after full-page screenshots at all 3 themes (animations disabled for determinism) + computed-style spot checks, not just "smoke passes". **Why:** the risk of CSS extraction is silent visual regression, which page-load tests don't catch. Result: pixel-identical except 8–9 px of glyph antialiasing on one logo character (a load-timing artifact of inline→external, confirmed harmless by a 4× magnified crop). **Confidence:** high.
+- **Decision:** Quick actions are a synthetic entry prepended to `_results`, not a separate rendering path. **Why:** keeps the existing arrow-key nav, `_selectedIndex` math, and Enter handling working with zero changes; the action just carries an `_isAction` flag that `selectItem` branches on. **Confidence:** high.
+- **Decision:** `task:`/`capture:` route to the Capture inbox, NOT directly to a project task. **Why:** routing to a real project needs a picker; the palette should stay a fast keyboard capture surface — Capture Hub already owns routing. **Confidence:** high.
 
-**B3 — PWA share-target + app shortcuts (`manifest.json`, `capture-hub.html`)**
-- `manifest.json`: add `"share_target": { "action": "./capture-hub.html", "method": "GET", "params": { "title": "title", "text": "text", "url": "url" } }` and `"shortcuts": [ {name: "Capture", url: "./capture-hub.html"}, {name: "Journal", url: "./journal-hub.html"}, {name: "Today", url: "./index.html"} ]` (with the existing 192px icon reference per shortcut).
-- `capture-hub.html`: on load, read `new URLSearchParams(location.search)` — if `text`/`title`/`url` present, concatenate non-empty parts (`title — text url`), push into inbox with the exact shape above, `history.replaceState` to strip the query (prevents re-adding on refresh), toast "Captured from share".
-- ⚠ The shell loads tools with `?v=<ts>` — the param reader must ignore `v` and only trigger when `text|title|url` present.
-- **Verify:** load `capture-hub.html?text=hello&title=Foo` directly → inbox gains one item, URL bar cleaned, reload adds nothing; manifest passes Chrome's parser (no console warning on load).
+**Verified** (before/after visual harness on B1: 15 page/theme combos pixel-compared; B2: 14 Playwright checks driving the real palette; B3: 9 Playwright checks with isolated contexts; full smoke suite green after each). 
 
-**Files:** `styles/` (new), `project-hub.html`, `idea-swiper.html`, `index.html`, `schedule.html`, `meetings-hub.html`, `sw.js`, `tests/smoke.js`, `hub-search.js`, `manifest.json`, `capture-hub.html`, `CLAUDE.md`
+**Files:** `styles/` (new, 5 files), `project-hub.html`, `idea-swiper.html`, `index.html`, `schedule.html`, `meetings-hub.html`, `sw.js`, `tests/smoke.js`, `hub-search.js`, `manifest.json`, `capture-hub.html`, `CLAUDE.md`
 
 ---
 

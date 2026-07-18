@@ -1018,8 +1018,31 @@ function relativeTime(iso) {
   return Math.floor(d / 86400000) + 'd ago';
 }
 
+// ── PWA share-target ingest (P85 B3) ───────────────────────────────────────
+// When the OS shares text/a link into the installed app, it opens
+// capture-hub.html?title=…&text=…&url=… — capture it as an inbox item.
+// The shell loads tools with ?v=<ts>; that alone must NOT trigger this.
+function _ingestShareParams() {
+  try {
+    const p = new URLSearchParams(location.search);
+    const title = (p.get('title') || '').trim();
+    const text  = (p.get('text')  || '').trim();
+    const url   = (p.get('url')   || '').trim();
+    if (!title && !text && !url) return;
+    const parts = [];
+    if (title) parts.push(title);
+    if (text)  parts.push(text);
+    let combined = parts.join(' — ');
+    if (url) combined = (combined ? combined + ' ' : '') + url;
+    addToInbox(combined, null, new Date().toISOString());
+    history.replaceState(null, '', location.pathname); // don't re-add on refresh
+    if (typeof showToast === 'function') showToast('Captured from share');
+  } catch (e) { /* ignore malformed share params */ }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 
+_ingestShareParams();
 updateInboxBadge();
 renderInbox();
 </script>
