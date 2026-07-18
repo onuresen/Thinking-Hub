@@ -1427,6 +1427,85 @@ First group of the phase-2 roadmap, reshaped after the user ruled out cloud sync
 
 ---
 
+### Priority 85 — 📋 PLANNED (outline only): Group B — Speed & capture flow `[group: speed-capture]`
+**Status: NOT implemented. This is a detailed implementation outline written by a planning session (P84 era) so any model can execute it. Implement one item at a time, verify each with the smoke suite + a targeted Playwright check before moving on.**
+
+**B1 — Extract heavy inline CSS to external files** *(highest risk item in the phase — do it alone, verify hard)*
+- Targets, by measured inline `<style>` size: `project-hub.html` (54 KB), `idea-swiper.html` (47 KB), `index.html` (46 KB), `schedule.html` (27 KB), `meetings-hub.html` (22 KB). Do these five only; smaller tools aren't worth the churn.
+- For each file: move the entire `<style>…</style>` content verbatim into `styles/<name>.css` (new `styles/` dir). Replace the block with `<link rel="stylesheet" href="styles/<name>.css">` at the SAME position in `<head>` (after `theme.css` link — cascade order theme.css → tool css is load-bearing, do not reorder).
+- ⚠ `index.html`'s style block contains CSS custom-property uses but no `<script>` interleaving — safe to move wholesale. Do NOT touch the small `<style>` blocks that JS modules inject at runtime (hub-links/hub-search/hub-tutorial) — they are not part of this.
+- Add every new `styles/*.css` file to `sw.js` PRECACHE **and** extend `tests/smoke.js`'s `mustCache` array (currently html/js/theme.css/manifest/favicon) to include `styles/` contents so CI enforces it.
+- **Verify:** (1) smoke suite green; (2) screenshot-diff sanity: load project-hub + index before/after at 1280px and 390px, compare visually — zero layout change expected; (3) check one `[data-theme="light"]` and one `ink` render (theme overrides live in theme.css and must still win where they did before — cascade order preserved means they do); (4) computed-style spot check: `getComputedStyle` of `.task-item` background and `.sidebar-logo-mark` font-family unchanged vs. pre-change values.
+- **Guardrail:** if any page's rendering differs, revert that page's extraction — partial completion is acceptable, breakage is not.
+
+**B2 — Cmd+K quick actions (`hub-search.js`)**
+- Current structure: `openSearch()` line ~41, `doSearch(query)` ~55, `renderResults(query)` ~76, input handlers ~186-190. All UI is injected by `injectUI()` (guard: `#hub-search-overlay`).
+- Add an `ACTIONS` table checked FIRST in `renderResults`: when the query matches `^(task|capture|decide|focus)\s*:\s*(.+)` (or bare `focus`), prepend a single action row (distinct style, e.g. accent left bar) above search results.
+  - `capture: <text>` and `task: <text>` → push into Capture Hub inbox: `raw.inbox.unshift({ id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2,6), text, cat: (task→'task', capture→null), capturedAt: new Date().toISOString() })` on key `capture-hub-v1` (shape copied from capture-hub.html:837 — keep field names exactly: `text`, `cat`, `capturedAt`). Toast "Captured — route it in Capture Hub". Do NOT build a project picker in the palette; routing to a real project task stays Capture Hub's job (v1 scope decision).
+  - `decide: <text>` → push `{ id: 'dh-' + Date.now(), title: text, summary: '', status: 'open', confidence: 'medium', projectId: null, createdAt: ISO }` to `decision-hub-v1` (same shape `_executeAction`'s `create_decision` uses in index.html:~4990), then navigate to decision-hub with highlight.
+  - `focus` → `HubSearch` posts the existing `hub-navigate` message to open `focus-hub`.
+- Enter on the action row executes it; Esc/other rows unchanged. Show hint text in the empty-state ("try task: … / capture: … / decide: … / focus").
+- **Verify:** Playwright — open palette, type `capture: buy cable`, Enter → `capture-hub-v1.inbox[0].text === 'buy cable'`; `decide: pick vendor` creates a `dh-` record and navigates; plain queries still search (regression: type "task" without colon still searches).
+
+**B3 — PWA share-target + app shortcuts (`manifest.json`, `capture-hub.html`)**
+- `manifest.json`: add `"share_target": { "action": "./capture-hub.html", "method": "GET", "params": { "title": "title", "text": "text", "url": "url" } }` and `"shortcuts": [ {name: "Capture", url: "./capture-hub.html"}, {name: "Journal", url: "./journal-hub.html"}, {name: "Today", url: "./index.html"} ]` (with the existing 192px icon reference per shortcut).
+- `capture-hub.html`: on load, read `new URLSearchParams(location.search)` — if `text`/`title`/`url` present, concatenate non-empty parts (`title — text url`), push into inbox with the exact shape above, `history.replaceState` to strip the query (prevents re-adding on refresh), toast "Captured from share".
+- ⚠ The shell loads tools with `?v=<ts>` — the param reader must ignore `v` and only trigger when `text|title|url` present.
+- **Verify:** load `capture-hub.html?text=hello&title=Foo` directly → inbox gains one item, URL bar cleaned, reload adds nothing; manifest passes Chrome's parser (no console warning on load).
+
+**Files:** `styles/` (new), `project-hub.html`, `idea-swiper.html`, `index.html`, `schedule.html`, `meetings-hub.html`, `sw.js`, `tests/smoke.js`, `hub-search.js`, `manifest.json`, `capture-hub.html`, `CLAUDE.md`
+
+---
+
+### Priority 86 — 📋 PLANNED (outline only): Group C — AI deepening `[group: platform-ai-2]`
+**Status: NOT implemented. Outline for any model; both items follow existing, proven patterns — copy them exactly.**
+
+**C1 — Broaden AI action vocabulary (`hub-ai.js` system prompt + `index.html` `_executeAction`)**
+- The act() flow: `hub-ai.js` `act()` builds a system prompt listing action types; `index.html` `_executeAction(action)` (line ~4867) applies confirmed actions; icon/label maps at ~4758/4766 (`create_risk: '⚠'` etc.). Add three new action types to ALL FOUR places (prompt spec, `_executeAction` branch, icon map, label map):
+  - `create_meeting` — `{ type, title, date: "YYYY-MM-DD", time: "HH:MM (optional)", meetingType: "custom|...", projectId (optional), agenda (optional) }`. Write shape (copy meetings-hub.html:~964 `normalizeMeeting` input): `{ id: 'mt-' + Date.now(), title, date, time: action.time || '', durationMins: 30, type: action.meetingType || 'custom', desiredOutcome: '', attendeesList: [], attendees: '', projectId: action.projectId || null, projectName: null, agenda: action.agenda || '', notes: '', actionItems: [], decisions: [], scheduleEventId: null, createdAt: ISO }` unshifted into `meetings-hub-v1.meetings`. (meetings-hub's `normalizeMeeting` backfills series fields on next open — do not add `recurring`/`occurrenceDates` here.)
+  - `create_assumption` — `{ type, statement, why (optional), decisionId (optional) }` → push `{ id: 'as-' + Date.now(), statement, why: action.why || '', confidence: 3, status: 'assumed', linkedDecision: action.decisionId || null, notes: '', createdAt: ISO }` into `assumptions-hub-v1.assumptions` (shape from assumptions-hub.html:~421 `newAssumptionWithStatus`).
+  - `create_learning` — `{ type, title, itemType: "book|article|video|course", url (optional) }` → unshift `{ id: 'lh-' + Date.now(), title, author: '', type: action.itemType || 'article', status: 'queue', platform: '', url: action.url || '', progress: 0, owned: false, tags: [], highlights: [], notes: '', keyInsight: '', createdAt: ISO }` into `learning-hub-v1.items` (shape from learning-hub.html:~800 `saveAddModal`).
+- Add one system-prompt line per action mirroring the existing terse format, and extend the prompt's "Tool values" list with `meetings-hub`.
+- **Verify:** Playwright with stubbed `HubAI.act` returning one of each action → confirm-and-apply flow writes correct shapes (assert every field above); then open each target tool page and confirm zero console errors rendering the created record (the real regression risk is a missing field a tool's render assumes).
+
+**C2 — Morning briefing card on Today (`index.html`)**
+- New card at the top of `buildTodayView()`'s grid (after the Resurface card, P51): header "✦ Briefing", a `↻ Brief me` button, body area. Manual-trigger ONLY (no auto token spend — established pattern: P45 Smart Priorities, P47 Energy Insights, P82 review draft).
+- On click: if `!HubAI.isConfigured()` → hint toast (copy the journal-hub `rhAiDraft` guard). Else build the prompt from `HubAI.getRichContext().lines` (exported in P82) + system prompt: "From this workspace snapshot, write a morning briefing: top 3 priorities for today (with one-line why each), then any overdue items, today's meetings, and decisions due for revisit. ≤10 short lines, no preamble." Call `HubAI.chat(lines, system)`.
+- Cache result in NEW ephemeral key `hub-briefing-v1` = `{ date: 'YYYY-MM-DD', text }`; on `buildTodayView()`, render cached text if `date === today`, else show the empty state + button. Add the key to: CLAUDE.md localStorage list (ephemeral, excluded from backup/sync), and index.html's health-check `KNOWN` set. Do NOT add to SCOPE_KEYS/MCP_SYNC_KEYS.
+- **Verify:** stub `HubAI.chat`, click → card fills, `hub-briefing-v1.date` is today; reload → cached text renders without an API call (assert stub NOT called); next-day simulation (overwrite `date` to yesterday) → empty state returns.
+
+**Files:** `hub-ai.js`, `index.html`, `CLAUDE.md`
+
+---
+
+### Priority 87 — 📋 PLANNED (outline only): Group D — Fit & finish `[group: platform-finish]`
+**Status: NOT implemented. Outline for any model. Three independent items — safe to split across sessions.**
+
+**D1 — Real Fraunces 800**
+- Headings using `font-weight: 800` with `--font-display` currently render browser-synthesized bold (real 800 was never in any fonts URL — P76 finding). Fix: in the canonical Google Fonts URL present in 30 files (`family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700`), append `;9..144,800` → `…;9..144,700;9..144,800`.
+- ⚠ This is a 30-file mechanical sweep of ONE byte-identical string: use a Node script with a literal `String.replace` + per-file match-count check (never PowerShell `-replace` — standing file-safety rule). `capture-hub.html` has a DIFFERENT richer URL (italics/opsz) — update its Fraunces segment separately by hand.
+- This is a deliberate VISUAL change (headings get slightly different, true-drawn 800). Screenshot index.html hero + one tool before/after for the record.
+- **Verify:** `document.fonts.check('800 20px Fraunces')` returns true after load; all 31 pages still pass smoke.
+- Do NOT self-host/subset fonts in this pass — Google Fonts already serves unicode-range subsets, and `sw.js` runtime-caches them for offline; further subsetting is real work for marginal bytes (explicitly out of scope).
+
+**D2 — Accessibility pass (shell first, tools opportunistically)**
+- `theme.css`: add a global `@media (prefers-reduced-motion: reduce)` block disabling `card-enter`, the body atmo gradients' animation, `progress-run`, and setting `scroll-behavior: auto`. Token-level, reaches all tools.
+- `hub-utils.js`: add `HubUtils.trapFocus(modalEl)` — keydown listener cycling Tab/Shift+Tab within focusable descendants, returns an untrap fn. Apply in index.html to `#data-modal` (openDataModal/closeDataModal already track `_modalTrigger` for focus return — keep that) and to hub-links' picker modal.
+- index.html: `aria-label` on icon-only buttons (⚙️ settings — already has one, verify; theme toggle, tour `?`, AI drawer tab), `role="dialog" aria-modal="true"` on `#data-modal` and the AI drawer panel, `aria-current="page"` on the active nav item in the sidebar builder.
+- **Verify:** Playwright — Tab from the last focusable element in the open data-modal lands on the first (trap works); Esc still closes; with `page.emulateMedia({ reducedMotion: 'reduce' })` the app-card `animation-name` computes to `none`.
+
+**D3 — CI interaction flows (`tests/flows.js`, new + wire into `.github/workflows/smoke.yml`)**
+- Same embedded-server + chromium harness as `tests/smoke.js` (copy its scaffolding; fonts route-aborted). Three flows, all through real pages:
+  1. **Task lifecycle:** seed empty storage → open index.html → `openApp('project-hub')` → inside the iframe, create a project + task via the real UI (`frame.locator` on the actual inputs; consult project-hub.html for ids at write time), mark done → assert `project-hub-v1` reflects it AND the home "Open Tasks" stat updates after `HubStorage` notify.
+  2. **Export/import round-trip:** seed 3 tools' keys → call `exportHubData()` with scope full (intercept the download via `page.on('download')` or read the blob through a stubbed anchor click) → wipe localStorage → `handleImportFile` with the exported JSON → assert all seeded keys byte-identical.
+  3. **Link + graph:** seed two tasks + `HubLinks.addLink` between them → open graph-hub.html → assert both nodes + the edge exist in `nodesMap`/`edgesDS`, and `computeShortestPath` returns the 1-hop path.
+- Add as a second job (or step) in `smoke.yml` after the smoke step. Keep flows.js under ~200 lines; if a flow needs >30 min of selector archaeology, simplify to the storage-level assertion rather than fighting the DOM — the goal is behavior coverage, not UI pixel fidelity.
+- **Verify:** both jobs green in CI on the PR.
+
+**Files:** 30 tool HTML files (fonts URL), `capture-hub.html`, `theme.css`, `hub-utils.js`, `index.html`, `hub-links.js`, `tests/flows.js` (new), `.github/workflows/smoke.yml`, `CLAUDE.md`
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
