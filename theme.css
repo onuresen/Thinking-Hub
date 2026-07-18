@@ -595,3 +595,19 @@ body {
   opacity: 1;
   transform: translateX(0);
 }
+
+/* ── AI feature marker (P86) ──────────────────────────────────────────────
+   Every control that calls the Anthropic API (consuming the user's key +
+   tokens) carries this badge so the cost is never a surprise. Uses the
+   secondary/coral accent to read as distinct from ordinary accent actions.
+   Give each instance title="Uses your Anthropic API key · consumes tokens". */
+.ai-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--accent2); background: var(--accent2-dim);
+  border: 1px solid var(--accent2-glow); border-radius: var(--r-chip);
+  padding: 1px 5px; cursor: help; vertical-align: middle; white-space: nowrap;
+  line-height: 1.5;
+}
+.ai-badge::before { content: "✦"; font-size: 8px; }

@@ -1372,6 +1372,61 @@
       return `${monday.getFullYear()}-W${String(week).padStart(2, '0')}`;
     }
 
+    // ── AI morning briefing (P86 C2) ──────────────────────────────────────────────
+    // Manual-trigger only (no auto token spend). Cached per-day in the ephemeral
+    // hub-briefing-v1 key so a reload shows the text without another API call.
+    const BRIEFING_KEY = 'hub-briefing-v1';
+
+    function _briefingFmt(text) {
+      return _esc(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^[•\-]\s/gm, '· ')
+        .split('\n').join('<br>');
+    }
+
+    function buildBriefingCard() {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.style.borderColor = 'color-mix(in srgb, var(--accent2) 35%, var(--border))';
+      let rec = null;
+      try { rec = HubStorage.get(BRIEFING_KEY); } catch { }
+      const today = new Date().toISOString().slice(0, 10);
+      const fresh = rec && rec.date === today && rec.text;
+      const body = fresh
+        ? `<div style="white-space:normal;font-size:12.5px;line-height:1.65;color:var(--text2)">${_briefingFmt(rec.text)}</div>`
+        : `<div style="padding:4px 2px;color:var(--text3);font-size:12px">A quick read on today: top priorities, overdue items, meetings, and decisions due for revisit.</div>`;
+      card.innerHTML = `
+        <div class="stat-card-header">
+          <span class="stat-card-icon">✦</span>
+          <span class="stat-card-title">Briefing</span>
+          <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+          <button id="briefing-btn" onclick="event.stopPropagation();generateBriefing()"
+            style="margin-left:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;color:var(--text2);cursor:pointer;padding:3px 9px;font-family:var(--font-body);white-space:nowrap">${fresh ? '↻ Refresh' : '✦ Brief me'}</button>
+        </div>
+        <div class="stat-card-body">${body}</div>
+        <div class="stat-card-footer"><span>${fresh ? 'generated today' : 'manual · one API call'}</span><span></span></div>`;
+      return card;
+    }
+
+    async function generateBriefing() {
+      if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
+        showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
+        return;
+      }
+      const btn = document.getElementById('briefing-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '✦ Briefing…'; }
+      try {
+        const { lines } = HubAI.getRichContext();
+        const system = 'From this workspace snapshot, write a concise morning briefing: the top 3 priorities for today (each with a one-line why), then any overdue items, today\'s meetings, and decisions due for revisit. Use at most 10 short lines. No preamble, no sign-off.';
+        const text = await HubAI.chat(lines, system);
+        HubStorage.set(BRIEFING_KEY, { date: new Date().toISOString().slice(0, 10), text: (text || '').trim() });
+        buildTodayView();
+      } catch (e) {
+        showToast('Briefing failed: ' + (e.message || e), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '✦ Brief me'; }
+      }
+    }
+
     function buildTodayView() {
       const container = document.getElementById('today-view');
       if (!container) return;
@@ -1447,6 +1502,9 @@
       }
 
       if (resurface.length) grid.appendChild(buildResurfaceCard(resurface));
+
+      // C2 — AI morning briefing card (manual trigger)
+      grid.appendChild(buildBriefingCard());
 
       // B4 — This week's rocks card
       if (thisWeekRocks.length) {
@@ -2299,7 +2357,8 @@
       // 3. Unknown localStorage keys (informational only)
       const KNOWN = new Set([...SCOPE_KEYS.full, 'hub-session-v1', 'th-theme', 'tutorial-seen-v1',
         'quick-tour-seen-v1', 'hub-resurface-v1', 'hub-last-backup-v1', 'machi-milestones-v1',
-        'rb-migration-done-v1', 'rb-reacted-v1', 'ai-drawer-pos-v1', 'review-hub-v1']);
+        'rb-migration-done-v1', 'rb-reacted-v1', 'ai-drawer-pos-v1', 'review-hub-v1',
+        'hub-briefing-v1']);
       const unknown = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -2921,7 +2980,8 @@
         update_task_status: '✅', update_task_priority: '⬆', update_task_due: '📅', assign_task: '👤',
         create_project: '◈', create_task: '📋', create_milestone: '◆',
         create_risk: '⚠', create_decision: '⊕', create_goal: '◎',
-        add_kmqt_item: '⊞', create_schedule_event: '▦', add_checklist_item: '☐'
+        add_kmqt_item: '⊞', create_schedule_event: '▦', add_checklist_item: '☐',
+        create_meeting: '▣', create_assumption: '◇', create_learning: '📖'
       };
       const actionLabels = {
         create_link: 'Create link', remove_link: 'Remove link',
@@ -2930,7 +2990,9 @@
         create_project: 'New project', create_task: 'New task', create_milestone: 'New milestone',
         create_risk: 'New risk', create_decision: 'New decision', create_goal: 'New goal',
         add_kmqt_item: 'Add to KMQT', create_schedule_event: 'Schedule event',
-        add_checklist_item: 'Add checklist item'
+        add_checklist_item: 'Add checklist item',
+        create_meeting: 'New meeting', create_assumption: 'New assumption',
+        create_learning: 'New learning item'
       };
 
       html += `<div style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">${actions.length} proposed action${actions.length > 1 ? 's' : ''}</div>`;
@@ -2970,6 +3032,12 @@
           desc = `[${colNames[a.column] || a.column}] ${HubUtils.esc(a.text)}`;
         } else if (a.type === 'create_schedule_event') {
           desc = `"${HubUtils.esc(a.title)}" · ${a.start}`;
+        } else if (a.type === 'create_meeting') {
+          desc = `"${HubUtils.esc(a.title)}"${a.date ? ' · ' + a.date : ''}${a.time ? ' ' + a.time : ''}`;
+        } else if (a.type === 'create_assumption') {
+          desc = `"${HubUtils.esc(a.statement)}"`;
+        } else if (a.type === 'create_learning') {
+          desc = `"${HubUtils.esc(a.title)}"${a.itemType ? ' (' + a.itemType + ')' : ''}`;
         }
         const reason = a.reason || a.description || '';
 
@@ -3210,6 +3278,53 @@
             createdAt: new Date().toISOString()
           });
           localStorage.setItem('schedule-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_meeting') {
+          const raw = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
+          raw.meetings = raw.meetings || [];
+          // Minimal meeting; meetings-hub's normalizeMeeting backfills series
+          // fields on next open, so recurring/occurrenceDates are NOT set here.
+          raw.meetings.unshift({
+            id: 'mt-' + Date.now(), title: action.title,
+            date: action.date || new Date().toISOString().split('T')[0],
+            time: action.time || '', durationMins: 30,
+            type: action.meetingType || 'custom', desiredOutcome: '',
+            attendeesList: [], attendees: '',
+            projectId: action.projectId || null, projectName: null,
+            agenda: action.agenda || '', notes: '',
+            actionItems: [], decisions: [], scheduleEventId: null,
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('meetings-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_assumption') {
+          const raw = JSON.parse(localStorage.getItem('assumptions-hub-v1') || '{}');
+          raw.assumptions = raw.assumptions || [];
+          raw.assumptions.push({
+            id: 'as-' + Date.now(), statement: action.statement,
+            why: action.why || '', confidence: 3, status: 'assumed',
+            linkedDecision: action.decisionId || null, notes: '',
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('assumptions-hub-v1', JSON.stringify(raw));
+          return true;
+        }
+
+        if (action.type === 'create_learning') {
+          const raw = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
+          raw.items = raw.items || [];
+          raw.items.unshift({
+            id: 'lh-' + Date.now(), title: action.title, author: '',
+            type: action.itemType || 'article', status: 'queue', platform: '',
+            url: action.url || '', progress: 0, owned: false,
+            tags: [], highlights: [], notes: '', keyInsight: '',
+            createdAt: new Date().toISOString()
+          });
+          localStorage.setItem('learning-hub-v1', JSON.stringify(raw));
           return true;
         }
 
@@ -3617,6 +3732,7 @@
       <div id="ai-panel-header">
         <span class="ai-tab-icon">✦</span>
         <span id="ai-panel-title">AI Assistant</span>
+        <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
         <button id="ai-panel-close" onclick="toggleAiDrawer()" title="Close">×</button>
       </div>
 
