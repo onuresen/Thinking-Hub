@@ -22,6 +22,12 @@ const PRECACHE = [
   './manifest.json',
   './favicon.svg',
   './theme.css',
+  // extracted tool stylesheets (P85 — inline <style> moved out for caching)
+  './styles/project-hub.css',
+  './styles/idea-swiper.css',
+  './styles/index.css',
+  './styles/schedule.css',
+  './styles/meetings-hub.css',
   // shared JS modules
   './hub-storage.js',
   './hub-snapshots.js',
