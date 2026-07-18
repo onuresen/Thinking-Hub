@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="theme.css">
 
   <script src="hub-storage.js"></script>
+  <script src="hub-snapshots.js"></script>
   <script src="hub-tutorial.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-starter-data.js"></script>
@@ -2074,6 +2075,18 @@
           <div class="sfield-hint" id="last-backup-line" style="margin-top:6px">Last full backup: never</div>
         </div>
 
+        <!-- Local snapshots (IndexedDB) + health check -->
+        <div id="snapshots-section" style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+          <div class="sfield-group-title">🕒 Local Snapshots</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Automatic daily snapshots of all data, stored in this browser (IndexedDB) — nothing leaves your machine. Restore rolls everything back to that moment.</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <button class="btn btn-ghost" onclick="takeSnapshotNow()" style="font-size:12px">📸 Take snapshot now</button>
+            <button class="btn btn-ghost" onclick="runHealthCheck()" style="font-size:12px">🩺 Health Check</button>
+          </div>
+          <div id="health-results" style="display:none;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;line-height:1.6"></div>
+          <div id="snapshot-list" style="max-height:180px;overflow-y:auto"></div>
+        </div>
+
         <!-- MCP Sync -->
         <div id="mcp-sync-panel"
           style="display:none;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
@@ -3994,7 +4007,161 @@
       document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
       document.getElementById('stab-' + tab).classList.add('active');
       document.getElementById('spane-' + tab).classList.add('active');
-      if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); }
+      if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); renderSnapshotList(); }
+    }
+
+    // ── Local snapshots UI (P84 — hub-snapshots.js) ─────────────────────────────
+
+    async function renderSnapshotList() {
+      const el = document.getElementById('snapshot-list');
+      if (!el || typeof HubSnapshots === 'undefined') return;
+      try {
+        const snaps = await HubSnapshots.list();
+        if (!snaps.length) {
+          el.innerHTML = '<div class="sfield-hint">No snapshots yet — one is taken automatically each day the app opens.</div>';
+          return;
+        }
+        el.innerHTML = snaps.map(s => {
+          const d = new Date(s.takenAt);
+          const when = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' +
+            d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          const badge = s.label === 'auto' ? '' :
+            ` <span style="font-size:10px;color:var(--text3);background:var(--surface3);padding:1px 5px;border-radius:var(--r-chip)">${HubUtils.esc(s.label)}</span>`;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="flex:1;color:var(--text2)">${when}${badge}</span>
+            <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--text3)">${(s.bytes / 1024).toFixed(0)} KB · ${s.keyCount} keys</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px" onclick="restoreSnapshot('${s.id}')">Restore</button>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        el.innerHTML = `<div class="sfield-hint">Snapshots unavailable: ${HubUtils.esc(e.message || String(e))}</div>`;
+      }
+    }
+
+    async function takeSnapshotNow() {
+      try {
+        await HubSnapshots.take('manual');
+        showToast('Snapshot saved', 'success');
+        renderSnapshotList();
+      } catch (e) {
+        showToast('Snapshot failed: ' + (e.message || e), 'error');
+      }
+    }
+
+    async function restoreSnapshot(id) {
+      const ok = confirm(
+        'Restore ALL data to this snapshot?\n\n' +
+        'Everything (every tool, settings, links) rolls back to that moment — changes made since will be gone. ' +
+        'A safety snapshot of the current state is taken first, so this is reversible.\n\nThe app will reload.'
+      );
+      if (!ok) return;
+      try {
+        await HubSnapshots.restore(id);
+        location.reload();
+      } catch (e) {
+        showToast('Restore failed: ' + (e.message || e), 'error');
+      }
+    }
+
+    // ── Data health check (P84) ─────────────────────────────────────────────────
+    // Tools with a HubLinks.resolveItems() branch — only these can be judged for
+    // dangling link endpoints. Anything else is skipped, never flagged.
+    const HEALTH_RESOLVABLE_TOOLS = [
+      'project-hub', 'decision-hub', 'idea-swiper', 'canvas-hub', 'schedule',
+      'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub',
+      'stakeholder-hub', 'kmqt-board', 'focus-hub', 'journal-hub',
+      'reflection-hub', 'argument-hub', 'tool-portfolio', 'tags-hub',
+    ];
+    let _healthDanglingIds = [];
+
+    function _findDanglingLinks() {
+      const dangling = [];
+      const cache = {};
+      const validIds = (tool) => {
+        if (!cache[tool]) {
+          cache[tool] = new Set(HubLinks.resolveItems(tool).map(i => String(i.id)));
+          if (tool === 'project-hub') {
+            // resolver lists projects+tasks but not milestones — accept those too
+            try {
+              const ph = HubStorage.get('project-hub-v1') || {};
+              (ph.projects || []).forEach(p => (p.milestones || []).forEach(m => cache[tool].add(String(m.id))));
+            } catch { }
+          }
+        }
+        return cache[tool];
+      };
+      HubLinks.getAll().forEach(link => {
+        for (const end of [link.a, link.b]) {
+          if (!end || !HEALTH_RESOLVABLE_TOOLS.includes(end.tool)) continue;
+          if (!validIds(end.tool).has(String(end.itemId))) {
+            dangling.push({ linkId: link.id, tool: end.tool, itemId: end.itemId, label: end.label || end.itemId });
+            break; // one dangling endpoint is enough to flag the link
+          }
+        }
+      });
+      return dangling;
+    }
+
+    async function runHealthCheck() {
+      const out = document.getElementById('health-results');
+      out.style.display = 'block';
+      const lines = [];
+
+      // 1. Malformed JSON in any stored key
+      const malformed = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        const raw = localStorage.getItem(k);
+        if (raw === null || raw === '') continue;
+        if (k === 'th-theme') continue; // plain string by design
+        try { JSON.parse(raw); } catch { malformed.push(k); }
+      }
+      lines.push(malformed.length
+        ? `⚠ <b>${malformed.length} key(s) with unparseable JSON:</b> ${malformed.map(HubUtils.esc).join(', ')} — restore a snapshot from before the corruption.`
+        : '✓ All stored data parses cleanly.');
+
+      // 2. Dangling cross-tool links
+      const dangling = _findDanglingLinks();
+      _healthDanglingIds = [...new Set(dangling.map(d => d.linkId))];
+      if (dangling.length) {
+        const preview = dangling.slice(0, 5).map(d => `"${HubUtils.esc(String(d.label).slice(0, 30))}" (${HubUtils.esc(d.tool)})`).join(', ');
+        lines.push(`⚠ <b>${_healthDanglingIds.length} link(s) point at deleted items:</b> ${preview}${dangling.length > 5 ? '…' : ''} ` +
+          `<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px" onclick="repairDanglingLinks()">Repair (remove them)</button>`);
+      } else {
+        lines.push('✓ All cross-tool links point at existing items.');
+      }
+
+      // 3. Unknown localStorage keys (informational only)
+      const KNOWN = new Set([...SCOPE_KEYS.full, 'hub-session-v1', 'th-theme', 'tutorial-seen-v1',
+        'quick-tour-seen-v1', 'hub-resurface-v1', 'hub-last-backup-v1', 'machi-milestones-v1',
+        'rb-migration-done-v1', 'rb-reacted-v1', 'ai-drawer-pos-v1', 'review-hub-v1']);
+      const unknown = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!KNOWN.has(k)) unknown.push(k);
+      }
+      lines.push(unknown.length
+        ? `ℹ ${unknown.length} unrecognized key(s) (harmless, not backed up): ${unknown.map(HubUtils.esc).join(', ')}`
+        : '✓ No unrecognized storage keys.');
+
+      out.innerHTML = lines.join('<br>');
+    }
+
+    async function repairDanglingLinks() {
+      if (!_healthDanglingIds.length) return;
+      const ok = confirm(`Remove ${_healthDanglingIds.length} dangling link(s)?\n\nA snapshot is taken first, so this is reversible.`);
+      if (!ok) return;
+      try {
+        await HubSnapshots.take('pre-repair');
+        const links = (HubStorage.get('hub-links-v1') || []).filter(l => !_healthDanglingIds.includes(l.id));
+        HubStorage.set('hub-links-v1', links);
+        _healthDanglingIds = [];
+        showToast('Dangling links removed (snapshot saved first)', 'success');
+        runHealthCheck();
+        renderSnapshotList();
+      } catch (e) {
+        showToast('Repair failed: ' + (e.message || e), 'error');
+      }
     }
 
     // ── Storage usage meter + backup freshness (Data & Backup pane) ──────────────
@@ -4022,6 +4189,12 @@
         }
       }
     }
+
+    // Daily auto-snapshot into IndexedDB (P84) — deferred so it never competes
+    // with first paint; snapshot-if-due + retention pruning.
+    setTimeout(() => {
+      if (typeof HubSnapshots !== 'undefined') HubSnapshots.init();
+    }, 2500);
 
     // Gentle stale-backup nudge on load: only when there is real data (>100 KB)
     // and the last full backup is >30 days old (or never), at most every 3 days.

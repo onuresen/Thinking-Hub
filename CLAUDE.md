@@ -4,14 +4,17 @@
 Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HTML/CSS/JS loaded directly in browser. Standalone tool pages share one shell (`index.html`) via iframe + postMessage.
 
 ## Architecture in one sentence
-`index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage + optional Supabase sync).
+`index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage — **local-only by standing decision, see below**).
+
+## ⛔ Standing decision: NO cloud sync (P84)
+The app holds **confidential work data**. Cloud persistence of any kind (Supabase, Firebase, any third-party backend) would require a company security review and creates breach surface for no acceptable benefit. Supabase sync was built once and **deliberately removed** by the user. Do not propose or re-add cloud storage, telemetry, or any feature that sends user data to a server. The only network calls the app may make: Google Fonts, the Anthropic API (user-supplied key, explicit per-use actions), and favicon fetches. Durability is handled locally: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`).
 
 ## File map
 | File | Role |
 |------|------|
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
-| `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
+| `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
@@ -23,7 +26,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
 | `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API. Self-contained (reads `hub-settings-v1` directly), so any tool can load it — currently `index.html` and `focus-hub.html` |
-| `supabase-schema.sql` | Cloud DB schema |
+| `hub-snapshots.js` | IndexedDB rolling snapshots: `HubSnapshots.init/take/list/restore` — daily auto-snapshot of all localStorage, point-in-time restore (P84). Loaded in `index.html` only. |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
 | `idea-swiper.html` | Rapid idea triage (swipe) |
@@ -93,9 +96,9 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 | Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest (runtime-cached by `sw.js` for offline) |
 | vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
 | html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
-| @supabase/supabase-js | hub-storage.js (dynamic) | **@2** |
 
 ## What NOT to do
+- **Do not add cloud sync or any server-side persistence** — standing P84 decision (confidential work data); see the ⛔ section at the top
 - Do not add new color hex values — extend `theme.css` tokens instead
 - Do not use `var(--font-m)` — it doesn't exist, use `var(--font-mono)`
 - Do not use `color-mix()` without a fallback property above it
@@ -1401,6 +1404,26 @@ Final group of the world-class-platform roadmap (A: PWA/offline, B: tests/CI/doc
 **Verified** (14 Group-D Playwright checks + full 31-page mobile re-audit + smoke suite, all passing): BFS returns the exact t1→t2→d1 chain on a seeded graph and `null` for a disconnected island; path mode arms/clears correctly; the panel shows "SHORTEST PATH" with start/1 hop/2 hops rows; mid-path node border verified accent at width 3; the two-click completion flow works through the real selectNode path; all five previously-overflowing pages measure +0px at 390px and the stacked reflection-hub layout was visually confirmed.
 
 **Files:** `graph-hub.html`, `reflection-hub.html`, `stakeholder-hub.html`, `assumptions-hub.html`, `retro-hub.html`, `review-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 84 — Local-first durability: no-cloud decision + snapshots + health check~~ ✓ Done `[group: local-durability]`
+First group of the phase-2 roadmap, reshaped after the user ruled out cloud sync entirely (confidential work data; company approval would be required; Supabase was built once before and deliberately removed). Items 1–3 of "revised Group A" — item 4 (two-way sync file via a user-picked folder) is deferred pending the user's read on whether the folder-file approach fits their multi-device reality.
+
+- **No-cloud standing decision** — recorded as the ⛔ section at the top of this file + "What NOT to do" entry, in `hub-storage.js`'s credential-cleanup comment, and in `README.md` (rewritten from "optional Supabase sync" marketing to an explicit local-only privacy stance). Stale Supabase references cleaned from `README.md`, `hub-data.js`, `sw.js`, the file map (`supabase-schema.sql` was already deleted from disk but still listed), and the external-deps table.
+- **Rolling local snapshots (`hub-snapshots.js`, new)** — `HubSnapshots.init/take/list/restore` over IndexedDB (`thinking-hub-snapshots` DB). On shell load (deferred 2.5s) takes one auto-snapshot per day of **ALL localStorage keys verbatim** (raw strings — no key list to drift, the P81 lesson) and prunes: autos kept 14 days, then Mondays-only to 60 days; manual/safety snapshots keep newest 10. `restore(id)` first takes a `pre-restore` safety snapshot, then overwrites every key and removes keys that didn't exist at snapshot time (true point-in-time semantics), caller reloads. ⚙ Data & Backup gained a "🕒 Local Snapshots" section: list (date/size/keys), "📸 Take snapshot now", per-row Restore with a plain-language confirm.
+- **Data health check (⚙ Data pane)** — "🩺 Health Check" runs three scans: (1) unparseable JSON in any stored key (points at snapshot restore as the fix); (2) dangling cross-tool links via `HubLinks.resolveItems()` — **only for the 18 tools with resolver branches** (`HEALTH_RESOLVABLE_TOOLS`), with a project-hub special case accepting milestone ids (the resolver only lists projects+tasks), so links to unresolvable tools are never falsely flagged; (3) unrecognized localStorage keys (informational only). "Repair" removes dangling links after auto-taking a `pre-repair` snapshot.
+
+**Key decisions:**
+- **Decision:** Local-only is a permanent architectural stance, not a temporary gap — recorded in four places (CLAUDE.md ⛔ section, What-NOT-to-do, hub-storage.js comment, README). **Why:** confidential work data + the company-approval requirement make cloud sync a liability, and the user already built-then-removed Supabase once; without a loud record, future sessions would keep re-proposing it (this session did exactly that). **Confidence:** high. **Revisit when:** the user gets explicit company clearance and asks — never proactively.
+- **Decision:** Snapshot ALL localStorage keys verbatim rather than a curated list. **Why:** the P81 audit proved curated key lists silently drift; a full capture can't miss a new tool's data. Ephemeral keys ride along harmlessly (a few hundred bytes). **Confidence:** high.
+- **Decision:** `restore()` also deletes keys created after the snapshot (true point-in-time), rather than merge-overwriting only. **Why:** a half-restore that leaves newer keys produces a state that never existed — worse for debugging corruption than a clean rollback; the automatic `pre-restore` snapshot makes the trade safe. **Confidence:** med.
+- **Decision:** Health check judges dangling links only for tools with `resolveItems` branches, and treats "resolver returned empty" as evidence (tool data really is empty → link really is dangling) while unresolvable tools are skipped entirely. **Why:** `resolveItems()` returns `[]` for both "no data" and "unsupported tool" — an explicit supported-tool list is the only way to distinguish them and never delete a valid link. **Confidence:** high.
+- **Decision:** Malformed-JSON findings are report-only (no auto-fix). **Why:** the tool can't invent the user's data back; the honest remedy is restoring a snapshot, which the finding text points at. **Confidence:** high.
+
+**Verified** (16 Playwright checks + full smoke suite, all passing): auto snapshot taken on load; manual snapshot → mutate → restore round-trip reverts the mutation, removes a key added after the snapshot, and leaves a `pre-restore` snapshot; retention pruning (>14d non-Monday removed, >14d Monday kept, >60d removed, verified by injecting fake old records directly into IDB); health check flags a seeded malformed key, exactly one dangling link (naming it), skips an unresolvable-tool endpoint, reports an unknown key; repair removes only the dangling link and takes a `pre-repair` snapshot; the snapshot list UI renders.
+
+**Files:** `hub-snapshots.js` (new), `index.html`, `hub-storage.js`, `hub-data.js`, `sw.js`, `README.md`, `CLAUDE.md`
 
 ---
 

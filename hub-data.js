@@ -166,8 +166,7 @@ window.HubData = (() => {
   function init(toolId) {
     if (!_initialized) {
       _initialized = true;
-      // HubStorage.subscribe handles BOTH same-tab and cross-tab changes,
-      // as well as real-time Supabase updates when cloud mode is active.
+      // HubStorage.subscribe handles BOTH same-tab and cross-tab changes.
       HubStorage.subscribe(PH_KEY, () => _notifyListeners());
       // Keep the native storage event as a belt-and-suspenders fallback for
       // any direct localStorage writes that bypass HubStorage.
