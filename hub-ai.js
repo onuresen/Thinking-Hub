@@ -388,6 +388,15 @@ add_kmqt_item — add an item to the KMQT board:
 create_schedule_event — add an event to Schedule:
   { "type":"create_schedule_event", "title":"event title", "eventType":"task|event|milestone", "start":"YYYY-MM-DD", "end":"YYYY-MM-DD (optional)", "projectId":"id (optional)", "notes":"optional" }
 
+create_meeting — schedule a meeting in Meeting Hub:
+  { "type":"create_meeting", "title":"meeting title", "date":"YYYY-MM-DD", "time":"HH:MM (optional)", "meetingType":"custom|standup|1on1|retro|planning|kickoff|review|decision|sync", "projectId":"id (optional)", "agenda":"optional" }
+
+create_assumption — log an assumption to track in Decision Hub's Assumptions:
+  { "type":"create_assumption", "statement":"the assumption", "why":"optional rationale", "decisionId":"id (optional)" }
+
+create_learning — add an item to the Reading & Learning log:
+  { "type":"create_learning", "title":"title", "itemType":"book|article|video|course", "url":"optional" }
+
 Tool values: "project-hub" | "decision-hub" | "risk-hub" | "goals-hub" | "meetings-hub" | "kmqt-board"
 
 Rules:

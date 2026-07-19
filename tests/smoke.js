@@ -66,9 +66,14 @@ function appFiles(ext) {
   // ── 1. sw.js PRECACHE consistency ──
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   const precached = new Set([...sw.matchAll(/'\.\/([^']+)'/g)].map((m) => m[1]));
+  const stylesDir = path.join(ROOT, 'styles');
+  const styleFiles = fs.existsSync(stylesDir)
+    ? fs.readdirSync(stylesDir).filter((f) => f.endsWith('.css')).map((f) => 'styles/' + f)
+    : [];
   const mustCache = [
     ...appFiles('.html'),
     ...appFiles('.js').filter((f) => f !== 'sw.js'),
+    ...styleFiles,
     'theme.css', 'manifest.json', 'favicon.svg',
   ];
   const missing = mustCache.filter((f) => !precached.has(f));

@@ -101,7 +101,11 @@ window.HubStorage = (() => {
     });
   }
 
-  // Clean up any Supabase credentials left over from previous sessions
+  // STANDING DECISION (P84): Thinking Hub is local-only — no cloud sync, ever.
+  // The app holds confidential work data; any cloud persistence would require a
+  // company security review and create breach surface for zero necessary benefit.
+  // Supabase sync existed once and was deliberately removed. Do not re-add cloud
+  // storage of any kind. This block clears any credentials left from that era.
   try {
     localStorage.removeItem('hub-cloud-config-v1');
     localStorage.removeItem('hub-cloud-credentials-v1');

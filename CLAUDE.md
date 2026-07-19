@@ -4,14 +4,17 @@
 Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HTML/CSS/JS loaded directly in browser. Standalone tool pages share one shell (`index.html`) via iframe + postMessage.
 
 ## Architecture in one sentence
-`index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage + optional Supabase sync).
+`index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage — **local-only by standing decision, see below**).
+
+## ⛔ Standing decision: NO cloud sync (P84)
+The app holds **confidential work data**. Cloud persistence of any kind (Supabase, Firebase, any third-party backend) would require a company security review and creates breach surface for no acceptable benefit. Supabase sync was built once and **deliberately removed** by the user. Do not propose or re-add cloud storage, telemetry, or any feature that sends user data to a server. The only network calls the app may make: Google Fonts, the Anthropic API (user-supplied key, explicit per-use actions), and favicon fetches. Durability is handled locally: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`).
 
 ## File map
 | File | Role |
 |------|------|
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
-| `hub-storage.js` | Storage adapter: `get/set/subscribe` + optional Supabase. Must load first. |
+| `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
@@ -23,7 +26,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
 | `hub-ai.js` | AI Assistant module: `HubAI.capture/chat/testKey/getKey/saveKey/isConfigured` — calls Claude Haiku API. Self-contained (reads `hub-settings-v1` directly), so any tool can load it — currently `index.html` and `focus-hub.html` |
-| `supabase-schema.sql` | Cloud DB schema |
+| `hub-snapshots.js` | IndexedDB rolling snapshots: `HubSnapshots.init/take/list/restore` — daily auto-snapshot of all localStorage, point-in-time restore (P84). Loaded in `index.html` only. |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
 | `idea-swiper.html` | Rapid idea triage (swipe) |
@@ -61,8 +64,9 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 | `manifest.json` | PWA manifest — installable app metadata + icons (P80) |
 | `sw.js` | Service worker — precaches all app assets, stale-while-revalidate offline support (P80). ⚠ New app files must be added to its `PRECACHE` list. |
 | `vendor/` | Self-hosted pinned libraries: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1 (P80 — no CDN dependency) |
+| `styles/` | Extracted tool stylesheets (P85 B1) — the inline `<style>` blocks of the 5 largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) moved out for browser caching. Each is `<link>`ed right after `theme.css` (cascade order preserved). ⚠ New files here must be added to `sw.js` PRECACHE. |
 | `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
-| `tests/` | Dev-only smoke suite (Node + Playwright; the app itself stays no-build). `node smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). Run by CI on every PR (`.github/workflows/smoke.yml`) |
+| `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
 `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (index.html + any tool with a manual AI feature, e.g. `focus-hub.html`)
@@ -85,7 +89,7 @@ Both dark (default) and light (`[data-theme="light"]`) are fully defined. Both m
 When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutorial.js), use CSS vars — not hardcoded hex. CSS vars resolve correctly in injected stylesheets.
 
 ## localStorage keys (source of truth)
-`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57), `hub-last-backup-v1` (ephemeral — last-full-backup + nudge timestamps, P80; excluded from backup/sync), `capture-hub-v1` (Capture Hub inbox), `people-hub-v1` (People Hub roster/org tree), `machi-milestones-v1` (ephemeral — Machi milestone dedupe/baseline state; deliberately excluded from backup/sync per Codex P81C decision), `rb-migration-done-v1` / `rb-reacted-v1` (ephemeral — Reflection Board migration flag + reaction state), `ai-drawer-pos-v1` (ephemeral — AI drawer position)
+`hub-session-v1`, `project-hub-v1`, `schedule-v1`, `decision-hub-v1`, `kmqt_current_v2`, `canvas-v1`, `hub-links-v1`, `ideaswipe_history_v6`, `hub-cloud-config-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `focus-hub-v1`, `log-hub-v1`, `retro-hub-v1`, `assumptions-hub-v1`, `review-hub-v1`, `matrix-hub-v1`, `meetings-hub-v1`, `goals-hub-v1`, `learning-hub-v1`, `stakeholder-hub-v1`, `risk-hub-v1`, `argument-hub-v1`, `scrum-hub-v1` ⚠ orphaned (tool deleted P50, data retained), `hub-activity-v1`, `hub-settings-v1`, `tool-portfolio-v1`, `reflection-hub-v1`, `hub-warroom-v1` ⚠ orphaned (War Room deleted P50, data retained), `hub-resurface-v1` (ephemeral — Resurface dismiss-state, P51; excluded from backup/sync like other UI-state keys), `hub-tags-v1` (central tag/topic registry, P57), `hub-last-backup-v1` (ephemeral — last-full-backup + nudge timestamps, P80; excluded from backup/sync), `capture-hub-v1` (Capture Hub inbox), `people-hub-v1` (People Hub roster/org tree), `machi-milestones-v1` (ephemeral — Machi milestone dedupe/baseline state; deliberately excluded from backup/sync per Codex P81C decision), `rb-migration-done-v1` / `rb-reacted-v1` (ephemeral — Reflection Board migration flag + reaction state), `ai-drawer-pos-v1` (ephemeral — AI drawer position), `hub-briefing-v1` (ephemeral — cached daily AI morning briefing `{date, text}`, P86; excluded from backup/sync)
 
 ## External dependencies
 | Lib | Used in | Version |
@@ -93,9 +97,9 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 | Google Fonts (Syne, DM Sans, JetBrains Mono) | All HTML files | latest (runtime-cached by `sw.js` for offline) |
 | vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
 | html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
-| @supabase/supabase-js | hub-storage.js (dynamic) | **@2** |
 
 ## What NOT to do
+- **Do not add cloud sync or any server-side persistence** — standing P84 decision (confidential work data); see the ⛔ section at the top
 - Do not add new color hex values — extend `theme.css` tokens instead
 - Do not use `var(--font-m)` — it doesn't exist, use `var(--font-mono)`
 - Do not use `color-mix()` without a fallback property above it
@@ -104,7 +108,10 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 - Do not use `var(--font-b)` or `var(--font-d)` (undefined aliases) — use `var(--font-body)` / `var(--font-display)`
 
 ## Shared UI primitives (already in theme.css — reuse, don't duplicate)
-`.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`
+`.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`, `.ai-badge`
+
+## ⚠ AI feature marker convention (P86)
+**Every control that calls the Anthropic API (consumes the user's key + tokens) MUST carry the `.ai-badge` marker** — a small coral `✦ AI` pill (theme.css, uses `--accent2`) with `title="Uses your Anthropic API key · consumes tokens"`. This is a standing user-requested convention so API/token cost is never a surprise. Current AI surfaces all carry it: the shell AI drawer (`index.html` panel header), the Today "✦ Briefing" card (`index.html`), Journal Hub "✦ Draft with AI", Focus Hub "✦ Energy Insights". Any NEW AI-triggering control must add the badge next to its trigger.
 
 ## Known duplication (accepted, don't add more)
 - `_esc(s)` now lives in `hub-utils.js` (`HubUtils.esc`); `hub-links.js` and `hub-search.js` fall back to an inline copy if `HubUtils` is not loaded — intentional resilience
@@ -1401,6 +1408,84 @@ Final group of the world-class-platform roadmap (A: PWA/offline, B: tests/CI/doc
 **Verified** (14 Group-D Playwright checks + full 31-page mobile re-audit + smoke suite, all passing): BFS returns the exact t1→t2→d1 chain on a seeded graph and `null` for a disconnected island; path mode arms/clears correctly; the panel shows "SHORTEST PATH" with start/1 hop/2 hops rows; mid-path node border verified accent at width 3; the two-click completion flow works through the real selectNode path; all five previously-overflowing pages measure +0px at 390px and the stacked reflection-hub layout was visually confirmed.
 
 **Files:** `graph-hub.html`, `reflection-hub.html`, `stakeholder-hub.html`, `assumptions-hub.html`, `retro-hub.html`, `review-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 84 — Local-first durability: no-cloud decision + snapshots + health check~~ ✓ Done `[group: local-durability]`
+First group of the phase-2 roadmap, reshaped after the user ruled out cloud sync entirely (confidential work data; company approval would be required; Supabase was built once before and deliberately removed). Items 1–3 of "revised Group A" shipped. Item 4 (two-way sync file via a user-picked folder) was **declined** — see decision below.
+
+**Decision (item 4 — multi-device folder sync): NOT building it.** **Why:** the user works almost entirely on **one computer** and moves data via the existing Full Backup file (carried to/from esen-vault through Claude — export to update the vault, import to update the app). That single-machine + backup-file workflow is fully served by the existing export/import + AI-context flows; folder-sync solves a multi-device problem the user doesn't have, and File System Access API is desktop-Chromium-only anyway (wouldn't include the phone). **Alternative rejected:** per-key last-write-wins sync file — sound, but no real use case to justify the added surface. **Revisit when:** the user starts regularly editing on a second computer. **Confidence:** high (explicit user call).
+
+- **No-cloud standing decision** — recorded as the ⛔ section at the top of this file + "What NOT to do" entry, in `hub-storage.js`'s credential-cleanup comment, and in `README.md` (rewritten from "optional Supabase sync" marketing to an explicit local-only privacy stance). Stale Supabase references cleaned from `README.md`, `hub-data.js`, `sw.js`, the file map (`supabase-schema.sql` was already deleted from disk but still listed), and the external-deps table.
+- **Rolling local snapshots (`hub-snapshots.js`, new)** — `HubSnapshots.init/take/list/restore` over IndexedDB (`thinking-hub-snapshots` DB). On shell load (deferred 2.5s) takes one auto-snapshot per day of **ALL localStorage keys verbatim** (raw strings — no key list to drift, the P81 lesson) and prunes: autos kept 14 days, then Mondays-only to 60 days; manual/safety snapshots keep newest 10. `restore(id)` first takes a `pre-restore` safety snapshot, then overwrites every key and removes keys that didn't exist at snapshot time (true point-in-time semantics), caller reloads. ⚙ Data & Backup gained a "🕒 Local Snapshots" section: list (date/size/keys), "📸 Take snapshot now", per-row Restore with a plain-language confirm.
+- **Data health check (⚙ Data pane)** — "🩺 Health Check" runs three scans: (1) unparseable JSON in any stored key (points at snapshot restore as the fix); (2) dangling cross-tool links via `HubLinks.resolveItems()` — **only for the 18 tools with resolver branches** (`HEALTH_RESOLVABLE_TOOLS`), with a project-hub special case accepting milestone ids (the resolver only lists projects+tasks), so links to unresolvable tools are never falsely flagged; (3) unrecognized localStorage keys (informational only). "Repair" removes dangling links after auto-taking a `pre-repair` snapshot.
+
+**Key decisions:**
+- **Decision:** Local-only is a permanent architectural stance, not a temporary gap — recorded in four places (CLAUDE.md ⛔ section, What-NOT-to-do, hub-storage.js comment, README). **Why:** confidential work data + the company-approval requirement make cloud sync a liability, and the user already built-then-removed Supabase once; without a loud record, future sessions would keep re-proposing it (this session did exactly that). **Confidence:** high. **Revisit when:** the user gets explicit company clearance and asks — never proactively.
+- **Decision:** Snapshot ALL localStorage keys verbatim rather than a curated list. **Why:** the P81 audit proved curated key lists silently drift; a full capture can't miss a new tool's data. Ephemeral keys ride along harmlessly (a few hundred bytes). **Confidence:** high.
+- **Decision:** `restore()` also deletes keys created after the snapshot (true point-in-time), rather than merge-overwriting only. **Why:** a half-restore that leaves newer keys produces a state that never existed — worse for debugging corruption than a clean rollback; the automatic `pre-restore` snapshot makes the trade safe. **Confidence:** med.
+- **Decision:** Health check judges dangling links only for tools with `resolveItems` branches, and treats "resolver returned empty" as evidence (tool data really is empty → link really is dangling) while unresolvable tools are skipped entirely. **Why:** `resolveItems()` returns `[]` for both "no data" and "unsupported tool" — an explicit supported-tool list is the only way to distinguish them and never delete a valid link. **Confidence:** high.
+- **Decision:** Malformed-JSON findings are report-only (no auto-fix). **Why:** the tool can't invent the user's data back; the honest remedy is restoring a snapshot, which the finding text points at. **Confidence:** high.
+
+**Verified** (16 Playwright checks + full smoke suite, all passing): auto snapshot taken on load; manual snapshot → mutate → restore round-trip reverts the mutation, removes a key added after the snapshot, and leaves a `pre-restore` snapshot; retention pruning (>14d non-Monday removed, >14d Monday kept, >60d removed, verified by injecting fake old records directly into IDB); health check flags a seeded malformed key, exactly one dangling link (naming it), skips an unresolvable-tool endpoint, reports an unknown key; repair removes only the dangling link and takes a `pre-repair` snapshot; the snapshot list UI renders.
+
+**Files:** `hub-snapshots.js` (new), `index.html`, `hub-storage.js`, `hub-data.js`, `sw.js`, `README.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 85 — Group B: Speed & capture flow~~ ✓ Done `[group: speed-capture]`
+Phase-2 Group B. Implemented on Opus with careful per-item verification (the user flagged B1 as risky and switched to Opus specifically for it).
+
+- **B1 — Extract heavy inline CSS to `styles/`** — moved the inline `<style>` blocks of the 5 largest tools (`project-hub` 52 KB, `idea-swiper` 46 KB, `index` 45 KB, `schedule` 25 KB, `meetings-hub` 22 KB) into `styles/<name>.css`, each `<link>`ed at the exact position of the old block (immediately after the `theme.css` link — cascade order preserved). project-hub and idea-swiper each had TWO back-to-back `<style>` blocks (tiny starter + big one); both were concatenated in order into one file. Now browser-cached across tool re-opens instead of re-parsed from HTML every switch. `sw.js` PRECACHE + `tests/smoke.js` `mustCache` extended to cover `styles/*.css` so CI enforces offline coverage (PRECACHE now 60 entries).
+- **B2 — Cmd+K quick actions (`hub-search.js`)** — typing `task: …`, `capture: …`, `decide: …`, or bare `focus` shows a distinct accent action row above search results; Enter executes. `task:`/`capture:` push to the `capture-hub-v1` inbox (exact Capture Hub item shape, `task:` sets `cat:'task'`); `decide:` creates a `dh-` decision record and navigates to Decision Hub; `focus` opens Focus Timer. Modeled as a synthetic first entry in `_results` so arrow-nav and index math are unchanged; plain queries (e.g. "task" without a colon) search exactly as before.
+- **B3 — PWA share-target + app shortcuts (`manifest.json`, `capture-hub.html`)** — manifest gains a `share_target` (GET → `capture-hub.html` with title/text/url params) and 3 `shortcuts` (Capture / Journal / Today). `capture-hub.html`'s `_ingestShareParams()` runs on load: if `title`/`text`/`url` are present it combines them (`title — text url`), pushes an inbox item, and `history.replaceState`s the query away so a refresh doesn't re-add. The shell's `?v=<ts>` cache-buster is correctly ignored (only fires on real share fields).
+
+**Key decisions:**
+- **Decision:** Concatenate the two adjacent `<style>` blocks (starter + main) into ONE `styles/*.css` rather than two files. **Why:** they're back-to-back with only whitespace between, so concatenation in source order preserves cascade exactly; one file per tool is cleaner than a tiny orphan file. A guard in the extraction script aborted if anything but whitespace sat between blocks. **Confidence:** high.
+- **Decision:** Verify B1 as visually lossless via before/after full-page screenshots at all 3 themes (animations disabled for determinism) + computed-style spot checks, not just "smoke passes". **Why:** the risk of CSS extraction is silent visual regression, which page-load tests don't catch. Result: pixel-identical except 8–9 px of glyph antialiasing on one logo character (a load-timing artifact of inline→external, confirmed harmless by a 4× magnified crop). **Confidence:** high.
+- **Decision:** Quick actions are a synthetic entry prepended to `_results`, not a separate rendering path. **Why:** keeps the existing arrow-key nav, `_selectedIndex` math, and Enter handling working with zero changes; the action just carries an `_isAction` flag that `selectItem` branches on. **Confidence:** high.
+- **Decision:** `task:`/`capture:` route to the Capture inbox, NOT directly to a project task. **Why:** routing to a real project needs a picker; the palette should stay a fast keyboard capture surface — Capture Hub already owns routing. **Confidence:** high.
+
+**Verified** (before/after visual harness on B1: 15 page/theme combos pixel-compared; B2: 14 Playwright checks driving the real palette; B3: 9 Playwright checks with isolated contexts; full smoke suite green after each). 
+
+**Files:** `styles/` (new, 5 files), `project-hub.html`, `idea-swiper.html`, `index.html`, `schedule.html`, `meetings-hub.html`, `sw.js`, `tests/smoke.js`, `hub-search.js`, `manifest.json`, `capture-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 86 — Group C: AI deepening + AI-feature markers~~ ✓ Done `[group: platform-ai-2]`
+Phase-2 Group C, plus a user-requested tweak: **mark every AI-key-consuming feature** so token cost is never a surprise.
+
+- **AI feature marker (`theme.css` + all AI surfaces)** — new shared `.ai-badge` primitive (coral `--accent2` pill reading `✦ AI`, `cursor:help`, tooltip "Uses your Anthropic API key · consumes tokens"). Applied to every control that calls the API: the shell AI drawer panel header, the new Today Briefing card, Journal Hub "Draft with AI", Focus Hub "Energy Insights". Recorded as a standing convention (see "⚠ AI feature marker convention" near the top) so any future AI control must carry it.
+- **C1 — Broaden AI action vocabulary (`hub-ai.js` + `index.html`)** — the AI drawer's `act()` can now propose three more action types: `create_meeting` (→ `meetings-hub-v1`, minimal shape; meetings-hub's `normalizeMeeting` backfills series fields on next open, so `recurring`/`occurrenceDates` are NOT set prematurely), `create_assumption` (→ `assumptions-hub-v1`), `create_learning` (→ `learning-hub-v1`). Added to all four places: the `act()` system-prompt spec, `_executeAction`'s branch, and the icon/label maps. Each write shape is copied verbatim from the target tool's own creation function.
+- **C2 — Morning briefing card on Today (`index.html`)** — a `✦ Briefing` `.stat-card` at the top of `buildTodayView()`'s grid (right after Resurface), carrying the `.ai-badge`. Manual-trigger only (no auto token spend — the established P45/P47/P82 pattern): "✦ Brief me" builds the prompt from `HubAI.getRichContext().lines` + a briefing system prompt and calls `HubAI.chat()`. Result cached per-day in the ephemeral `hub-briefing-v1` `{date, text}`; `buildTodayView()` renders cached text (and a "↻ Refresh" button) when `date === today`, else the empty state. No key → hint toast, zero tokens.
+
+**Key decisions:**
+- **Decision:** One shared `.ai-badge` in theme.css, applied to every AI trigger, rather than ad-hoc per-tool marks. **Why:** the user's ask is that AI/token cost be *recognizable at a glance everywhere* — a single coral primitive with a consistent tooltip is instantly learnable and reaches all tools via theme.css. Coral `--accent2` (not the lime `--accent`) makes it read as a distinct "this costs something" signal, not a normal action. **Confidence:** high.
+- **Decision:** Briefing lives inside the Today grid (shows only when the grid renders), not as an always-present standalone strip. **Why:** it belongs with the other Today cards and the manual button means no cost until asked; on a truly all-clear day there's nothing to brief anyway. **Confidence:** med. **Revisit when:** if users want a briefing even on empty days, render the grid whenever a key is configured.
+- **Decision:** `create_meeting` writes a minimal (non-recurring) meeting and lets `meetings-hub`'s `normalizeMeeting` backfill series fields on next open. **Why:** avoids duplicating series plumbing in the shell and matches how manual meeting creation already works. **Confidence:** high.
+- **Decision:** `hub-briefing-v1` is ephemeral (excluded from backup/sync, added to health-check KNOWN). **Why:** a cached daily briefing regenerates trivially and shouldn't resurrect stale on a backup restore — same class as `hub-resurface-v1`/`hub-last-backup-v1`. **Confidence:** high.
+
+**Verified** (26 Playwright checks + full smoke suite, all passing): all three new action executors write the exact expected shapes and the proposed-action cards render their labels; each created record renders in its target tool (meetings/assumptions/learning) with zero console errors; the briefing card shows "Brief me" → calls chat once → caches with today's date → renders the text → a reload shows the cached text with NO further API call → a stale (yesterday) cache returns the empty state → no-key shows the hint toast; the `.ai-badge` with the token tooltip is present on focus-hub and journal-hub. Visual confirmation of the coral badge + briefing card on the Today view.
+
+**Files:** `theme.css`, `hub-ai.js`, `index.html`, `focus-hub.html`, `journal-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 87 — Group D: Fit & finish~~ ✓ Done `[group: platform-finish]`
+Final phase-2 group. Three independent items.
+
+- **D1 — Real Fraunces 800** — headings using `font-weight:800` with `--font-display` previously rendered browser-synthesized faux-bold (real 800 was never in any fonts URL — P76 finding). Appended `;9..144,800` to the canonical Google Fonts URL across 30 files via a Node script (literal `String.replace` + per-file match-count guard — never regex-replace, per the file-safety rule); `capture-hub.html`'s richer italic/opsz URL got roman `0,9..144,800` added by hand. Validated Google actually serves the Fraunces 800 face for the new URL (400/500/600/700/800 all present). Deliberate visual change — headings now draw true 800. (Did NOT self-host/subset fonts — Google serves unicode-range subsets and `sw.js` runtime-caches them; out of scope.)
+- **D2 — Accessibility pass** — `theme.css` gained a global `@media (prefers-reduced-motion: reduce)` block (near-instant animations/transitions, caps infinite loops like the load-bar, `scroll-behavior:auto`) — reaches every tool + shell via theme.css. `hub-utils.js` gained `HubUtils.trapFocus(modalEl)` (cycles Tab/Shift+Tab within a modal's focusables, returns an untrap fn), applied to `index.html`'s `#data-modal` and `hub-links.js`'s picker modal. `index.html`: active nav-item gets `aria-current="page"`, AI drawer panel gets `role="dialog" aria-label`. (The `#data-modal` role/aria-modal and icon-button aria-labels already existed.)
+- **D3 — CI interaction flows (`tests/flows.js`, new)** — three end-to-end behavior flows beyond smoke's "pages load": (1) **task lifecycle** — complete a task via Project Hub's real `.task-check`/`toggleTask`, and the shell Today view reacts to the storage change; (2) **export/import round-trip** — Full Backup export → wipe → `handleImportFile` restores every key byte-identically; (3) **link + graph** — a `hub-links` link becomes graph nodes + an edge and `computeShortestPath` connects them 1-hop. Wired into `.github/workflows/smoke.yml` as a step after the smoke suite; `tests/package.json` `test` script runs both.
+
+**Key decisions:**
+- **Decision:** Reduced-motion uses one universal `*{animation-duration:.001ms;animation-iteration-count:1;transition-duration:.001ms}` rule, not per-animation disables. **Why:** it's the industry-standard reduced-motion reset — catches every animation/transition/infinite-loop app-wide (including tool-local ones) with no enumeration to keep in sync. **Confidence:** high.
+- **Decision:** Flow 1 drives Project Hub's real task toggle (`.task-check` → `toggleTask`) for the tool side, but asserts the shell's reactivity at the storage level (mutate + `HubStorage.set` notify → re-check Today), rather than fighting the project-creation modal UI. **Why:** the outline's explicit guidance — behavior coverage, not UI pixel fidelity; the create-project modal is selector-archaeology, while `toggleTask` + storage reactivity are the load-bearing behaviors. **Confidence:** high.
+- **Decision:** Flow 2 stubs `location.reload` to a no-op so the round-trip can be asserted in-page after `handleImportFile`'s FileReader completes. **Why:** the real handler reloads 1s after import; the test needs to read restored keys before that. **Confidence:** high.
+
+**Verified** (D1: URL correctness validated against Google's live CSS + smoke; D2: 12 Playwright checks — reduced-motion duration/iteration, Tab + Shift+Tab wrap, aria-current, modal close/restore; D3: 11 flow checks, all green on first run; full smoke suite green throughout).
+
+**Files:** 30 tool HTML files (fonts URL), `capture-hub.html`, `theme.css`, `hub-utils.js`, `index.html`, `hub-links.js`, `tests/flows.js` (new), `tests/package.json`, `.github/workflows/smoke.yml`, `CLAUDE.md`
 
 ---
 

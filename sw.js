@@ -8,7 +8,7 @@
  *    Matching uses ignoreSearch because the shell loads tools with a
  *    ?v=<timestamp> cache-buster (index.html APP_LOAD_TS).
  *  - Google Fonts (googleapis/gstatic): cache-first — fonts are immutable.
- *  - Every other origin (Supabase, Anthropic API, favicon services…):
+ *  - Every other origin (Anthropic API, favicon services…):
  *    untouched — passed straight to the network, never cached.
  *
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
@@ -22,8 +22,15 @@ const PRECACHE = [
   './manifest.json',
   './favicon.svg',
   './theme.css',
+  // extracted tool stylesheets (P85 — inline <style> moved out for caching)
+  './styles/project-hub.css',
+  './styles/idea-swiper.css',
+  './styles/index.css',
+  './styles/schedule.css',
+  './styles/meetings-hub.css',
   // shared JS modules
   './hub-storage.js',
+  './hub-snapshots.js',
   './hub-utils.js',
   './hub-starter-data.js',
   './hub-obsidian.js',

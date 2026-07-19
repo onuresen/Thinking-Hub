@@ -13,7 +13,7 @@
   <script src="hub-ai.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -363,9 +363,12 @@
             <div class="rh-col-title capture-color">◎ Capture</div>
             <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
           </div>
-          <button class="btn btn-ghost" id="rh-ai-draft-btn" onclick="rhAiDraft()"
-            title="Draft this review from the week's real activity (fills only empty fields)"
-            style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0">✦ Draft with AI</button>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+            <button class="btn btn-ghost" id="rh-ai-draft-btn" onclick="rhAiDraft()"
+              title="Draft this review from the week's real activity (fills only empty fields) — uses your API key"
+              style="font-size:11px;padding:4px 10px;white-space:nowrap">✦ Draft with AI</button>
+          </div>
         </div>
         <div class="rh-col-body">
           <div class="rh-capture-section">

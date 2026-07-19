@@ -8,7 +8,7 @@
 ![No Build Step](https://img.shields.io/badge/build-none-lightgrey)
 ![Tools](https://img.shields.io/badge/tools-20%2B-blueviolet)
 ![Obsidian](https://img.shields.io/badge/Obsidian-integrated-483699)
-![Supabase](https://img.shields.io/badge/Supabase-optional_sync-3ecf8e)
+![Local First](https://img.shields.io/badge/data-100%25_local-3ecf8e)
 
 *Think clearly, plan deliberately, decide confidently — 20+ tools in one shell, no build step required.*
 
@@ -18,13 +18,13 @@
 
 ## What is Thinking Hub?
 
-Thinking Hub is a multi-tool personal productivity suite that runs entirely in the browser — no Node.js, no build step, no framework. A single shell (`index.html`) loads individual tools inside an `<iframe>` and they all share state through `HubStorage` (localStorage + optional Supabase cloud sync).
+Thinking Hub is a multi-tool personal productivity suite that runs entirely in the browser — no Node.js, no build step, no framework. A single shell (`index.html`) loads individual tools inside an `<iframe>` and they all share state through `HubStorage` (localStorage — **all data stays on your machine**).
 
 > **"One shell. All the tools you actually need."**
 
 It covers the full arc of knowledge work: capturing raw ideas, structuring projects, making decisions, running retrospectives, tracking OKRs, managing risks, and logging daily reflections. All tools talk to each other through a cross-linking system and a global Cmd+K search.
 
-Works offline out of the box. Optional cloud sync via Supabase when you want your data on multiple devices.
+Works fully offline (installable PWA). **Deliberately local-only:** your data never leaves your machine — no cloud database, no third-party sync, no account. Safe for confidential work content by construction. Move data between machines with the Full Backup export/import in ⚙️ Data & Backup.
 
 ---
 
@@ -92,7 +92,7 @@ index.html  (shell — sidebar, home dashboard, iframe router, cloud panel)
 <iframe id="app-frame">  (one tool loaded at a time)
     │
     ▼
-HubStorage  (localStorage primary / optional Supabase cloud sync)
+HubStorage  (localStorage — local-only by design)
     │
 postMessage ◄────────────────────────────────────────────────────► hub-links.js
                               cross-tool linking, picker modal, badges
@@ -102,7 +102,7 @@ postMessage ◄─────────────────────�
 
 | Module | Role |
 |--------|------|
-| `hub-storage.js` | Storage adapter — `get / set / subscribe` + Supabase sync |
+| `hub-storage.js` | Storage adapter — `get / set / subscribe`, quota guard |
 | `hub-utils.js` | Shared utilities (`HubUtils.esc` for safe HTML escaping) |
 | `hub-obsidian.js` | Obsidian vault reader — File System Access API, index notes, autocomplete |
 | `hub-links.js` | Cross-tool linking via postMessage, picker modal, badges |
@@ -135,8 +135,8 @@ Three export scopes from the ⚙️ Data & Backup modal:
 | **AI Context** | 13 high-signal keys (curated, noise-stripped) | Read-only |
 | **Current Tool** | Active tool's key(s) only | Read-only |
 
-### Optional cloud sync
-Connect a Supabase project in the ⚙️ Cloud Settings panel. All `HubStorage` reads and writes transparently sync to your Supabase database without any code changes in individual tools. Schema: [`supabase-schema.sql`](supabase-schema.sql).
+### Local-only data (a feature, not a gap)
+All data lives in your browser's localStorage, with automatic daily snapshots in IndexedDB for point-in-time restore. Nothing is ever sent to a server. This is a deliberate architectural decision — it makes the app safe for confidential work data with zero security review surface. Cloud sync was prototyped once and intentionally removed; do not re-add it.
 
 ### Framework-grounded design
 Each tool is mapped to one or more established frameworks:
@@ -182,8 +182,7 @@ python -m http.server 5500
 **First run**
 1. The onboarding tour starts automatically on first open.
 2. Create your first project in **Project Hub** to kick off the workflow tour (covers Schedule sync, Idea Swiper pipeline, Decision Hub, and Graph + Cmd+K).
-3. Optional: configure Supabase cloud sync via ⚙️ → Cloud Settings.
-4. Optional: pick your Obsidian vault folder via ⚙️ → Obsidian Vault to enable note autocomplete.
+3. Optional: pick your Obsidian vault folder via ⚙️ → Obsidian Vault to enable note autocomplete.
 
 <details>
 <summary>Keyboard shortcuts</summary>
@@ -201,9 +200,9 @@ python -m http.server 5500
 ## Directory Structure
 
 ```
-index.html              # Shell — sidebar, iframe router, cloud panel, onboarding
+index.html              # Shell — sidebar, iframe router, onboarding
 theme.css               # Global CSS token source — dark/light, all variables
-hub-storage.js          # Storage adapter (localStorage + Supabase)
+hub-storage.js          # Storage adapter (localStorage, quota guard)
 hub-utils.js            # Shared utilities (HubUtils.esc)
 hub-obsidian.js         # Obsidian vault reader (File System Access API)
 hub-links.js            # Cross-tool linking (postMessage + picker modal)
@@ -211,7 +210,6 @@ hub-search.js           # Global Cmd+K search
 hub-toast.js            # Toast notifications
 hub-bootstrap.js        # Init coordinator
 hub-data.js             # Read API for project/task/member data
-supabase-schema.sql     # Cloud DB schema for optional Supabase sync
 
 project-hub.html        # Project + task tracking
 schedule.html           # Calendar / timeline

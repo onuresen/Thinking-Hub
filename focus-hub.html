@@ -12,7 +12,7 @@
   <script src="hub-ai.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -219,7 +219,8 @@
     <div class="insights-wrap">
       <div class="insights-header">
         <span class="insights-label">✦ Energy Insights</span>
-        <button class="insights-refresh-btn" id="insights-refresh" onclick="generateInsights()" title="Find patterns between focus sessions and mood">↻</button>
+        <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+        <button class="insights-refresh-btn" id="insights-refresh" onclick="generateInsights()" title="Find patterns between focus sessions and mood — uses your API key" style="margin-left:auto">↻</button>
       </div>
       <div id="insights-content"></div>
     </div>

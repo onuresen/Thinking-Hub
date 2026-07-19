@@ -692,10 +692,14 @@ window.HubLinks = (() => {
 
     document.getElementById('hl-btn-confirm').disabled = true;
     document.getElementById('hl-selected-hint').textContent = 'Select an item above';
-    document.getElementById('hl-modal-overlay').classList.add('open');
+    const overlay = document.getElementById('hl-modal-overlay');
+    overlay.classList.add('open');
+    if (_hlUntrap) _hlUntrap();
+    _hlUntrap = (typeof HubUtils !== 'undefined' && HubUtils.trapFocus) ? HubUtils.trapFocus(overlay) : null;
 
     if (otherTools.length > 0) _selectTab(otherTools[0]);
   }
+  let _hlUntrap = null;
 
   function _selectTab(toolId) {
     _selectedTarget = null;
@@ -757,6 +761,7 @@ window.HubLinks = (() => {
   function _closePickerModal() {
     const overlay = document.getElementById('hl-modal-overlay');
     if (overlay) overlay.classList.remove('open');
+    if (_hlUntrap) { _hlUntrap(); _hlUntrap = null; }
     _modalCtx = null;
     _selectedTarget = null;
   }
