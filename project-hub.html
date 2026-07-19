@@ -87,11 +87,8 @@
       </div>
       <button class="btn btn-ghost" onclick="showAddProject()">+ Project</button>
       <button class="btn btn-primary" id="main-action-btn" onclick="handleMainAction()">+ Task</button>
-      <button class="btn btn-ghost topbar-mob-hide" onclick="exportJSON()" title="Download a JSON backup">Export</button>
-      <button class="btn btn-ghost topbar-mob-hide" onclick="importJSON()" title="Restore from a JSON backup">Import</button>
       <button class="btn btn-reset topbar-mob-hide" onclick="resetToDefault()"
         title="Clear local data and restore defaults">Reset</button>
-      <input type="file" id="import-file" accept="application/json" style="display:none" />
     </div>
     <div class="content" id="main-content"></div>
   </div>
@@ -488,112 +485,6 @@
       toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
     }
 
-
-
-    // ─── BACKUP / RESTORE (JSON) ─────────────────────────────────────────────────
-    // Exports/imports the same persisted shape as localStorage: { members, projects }
-    // NOTE: This is per-browser storage. Export gives you portability/backups.
-
-    function exportJSON() {
-      try {
-        const payload = {
-          version: 1,
-          app: 'Project Hub',
-          storageKey: STORAGE_KEY,
-          exportedAt: new Date().toISOString(),
-          data: { members: state.members, projects: state.projects },
-        };
-
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `project-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
-        URL.revokeObjectURL(url);
-        showToast('Exported JSON backup');
-      } catch (e) {
-        console.warn('Export failed:', e);
-        showToast('Export failed');
-      }
-    }
-
-    function importJSON() {
-      const input = document.getElementById('import-file');
-      if (!input) { showToast('Import input not found'); return; }
-
-      input.value = ''; // allow importing same file twice
-      input.click();
-
-      input.onchange = async () => {
-        const file = input.files && input.files[0];
-        if (!file) return;
-
-        try {
-          const text = await file.text();
-          const parsed = JSON.parse(text);
-
-          // Accept either {data:{members,projects}} or raw {members,projects}
-          const incoming = parsed && parsed.data ? parsed.data : parsed;
-
-          if (!incoming || !Array.isArray(incoming.members) || !Array.isArray(incoming.projects)) {
-            showToast('Invalid JSON: missing members/projects');
-            return;
-          }
-
-          // Normalize (compatibility / defensive)
-          incoming.projects.forEach(p => {
-            p.goals = Array.isArray(p.goals) ? p.goals : [];
-            p.milestones = Array.isArray(p.milestones) ? p.milestones : [];
-            p.workstreams = Array.isArray(p.workstreams) ? p.workstreams : [];
-            if (!p.group) p.group = '';
-            p.tasks = Array.isArray(p.tasks) ? p.tasks : [];
-            p.tasks.forEach(t => {
-              if (!t.status) t.status = t.done ? 'done' : 'todo';
-              if (typeof t.done !== 'boolean') t.done = t.status === 'done';
-              if (!t.blockedReason) t.blockedReason = '';
-              if (!t.completedAt) t.completedAt = '';
-              if (!t.taskCode) t.taskCode = '';
-              if (!t.taskType) t.taskType = '';
-              if (!t.workstreamId) t.workstreamId = '';
-            });
-          });
-
-          const ok = confirm(
-            `Import will REPLACE your current local data.\n\n` +
-            `File: ${file.name}\nProjects: ${incoming.projects.length}\nMembers: ${incoming.members.length}\n\nContinue?`
-          );
-          if (!ok) return;
-
-          // Apply imported data
-          state.members = incoming.members;
-          state.projects = incoming.projects;
-
-          // Reset transient UI state
-          state.selectedProject = null;
-          state.overviewFilter = { members: [], status: 'all', search: '', sort: 'manual' };
-          state.allTasksFilter = { members: [], status: 'all', priority: 'all' };
-          state.currentTab = 'tasks';
-
-          // Close any open modals
-          document.querySelectorAll('.ui-modal-overlay.is-open').forEach(m => m.classList.remove('is-open'));
-
-          saveState();
-          renderSidebarUsers();
-          closePanel();
-          renderContent();
-
-          showToast('Imported JSON backup');
-        } catch (e) {
-          console.warn('Import failed:', e);
-          showToast('Import failed (invalid JSON)');
-        }
-      };
-    }
 
     function resetToDefault() {
       const ok = confirm(
