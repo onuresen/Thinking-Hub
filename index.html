@@ -899,28 +899,6 @@
         }
       } catch { }
 
-      // ── Open Questions (kmqt_current_v2) ──────────────────────────────────────
-      try {
-        const km = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
-        const questions = (km.columns && km.columns.Q) || [];
-        if (questions.length) {
-          const qLabel = (km.labels && km.labels.Q) || 'Question';
-          const shown = questions.slice(0, 3);
-          const rows = shown.map(q => `<div class="stat-item" data-tool="kmqt-board" data-item-id="${_esc(q.id || '')}">
-        <div class="stat-item-dot" style="background:var(--accent);opacity:.45"></div>
-        <div class="stat-item-text">${_esc(q.text || '')}</div>
-      </div>`).join('');
-          const kmAge = relativeAge(latestTimestamp(questions));
-          widgets.push({
-            id: 'kmqt-board', icon: '⊞', title: `${_esc(qLabel)}s`,
-            count: `${questions.length} open`,
-            body: rows,
-            more: questions.length > 3 ? `+${questions.length - 3} more` : '',
-            staleness: kmAge
-          });
-        }
-      } catch { }
-
       // ── Goals Hub (goals-hub-v1) ──────────────────────────────────────────────
       try {
         const gh = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
@@ -1995,13 +1973,13 @@
           },
           {
             element: '[data-app="idea-swiper"]',
-            title: '2 — Think: Idea Swiper → KMQT',
-            text: 'Dump every idea into Idea Swiper and swipe to sort (Like / Super / Nope). Strong ideas land in Project Hub. Messy ones go to the KMQT Board to be unpacked into Known facts, Questions, and next Tries.'
+            title: '2 — Think: Idea Swiper',
+            text: 'Dump every idea into Idea Swiper and swipe to sort (Like / Super / Nope). Strong ideas land in Project Hub; the rest you can capture and route from Capture Hub.'
           },
           {
             element: '[data-app="decision-hub"]',
             title: '3 — Decide: Decision Hub',
-            text: 'Log decisions with problem framing, option mapping, and stakeholder alignment votes. Link decisions to tasks and ideas — open questions can be sent straight to the KMQT Q-column.'
+            text: 'Log decisions with problem framing, option mapping, and stakeholder alignment votes. Link decisions to tasks and ideas, and track the assumptions behind each call.'
           },
           {
             element: '[data-app="graph-hub"]',
@@ -2032,7 +2010,7 @@
         {
           element: '[data-app="decision-hub"]',
           title: 'Log decisions, not just tasks',
-          text: 'When you face a real choice, log it in Decision Hub — frame the problem, map options, record the rationale. Open questions can be sent to KMQT for deeper thinking.'
+          text: 'When you face a real choice, log it in Decision Hub — frame the problem, map options, record the rationale, and calibrate your past calls over time.'
         },
         {
           element: '[data-app="graph-hub"]',
@@ -2295,7 +2273,7 @@
     const HEALTH_RESOLVABLE_TOOLS = [
       'project-hub', 'decision-hub', 'idea-swiper', 'canvas-hub', 'schedule',
       'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub',
-      'stakeholder-hub', 'kmqt-board', 'focus-hub', 'journal-hub',
+      'stakeholder-hub', 'focus-hub', 'journal-hub',
       'reflection-hub', 'argument-hub', 'tool-portfolio', 'tags-hub',
     ];
     let _healthDanglingIds = [];
@@ -2563,7 +2541,6 @@
       'project-hub.html': ['project-hub-v1'],
       'schedule.html': ['schedule-v1'],
       'idea-swiper.html': ['ideaswipe_history_v6'],
-      'kmqt-board.html': ['kmqt_current_v2'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
       'argument-hub.html': ['argument-hub-v1'],
@@ -2988,7 +2965,7 @@
         update_task_status: '✅', update_task_priority: '⬆', update_task_due: '📅', assign_task: '👤',
         create_project: '◈', create_task: '📋', create_milestone: '◆',
         create_risk: '⚠', create_decision: '⊕', create_goal: '◎',
-        add_kmqt_item: '⊞', create_schedule_event: '▦', add_checklist_item: '☐',
+        create_schedule_event: '▦', add_checklist_item: '☐',
         create_meeting: '▣', create_assumption: '◇', create_learning: '📖'
       };
       const actionLabels = {
@@ -2997,7 +2974,7 @@
         update_task_due: 'Set due date', assign_task: 'Assign task',
         create_project: 'New project', create_task: 'New task', create_milestone: 'New milestone',
         create_risk: 'New risk', create_decision: 'New decision', create_goal: 'New goal',
-        add_kmqt_item: 'Add to KMQT', create_schedule_event: 'Schedule event',
+        create_schedule_event: 'Schedule event',
         add_checklist_item: 'Add checklist item',
         create_meeting: 'New meeting', create_assumption: 'New assumption',
         create_learning: 'New learning item'
@@ -3035,9 +3012,6 @@
           desc = `"${HubUtils.esc(a.title)}"`;
         } else if (a.type === 'create_goal') {
           desc = `"${HubUtils.esc(a.title)}"${a.quarterName ? ' in ' + HubUtils.esc(a.quarterName) : ''}`;
-        } else if (a.type === 'add_kmqt_item') {
-          const colNames = { K: 'Known', M: 'MoyaMoya', Q: 'Question', T: 'Try' };
-          desc = `[${colNames[a.column] || a.column}] ${HubUtils.esc(a.text)}`;
         } else if (a.type === 'create_schedule_event') {
           desc = `"${HubUtils.esc(a.title)}" · ${a.start}`;
         } else if (a.type === 'create_meeting') {
@@ -3257,20 +3231,6 @@
             keyResults: [], createdAt: new Date().toISOString()
           });
           localStorage.setItem('goals-hub-v1', JSON.stringify(raw));
-          return true;
-        }
-
-        if (action.type === 'add_kmqt_item') {
-          const raw = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
-          raw.columns = raw.columns || { K: [], M: [], Q: [], T: [] };
-          const col = action.column;
-          if (!['K', 'M', 'Q', 'T'].includes(col)) return false;
-          raw.columns[col] = raw.columns[col] || [];
-          raw.columns[col].push({
-            id: 'kmqt-' + Date.now(), text: action.text,
-            tags: [], createdAt: new Date().toISOString()
-          });
-          localStorage.setItem('kmqt_current_v2', JSON.stringify(raw));
           return true;
         }
 

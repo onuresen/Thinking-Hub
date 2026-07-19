@@ -26,7 +26,6 @@ window.HubLinks = (() => {
     'project-hub': 'Project Hub',
     'schedule': 'Schedule',
     'idea-swiper': 'Idea Swiper',
-    'kmqt-board': 'KMQT Board',
     'decision-hub': 'Decision Hub',
     'meetings-hub': 'Meetings',
     'goals-hub': 'Goals',
@@ -140,19 +139,6 @@ window.HubLinks = (() => {
           label: i.title || '(untitled)',
           subtitle: i.projectRef || i.type || 'item'
         }));
-      }
-
-      if (toolId === 'kmqt-board') {
-        const data = HubStorage.get('kmqt_current_v2');
-        if (!data) return [];
-        const items = [];
-        for (const col of ['K', 'M', 'Q', 'T']) {
-          for (const it of (data.columns?.[col] || [])) {
-            const colLabel = data.labels?.[col] || col;
-            items.push({ id: it.id, label: (it.text || '').slice(0, 60), subtitle: colLabel });
-          }
-        }
-        return items;
       }
 
       if (toolId === 'canvas-hub') {

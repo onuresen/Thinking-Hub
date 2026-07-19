@@ -555,7 +555,7 @@ HubBootstrap.start('capture-hub');
 
 const CATS = {
   task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Project Hub',   routable: true  },
-  question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'KMQT',          routable: true  },
+  question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'Decision Hub',  routable: true  },
   idea:     { label: 'Idea',     icon: '✦', dot: 'var(--border-yellow)', chipBg: 'var(--node-yellow)', chipColor: 'var(--border-yellow)', dest: 'Inbox',         routable: false },
   decision: { label: 'Decision', icon: '⚖', dot: 'var(--border-green)',  chipBg: 'var(--node-green)',  chipColor: 'var(--border-green)',  dest: 'Decision Hub',  routable: true  },
   risk:     { label: 'Risk',     icon: '⚠', dot: 'var(--border-red)',    chipBg: 'var(--node-red)',    chipColor: 'var(--border-red)',    dest: 'Risk Register', routable: true  },
@@ -792,12 +792,11 @@ function routeTask(text, ts) {
 
 function routeQuestion(text, ts) {
   try {
-    const raw = HubStorage.get('kmqt_current_v2') || { columns: { K: [], M: [], Q: [], T: [] }, labels: {} };
-    if (!raw.columns) raw.columns = { K: [], M: [], Q: [], T: [] };
-    if (!Array.isArray(raw.columns.Q)) raw.columns.Q = [];
-    raw.columns.Q.push({ id: 'cap-' + Date.now(), text, tags: [], createdAt: ts });
-    HubStorage.set('kmqt_current_v2', raw);
-    return 'KMQT';
+    const raw = HubStorage.get('decision-hub-v1');
+    const arr = Array.isArray(raw) ? raw : [];
+    arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', status: 'pending', type: 'question', tags: [], createdAt: ts });
+    HubStorage.set('decision-hub-v1', arr);
+    return 'Decision Hub';
   } catch { addToInbox(text, 'question', ts); return 'Inbox'; }
 }
 

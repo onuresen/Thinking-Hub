@@ -67,7 +67,6 @@ const PRECACHE = [
   './help-hub.html',
   './idea-swiper.html',
   './journal-hub.html',
-  './kmqt-board.html',
   './learning-hub.html',
   './log-hub.html',
   './matrix-hub.html',
