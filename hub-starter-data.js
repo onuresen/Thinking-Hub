@@ -380,24 +380,6 @@ window.HubStarter = (() => {
     HubStorage.set('tool-portfolio-v1', tools);
   }
 
-  function seedKmqt() {
-    function item(text) {
-      return { id: 'kmqt-' + Math.random().toString(36).slice(2, 9), text, tags: [], createdAt: NOW };
-    }
-    const payload = {
-      v: 1,
-      labels: { K: 'Keep', M: 'MoyaMoya', Q: 'Question', T: 'Try' },
-      columns: {
-        K: [item('Users want mobile-first navigation — confirmed in 3 interviews')],
-        M: [item('Contractor pricing varies widely — unclear what\'s driving the gap')],
-        Q: [item('Should we phase the renovation or shut down the whole center at once?')],
-        T: [item('Try a content-first design approach for the website — sketch with real copy, not lorem ipsum')],
-      },
-      links: [],
-    };
-    HubStorage.set('kmqt_current_v2', payload);
-  }
-
   function seedRetroHub() {
     const data = {
       retros: [
@@ -532,7 +514,6 @@ window.HubStarter = (() => {
     seedMeetingsHub();
     seedLearningHub();
     seedToolPortfolio();
-    seedKmqt();
     seedRetroHub();
     seedLogHub();
     seedSchedule();

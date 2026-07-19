@@ -119,19 +119,6 @@ const HubAI = (() => {
       });
     } catch {}
 
-    // KMQT
-    try {
-      const kmqt = JSON.parse(localStorage.getItem('kmqt_current_v2') || '{}');
-      const cols = kmqt.columns || {};
-      const counts = Object.entries(cols).map(([k, v]) => `${k}:${(v||[]).length}`).join(', ');
-      if (counts) lines.push(`\nKMQT board: ${counts} items`);
-      ['K','M','Q','T'].forEach(col => {
-        (cols[col] || []).slice(0, 5).forEach(it => {
-          items.push({ id: it.id, tool: 'kmqt-board', label: it.text, type: 'kmqt', column: col });
-        });
-      });
-    } catch {}
-
     // Meetings (series-aware: one line per meeting record, next occurrence for series)
     try {
       const raw = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}');
@@ -381,10 +368,6 @@ create_decision — log a new decision:
 create_goal — add an objective to Goals Hub:
   { "type":"create_goal", "title":"objective title", "description":"optional", "quarterId":"id (optional)", "quarterName":"name (optional)", "projectId":"id (optional)" }
 
-add_kmqt_item — add an item to the KMQT board:
-  { "type":"add_kmqt_item", "column":"K|M|Q|T", "text":"item text", "reason":"why this column" }
-  (K=Known facts, M=MoyaMoya/unclear, Q=Questions, T=Try/ideas)
-
 create_schedule_event — add an event to Schedule:
   { "type":"create_schedule_event", "title":"event title", "eventType":"task|event|milestone", "start":"YYYY-MM-DD", "end":"YYYY-MM-DD (optional)", "projectId":"id (optional)", "notes":"optional" }
 
@@ -397,7 +380,7 @@ create_assumption — log an assumption to track in Decision Hub's Assumptions:
 create_learning — add an item to the Reading & Learning log:
   { "type":"create_learning", "title":"title", "itemType":"book|article|video|course", "url":"optional" }
 
-Tool values: "project-hub" | "decision-hub" | "risk-hub" | "goals-hub" | "meetings-hub" | "kmqt-board"
+Tool values: "project-hub" | "decision-hub" | "risk-hub" | "goals-hub" | "meetings-hub"
 
 Rules:
 - ONLY use IDs that appear in the workspace data above — never invent IDs

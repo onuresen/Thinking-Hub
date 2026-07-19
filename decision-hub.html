@@ -306,19 +306,6 @@
       justify-content: flex-end;
       margin-bottom: 10px;
     }
-    .ws-kmqt-btn {
-      padding: 5px 12px;
-      background: transparent;
-      border: 1px solid var(--border2);
-      border-radius: var(--r-sm);
-      color: var(--text3);
-      font-size: 11.5px;
-      font-family: var(--font-body);
-      cursor: pointer;
-      transition: all 0.12s;
-    }
-    .ws-kmqt-btn:hover { color: var(--text); border-color: var(--accent); }
-
     /* ── OPTION MAP TABLE ────────────────────────────────────── */
     table {
       width: 100%;
@@ -1115,9 +1102,6 @@
           <button class="ws-expand-btn" id="dc-expand-btn" onclick="toggleWsExtra('dc-extra','dc-expand-btn')">${dcHasExtra ? 'Show less ↑' : 'Show more context ↓'}</button>`;
 
         c.innerHTML = `
-          <div class="ws-action-bar">
-            <button class="ws-kmqt-btn" onclick="sendToKmqt()">⊞ Send as KMQT Question</button>
-          </div>
           <div class="grid-2">
             <div class="card">
               <div class="card-header"><div class="card-title">Problem Lens</div></div>
@@ -1274,32 +1258,6 @@
       if (!extra || !btn) return;
       const open = extra.classList.toggle('open');
       btn.textContent = open ? 'Show less ↑' : 'Show more context ↓';
-    }
-
-    function sendToKmqt() {
-      const dec = decisions.find(d => d.id === currentId);
-      if (!dec) return;
-      const title = (dec.title || '').trim();
-      if (!title) { alert('Save a decision title first.'); return; }
-      const km = HubStorage.get('kmqt_current_v2') || { columns: { K: [], M: [], Q: [], T: [] }, labels: {} };
-      if (!km.columns) km.columns = { K: [], M: [], Q: [], T: [] };
-      if (!km.columns.Q) km.columns.Q = [];
-      km.columns.Q.push({
-        id: 'q-' + Math.random().toString(36).slice(2, 9),
-        text: `[Decision] ${title}`,
-        createdAt: new Date().toISOString()
-      });
-      HubStorage.set('kmqt_current_v2', km);
-      const toast = document.createElement('div');
-      toast.textContent = 'Sent to KMQT Q-column ✓';
-      Object.assign(toast.style, {
-        position:'fixed', bottom:'20px', left:'50%', transform:'translateX(-50%)',
-        background:'var(--surface3)', border:'1px solid var(--border2)', borderRadius:'8px',
-        padding:'8px 16px', fontSize:'12.5px', color:'var(--text)', zIndex:'999',
-        pointerEvents:'none', transition:'opacity 0.3s'
-      });
-      document.body.appendChild(toast);
-      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
     }
 
     window.updateOpt = (idx, key, val) => {

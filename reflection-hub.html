@@ -946,13 +946,6 @@
   }
   window.exportMarkdown = exportMarkdown;
 
-  function exportJSON() {
-    const board = getActiveBoard();
-    downloadBlob(JSON.stringify({ _type: 'reflection-hub-v1', board }, null, 2), `reflection-${board.name.replace(/\s+/g, '-')}.json`, 'application/json');
-    showToast('JSON exported');
-  }
-  window.exportJSON = exportJSON;
-
   /* ══ K — Migration ════════════════════════════════════ */
 
   function importFromRetroHub() {
@@ -1450,7 +1443,6 @@
         <div class="snap-card-title">Export</div>
         <div style="display:flex;flex-direction:column;gap:7px">
           <button class="btn btn-ghost" onclick="exportMarkdown()" style="width:100%;font-size:11px">↓ Markdown</button>
-          <button class="btn btn-ghost" onclick="exportJSON()" style="width:100%;font-size:11px">↓ JSON</button>
         </div>
         <div style="margin-top:10px;font-size:10.5px;color:var(--text3);line-height:1.7">
           Markdown: share in docs or slides.<br>JSON: for your own ecosystem.
