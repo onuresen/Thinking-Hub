@@ -68,6 +68,8 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `CHANGELOG.md` | Dated user/operator-visible release impact and security notes; Keep-a-Changelog structure. |
 | `docs/RELEASING.md` | Maintainer and administrator contract for preparing, publishing, verifying, pinning, and rolling back immutable releases. |
 | `.github/workflows/release.yml` | Tag-triggered release gate: validates tag/version/changelog, reruns tests, builds an export-filtered archive + SHA-256 file, then publishes GitHub Release assets. |
+| `favicon.svg` | Canonical Convergence identity mark (three thoughts → one clarity spark); source for all PWA icon PNGs. |
+| `scripts/render-icons.js` | Dev-only Playwright renderer that regenerates the 192/512/maskable PNG set from `favicon.svg`. |
 | `vendor/` | Self-hosted pinned libraries and fonts: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1, plus OFL WOFF2 subsets under `vendor/fonts/` (P80/P93 — no runtime CDN dependency) |
 | `styles/` | Shared `fonts.css` plus extracted tool stylesheets (P85 B1). The five largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) keep extracted CSS for browser caching. ⚠ New files here must be added to `sw.js` PRECACHE. |
 | `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
@@ -1682,6 +1684,26 @@ Closed the final planned enterprise-readiness group without changing application
 **Verified:** full `tests/npm test` green: 30-page smoke/CSP/egress/offline/AI-policy suite plus all 13 interaction flows; new checks confirm SemVer `1.1.0`, its dated changelog entry, and the workflow's tag/full-test/checksum/publication gates. `git diff --check` clean; export attributes confirmed for tests, agent context, and workflow metadata; all required reviewer/release artifacts present. No localStorage keys, application scripts/styles, CSP values, AI policy, or service-worker runtime assets were added by Group D.
 
 **Files:** `VERSION` (new), `CHANGELOG.md` (new), `.gitattributes` (new), `.github/workflows/release.yml` (new), `docs/RELEASING.md` (new), `tests/smoke.js`, `README.md`, `SECURITY.md`, `docs/DEPLOYMENT.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 95 — Convergence PWA identity~~ ✓ Done `[group: visual-identity]`
+Replaced the generic TH-letter tile and unrelated third-party lightbulb favicon with one coherent, original app mark selected by the user.
+
+- **Convergence mark:** three lime thought nodes flow into one clarity spark, with restrained coral insight rays. It expresses the Hub's core promise—many tools and signals becoming one clear thought—without relying on small lettering.
+- **One canonical vector:** `favicon.svg` is the accessible source master and browser favicon. `scripts/render-icons.js` deterministically renders `icon-192.png`, `icon-512.png`, and `icon-maskable-512.png` from the same geometry using the existing dev-only Playwright installation.
+- **Consistent in-app identity:** the shell sidebar and first-run welcome header now render the same canonical SVG; no TH-letter logo remains in the home experience.
+- **Maskable-safe composition:** all identity-bearing geometry was pulled inside the conservative central circular safe zone; the near-black background remains full bleed for launcher-specific circle, squircle, and rounded-square masks.
+- **Regression checks:** smoke verifies the canonical Convergence title/palette and exact PNG dimensions declared by the manifest. Changelog records the visible identity change for v1.1.0.
+
+**Key decisions:**
+- **Decision:** Choose Convergence over Portal, Synapse, and Faceted Spark. **Why:** it communicates Thinking Hub's specific value—multiple inputs becoming clarity—while remaining recognizable without text at taskbar size. **Confidence:** high.
+- **Decision:** Use a hand-authored SVG master rather than ship the exploratory generated concept bitmap. **Why:** app identity needs precise geometry, deterministic regeneration, clean scaling, accessible metadata, and reliable mask cropping. **Confidence:** high.
+- **Decision:** Keep the dark tile full bleed and the symbol within the maskable safe zone. **Why:** operating systems apply different icon masks; background loss is harmless, but clipped nodes/rays would damage the mark. **Confidence:** high.
+
+**Verified:** 192×192 and both 512×512 PNGs regenerated from the SVG; visual review at full and reduced size; full `tests/npm test` green, including canonical identity/palette, shell/welcome usage, manifest-dimension assertions, all 30 pages, and all 13 interaction flows. No storage, script load order, CSP, egress, or application behavior changed.
+
+**Files:** `favicon.svg`, `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-maskable-512.png`, `scripts/render-icons.js` (new), `index.html`, `styles/index.css`, `.gitattributes`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 

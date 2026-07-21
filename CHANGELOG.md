@@ -23,6 +23,8 @@ No changes yet.
 
 ### Changed
 
+- Replaced the former TH-letter PWA icon and unrelated lightbulb favicon with
+  the Convergence mark: three thoughts joining into a clear insight spark.
 - Replaced the runtime Anthropic SDK/CDN with a small direct Messages API
   client while preserving the existing opt-in behavior.
 - Removed Google Fonts and remote favicon requests; fonts and icons now remain

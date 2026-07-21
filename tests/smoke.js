@@ -103,6 +103,24 @@ function appFiles(ext) {
     releaseWorkflow.includes('sha256sum "$archive"') &&
     releaseWorkflow.includes('gh release create'));
 
+  const favicon = fs.readFileSync(path.join(ROOT, 'favicon.svg'), 'utf8');
+  const pngDimensions = (filename) => {
+    const png = fs.readFileSync(path.join(ROOT, 'icons', filename));
+    return [png.readUInt32BE(16), png.readUInt32BE(20)];
+  };
+  check('Convergence is the canonical favicon',
+    favicon.includes('Thinking Hub Convergence') &&
+    favicon.includes('#b8f033') && favicon.includes('#ff8a5c'));
+  const shellHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  check('shell and welcome surfaces use Convergence',
+    shellHtml.includes('<img class="sidebar-logo-mark" src="favicon.svg" alt="">') &&
+    (shellHtml.match(/<img src="favicon\.svg" alt=""/g) || []).length >= 1 &&
+    !/>TH<\//.test(shellHtml));
+  check('PWA icon dimensions match the manifest',
+    JSON.stringify(pngDimensions('icon-192.png')) === '[192,192]' &&
+    JSON.stringify(pngDimensions('icon-512.png')) === '[512,512]' &&
+    JSON.stringify(pngDimensions('icon-maskable-512.png')) === '[512,512]');
+
   const pages = appFiles('.html');
   const cspValues = pages.map((f) => {
     const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
