@@ -534,7 +534,8 @@
     const board = getActiveBoard(data);
     if (!board) return;
     if (!confirm(`Archive board "${board.name}"?`)) return;
-    board.archived = true;
+    HubUtils.stampArchive(board, true);
+    HubUtils.stampUpdate(board);
     const remaining = data.boards.find(b => !b.archived);
     data.activeId = remaining ? remaining.id : null;
     if (!remaining) {
@@ -556,6 +557,7 @@
       text: (text || '').slice(0, 300),
       tags: [],
       createdAt: nowISO(),
+      updatedAt: nowISO(),
       reactions: { '👍': 0, '🔥': 0, '🤔': 0 },
       assignee: isAction ? '' : null,
       dueDate: isAction ? '' : null,
@@ -603,6 +605,7 @@
     const found = getItemFromBoard(board, itemId);
     if (!found) return;
     Object.assign(found.item, patch);
+    HubUtils.stampUpdate(found.item);
     saveData(data);
     renderColumn(found.col, board);
     renderLinks(board);

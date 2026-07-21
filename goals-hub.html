@@ -407,12 +407,12 @@
       const startMonth = (q - 1) * 3;
       const start = new Date(year, startMonth, 1);
       const end = new Date(year, startMonth + 3, 0);
-      data.quarters.push({
-        id: uid(), label: `Q${q} ${year}`, archived: false,
+      data.quarters.push(HubUtils.stampUpdate({
+        id: uid(), label: `Q${q} ${year}`, archived: false, archivedAt: '',
         startDate: start.toISOString().split('T')[0],
         endDate: end.toISOString().split('T')[0],
         objectives: []
-      });
+      }));
       save();
     }
   }
@@ -690,7 +690,7 @@
 
   function restoreQuarter(id) {
     const q = data.quarters.find(x => x.id === id);
-    if (q) { q.archived = false; save(); activeQId = id; renderMain(); }
+    if (q) { HubUtils.stampArchive(q, false); HubUtils.stampUpdate(q); save(); activeQId = id; renderMain(); }
   }
 
   // ── Quarter modal ────────────────────────────────────────────────────────────
@@ -717,9 +717,9 @@
     if (!label) return;
     if (editingQId) {
       const q = getQuarter(editingQId);
-      if (q) { q.label = label; q.startDate = document.getElementById('qm-start').value; q.endDate = document.getElementById('qm-end').value; }
+      if (q) { q.label = label; q.startDate = document.getElementById('qm-start').value; q.endDate = document.getElementById('qm-end').value; HubUtils.stampUpdate(q); }
     } else {
-      const newQ = { id: uid(), label, archived: false, startDate: document.getElementById('qm-start').value, endDate: document.getElementById('qm-end').value, objectives: [] };
+      const newQ = HubUtils.stampUpdate({ id: uid(), label, archived: false, archivedAt: '', startDate: document.getElementById('qm-start').value, endDate: document.getElementById('qm-end').value, objectives: [] });
       data.quarters.push(newQ);
       activeQId = newQ.id;
     }
@@ -731,7 +731,7 @@
     const q = getQuarter(editingQId);
     if (!q) return;
     if (!confirm(`Archive "${q.label}"? It will be moved to the archive.`)) return;
-    q.archived = true;
+    HubUtils.stampArchive(q, true); HubUtils.stampUpdate(q);
     const active = activeQuarters();
     activeQId = active.length ? active[active.length - 1].id : null;
     save(); closeQuarterModal(); renderMain();
@@ -863,6 +863,7 @@
       type: modalObjType,
       keyResults: modalKRs.filter(kr => kr.title.trim()),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       projectId: projId,
       projectName: projName
     };
@@ -870,12 +871,13 @@
     if (editingObjId) {
       const idx = qtr.objectives.findIndex(o => o.id === editingObjId);
       if (idx !== -1) {
-        obj.createdAt = qtr.objectives[idx].createdAt;
+        obj.createdAt = qtr.objectives[idx].createdAt || obj.createdAt;
         qtr.objectives[idx] = obj;
       }
     } else {
       qtr.objectives.push(obj);
     }
+    HubUtils.stampUpdate(qtr);
     save(); showToast('Objective saved'); closeObjModal(); renderMain();
   }
 

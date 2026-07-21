@@ -1304,6 +1304,32 @@
         }
       } catch { }
 
+      // P90 — Stale open tasks (real timestamp, untouched 30+ days). Unknown-age tasks are skipped.
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        const staleTasks = [];
+        (ph.projects || []).forEach(p => {
+          if (p.status === 'done' || p.status === 'archived') return;
+          (p.tasks || []).forEach(t => {
+            if (t.done || t.archived) return;
+            const stamp = t.updatedAt || t.createdAt;
+            if (!stamp) return; // unknown age ≠ stale
+            const age = Math.floor((Date.now() - new Date(stamp).getTime()) / 86400000);
+            if (age >= 30) staleTasks.push({ t, p, age });
+          });
+        });
+        staleTasks.sort((a, b) => b.age - a.age).slice(0, 2).forEach(({ t, p, age }) => {
+          const key = 'stale-task:' + t.id;
+          if (_resurfaceDismissed(key)) return;
+          out.push({
+            key, tool: 'project-hub', id: t.id, icon: '◔',
+            dot: 'var(--accent-super)',
+            text: t.title || '(task)',
+            meta: `untouched ${age}d — ${_esc(p.name || 'project')}`
+          });
+        });
+      } catch { }
+
       return out.slice(0, 5);
     }
 
@@ -2348,6 +2374,28 @@
       lines.push(unknown.length
         ? `ℹ ${unknown.length} unrecognized key(s) (harmless, not backed up): ${unknown.map(HubUtils.esc).join(', ')}`
         : '✓ No unrecognized storage keys.');
+
+      // 4. Outdated items — staleness scan on lifecycle timestamps (P90).
+      //    Only counts items with a real timestamp; unknown-age items are never "stale".
+      const stale = [];
+      try {
+        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
+        let staleTaskN = 0, staleProjN = 0;
+        (ph.projects || []).forEach(p => {
+          const openTasks = (p.tasks || []).filter(t => !t.done && !t.archived);
+          if (p.status !== 'done' && p.status !== 'archived' && p.updatedAt &&
+              HubUtils.daysSince(p.updatedAt) >= 60 && openTasks.length) staleProjN++;
+          openTasks.forEach(t => {
+            const s = t.updatedAt || t.createdAt;
+            if (s && HubUtils.daysSince(s) >= 30) staleTaskN++;
+          });
+        });
+        if (staleTaskN) stale.push(`${staleTaskN} open task(s) untouched 30+ days`);
+        if (staleProjN) stale.push(`${staleProjN} active project(s) with no activity in 60+ days`);
+      } catch { }
+      lines.push(stale.length
+        ? `🕒 <b>Outdated:</b> ${stale.join('; ')} — the oldest surface in the Resurface card on Today.`
+        : '✓ Nothing looks stale (no items past their staleness window).');
 
       out.innerHTML = lines.join('<br>');
     }

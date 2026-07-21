@@ -389,6 +389,9 @@
               if (!t.status) t.status = t.done ? 'done' : 'todo';
               if (!t.blockedReason) t.blockedReason = '';
               if (!t.completedAt) t.completedAt = '';
+              if (!t.createdAt) t.createdAt = '';
+              if (!t.updatedAt) t.updatedAt = '';
+              if (!t.archivedAt) t.archivedAt = '';
               if (!t.taskCode) t.taskCode = '';
               if (!t.taskType) t.taskType = '';
               if (!t.workstreamId) t.workstreamId = '';
@@ -1267,6 +1270,9 @@
           if (task && task.status !== col.id) {
             task.status = col.id;
             task.done = col.id === 'done';
+            if (task.done && !task.completedAt) task.completedAt = new Date().toISOString();
+            else if (!task.done) task.completedAt = '';
+            HubUtils.stampUpdate(task);
             touchProject(projectId); saveState(); renderContent();
             showToast(`Moved to <span style="color:${col.color};font-weight:600">${col.label}</span>`);
           }
@@ -1319,6 +1325,7 @@
       const input = prompt('Obsidian note path (e.g. Projects/MyNote.md):\nLeave blank to remove the link.', task.obsidianNote || '');
       if (input === null) return;
       task.obsidianNote = input.trim();
+      HubUtils.stampUpdate(task);
       touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
@@ -1347,6 +1354,11 @@
       const typeBadge = task.taskType ? `<span style="font-size:10px;color:var(--text3)">${task.taskType}</span>` : '';
       const focusMin = _focusMap[task.id] || 0;
       const focusBadge = focusMin > 0 ? `<span class="focus-time-badge" title="Focus time logged">⏱ ${focusMin >= 60 ? Math.floor(focusMin/60)+'h '+(focusMin%60 ? focusMin%60+'m' : '') : focusMin+'m'}</span>` : '';
+      const ageStamp = task.updatedAt || task.createdAt;
+      const ageDays = ageStamp ? HubUtils.daysSince(ageStamp) : Infinity;
+      const ageBadge = (!task.done && ageStamp && ageDays >= 7)
+        ? `<span style="font-size:10px;font-family:var(--font-mono);color:${ageDays >= 30 ? 'var(--accent-super)' : 'var(--text3)'}" title="Last updated ${new Date(ageStamp).toLocaleString()}">${HubUtils.relativeAge(ageStamp)}</span>`
+        : '';
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
       const checklist = task.checklist || [];
@@ -1373,6 +1385,7 @@
           ${assignee ? `<span class="task-assignee"><div class="avatar" style="background:${bg};color:${fg};width:16px;height:16px;font-size:8px">${initials(assignee.name)}</div>${assignee.name}</span>` : ''}
           ${task.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${formatDate(task.due)}</span>` : ''}
           ${focusBadge}
+          ${ageBadge}
           ${linkBadge}
           ${obsidianBadge}
         </div>
@@ -1473,7 +1486,7 @@
         const newTitle = input.value.trim();
         if (newTitle && newTitle !== original) {
           const task = findTask(taskId, projectId);
-          if (task) { task.title = newTitle; touchProjectOfTask(taskId, projectId); saveState(); showToast('Task renamed'); }
+          if (task) { task.title = newTitle; HubUtils.stampUpdate(task); touchProjectOfTask(taskId, projectId); saveState(); showToast('Task renamed'); }
         }
         renderContent();
         if (state.selectedProject) renderPanel(state.selectedProject);
@@ -1489,7 +1502,8 @@
       e.stopPropagation();
       const task = findTask(taskId, projectId);
       if (!task) return;
-      task.archived = !task.archived;
+      HubUtils.stampArchive(task, !task.archived);
+      HubUtils.stampUpdate(task);
       touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
@@ -1519,6 +1533,7 @@
       task.status = task.done ? 'done' : 'todo';
       task.completedAt = task.done ? new Date().toISOString() : '';
       if (task.done) task.blockedReason = '';
+      HubUtils.stampUpdate(task);
       touchProjectOfTask(taskId, projectId);
       saveState();
       if (task.done) {
@@ -1539,6 +1554,7 @@
       const item = task.checklist.find(c => c.id === itemId);
       if (!item) return;
       item.done = !item.done;
+      HubUtils.stampUpdate(task);
       touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
@@ -1820,7 +1836,7 @@
           });
           el.querySelector('input[type=range]').addEventListener('change', function () {
             const g2 = proj.goals.find(x => x.id === g.id);
-            if (g2) { g2.progress = parseInt(this.value); touchProject(projId); saveState(); renderPanel(projId); renderContent(); }
+            if (g2) { g2.progress = parseInt(this.value); HubUtils.stampUpdate(g2); touchProject(projId); saveState(); renderPanel(projId); renderContent(); }
           });
           body.appendChild(el);
         });
@@ -2150,13 +2166,15 @@
         task.taskCode = taskCode;
         task.taskType = taskType;
         task.obsidianNote = document.getElementById('task-obsidian').value.trim();
+        HubUtils.stampUpdate(task);
         touchProject(projId); if (projId !== editProjId) touchProject(editProjId);
         saveState(); closeModal('modal-task'); showToast('Task updated');
         renderContent();
         if (state.selectedProject) renderPanel(state.selectedProject);
       } else {
         const newId = uid();
-        proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+        const nowTs = new Date().toISOString();
+        proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? nowTs : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim(), createdAt: nowTs, updatedAt: nowTs, archivedAt: '' });
         touchProject(projId);
         saveState(); closeModal('modal-task'); showToast('Task added');
         renderContent();
@@ -2227,11 +2245,11 @@
       touchProject(projId);
       if (_editingMsId) {
         const ms = proj.milestones.find(m => m.id === _editingMsId);
-        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; }
+        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; HubUtils.stampUpdate(ms); }
         _editingMsId = null; _editingMsProjId = null;
         saveState(); closeModal('modal-milestone'); showToast('Milestone updated');
       } else {
-        proj.milestones.push({ id: uid(), name, date: document.getElementById('ms-date').value });
+        proj.milestones.push(HubUtils.stampUpdate({ id: uid(), name, date: document.getElementById('ms-date').value }));
         saveState(); closeModal('modal-milestone'); showToast('Milestone added');
       }
       renderContent(); if (state.selectedProject) renderPanel(projId);
@@ -2275,11 +2293,11 @@
       touchProject(projId);
       if (_editingGoalId) {
         const g = proj.goals.find(x => x.id === _editingGoalId);
-        if (g) { g.name = name; g.desc = document.getElementById('goal-desc').value.trim(); }
+        if (g) { g.name = name; g.desc = document.getElementById('goal-desc').value.trim(); HubUtils.stampUpdate(g); }
         _editingGoalId = null; _editingGoalProjId = null;
         saveState(); closeModal('modal-goal'); showToast('Goal updated');
       } else {
-        proj.goals.push({ id: uid(), name, desc: document.getElementById('goal-desc').value.trim(), progress: 0 });
+        proj.goals.push(HubUtils.stampUpdate({ id: uid(), name, desc: document.getElementById('goal-desc').value.trim(), progress: 0 }));
         saveState(); closeModal('modal-goal'); showToast('Goal added');
       }
       renderContent(); if (state.selectedProject) renderPanel(projId);

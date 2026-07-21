@@ -596,7 +596,8 @@
     if (!activeId) return;
     const r = data.risks.find(x => x.id === activeId);
     if (!r) return;
-    r.archived = !r.archived;
+    HubUtils.stampArchive(r, !r.archived);
+    HubUtils.stampUpdate(r);
     save(); closeDetail(); renderAll();
     showToast(r.archived ? 'Risk archived' : 'Risk restored');
   }
