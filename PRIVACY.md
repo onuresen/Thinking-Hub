@@ -18,7 +18,7 @@ privacy behavior.
 | --- | --- | --- |
 | localStorage | Tool records, settings, links, UI state, and the optional Anthropic API key | Until the user imports/replaces data, resets a tool, clears site data, or the browser removes it |
 | IndexedDB | Automatic, manual, and pre-restore snapshots of localStorage | Automatic daily snapshots: 14 days; older Monday snapshots: up to 60 days; newest 10 manual/safety snapshots |
-| Cache Storage | Offline application assets and Google Font responses | Until replaced by service-worker cache maintenance or cleared as site data |
+| Cache Storage | Offline application assets, including self-hosted fonts | Until replaced by service-worker cache maintenance or cleared as site data |
 | Selected local files/directories | Backup import, Obsidian read access, and explicit MCP file sync | Governed by the browser permission and the user's selected location |
 
 Browser storage is scoped to the exact origin: scheme, host, and port. Moving a
@@ -29,10 +29,6 @@ exports and imports a Full Backup.
 
 | Destination | Trigger | Information sent or exposed | Required for core use? |
 | --- | --- | --- | --- |
-| `fonts.googleapis.com` | Each page requests the font stylesheet | Normal request metadata such as IP address, user agent, and referrer | No; system-font fallbacks render if blocked |
-| `fonts.gstatic.com` | The Google Fonts stylesheet requests font files; the service worker may cache responses | Normal request metadata and requested font asset | No |
-| `www.google.com/s2/favicons` | Stakeholder Map or Tool Portfolio renders an entry with a URL | The URL's domain in the query string plus normal request metadata | No; the UI falls back to generated initials |
-| `esm.sh` | The first explicit AI action or API-key test in a page session loads `@anthropic-ai/sdk@0.52.0` | Requested package/version plus normal request metadata; the Anthropic API key and workspace context are not intentionally sent to esm.sh | No; AI features fail if blocked |
 | `api.anthropic.com` | A user explicitly tests a key or invokes an AI capture, query, act, briefing, drafting, or insight feature | Anthropic API key, prompt, applicable system instructions, and feature-dependent workspace context | No |
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
@@ -45,6 +41,10 @@ Thinking Hub does not contain `sendBeacon`, WebSocket, analytics, advertising,
 crash-reporting, or telemetry code. Same-origin service-worker requests fetch
 application assets from the deployment host and may appear in that host's
 access logs.
+
+Fonts, tool/stakeholder icons, and runtime JavaScript libraries are self-hosted.
+Thinking Hub does not contact Google Fonts, Google's favicon service, or a
+JavaScript CDN during application use.
 
 ## What optional AI can include
 

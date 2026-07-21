@@ -1,0 +1,6 @@
+.git* export-ignore
+.github export-ignore
+.agents export-ignore
+.claude export-ignore
+tests export-ignore
+CLAUDE.md export-ignore

@@ -20,25 +20,17 @@ Copyright (c) 2022 Niklas von Hertzen
 https://github.com/niklasvh/html2canvas
 Licensed under the MIT License. The license text appears below.
 
-Runtime components fetched from third-party services
-----------------------------------------------------
+Vendored font families
+----------------------
 
-Anthropic TypeScript SDK 0.52.0
-Copyright (c) Anthropic PBC
-https://github.com/anthropics/anthropic-sdk-typescript
-Licensed under the MIT License. The license text appears below. Thinking Hub
-currently loads this pinned SDK from esm.sh only when an AI action needs it;
-the SDK is not stored in this repository.
-
-Google Fonts families
 - DM Sans: https://github.com/googlefonts/dm-fonts
 - Fraunces: https://github.com/undercasetype/Fraunces
 - JetBrains Mono: https://github.com/JetBrains/JetBrainsMono
 - Syne: https://github.com/bonjour-monde/syne-typeface
 
-The font families are licensed under the SIL Open Font License 1.1. Thinking
-Hub currently requests them from Google Fonts; font binaries are not stored in
-this repository. License: https://openfontlicense.org/open-font-license-official-text/
+The included WOFF2 subsets are licensed under the SIL Open Font License 1.1.
+The complete license and retrieval record are stored in `vendor/fonts/OFL.txt`
+and `vendor/fonts/SOURCES.md`.
 
 Development-only components
 ---------------------------

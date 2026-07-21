@@ -9,7 +9,10 @@
  *  3. Loads EVERY *.html page in the repo root in headless Chromium and fails
  *     on any real JS error (pageerror, or console.error that isn't network
  *     noise). New tools are covered automatically — no list to maintain.
- *  4. Shell checks on index.html: sidebar builds, HubStorage round-trips,
+ *  4. Security checks: every page carries CSP, no retired runtime egress hosts
+ *     remain, direct Anthropic requests have the expected browser headers, and
+ *     the enterprise AI policy hides UI + blocks execution before fetch.
+ *  5. Shell checks on index.html: sidebar builds, HubStorage round-trips,
  *     Cmd+K opens the global search overlay (regression guard for the P57
  *     silent-breakage), service worker registers.
  *
@@ -20,6 +23,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -32,9 +36,8 @@ const MIME = {
   '.woff2': 'font/woff2', '.md': 'text/markdown', '.ico': 'image/x-icon',
 };
 
-// Console noise that is environment-dependent, not an app bug: failed network
-// resource loads (fonts/CDN/favicon fetches vary by sandbox and network).
-const NOISE = /Failed to load resource|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|fonts\.g/;
+// Console noise that is environment-dependent, not an app bug.
+const NOISE = /Failed to load resource|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED/;
 
 let failures = 0;
 function check(name, ok, extra) {
@@ -70,15 +73,56 @@ function appFiles(ext) {
   const styleFiles = fs.existsSync(stylesDir)
     ? fs.readdirSync(stylesDir).filter((f) => f.endsWith('.css')).map((f) => 'styles/' + f)
     : [];
+  const fontDir = path.join(ROOT, 'vendor', 'fonts');
+  const fontFiles = fs.existsSync(fontDir)
+    ? fs.readdirSync(fontDir).filter((f) => /\.(woff2|txt|md)$/.test(f)).map((f) => 'vendor/fonts/' + f)
+    : [];
   const mustCache = [
     ...appFiles('.html'),
     ...appFiles('.js').filter((f) => f !== 'sw.js'),
     ...styleFiles,
+    ...fontFiles,
     'theme.css', 'manifest.json', 'favicon.svg',
   ];
   const missing = mustCache.filter((f) => !precached.has(f));
   check('sw.js PRECACHE covers all app files', missing.length === 0,
     missing.length ? 'missing: ' + missing.join(', ') : precached.size + ' entries');
+  check('service worker treats enterprise policy as network-first',
+    sw.includes("url.pathname.endsWith('/enterprise-config.js')") &&
+    sw.includes('networkFirstPolicy(req)') && sw.includes("cache: 'no-store'"));
+
+  const version = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim();
+  const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
+  const releaseWorkflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'release.yml'), 'utf8');
+  check('release version follows Semantic Versioning', /^\d+\.\d+\.\d+$/.test(version), version);
+  check('changelog contains the current release',
+    changelog.includes(`## [${version}] - `));
+  check('tagged release workflow validates and checksums artifacts',
+    releaseWorkflow.includes('test "$GITHUB_REF_NAME" = "v$version"') &&
+    releaseWorkflow.includes('npm test') &&
+    releaseWorkflow.includes('sha256sum "$archive"') &&
+    releaseWorkflow.includes('gh release create'));
+
+  const pages = appFiles('.html');
+  const cspValues = pages.map((f) => {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    return html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1] || '';
+  });
+  const missingCsp = pages.filter((_, i) => !cspValues[i]);
+  check('every app page declares Content Security Policy', missingCsp.length === 0,
+    missingCsp.length ? 'missing: ' + missingCsp.join(', ') : pages.length + ' pages');
+  check('all app pages share one CSP contract', new Set(cspValues).size === 1);
+
+  const runtimeFiles = [
+    ...pages,
+    ...appFiles('.js').filter((f) => f !== 'sw.js'),
+    'theme.css',
+    ...styleFiles,
+  ];
+  const retiredHosts = /fonts\.googleapis\.com|fonts\.gstatic\.com|esm\.sh|google\.com\/s2\/favicons/;
+  const egressHits = runtimeFiles.filter((f) => retiredHosts.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+  check('retired runtime egress hosts are absent', egressHits.length === 0,
+    egressHits.length ? 'found in: ' + egressHits.join(', ') : 'fonts, favicon CDN, esm.sh');
 
   // ── 2. every page loads clean ──
   const server = await startServer();
@@ -87,11 +131,6 @@ function appFiles(ext) {
     args: ['--no-sandbox'],
   });
   const ctx = await browser.newContext({ serviceWorkers: 'block' });
-  // abort font requests: they're visual-only, already noise-filtered, and in a
-  // network-restricted sandbox each page would otherwise stall on them
-  await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-
-  const pages = appFiles('.html');
   for (const file of pages) {
     const page = await ctx.newPage();
     const errors = [];
@@ -109,15 +148,46 @@ function appFiles(ext) {
     await page.close();
   }
 
+  const filePage = await ctx.newPage();
+  const fileErrors = [];
+  filePage.on('pageerror', (e) => fileErrors.push(e.message));
+  filePage.on('console', (m) => {
+    if (m.type() === 'error' && !NOISE.test(m.text())) fileErrors.push(m.text());
+  });
+  await filePage.goto(pathToFileURL(path.join(ROOT, 'index.html')).href, { waitUntil: 'load', timeout: 20000 });
+  await filePage.waitForTimeout(500);
+  const fileNavCount = await filePage.evaluate(() => document.querySelectorAll('.nav-item').length);
+  check('file:// shell remains usable under CSP', fileErrors.length === 0 && fileNavCount >= 10,
+    fileErrors.slice(0, 2).join(' | '));
+  await filePage.close();
+
   // ── 3. shell functionality (service workers allowed in this context) ──
   const swCtx = await browser.newContext();
-  await swCtx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   const shell = await swCtx.newPage();
   await shell.goto(`${BASE}/index.html`, { waitUntil: 'load', timeout: 20000 });
   await shell.waitForTimeout(1000);
 
   const navCount = await shell.evaluate(() => document.querySelectorAll('.nav-item').length);
   check('sidebar builds (nav items)', navCount >= 10, navCount + ' items');
+
+  const fontProbe = await shell.evaluate(async () => {
+    await document.fonts.load('400 16px "DM Sans"');
+    return {
+      loaded: document.fonts.check('400 16px "DM Sans"'),
+      localCss: [...document.styleSheets].some((s) => /styles\/fonts\.css$/.test(s.href || '')),
+      localAssets: performance.getEntriesByType('resource').some((r) => /\/vendor\/fonts\/.+\.woff2$/.test(r.name)),
+    };
+  });
+  check('self-hosted font CSS and WOFF2 assets load',
+    fontProbe.loaded && fontProbe.localCss && fontProbe.localAssets);
+
+  let forbiddenCspRequests = 0;
+  await shell.route('https://esm.sh/**', (route) => { forbiddenCspRequests++; return route.abort(); });
+  const cspBlocked = await shell.evaluate(async () => {
+    try { await fetch('https://esm.sh/should-be-blocked'); return false; }
+    catch { return true; }
+  });
+  check('CSP blocks undeclared connection origins', cspBlocked && forbiddenCspRequests === 0);
 
   const roundTrip = await shell.evaluate(() => {
     window.HubStorage.set('__smoke-test', { ok: 1 });
@@ -145,6 +215,68 @@ function appFiles(ext) {
     return false;
   });
   check('service worker registers on http', swRegistered === true, String(swRegistered));
+
+  let apiRequest = null;
+  await shell.route('https://api.anthropic.com/v1/messages', async (route) => {
+    apiRequest = {
+      headers: route.request().headers(),
+      body: route.request().postDataJSON(),
+    };
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ content: [{ type: 'text', text: 'ok' }] }),
+    });
+  });
+  const aiProbe = await shell.evaluate(() => HubAI.testKey('sk-ant-smoke-test'));
+  check('direct Anthropic client succeeds without runtime SDK', aiProbe.ok === true && !!apiRequest);
+  check('direct Anthropic request carries browser API contract',
+    apiRequest?.headers?.['anthropic-version'] === '2023-06-01' &&
+    apiRequest?.headers?.['anthropic-dangerous-direct-browser-access'] === 'true' &&
+    apiRequest?.body?.model === 'claude-haiku-4-5');
+
+  const lockedCtx = await browser.newContext({ serviceWorkers: 'block' });
+  let lockedApiCalls = 0;
+  await lockedCtx.route(`${BASE}/enterprise-config.js`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'text/javascript',
+    body: `Object.defineProperty(window,'ThinkingHubPolicy',{value:Object.freeze({aiEnabled:false}),writable:false,configurable:false});document.documentElement.setAttribute('data-ai-enabled','false');`,
+  }));
+  await lockedCtx.route('https://api.anthropic.com/v1/messages', (route) => {
+    lockedApiCalls++;
+    return route.abort();
+  });
+  const locked = await lockedCtx.newPage();
+  await locked.goto(`${BASE}/index.html`, { waitUntil: 'load', timeout: 20000 });
+  const lockedResult = await locked.evaluate(async () => {
+    let error = '';
+    try { await HubAI.chat('must not send'); } catch (e) { error = e.message; }
+    const surfaces = [...document.querySelectorAll('.ai-surface')];
+    return {
+      enabled: HubAI.isEnabled(),
+      configured: HubAI.isConfigured(),
+      allHidden: surfaces.length > 0 && surfaces.every((el) => getComputedStyle(el).display === 'none'),
+      error,
+    };
+  });
+  let allPolicySurfacesHidden = lockedResult.allHidden;
+  for (const file of ['focus-hub.html', 'journal-hub.html']) {
+    const policyPage = await lockedCtx.newPage();
+    await policyPage.goto(`${BASE}/${file}`, { waitUntil: 'load', timeout: 20000 });
+    const hidden = await policyPage.evaluate(() => {
+      const surfaces = [...document.querySelectorAll('.ai-surface')];
+      return HubAI.isEnabled() === false && surfaces.length > 0 &&
+        surfaces.every((el) => getComputedStyle(el).display === 'none');
+    });
+    allPolicySurfacesHidden = allPolicySurfacesHidden && hidden;
+    await policyPage.close();
+  }
+  check('enterprise AI policy hides all marked AI surfaces', allPolicySurfacesHidden === true,
+    'shell + Focus + Journal');
+  check('enterprise AI policy blocks execution before network',
+    lockedResult.enabled === false && lockedResult.configured === false &&
+    /disabled by your organization/i.test(lockedResult.error) && lockedApiCalls === 0);
+  await lockedCtx.close();
 
   await browser.close();
   server.close();

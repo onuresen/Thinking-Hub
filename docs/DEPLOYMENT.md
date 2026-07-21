@@ -8,28 +8,24 @@ application server, account service, or environment-variable configuration.
 
 ### Standard connected deployment
 
-Allows the currently documented external hosts:
-
-- `fonts.googleapis.com` and `fonts.gstatic.com` for fonts;
-- `www.google.com` for optional favicon images;
-- `esm.sh` and `api.anthropic.com` only if optional AI is approved.
+All fonts, icons, and runtime libraries are self-hosted. The only application
+egress to consider is `api.anthropic.com`, and only if optional AI is approved
+and `enterprise-config.js` keeps `aiEnabled: true`.
 
 ### Restricted deployment
 
-Block unapproved external hosts at the proxy, DNS, firewall, or browser-policy
-layer. Core records and tools remain local. Current consequences:
-
-- blocking Google Fonts uses local system-font fallbacks;
-- blocking Google favicon requests uses generated initials;
-- blocking `esm.sh` or `api.anthropic.com` disables AI actions and API-key
-  testing;
-- a fully air-gapped first load is not yet a supported packaged mode because
-  fonts and the AI SDK are not self-hosted. Self-hosting is planned for
-  Enterprise Group C.
+Set `aiEnabled: false` in `enterprise-config.js` and block
+`api.anthropic.com` at the proxy, DNS, firewall, and/or managed-browser layer.
+The application then uses same-origin resources only and can be deployed on an
+isolated intranet. The policy switch hides AI controls and rejects all Thinking
+Hub AI calls before fetch; network blocking is the defense-in-depth control.
 
 Do not configure an Anthropic API key where external AI use is prohibited.
-Until the organization-level AI switch ships in Group C, network blocking is
-the enforceable administrative control.
+The service worker treats `enterprise-config.js` as network-first with an
+offline cache fallback, so an online policy change is not delayed by the
+normal stale-while-revalidate asset strategy. Network blocking remains the
+authoritative defense if a previously installed device is indefinitely
+offline with an older cached policy.
 
 ## 2. Hosting requirements
 
@@ -80,11 +76,14 @@ At minimum:
 - no shared intermediary caching of user-generated backup downloads;
 - documented retention and access controls for ordinary web-server logs.
 
-A complete application Content Security Policy is deliberately deferred to
-Enterprise Group C because the current code contains inline scripts/styles and
-approved external resources that must be inventoried and tested. Do not deploy
-an untested blanket CSP that silently breaks tools, iframes, workers, fonts, or
-optional AI.
+Every HTML page includes a tested meta Content Security Policy restricting
+default resources to self, images to self/data/blob, fonts/frames/workers to
+self, objects to none, and connections to self plus the optional Anthropic API.
+The current no-build architecture still requires `unsafe-inline` for inline
+scripts, styles, and event handlers. `frame-ancestors` is not enforced from a
+meta policy, so operators should keep the HTTP-header `frame-ancestors 'self'`
+control above. A deployment may add stricter headers, but must test all tools,
+iframes, workers, exports, and the chosen AI policy.
 
 ## 4. Browser and profile management
 
@@ -103,8 +102,9 @@ optional AI.
 ## 5. Predeployment checklist
 
 1. Review `LICENSE`, `THIRD-PARTY-NOTICES`, `SECURITY.md`, and `PRIVACY.md`.
-2. Pin deployment to a reviewed commit. Versioned releases are planned for
-   Enterprise Group D.
+2. Select a published release, verify its SHA-256 checksum, and record both the
+   release tag and full commit SHA. Do not deploy from a moving branch or an
+   unverified source archive. See `RELEASING.md`.
 3. Run the repository test suite:
 
    ```powershell
@@ -116,13 +116,14 @@ optional AI.
 
 4. Confirm `sw.js` precache coverage passes.
 5. Confirm the required network allowlist/denylist with the security team.
-6. Decide whether AI is permitted. If it is not, block both `esm.sh` and
-   `api.anthropic.com` and instruct users not to store a key.
+6. Decide whether AI is permitted. If it is not, set `aiEnabled: false` in
+   `enterprise-config.js`, block `api.anthropic.com`, and instruct users not to
+   store a key.
 7. Open every approved browser profile against the final HTTPS origin and test
    a synthetic Full Backup export, read-only verification, wipe in a disposable
    profile, and restore.
-8. Record the reviewed commit, deployment origin, browser policy, external-host
-   policy, and rollback owner.
+8. Record the release tag, commit, checksum, deployment origin, browser policy,
+   external-host policy, reviewer, and rollback owner.
 
 ## 6. Data protection and recovery
 
@@ -142,8 +143,9 @@ optional AI.
 
 ## 7. Upgrade procedure
 
-1. Review the source diff and enterprise documents for changed storage keys,
-   dependencies, network destinations, and service-worker entries.
+1. Read `CHANGELOG.md`, verify the release archive checksum, and review the
+   source diff and enterprise documents for changed storage keys, dependencies,
+   network destinations, and service-worker entries.
 2. Run `npm ci` and `npm test` from `tests/`.
 3. Export and verify a Full Backup from a representative profile.
 4. Deploy all static files atomically; do not mix files from different commits.
@@ -175,10 +177,12 @@ optional AI.
 - No central admin console, SSO, RBAC, remote wipe, server-side audit log, or
   policy distribution.
 - Optional Anthropic key stored in plaintext browser localStorage.
-- Remaining runtime requests to Google Fonts, Google favicons, esm.sh, and
-  Anthropic as described in `PRIVACY.md`.
-- Repository-level CSP and an organization AI kill switch are pending Group C.
-- Versioned releases and changelog are pending Group D.
+- Optional direct requests to Anthropic when both deployment policy and the
+  user enable AI, as described in `PRIVACY.md`.
+- The repository CSP retains `unsafe-inline` because the no-build application
+  uses inline scripts, styles, and event handlers.
+- Only the latest published release is maintained; there is no long-term
+  support release line or staffed response-time SLA.
 
 These limitations must be assessed against the organization's threat model;
 they should not be represented as features that already exist.

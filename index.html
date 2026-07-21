@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thinking Hub — 20+ Tools. One Browser Tab.</title>
   <meta name="description"
@@ -28,9 +29,7 @@
     content="A personal productivity suite in a single HTML file. No install. No server. Just open and work.">
   <meta name="twitter:image" content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
 
   <script src="hub-storage.js"></script>
@@ -43,6 +42,7 @@
   <script src="hub-search.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="enterprise-config.js"></script>
   <script src="hub-ai.js"></script>
   <link rel="stylesheet" href="styles/index.css">
 </head>
@@ -181,7 +181,7 @@
       <div class="settings-pane active" id="spane-integrations">
 
         <!-- AI Assistant -->
-        <div class="sfield-group">
+        <div class="sfield-group ai-surface">
           <div class="sfield-group-title">✦ AI Assistant <span class="badge">Claude Haiku</span></div>
           <div class="sfield-hint" style="margin-bottom:8px">Your key is stored locally only — never sent anywhere
             except Anthropic's API.</div>
@@ -1399,7 +1399,7 @@
 
     function buildBriefingCard() {
       const card = document.createElement('div');
-      card.className = 'stat-card';
+      card.className = 'stat-card ai-surface';
       card.style.borderColor = 'color-mix(in srgb, var(--accent2) 35%, var(--border))';
       let rec = null;
       try { rec = HubStorage.get(BRIEFING_KEY); } catch { }
@@ -1422,6 +1422,7 @@
     }
 
     async function generateBriefing() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
         showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
         return;
@@ -2476,6 +2477,7 @@
     // ── AI key helpers ────────────────────────────────────────────────────────────
 
     function onAiKeyInput(val) {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       if (typeof HubAI !== 'undefined') HubAI.saveKey(val);
       _updateAiKeyStatus('');
       _updateAiDrawerHint();
@@ -2503,6 +2505,7 @@
     }
 
     async function testAiKey() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       const inp = document.getElementById('ai-key-input');
       const key = inp ? inp.value.trim() : '';
       if (!key) { _setAiKeyStatus('Enter a key first', 'err'); return; }
@@ -2889,6 +2892,7 @@
 
     let _aiHistoryLoaded = false;
     function toggleAiDrawer() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       _aiDrawerOpen = !_aiDrawerOpen;
       document.getElementById('ai-drawer').classList.toggle('open', _aiDrawerOpen);
       if (_aiDrawerOpen) {
@@ -2995,6 +2999,7 @@
     }
 
     async function aiCaptureSend() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       const inp = document.getElementById('ai-input');
       const text = inp ? inp.value.trim() : '';
       if (!text) return;
@@ -3809,7 +3814,7 @@
     </div>
   </div>
   <!-- AI Floating Chat Panel -->
-  <div id="ai-drawer">
+  <div id="ai-drawer" class="ai-surface">
     <!-- Collapsed tab -->
     <div id="ai-tab">
       <span id="ai-drag-grip" title="Drag to reposition">⠿</span>

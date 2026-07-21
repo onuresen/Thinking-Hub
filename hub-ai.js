@@ -1,15 +1,24 @@
 /**
  * hub-ai.js — AI Assistant module for Thinking Hub
- * Uses the official Anthropic JS SDK (loaded via esm.sh CDN).
+ * Calls Anthropic's Messages API directly from the browser. No runtime SDK or
+ * CDN dependency; enterprise-config.js owns the deployment-level AI policy.
  */
 
 const HubAI = (() => {
   const SETTINGS_KEY = 'hub-settings-v1';
   const MODEL = 'claude-haiku-4-5';
-  const SDK_URL = 'https://esm.sh/@anthropic-ai/sdk@0.52.0'; // pinned — update manually after testing
+  const API_URL = 'https://api.anthropic.com/v1/messages';
+  const API_VERSION = '2023-06-01';
 
-  let _sdkPromise = null;
-  let _clientCache = null;
+  function isEnabled() {
+    return !window.ThinkingHubPolicy || window.ThinkingHubPolicy.aiEnabled !== false;
+  }
+
+  function _assertEnabled() {
+    if (!isEnabled()) {
+      throw new Error('AI features are disabled by your organization.');
+    }
+  }
 
   // ── Key management ────────────────────────────────────────────────────────────
 
@@ -21,33 +30,44 @@ const HubAI = (() => {
   }
 
   function saveKey(key) {
+    if (!isEnabled()) return false;
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
       s.anthropicKey = key.trim();
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-      _clientCache = null;
-    } catch {}
+      return true;
+    } catch { return false; }
   }
 
-  function isConfigured() { return getKey().length > 10; }
+  function isConfigured() { return isEnabled() && getKey().length > 10; }
 
-  // ── SDK ───────────────────────────────────────────────────────────────────────
+  // ── Direct Anthropic API client ───────────────────────────────────────────────
 
-  async function _loadSDK() {
-    if (!_sdkPromise) {
-      _sdkPromise = import(SDK_URL).then(m => m.default || m.Anthropic || m);
+  async function _createMessage(key, body) {
+    _assertEnabled();
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = payload?.error?.message || payload?.message || response.statusText;
+      throw new Error(`Anthropic API ${response.status}: ${detail || 'request failed'}`);
     }
-    return _sdkPromise;
+    return payload;
   }
 
-  async function _getClient() {
-    const key = getKey();
+  async function _getClient(keyOverride) {
+    _assertEnabled();
+    const key = (keyOverride || getKey()).trim();
     if (!key) throw new Error('No API key configured. Add your Anthropic API key in Settings → Integrations.');
-    if (_clientCache && _clientCache._key === key) return _clientCache._client;
-    const Anthropic = await _loadSDK();
-    const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
-    _clientCache = { _key: key, _client: client };
-    return client;
+    return { messages: { create: (body) => _createMessage(key, body) } };
   }
 
   // ── Context ───────────────────────────────────────────────────────────────────
@@ -445,11 +465,11 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
   // ── Test key ──────────────────────────────────────────────────────────────────
 
   async function testKey(keyOverride) {
+    if (!isEnabled()) return { ok: false, message: 'AI features are disabled by your organization.' };
     const key = keyOverride || getKey();
     if (!key) return { ok: false, message: 'No key provided' };
     try {
-      const Anthropic = await _loadSDK();
-      const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+      const client = await _getClient(key);
       await client.messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: 'user', content: 'Hi' }] });
       return { ok: true, message: `Connected · ${MODEL}` };
     } catch (err) {
@@ -457,5 +477,5 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
     }
   }
 
-  return { getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey, getRichContext: _getRichContext };
+  return { isEnabled, getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey, getRichContext: _getRichContext };
 })();
