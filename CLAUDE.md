@@ -1590,34 +1590,72 @@ Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Projec
 
 ---
 
-### 💭 Proposed / parked — Enterprise-readiness roadmap ("free tool that passes IT/security/legal review") `[group: enterprise-readiness]` — NOT STARTED, recorded 2026-07-21
+### ~~Priority 91 — Enterprise readiness Group A: legal baseline + README truth pass~~ ✓ Done `[group: enterprise-readiness]`
+Closed the first enterprise-review gate without changing runtime behavior or the standing local-only architecture.
+
+- Added the repository's first real **`LICENSE`**: Apache License 2.0, with the project copyright notice. The README's previous MIT badge/link claimed a license file that did not exist.
+- Added **`THIRD-PARTY-NOTICES`** covering every direct runtime and development dependency currently identified: self-hosted vis-network 9.1.9 and html2canvas 1.4.1; remotely loaded Anthropic TypeScript SDK 0.52.0; Google Fonts families DM Sans, Fraunces, JetBrains Mono, and Syne; and dev-only Playwright 1.61.1. Includes the MIT terms and points Apache/OFL components to their included or canonical license text.
+- Corrected the public README's material drift: removed deleted KMQT surfaces, updated Full Backup from 20 to 28 registered keys, corrected the API-key export warning, synchronized the shared-module/load-order summary, replaced absolute "nothing leaves" claims with the honest local-records/optional-AI/font/favicon boundary, and added a reviewer-facing summary of existing PWA/CI/recovery/accessibility strengths plus explicit remaining work.
+
+**Key decisions:**
+- **Decision:** License Thinking Hub under **Apache-2.0**, not MIT. **Why:** both are permissive, but Apache-2.0 adds an explicit patent grant and termination terms that make the legal posture clearer for enterprise adoption. The README's former MIT badge was not backed by a license file, so there was no established license to preserve. **Alternative:** MIT — shorter and familiar, but weaker for the specific corporate-review goal. **Confidence:** high.
+- **Decision:** Include development-only Playwright in the third-party inventory alongside runtime dependencies. **Why:** the notice should describe the repository an enterprise receives, not only code executed in the end-user browser. **Confidence:** high.
+- **Decision:** Fix urgent README truth issues in Group A instead of waiting for Tier 3 polish. **Why:** a nonexistent MIT license, a deleted tool, an incorrect backup-key count, and absolute no-egress language undermine the legal baseline itself. The full security/privacy/deployment package remains Group B. **Confidence:** high.
+
+**Verified:** license/notice files present; dependency names and pinned versions cross-checked against vendored headers, `hub-ai.js`, Google Fonts declarations, and `tests/package-lock.json`; README has no remaining MIT/KMQT/20-key claims; `git diff --check` clean; full smoke suite (all 30 root HTML pages + shell/storage/search/SW checks) and all 13 interaction-flow checks pass, including the Phase 0 all-28-key byte-identical backup round trip. No runtime files, storage keys, scripts, styles, or service-worker assets changed.
+
+**Files:** `LICENSE` (new), `THIRD-PARTY-NOTICES` (new), `README.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 92 — Enterprise readiness Group B: security, privacy, and deployment review package~~ ✓ Done `[group: enterprise-readiness]`
+Turned the actual local/browser/egress architecture into documents an IT, security, privacy, or deployment reviewer can assess. This group is documentation and operating guidance only; it does not add Workspaces or claim Group C technical controls.
+
+- **`SECURITY.md`** — support scope (`main` until versioned releases exist), private-reporting-first vulnerability process with a safe fallback, security architecture, browser-storage/shared-profile risk, optional AI and local-file boundaries, supply-chain posture, operator responsibilities, and explicit out-of-scope cases. No invented SLA. The GitHub private-advisory URL is preferred but documented with an unavailable-form fallback because this environment could not verify the repository setting.
+- **`PRIVACY.md`** — source-specific local-storage/IndexedDB/Cache Storage retention; complete outbound-host table with trigger, disclosed data, and whether core use needs it; feature-level AI context categories; backup/index/key handling; access/deletion/portability; and enterprise operator responsibilities. Separates Thinking Hub behavior from hosting/web-server logs and modified deployments.
+- **`docs/DEPLOYMENT.md`** — connected vs restricted operation, HTTPS/static-host requirements, current network controls, recommended response headers without pretending a complete CSP exists, managed-browser/user-isolation guidance, predeployment checklist, backup/restore operations, upgrade/rollback, incident/offboarding, and known limitations. Explicitly says future Workspaces are not an access-control boundary.
+- **README** now links the four reviewer artifacts (security, privacy/egress, deployment, third-party notices) and identifies the remaining Group C controls accurately.
+
+**Key decisions:**
+- **Decision:** Keep security, privacy/egress, and deployment responsibilities in three focused documents rather than one enterprise whitepaper. **Why:** they have different owners and review jobs (security reporter/reviewer, privacy reviewer, deployment administrator) while cross-linking avoids duplicated policy claims. **Confidence:** high.
+- **Decision:** Document only `main` as supported and promise best-effort handling, not response/remediation deadlines. **Why:** versioned releases and a staffed security SLA do not exist yet; an invented promise would weaken rather than improve enterprise trust. **Revisit when:** Group D introduces releases or a real support commitment. **Confidence:** high.
+- **Decision:** Recommend network blocking as the interim enforceable AI-off control, while clearly marking the in-app organization kill switch as pending Group C. **Why:** "do not enter a key" is user guidance, not administration; the current code has no policy layer. **Confidence:** high.
+- **Decision:** State that Workspaces are separation/convenience, never authentication or access control. **Why:** browser-local workspace switching cannot protect data from someone who can access the same profile/origin. **Confidence:** high.
+
+**Verified:** outbound destinations and triggers audited from every root HTML/shared JS file (excluding vendored code); AI payload categories matched to `hub-ai.js`; retention matched to `hub-snapshots.js`; export exclusions matched to `buildExportPayload()`; service-worker caching matched to `sw.js`; all local Markdown links resolve; `git diff --check` clean; full smoke + interaction-flow suites remain green. No storage keys, runtime code, styles, script order, or service-worker assets changed.
+
+**Files:** `SECURITY.md` (new), `PRIVACY.md` (new), `docs/DEPLOYMENT.md` (new), `README.md`, `CLAUDE.md`
+
+---
+
+### 💭 Proposed / in progress — Enterprise-readiness roadmap ("free tool that passes IT/security/legal review") `[group: enterprise-readiness]` — GROUPS A–B DONE, recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
 **The reframe (the whole point):** "enterprise-ready" ≠ "paid" and ≠ "has a sales team" — it means **passing an IT security + legal + procurement review** (see VS Code / Obsidian / free-tier Postman). A free tool clears that bar routinely. **Thinking Hub's local-first architecture (P84 no-cloud) is a massive head start** — no server means no data-residency question, no breach surface, no vendor-trust problem, no DPA to negotiate, and SSO is *moot* (there are no accounts). The P84 decision, made for the user's own reasons, is also the single best enterprise-readiness feature the app has. Most SaaS tools fail review on exactly the things this app gets for free.
 
-**Repo scan findings (2026-07-21):** **no LICENSE file exists** (the #1 legal blocker). Non-user-initiated external calls today: **Google Fonts** (`fonts.googleapis.com` / `fonts.gstatic.com`, on every page), **Google favicon service** (`google.com/s2/favicons`, stakeholder/tool logos), **`esm.sh`** (the Anthropic SDK is dynamically imported from this CDN at runtime by `hub-ai.js`), and the **Anthropic API** (user-initiated, user's own key). Already-strong signals present: automated tests + CI, offline PWA (P80), pinned self-hosted vis-network/html2canvas (P80), accessibility pass (P87), API key stripped from exports (P66), no telemetry/analytics.
+**Repo scan findings (updated 2026-07-21):** the legal baseline is now present (`LICENSE` + `THIRD-PARTY-NOTICES`, P91). External calls today: **Google Fonts** (`fonts.googleapis.com` / `fonts.gstatic.com`, on every page), **Google favicon service** (`google.com/s2/favicons`, when stakeholder/tool logos with URLs render), **`esm.sh`** (the pinned Anthropic SDK is dynamically imported when an AI action first needs it), and the **Anthropic API** (user-initiated, user's own key). Already-strong signals present: automated tests + CI, offline PWA (P80), pinned self-hosted vis-network/html2canvas (P80), accessibility pass (P87), API key stripped from exports (P66), no telemetry/analytics.
 
-**Tier 1 — Non-negotiable legal blockers (a lawyer says "no" without these):**
-1. **Add a LICENSE file.** None exists today → legally "all rights reserved" → **enterprises cannot use it at all**, free or not. Recommend **Apache-2.0** (grants patent rights, which corporate legal often prefers) or MIT. Single highest-impact item on this list.
-2. **Third-party license inventory** — a `NOTICE` / `THIRD-PARTY-NOTICES` file listing vis-network, html2canvas, the fonts, and the Anthropic SDK with their (all permissive) licenses. Easy — just needs to be *stated*.
+**Tier 1 — Non-negotiable legal blockers:** ✓ Done (P91)
+1. ~~**Add a LICENSE file.**~~ ✓ Apache License 2.0.
+2. ~~**Third-party license inventory.**~~ ✓ `THIRD-PARTY-NOTICES` covers runtime, remote, font, and development dependencies.
 
 **Tier 2 — What a security review asks for:**
-3. **Written security & privacy posture** (`SECURITY.md` + a short privacy statement) — turn the architecture into a review-passing artifact: all data stays in browser localStorage, no telemetry, no analytics, and an explicit list of *every* network call (the four above), when each fires, and what it sends.
+3. ~~**Written security & privacy posture.**~~ ✓ `SECURITY.md` + `PRIVACY.md` (P92).
 4. **Eliminate the last non-user-initiated external calls → truly zero-egress + air-gap-capable:** self-host the **fonts** (removes the Google Fonts call that leaks every user's IP to Google — a real GDPR flag) and self-host/pin the **AI SDK** instead of `esm.sh`. After that the *only* outbound call is the Anthropic API — user-initiated, user's own key. (Note: self-hosting fonts partly reverses P76's font-delivery approach — weigh against that; P76 kept Google Fonts deliberately for caching. Enterprise air-gap is the countervailing reason.)
-5. **`SECURITY.md`** with a vulnerability-reporting path.
+5. ~~**`SECURITY.md` with a vulnerability-reporting path.**~~ ✓ P92; private GitHub advisory route plus safe fallback, no invented SLA.
 6. **Content-Security-Policy** (header/meta) locking the app to its own origin + the allowed hosts.
 
 **Tier 3 — Trust & operability signals:**
-7. **Deployment/admin guide** — "drop these static files on any intranet web server, or install as a PWA." The no-build static architecture makes enterprise self-hosting trivial; say so explicitly.
+7. ~~**Deployment/admin guide.**~~ ✓ `docs/DEPLOYMENT.md` (P92).
 8. **Org-level kill-switch for the AI feature** — a config flag so an enterprise can disable anything that calls an external API org-wide. Turns "we can't allow tools that call outside APIs" into "fine, we disabled it." High leverage for low effort.
 9. **Versioned releases + changelog** so IT can pin/track a known-good version.
-10. **Surface existing strengths in the README** — tests+CI, offline PWA, pinned self-hosted libs, a11y pass, export-key-stripping. They already exist; reviewers just need to *see* them.
+10. ~~**Surface existing strengths in the README**~~ ✓ Core trust signals added in P91; revisit after Groups B–D to link the finished review artifacts.
 
 **Honest caveats to disclose (don't hide them):**
 - Anthropic API key is stored in **plaintext localStorage** — fine for personal use; flag it, and the Tier-3 AI kill-switch is the mitigation.
 - No SSO / no central admin console — but both are *moot* with no accounts/server; state that rather than leaving it unaddressed.
 
-**Recommended sequencing:** Tier 1 (LICENSE + third-party notice) is ~an hour and unblocks the entire "can we legally use it" question — do first regardless. Tier 2 (self-host fonts + security/privacy docs + CSP) is the bulk of a real security review and very achievable given the architecture. Tier 3 is polish/trust. **Cross-check against P76** before self-hosting fonts (P76 deliberately used Google Fonts for cross-tool caching) and against the ⛔ P84 no-cloud stance (fully compatible — all of this keeps the app local).
+**Recommended sequencing:** Groups A–B are ✓ Done (P91–P92). Next: Group C (self-host fonts + SDK, favicon policy, CSP, AI kill-switch), then Group D (versioned releases + changelog). **Cross-check against P76** before self-hosting fonts (P76 deliberately used Google Fonts for cross-tool caching) and against the ⛔ P84 no-cloud stance (fully compatible — all of this keeps the app local).
 
 ---
 

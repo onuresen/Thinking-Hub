@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
 ![Vanilla JS](https://img.shields.io/badge/Vanilla_JS-no_framework-f7df1e)
 ![No Build Step](https://img.shields.io/badge/build-none-lightgrey)
@@ -24,7 +24,7 @@ Thinking Hub is a multi-tool personal productivity suite that runs entirely in t
 
 It covers the full arc of knowledge work: capturing raw ideas, structuring projects, making decisions, running retrospectives, tracking OKRs, managing risks, and logging daily reflections. All tools talk to each other through a cross-linking system and a global Cmd+K search.
 
-Works fully offline (installable PWA). **Deliberately local-only:** your data never leaves your machine — no cloud database, no third-party sync, no account. Safe for confidential work content by construction. Move data between machines with the Full Backup export/import in ⚙️ Data & Backup.
+Works fully offline as an installable PWA. **Deliberately local-first:** application records stay in browser storage — there is no cloud database, third-party sync, account, telemetry, or analytics. Move data between machines with Full Backup export/import in ⚙️ Data & Backup. Optional AI actions send the context shown for that action directly to Anthropic using a user-supplied API key; Google Fonts and favicon images are currently fetched from their documented external services.
 
 ---
 
@@ -37,7 +37,6 @@ Tools are grouped by the phase of work they support.
 | Tool | What it does |
 |------|-------------|
 | **Idea Swiper** | Rapid triage — swipe ideas into Like / Super / Nope piles, send survivors straight to Project Hub |
-| **KMQT Board** | Four-lane board: Known / Messy / Questions / Thinking — the messy middle of any complex problem |
 | **Decision Hub** | Structured decision log with Cynefin domain tags, confidence scores, Assumption tracker, alignment matrix, revisit dates + outcome calibration |
 | **Argument Hub** | Build a case top-down with the Pyramid Principle — SCQA intro, governing thought, MECE supporting pyramid, Markdown export |
 | **Canvas Hub** | Infinite spatial canvas for freeform notes, diagrams, and sticky thoughts |
@@ -69,7 +68,7 @@ Tools are grouped by the phase of work they support.
 |------|-------------|
 | **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Add your Anthropic API key in ⚙️ Settings → Integrations. |
 
-> **API key note:** The key is stored in your browser's localStorage and sent directly to Anthropic from your browser. Nothing is stored server-side. The app uses `dangerouslyAllowBrowser: true` in the Anthropic SDK — this is intentional for a local-first tool. Do not share your browser storage or export files that contain `hub-settings-v1` with others.
+> **API key note:** The key is stored in plaintext in your browser's localStorage and sent directly to Anthropic from your browser. Nothing is stored on a Thinking Hub server. The app uses `dangerouslyAllowBrowser: true` in the Anthropic SDK — this is intentional for a local-first tool. Full Backups created by current versions strip the API key and bulky Obsidian index; do not share browser storage or pre-2026-06-17 backups without inspecting them first.
 
 ### Knowledge & Goals
 
@@ -103,22 +102,26 @@ postMessage ◄─────────────────────�
 | Module | Role |
 |--------|------|
 | `hub-storage.js` | Storage adapter — `get / set / subscribe`, quota guard |
-| `hub-utils.js` | Shared utilities (`HubUtils.esc` for safe HTML escaping) |
+| `hub-utils.js` | Shared escaping, focus, and record-timestamp utilities |
+| `hub-starter-data.js` | First-run sample-data seeder (shell only) |
 | `hub-obsidian.js` | Obsidian vault reader — File System Access API, index notes, autocomplete |
+| `hub-tags.js` | Central tag/topic registry and cross-tool rename support |
 | `hub-links.js` | Cross-tool linking via postMessage, picker modal, badges |
 | `hub-search.js` | Global Cmd+K search — injected into shell only |
+| `hub-tutorial.js` | Shell onboarding and workflow tour |
 | `hub-toast.js` | Lightweight toast notifications |
 | `hub-bootstrap.js` | Init coordinator — call last in each tool |
-| `hub-ai.js` | AI Assistant — Anthropic SDK (esm.sh, pinned), capture / query / act modes, loaded in shell only |
+| `hub-ai.js` | Optional AI assistant — pinned Anthropic SDK, loaded by the shell and manual AI surfaces |
+| `hub-snapshots.js` | IndexedDB rolling snapshots and point-in-time restore (shell only) |
 
-Load order: `hub-storage.js` → `hub-utils.js` → `hub-obsidian.js` → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js`
+Required order where applicable: `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (shell only) → `hub-obsidian.js` → `hub-tags.js` → `hub-links.js` → `hub-search.js` (shell only) → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (manual AI surfaces).
 
 ---
 
 ## Key Features
 
 ### Cross-tool linking
-Any item in any tool (project, decision, canvas node, KMQT card, meeting) can be linked to any other item. The `hub-links.js` picker opens with `Ctrl+L`, embeds as a badge, and navigates on click. Works entirely via postMessage — no server needed.
+Items across supported tools (projects, decisions, canvas nodes, meetings, risks, goals, and others) can be linked to one another. The `hub-links.js` picker opens with `Ctrl+L`, embeds links as badges, and navigates on click. It works entirely via postMessage — no server needed.
 
 ### Global Cmd+K search
 `hub-search.js` indexes all tools' localStorage data and surfaces results in a fuzzy command palette. Selecting a result navigates to the tool and highlights the item.
@@ -131,12 +134,12 @@ Three export scopes from the ⚙️ Data & Backup modal:
 
 | Scope | Contents | Restorable |
 |-------|----------|-----------|
-| **Full Backup** | All 20 data keys | ✓ Yes |
+| **Full Backup** | All 28 registered data keys | ✓ Yes |
 | **AI Context** | 13 high-signal keys (curated, noise-stripped) | Read-only |
 | **Current Tool** | Active tool's key(s) only | Read-only |
 
 ### Local-only data (a feature, not a gap)
-All data lives in your browser's localStorage, with automatic daily snapshots in IndexedDB for point-in-time restore. Nothing is ever sent to a server. This is a deliberate architectural decision — it makes the app safe for confidential work data with zero security review surface. Cloud sync was prototyped once and intentionally removed; do not re-add it.
+Application records live in your browser's localStorage, with automatic daily snapshots in IndexedDB for point-in-time restore. Thinking Hub has no application backend, accounts, cloud persistence, telemetry, or analytics. Cloud sync was prototyped once and intentionally removed. Optional AI actions are the exception: when explicitly triggered, they send selected workspace context directly to Anthropic with the user's API key. Fonts and favicon images currently use the external services described above.
 
 ### Framework-grounded design
 Each tool is mapped to one or more established frameworks:
@@ -191,7 +194,6 @@ python -m http.server 5500
 |-----|--------|
 | `Cmd/Ctrl+K` | Global search across all tools |
 | `Ctrl+L` | Open cross-tool link picker (in any tool) |
-| `?` | Show tool-level keyboard shortcut overlay (in KMQT Board) |
 
 </details>
 
@@ -214,7 +216,6 @@ hub-data.js             # Read API for project/task/member data
 project-hub.html        # Project + task tracking
 schedule.html           # Calendar / timeline
 idea-swiper.html        # Rapid idea triage (swipe)
-kmqt-board.html         # Known / Messy / Questions / Thinking board
 decision-hub.html       # Decision log + assumptions + alignment matrix + calibration
 argument-hub.html       # Pyramid Principle argument builder (SCQA, MECE, export)
 canvas-hub.html         # Infinite spatial canvas
@@ -243,6 +244,25 @@ help-hub.html           # Help, framework reference, workflow guides
 - **postMessage for cross-tool communication** — tools never import each other directly. All coordination goes through the shell via `hub-navigate`, `hub-highlight`, `hub-project-active`, and `hub-links` messages.
 - **Fail-safe storage** — every tool reads from `HubStorage` with a default fallback. Missing or corrupt keys don't break other tools.
 
+## Enterprise-readiness foundation
+
+- **Local-first and serverless** — no Thinking Hub backend, accounts, cloud persistence, telemetry, or analytics.
+- **Offline-capable PWA** — the shell, tools, and pinned runtime libraries are precached for offline use.
+- **Pinned runtime libraries** — vis-network and html2canvas are self-hosted in `vendor/`; the Anthropic SDK is pinned to an explicit version while self-hosting is planned.
+- **Automated safeguards** — GitHub Actions runs auto-discovered page smoke tests, service-worker coverage checks, and interaction flows on every pull request and push to `main`.
+- **Data recovery** — full export/import, a read-only backup verifier, storage quota warnings, and IndexedDB point-in-time snapshots.
+- **Secret-aware exports** — current Full Backups strip the Anthropic API key and bulky Obsidian index.
+- **Accessibility baseline** — keyboard focus trapping, semantic modal/navigation attributes, and global reduced-motion support.
+
+The current external-service boundary and remaining hardening work are documented in the enterprise-readiness roadmap in [`CLAUDE.md`](CLAUDE.md). The review documents below describe today's implementation; repository CSP, self-hosted remaining dependencies, and organization-level AI controls remain planned for Group C.
+
+### Security and deployment documents
+
+- [Security policy and vulnerability reporting](SECURITY.md)
+- [Privacy and network-egress statement](PRIVACY.md)
+- [Enterprise deployment and administration guide](docs/DEPLOYMENT.md)
+- [Third-party notices](THIRD-PARTY-NOTICES)
+
 ---
 
 ## Contributing
@@ -260,4 +280,4 @@ For AI-assisted development, see [`CLAUDE.md`](CLAUDE.md) for project convention
 
 ## License
 
-[MIT License](LICENSE) — freely usable and modifiable for any purpose.
+Thinking Hub is licensed under the [Apache License 2.0](LICENSE). Third-party components and fonts remain under their own permissive licenses; see [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).

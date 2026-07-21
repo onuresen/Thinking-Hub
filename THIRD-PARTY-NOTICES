@@ -1,0 +1,71 @@
+Thinking Hub third-party notices
+================================
+
+This file identifies third-party software and fonts used by Thinking Hub.
+Thinking Hub's own source code is licensed under Apache License 2.0; see
+LICENSE. Third-party components remain under their respective licenses.
+
+Runtime components distributed with this repository
+---------------------------------------------------
+
+vis-network 9.1.9
+Copyright (c) 2010-2018 Almende B.V. and contributors
+Copyright (c) 2018-2021 Vis.js contributors
+https://github.com/visjs/vis-network
+Dual-licensed under Apache License 2.0 and the MIT License. Thinking Hub uses
+it under Apache License 2.0; the license text is included in LICENSE.
+
+html2canvas 1.4.1
+Copyright (c) 2022 Niklas von Hertzen
+https://github.com/niklasvh/html2canvas
+Licensed under the MIT License. The license text appears below.
+
+Runtime components fetched from third-party services
+----------------------------------------------------
+
+Anthropic TypeScript SDK 0.52.0
+Copyright (c) Anthropic PBC
+https://github.com/anthropics/anthropic-sdk-typescript
+Licensed under the MIT License. The license text appears below. Thinking Hub
+currently loads this pinned SDK from esm.sh only when an AI action needs it;
+the SDK is not stored in this repository.
+
+Google Fonts families
+- DM Sans: https://github.com/googlefonts/dm-fonts
+- Fraunces: https://github.com/undercasetype/Fraunces
+- JetBrains Mono: https://github.com/JetBrains/JetBrainsMono
+- Syne: https://github.com/bonjour-monde/syne-typeface
+
+The font families are licensed under the SIL Open Font License 1.1. Thinking
+Hub currently requests them from Google Fonts; font binaries are not stored in
+this repository. License: https://openfontlicense.org/open-font-license-official-text/
+
+Development-only components
+---------------------------
+
+Playwright 1.61.1
+Copyright (c) Microsoft Corporation
+https://github.com/microsoft/playwright
+Licensed under Apache License 2.0; the license text is included in LICENSE.
+Playwright is used only by the tests and is not a runtime dependency.
+
+MIT License text
+----------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
