@@ -383,6 +383,7 @@
         if (saved) {
           saved.projects?.forEach(p => {
             if (!p.group) p.group = '';
+            if (!p.updatedAt) p.updatedAt = '';
             if (!Array.isArray(p.workstreams)) p.workstreams = [];
             p.tasks?.forEach(t => {
               if (!t.status) t.status = t.done ? 'done' : 'todo';
@@ -401,6 +402,26 @@
 
     function saveState() {
       HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, kanbanWip: state.kanbanWip, concepts: state.concepts, groupOrder: state.groupOrder });
+    }
+
+    // Stamp a project's last-activity time (drives the "Recent" overview sort).
+    function touchProject(projId) {
+      const p = state.projects.find(x => x.id === projId);
+      if (p) p.updatedAt = new Date().toISOString();
+    }
+    // Task mutators may pass a null projectId (task looked up across all projects) — resolve the owner.
+    function touchProjectOfTask(taskId, projectId) {
+      const p = projectId ? state.projects.find(x => x.id === projectId)
+                          : state.projects.find(x => x.tasks.some(t => t.id === taskId));
+      if (p) p.updatedAt = new Date().toISOString();
+    }
+    // Recency for the "Recent" sort: explicit updatedAt, else newest task completion, else 0 (unknown).
+    function projectRecency(p) {
+      let latest = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+      (p.tasks || []).forEach(t => {
+        if (t.completedAt) { const ts = new Date(t.completedAt).getTime(); if (ts > latest) latest = ts; }
+      });
+      return latest || 0;
     }
 
     function setKanbanWip(colId, val) {
@@ -444,6 +465,7 @@
     function saveProjMemberRole(projId, memberId, role) {
       const proj = getProject(projId); if (!proj) return;
       proj.members = normalizeProjMembers(proj).map(pm => pm.memberId === memberId ? { memberId, role } : pm);
+      touchProject(projId);
       saveState();
     }
 
@@ -805,7 +827,7 @@
       const sortSel = document.createElement('select');
       sortSel.className = 'ov-filter-sort';
       sortSel.title = 'Sort projects';
-      [{ val: 'manual', label: '⇅ Manual' }, { val: 'name', label: 'A–Z Name' }, { val: 'status', label: 'By Status' }, { val: 'tasks', label: 'Open Tasks' }].forEach(o => {
+      [{ val: 'manual', label: '⇅ Manual' }, { val: 'recent', label: '🕒 Recent' }, { val: 'name', label: 'A–Z Name' }, { val: 'status', label: 'By Status' }, { val: 'tasks', label: 'Open Tasks' }].forEach(o => {
         const opt = document.createElement('option');
         opt.value = o.val; opt.textContent = o.label; opt.selected = of.sort === o.val;
         sortSel.appendChild(opt);
@@ -832,6 +854,7 @@
         visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q));
       }
       if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
+      else if (of.sort === 'recent') visible.sort((a, b) => projectRecency(b) - projectRecency(a));
       else if (of.sort === 'status') {
         const ord = { active: 0, planning: 1, onhold: 2, maintenance: 3, done: 4 };
         visible.sort((a, b) => (ord[a.status] ?? 9) - (ord[b.status] ?? 9));
@@ -984,7 +1007,7 @@
             const commit = () => {
               const val = input.value.trim();
               const p = state.projects.find(x => x.id === proj.id);
-              if (p) { p.group = val; saveState(); }
+              if (p) { p.group = val; p.updatedAt = new Date().toISOString(); saveState(); }
               renderContent();
             };
             input.addEventListener('blur', commit);
@@ -1244,7 +1267,7 @@
           if (task && task.status !== col.id) {
             task.status = col.id;
             task.done = col.id === 'done';
-            saveState(); renderContent();
+            touchProject(projectId); saveState(); renderContent();
             showToast(`Moved to <span style="color:${col.color};font-weight:600">${col.label}</span>`);
           }
           dragSrc = null;
@@ -1296,6 +1319,7 @@
       const input = prompt('Obsidian note path (e.g. Projects/MyNote.md):\nLeave blank to remove the link.', task.obsidianNote || '');
       if (input === null) return;
       task.obsidianNote = input.trim();
+      touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
       if (state.selectedProject === task.projectId) renderPanel(state.selectedProject);
@@ -1421,7 +1445,7 @@
         const toIdx = arr.findIndex(x => x.id === toId);
         arr.splice(before ? toIdx : toIdx + 1, 0, moved);
         _id = null; _group = null;
-        saveState(); renderPanel(proj.id);
+        touchProject(proj.id); saveState(); renderPanel(proj.id);
       });
     }
 
@@ -1449,7 +1473,7 @@
         const newTitle = input.value.trim();
         if (newTitle && newTitle !== original) {
           const task = findTask(taskId, projectId);
-          if (task) { task.title = newTitle; saveState(); showToast('Task renamed'); }
+          if (task) { task.title = newTitle; touchProjectOfTask(taskId, projectId); saveState(); showToast('Task renamed'); }
         }
         renderContent();
         if (state.selectedProject) renderPanel(state.selectedProject);
@@ -1466,6 +1490,7 @@
       const task = findTask(taskId, projectId);
       if (!task) return;
       task.archived = !task.archived;
+      touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
       if (state.selectedProject) renderPanel(state.selectedProject);
@@ -1474,6 +1499,7 @@
 
     function deleteTask(e, taskId, projectId) {
       e.stopPropagation();
+      touchProjectOfTask(taskId, projectId);
       if (projectId) {
         const proj = getProject(projectId);
         if (proj) proj.tasks = proj.tasks.filter(t => t.id !== taskId);
@@ -1493,6 +1519,7 @@
       task.status = task.done ? 'done' : 'todo';
       task.completedAt = task.done ? new Date().toISOString() : '';
       if (task.done) task.blockedReason = '';
+      touchProjectOfTask(taskId, projectId);
       saveState();
       if (task.done) {
         const row = e.currentTarget.closest('[data-task-id]');
@@ -1512,6 +1539,7 @@
       const item = task.checklist.find(c => c.id === itemId);
       if (!item) return;
       item.done = !item.done;
+      touchProjectOfTask(taskId, projectId);
       saveState();
       renderContent();
       if (state.selectedProject) renderPanel(state.selectedProject);
@@ -1524,6 +1552,7 @@
       if (!getProjMemberIds(proj).includes(memberId)) {
         proj.members = normalizeProjMembers(proj);
         proj.members.push({ memberId, role: '' });
+        touchProject(projId);
         saveState();
         renderContent();
         renderPanel(projId);
@@ -1545,6 +1574,7 @@
       const affected = proj.tasks.filter(t => t.assigneeId === memberId);
       affected.forEach(t => { t.assigneeId = ''; });
 
+      touchProject(projId);
       saveState();
       renderContent();
       renderPanel(projId);
@@ -1790,7 +1820,7 @@
           });
           el.querySelector('input[type=range]').addEventListener('change', function () {
             const g2 = proj.goals.find(x => x.id === g.id);
-            if (g2) { g2.progress = parseInt(this.value); saveState(); renderPanel(projId); renderContent(); }
+            if (g2) { g2.progress = parseInt(this.value); touchProject(projId); saveState(); renderPanel(projId); renderContent(); }
           });
           body.appendChild(el);
         });
@@ -1981,7 +2011,7 @@
       const name = document.getElementById('proj-name').value.trim(); if (!name) return;
       const members = [...document.querySelectorAll('#proj-members input:checked')].map(cb => ({ memberId: cb.value, role: '' }));
       const isFirst = state.projects.length === 0;
-      state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [] });
+      state.projects.push({ id: uid(), name, desc: document.getElementById('proj-desc').value.trim(), status: document.getElementById('proj-status').value, color: document.getElementById('proj-color').value, members, goals: [], milestones: [], tasks: [], updatedAt: new Date().toISOString() });
       saveState(); closeModal('modal-project'); showToast('Project created'); renderContent();
       if (isFirst) window.parent.postMessage({ type: 'hub-first-project' }, window.location.origin || '*');
     }
@@ -2120,12 +2150,14 @@
         task.taskCode = taskCode;
         task.taskType = taskType;
         task.obsidianNote = document.getElementById('task-obsidian').value.trim();
+        touchProject(projId); if (projId !== editProjId) touchProject(editProjId);
         saveState(); closeModal('modal-task'); showToast('Task updated');
         renderContent();
         if (state.selectedProject) renderPanel(state.selectedProject);
       } else {
         const newId = uid();
         proj.tasks.push({ id: newId, title, milestoneId: document.getElementById('task-milestone').value, assigneeId: document.getElementById('task-assignee').value, priority: document.getElementById('task-priority').value, due: document.getElementById('task-due').value, done: statusVal === 'done', status: statusVal, completedAt: statusVal === 'done' ? new Date().toISOString() : '', blockedReason, taskCode, taskType, obsidianNote: document.getElementById('task-obsidian').value.trim() });
+        touchProject(projId);
         saveState(); closeModal('modal-task'); showToast('Task added');
         renderContent();
         if (state.selectedProject === projId) renderPanel(projId);
@@ -2192,6 +2224,7 @@
       const name = document.getElementById('ms-name').value.trim(); if (!name) return;
       const projId = _editingMsProjId || state.selectedProject || state.projects[0]?.id;
       const proj = getProject(projId); if (!proj) return;
+      touchProject(projId);
       if (_editingMsId) {
         const ms = proj.milestones.find(m => m.id === _editingMsId);
         if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; }
@@ -2209,6 +2242,7 @@
       const proj = getProject(projId); if (!proj) return;
       proj.milestones = proj.milestones.filter(m => m.id !== msId);
       proj.tasks.forEach(t => { if (t.milestoneId === msId) t.milestoneId = null; });
+      touchProject(projId);
       saveState(); renderContent(); if (state.selectedProject) renderPanel(projId); showToast('Milestone deleted');
     }
 
@@ -2238,6 +2272,7 @@
       const name = document.getElementById('goal-name').value.trim(); if (!name) return;
       const projId = _editingGoalProjId || state.selectedProject || state.projects[0]?.id;
       const proj = getProject(projId); if (!proj) return;
+      touchProject(projId);
       if (_editingGoalId) {
         const g = proj.goals.find(x => x.id === _editingGoalId);
         if (g) { g.name = name; g.desc = document.getElementById('goal-desc').value.trim(); }
@@ -2254,6 +2289,7 @@
       if (!confirm('Delete this goal?')) return;
       const proj = getProject(projId); if (!proj) return;
       proj.goals = proj.goals.filter(g => g.id !== goalId);
+      touchProject(projId);
       saveState(); renderContent(); if (state.selectedProject) renderPanel(projId); showToast('Goal deleted');
     }
 
@@ -2360,6 +2396,7 @@
       p.status = document.getElementById('ps-status').value;
       p.color = document.getElementById('ps-color').value;
 
+      touchProject(projId);
       saveState();
       renderContent();
       renderPanel(projId);
