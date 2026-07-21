@@ -1552,6 +1552,24 @@ Follow-on from P89's project `updatedAt`: the user asked to generalize timestamp
 
 ---
 
+### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED, awaiting user decision
+Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Project Hub "Reset" button into a Settings danger zone (see the reset change), the user noted that *deleting just Project Hub data* is an odd action, and floated a bigger idea — a **Visual-Studio-"Solution"-style workspace model**: create multiple named workspaces, load/unload, auto-open the last one; optionally back them with a **user-accessible folder** (manage/delete files in Explorer, so no in-app "delete data" button is needed). Use cases raised: (a) occasional "fresh start", (b) *potential* future multi-user-on-one-PC "own account each time" (user is the only user today — hypothetical).
+
+**Key framing / findings from the discussion:**
+- **The workspace frame dissolves the reset problem.** "Fresh start" becomes *create a new empty workspace + switch to it* (non-destructive — old data still exists); "delete my data" becomes *delete a workspace / its file*. No destructive "erase everything" button needed.
+- **Browser file/folder access is real and already used here** — `hub-obsidian.js` already calls `window.showDirectoryPicker()` (File System Access API). **Caveats:** Chromium-desktop only (no Firefox/Safari, **no mobile**); needs a user-gesture click to grant, and a re-grant click most sessions after a browser restart (so fully-silent "auto-open last folder" isn't guaranteed); write-back is whole-dataset-on-change (debounced).
+- **~90% of the plumbing already exists:** `hub-snapshots.js` already captures *all* localStorage into IndexedDB and restores point-in-time. A "workspace" is essentially a **named, switchable snapshot** you save into / load out of.
+
+**Two models (recommendation: lead with A, offer B as an optional bridge):**
+- **Model A — in-browser workspace switcher (recommended core):** each workspace = full set of hub keys in IndexedDB; switch = save-current→load-selected; auto-open-last = remember active workspace id. ✅ works in every browser, zero permission prompts, silent auto-open, reuses snapshot code. ❌ data lives in browser storage, not an Explorer-visible folder (Full Backup export still covers portability).
+- **Model B — folder-backed workspaces:** each workspace = a `.json` file in a picked directory; load reads it, edits write back. ✅ files visible/manageable/deletable in Explorer (the user's "delete it yourself" vision), portable. ❌ Chromium-desktop only (no phone), re-grant click most sessions, more complexity.
+
+**Honest caveat recorded:** workspaces give *separation*, not *privacy* — on a shared PC anyone could switch workspaces. True per-user accounts would need a passphrase (browser-local encryption has real limits) — treat as a separate, later question; do NOT build auth as part of this.
+
+**Open questions to resolve before building:** (1) is folder-in-Explorer a must-have (→ accept Chromium-desktop-only, Model B) or nice-to-have (→ Model A first)? (2) does the user ever open this on mobile (rules Model B in/out as primary store)? (3) workspace scope = everything (all tools — argued yes, a true separate world) vs. Project Hub only? **Next step if pursued:** sketch the Model A UX (sidebar workspace picker: New / Switch / Rename / Export-to-folder) before committing. **Compatible with the ⛔ no-cloud standing decision (P84)** — this is all local.
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
