@@ -769,7 +769,8 @@
       if (!currentId) return;
       const d = decisions.find(x => x.id === currentId);
       if (!d) return;
-      d.archived = !d.archived;
+      HubUtils.stampArchive(d, !d.archived);
+      HubUtils.stampUpdate(d);
       saveData();
       const archBtn = document.getElementById('btn-archive');
       if (archBtn) archBtn.textContent = d.archived ? '↩ Restore' : '📦 Archive';
@@ -858,9 +859,10 @@
           dec.decisionCanvas[f.id] = document.getElementById('dc-' + f.id)?.value || '';
         });
 
-        // Option Map Save natively handled on input change 
+        // Option Map Save natively handled on input change
       }
 
+      HubUtils.stampUpdate(dec);
       saveData();
       renderSidebar();
       document.getElementById('topbar-title').innerText = dec.title || 'Untitled';
