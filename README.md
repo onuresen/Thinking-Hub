@@ -24,7 +24,7 @@ Thinking Hub is a multi-tool personal productivity suite that runs entirely in t
 
 It covers the full arc of knowledge work: capturing raw ideas, structuring projects, making decisions, running retrospectives, tracking OKRs, managing risks, and logging daily reflections. All tools talk to each other through a cross-linking system and a global Cmd+K search.
 
-Works fully offline as an installable PWA. **Deliberately local-first:** application records stay in browser storage — there is no cloud database, third-party sync, account, telemetry, or analytics. Fonts, icons, and runtime libraries are self-hosted. Move data between machines with Full Backup export/import in ⚙️ Data & Backup. The only application egress is an optional, explicitly triggered request directly to Anthropic using a user-supplied API key.
+Works fully offline as an installable PWA. **Deliberately local-first:** application records stay in browser storage — there is no cloud database, third-party sync, account, telemetry, or analytics. Fonts, icons, and runtime libraries are self-hosted. Move data between machines with Full Backup export/import in ⚙️ Data & Backup. Optional AI can use a reviewed Microsoft Copilot copy/open handoff with no key or an explicitly triggered direct Anthropic request, subject to deployment policy.
 
 For managed deployments, use a published [versioned release](https://github.com/onuresen/Thinking-Hub/releases) and verify its SHA-256 checksum. The canonical source version is in [`VERSION`](VERSION), with release impact recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -68,9 +68,9 @@ Tools are grouped by the phase of work they support.
 
 | Tool | What it does |
 |------|-------------|
-| **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Add your Anthropic API key in ⚙️ Settings → Integrations. |
+| **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Choose Microsoft Copilot handoff (no key) or Anthropic direct in ⚙️ Settings → Integrations. |
 
-> **API key note:** The key is stored in plaintext in your browser's localStorage and sent directly to Anthropic from your browser. Nothing is stored on a Thinking Hub server. Full Backups created by current versions strip the API key and bulky Obsidian index; do not share browser storage or pre-2026-06-17 backups without inspecting them first. Organizations can disable every AI surface and call through `enterprise-config.js`.
+> **AI boundary:** Microsoft Copilot handoff prepares and previews a prompt locally, then copies it and opens Microsoft 365 Copilot only after confirmation; Thinking Hub stores no Microsoft credential and submits nothing automatically. Anthropic direct remains optional: its key is plaintext browser localStorage and requests go directly to Anthropic. Current Full Backups strip the key and bulky Obsidian index. Organizations can allow only approved providers—or disable every AI surface—through `enterprise-config.js`. See [AI providers and Copilot handoff](docs/AI-PROVIDERS.md).
 
 ### Knowledge & Goals
 
@@ -142,7 +142,7 @@ Three export scopes from the ⚙️ Data & Backup modal:
 | **Current Tool** | Active tool's key(s) only | Read-only |
 
 ### Local-only data (a feature, not a gap)
-Application records live in your browser's localStorage, with automatic daily snapshots in IndexedDB for point-in-time restore. Thinking Hub has no application backend, accounts, cloud persistence, telemetry, or analytics. Cloud sync was prototyped once and intentionally removed. Optional AI actions are the only application egress: when explicitly triggered and allowed by deployment policy, they send selected workspace context directly to Anthropic with the user's API key.
+Application records live in your browser's localStorage, with automatic daily snapshots in IndexedDB for point-in-time restore. Thinking Hub has no application backend, accounts, cloud persistence, telemetry, or analytics. Cloud sync was prototyped once and intentionally removed. Optional AI is deployment-controlled: Anthropic direct is the only automatic application API egress; Microsoft Copilot handoff previews and copies locally, then opens Copilot only after user confirmation without automatic submission.
 
 ### Framework-grounded design
 Each tool is mapped to one or more established frameworks:
@@ -251,8 +251,8 @@ help-hub.html           # Help, framework reference, workflow guides
 
 - **Local-first and serverless** — no Thinking Hub backend, accounts, cloud persistence, telemetry, or analytics.
 - **Offline-capable PWA** — the shell, tools, and pinned runtime libraries are precached for offline use.
-- **Self-hosted runtime** — fonts, vis-network, and html2canvas are stored locally; optional AI uses a small direct API client rather than a runtime SDK/CDN.
-- **Deployment policy** — `enterprise-config.js` can remove AI controls and reject every AI call before a network request is created.
+- **Self-hosted runtime** — fonts, vis-network, and html2canvas are stored locally; optional Anthropic AI uses a small direct API client rather than a runtime SDK/CDN.
+- **Deployment policy** — `enterprise-config.js` can allow only Microsoft Copilot handoff, only Anthropic direct, both, or no AI. Disabled providers fail before clipboard or network activity.
 - **Content Security Policy** — all application pages restrict scripts, styles, fonts, images, frames, workers, forms, and connections to the documented boundary.
 - **Automated safeguards** — GitHub Actions runs auto-discovered page smoke tests, service-worker coverage checks, and interaction flows on every pull request and push to `main`.
 - **Data recovery** — full export/import, a read-only backup verifier, storage quota warnings, and IndexedDB point-in-time snapshots.
@@ -266,6 +266,7 @@ The current external-service boundary and architectural decisions are documented
 - [Security policy and vulnerability reporting](SECURITY.md)
 - [Privacy and network-egress statement](PRIVACY.md)
 - [Enterprise deployment and administration guide](docs/DEPLOYMENT.md)
+- [AI providers and Microsoft Copilot handoff](docs/AI-PROVIDERS.md)
 - [Release, verification, and rollback process](docs/RELEASING.md)
 - [Version history and security-relevant changes](CHANGELOG.md)
 - [Third-party notices](THIRD-PARTY-NOTICES)

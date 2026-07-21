@@ -364,9 +364,9 @@
             <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
           </div>
           <div class="ai-surface" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+            <span class="ai-badge" title="Uses the AI provider selected in the main app">AI</span>
             <button class="btn btn-ghost" id="rh-ai-draft-btn" onclick="rhAiDraft()"
-              title="Draft this review from the week's real activity (fills only empty fields) — uses your API key"
+              title="Draft this review from the week's real activity using the selected AI provider (fills only empty fields)"
               style="font-size:11px;padding:4px 10px;white-space:nowrap">✦ Draft with AI</button>
           </div>
         </div>
@@ -862,7 +862,7 @@
   async function rhAiDraft() {
     if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
     if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
-      showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
+      showToast(typeof HubAI !== 'undefined' ? HubAI.getSetupMessage() : 'AI is unavailable', 'error');
       return;
     }
     const monday = rhGetMonday(rhWeekOffset);
@@ -908,7 +908,7 @@
         showToast('All fields already have your text — nothing overwritten');
       }
     } catch (err) {
-      showToast('AI draft failed: ' + (err.message || err), 'error');
+      showToast(HubAI.isHandoffError(err) ? err.message : 'AI draft failed: ' + (err.message || err), HubAI.isHandoffError(err) ? '' : 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = origLabel;

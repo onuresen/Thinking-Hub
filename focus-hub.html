@@ -219,8 +219,8 @@
     <div class="insights-wrap ai-surface">
       <div class="insights-header">
         <span class="insights-label">✦ Energy Insights</span>
-        <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
-        <button class="insights-refresh-btn" id="insights-refresh" onclick="generateInsights()" title="Find patterns between focus sessions and mood — uses your API key" style="margin-left:auto">↻</button>
+        <span class="ai-badge" title="Uses the AI provider selected in the main app">AI</span>
+        <button class="insights-refresh-btn" id="insights-refresh" onclick="generateInsights()" title="Find patterns between focus sessions and mood using the selected AI provider" style="margin-left:auto">↻</button>
       </div>
       <div id="insights-content"></div>
     </div>
@@ -586,7 +586,7 @@
       } else {
         const hint = (typeof HubAI !== 'undefined' && HubAI.isConfigured())
           ? 'Click ↻ to find patterns between your focus sessions and daily mood (logged in Journal Hub).'
-          : 'Add your Anthropic API key in Settings → Integrations (in the main app), then click ↻.';
+          : (typeof HubAI !== 'undefined' ? HubAI.getSetupMessage() : 'AI is unavailable.');
         el.innerHTML = `<div class="insights-empty">${hint}</div>`;
       }
     }
@@ -643,6 +643,12 @@
         const text = await HubAI.chat(prompt, system);
         saveInsights(text || 'No response from AI.');
       } catch (e) {
+        if (HubAI.isHandoffError(e)) {
+          insightsLoading = false;
+          btn.classList.remove('is-loading');
+          document.getElementById('insights-content').innerHTML = `<div class="insights-empty">${esc(e.message)}</div>`;
+          return;
+        }
         saveInsights('Could not reach AI: ' + (e?.message || 'unknown error'));
       }
       insightsLoading = false;

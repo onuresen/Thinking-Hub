@@ -13,6 +13,12 @@
     // before a network request is created. A network deny rule remains the
     // strongest defense-in-depth control for restricted deployments.
     aiEnabled: true,
+
+    // Provider allowlist, in deployment-preference order. Supported values:
+    // 'copilot-handoff' (local preview/copy/open; no Microsoft API or secret)
+    // 'anthropic' (direct browser API request with a user-supplied key).
+    // Use ['copilot-handoff'] for a no-key Microsoft-first deployment.
+    allowedAiProviders: Object.freeze(['copilot-handoff', 'anthropic']),
   });
 
   Object.defineProperty(window, 'ThinkingHubPolicy', {
@@ -24,6 +30,6 @@
 
   document.documentElement.setAttribute(
     'data-ai-enabled',
-    policy.aiEnabled ? 'true' : 'false'
+    policy.aiEnabled && policy.allowedAiProviders.length ? 'true' : 'false'
   );
 })();

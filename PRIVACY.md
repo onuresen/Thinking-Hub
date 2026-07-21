@@ -31,6 +31,7 @@ exports and imports a Full Backup.
 | --- | --- | --- | --- |
 | `api.anthropic.com` | A user explicitly tests a key or invokes an AI capture, query, act, briefing, drafting, or insight feature | Anthropic API key, prompt, applicable system instructions, and feature-dependent workspace context | No |
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
+| `m365.cloud.microsoft` | User confirms **Copy and open Copilot** after reviewing a locally prepared prompt | Normal browser navigation metadata; the prompt remains on the clipboard until the user pastes it | No |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
 
 The Open Graph and Twitter preview URLs in `index.html` may be fetched by
@@ -48,8 +49,7 @@ JavaScript CDN during application use.
 
 ## What optional AI can include
 
-AI traffic is sent directly from the browser to Anthropic, not through a
-Thinking Hub server. Depending on the chosen feature, the request can include:
+Depending on the provider and feature, the prepared prompt can include:
 
 - the text the user entered and up to four recent AI conversation turns;
 - active project and task names, status, priority, due dates, assignees, and
@@ -60,13 +60,22 @@ Thinking Hub server. Depending on the chosen feature, the request can include:
   cross-tool links.
 
 The capture feature uses a narrower context of active project names and known
-people. The API-key test sends only a short connectivity message. Users should
-review organizational policy and avoid AI features for data that may not be
-sent to Anthropic.
+people. The Anthropic API-key test sends only a short connectivity message.
 
-Anthropic independently governs its processing and retention under the terms
-applicable to the user's API account. Thinking Hub does not control those
-terms.
+With Microsoft Copilot handoff, Thinking Hub shows the exact prepared prompt
+before copying. Closing the dialog copies and sends nothing. Confirming copies
+the text and opens Microsoft 365 Copilot, but does not paste or submit it; the
+user controls the final disclosure. Thinking Hub stores no Microsoft token or
+conversation. Clipboard contents remain subject to the browser and operating
+system clipboard boundary.
+
+With Anthropic direct, the prompt is sent from the browser to Anthropic, not
+through a Thinking Hub server. Users should follow organizational policy and
+avoid either provider for data that is not approved for that destination.
+
+Anthropic and Microsoft independently govern processing and retention under
+the terms applicable to the user's account and organization. Thinking Hub does
+not control those terms.
 
 ## Exports and local files
 

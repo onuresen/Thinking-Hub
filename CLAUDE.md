@@ -7,7 +7,7 @@ Multi-tool personal productivity web app. **No build step, no Node.js.** Pure HT
 `index.html` (shell) → loads tools in `<iframe id="app-frame">` → tools share state via `HubStorage` (localStorage — **local-only by standing decision, see below**).
 
 ## ⛔ Standing decision: NO cloud sync (P84)
-The app holds **confidential work data**. Cloud persistence of any kind (Supabase, Firebase, any third-party backend) would require a company security review and creates breach surface for no acceptable benefit. Supabase sync was built once and **deliberately removed** by the user. Do not propose or re-add cloud storage, telemetry, or any feature that sends user data to a server. Fonts, icons, and runtime libraries are self-hosted; the only application egress allowed is the Anthropic API (user-supplied key, explicit per-use action, and only when `enterprise-config.js` permits AI). Durability is handled locally: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`).
+The app holds **confidential work data**. Cloud persistence of any kind (Supabase, Firebase, any third-party backend) would require a company security review and creates breach surface for no acceptable benefit. Supabase sync was built once and **deliberately removed** by the user. Do not propose or re-add cloud storage, telemetry, or any feature that sends user data to a server. Fonts, icons, and runtime libraries are self-hosted. Optional AI is deployment-controlled: Anthropic direct is the only automatic application API egress; Microsoft Copilot handoff only previews/copies locally and opens a user-controlled browser destination after confirmation. Durability is handled locally: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`).
 
 ## File map
 | File | Role |
@@ -25,8 +25,8 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
 | `hub-bootstrap.js` | Init coordinator (35 lines) — call last in each tool |
-| `enterprise-config.js` | Deployment-owned immutable policy loaded before `hub-ai.js`; `aiEnabled:false` hides AI surfaces and blocks every HubAI request before fetch. Not stored in localStorage, so backups cannot override it. |
-| `hub-ai.js` | AI Assistant module: direct Anthropic Messages API client (`HubAI.isEnabled/capture/chat/testKey/getKey/saveKey/isConfigured`) — no runtime SDK/CDN. Self-contained; currently loaded by `index.html`, `focus-hub.html`, and `journal-hub.html`. |
+| `enterprise-config.js` | Deployment-owned immutable AI policy loaded before `hub-ai.js`; master enable plus provider allowlist. Not stored in localStorage, so backups cannot override it. |
+| `hub-ai.js` | Provider-neutral AI module: Anthropic direct adapter plus no-key Microsoft Copilot preview/copy/open handoff. Exposes provider/policy state and existing capture/chat/query/act APIs. No runtime SDK/CDN. |
 | `hub-snapshots.js` | IndexedDB rolling snapshots: `HubSnapshots.init/take/list/restore` — daily auto-snapshot of all localStorage, point-in-time restore (P84). Loaded in `index.html` only. |
 | `project-hub.html` | Project + task tracking |
 | `schedule.html` | Calendar / timeline |
@@ -67,12 +67,13 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `VERSION` | Canonical Semantic Versioning source for releases from v1.1.0 onward. Tag must equal `v` + this exact value. |
 | `CHANGELOG.md` | Dated user/operator-visible release impact and security notes; Keep-a-Changelog structure. |
 | `docs/RELEASING.md` | Maintainer and administrator contract for preparing, publishing, verifying, pinning, and rolling back immutable releases. |
+| `docs/AI-PROVIDERS.md` | Reviewer/operator contract for Copilot handoff, Anthropic direct, deployment allowlist, privacy boundary, and deferred direct Microsoft APIs. |
 | `.github/workflows/release.yml` | Tag-triggered release gate: validates tag/version/changelog, reruns tests, builds an export-filtered archive + SHA-256 file, then publishes GitHub Release assets. |
 | `favicon.svg` | Canonical Convergence identity mark (three thoughts → one clarity spark); source for all PWA icon PNGs. |
 | `scripts/render-icons.js` | Dev-only Playwright renderer that regenerates the 192/512/maskable PNG set from `favicon.svg`. |
 | `vendor/` | Self-hosted pinned libraries and fonts: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1, plus OFL WOFF2 subsets under `vendor/fonts/` (P80/P93 — no runtime CDN dependency) |
 | `styles/` | Shared `fonts.css` plus extracted tool stylesheets (P85 B1). The five largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) keep extracted CSS for browser caching. ⚠ New files here must be added to `sw.js` PRECACHE. |
-| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the sidebar "TH" logo mark |
+| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the canonical Convergence SVG |
 | `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
@@ -105,6 +106,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 | vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
 | html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
 | Anthropic Messages API | Manual AI features only | Direct local fetch client in `hub-ai.js`; no SDK dependency (P93) |
+| Microsoft 365 Copilot handoff | Manual AI features only | Browser navigation + reviewed clipboard copy; no API, credential, SDK, or automatic submission (P96) |
 
 ## What NOT to do
 - **Do not add cloud sync or any server-side persistence** — standing P84 decision (confidential work data); see the ⛔ section at the top
@@ -114,7 +116,8 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 - Do not break `hub-storage.js` load order
 - Do not hardcode colors in JS-injected CSS strings
 - Do not load runtime libraries, fonts, or favicons from a CDN; keep the P93 zero-egress boundary
-- Do not bypass `ThinkingHubPolicy.aiEnabled`; every new AI surface needs `.ai-surface` and every call must go through guarded `HubAI`
+- Do not bypass `ThinkingHubPolicy.aiEnabled` or `allowedAiProviders`; every AI surface needs `.ai-surface` and every operation must go through guarded `HubAI`
+- Do not add a Microsoft/Direct Line/Graph secret to browser code. Direct Copilot APIs stay deferred until an explicitly approved identity/backend architecture exists.
 - Do not use `var(--font-b)` or `var(--font-d)` (undefined aliases) — use `var(--font-body)` / `var(--font-display)`
 
 ## ⏱ Timestamp convention (P90)
@@ -130,7 +133,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`, `.ai-badge`
 
 ## ⚠ AI feature marker convention (P86)
-**Every control that calls the Anthropic API (consumes the user's key + tokens) MUST carry the `.ai-badge` marker** — a small coral `✦ AI` pill (theme.css, uses `--accent2`) with `title="Uses your Anthropic API key · consumes tokens"`. This is a standing user-requested convention so API/token cost is never a surprise. Current AI surfaces all carry it: the shell AI drawer (`index.html` panel header), the Today "✦ Briefing" card (`index.html`), Journal Hub "✦ Draft with AI", Focus Hub "✦ Energy Insights". Any NEW AI-triggering control must add the badge next to its trigger.
+**Every control that invokes an AI provider MUST carry the `.ai-badge` marker** — a small coral `✦ AI` pill (theme.css, uses `--accent2`) with provider-aware guidance. This is a standing convention so external processing or token/cost implications are never a surprise. Current AI surfaces all carry it: the shell AI drawer, Today Briefing, Journal Draft, and Focus Energy Insights. Any new AI control must add the badge and route through `HubAI`; Copilot handoff must preview before clipboard/navigation, while Anthropic direct must remain explicit and key-aware.
 
 ## Known duplication (accepted, don't add more)
 - `_esc(s)` now lives in `hub-utils.js` (`HubUtils.esc`); `hub-links.js` and `hub-search.js` fall back to an inline copy if `HubUtils` is not loaded — intentional resilience
@@ -1707,12 +1710,34 @@ Replaced the generic TH-letter tile and unrelated third-party lightbulb favicon 
 
 ---
 
+### ~~Priority 96 — Provider-neutral AI + Microsoft Copilot handoff~~ ✓ Done `[group: enterprise-readiness]`
+Reduce dependence on personal Anthropic keys without weakening the local-first/serverless boundary.
+
+- **Provider-neutral core:** `HubAI` now resolves the deployment allowlist and the user's permitted preference on every operation. Existing capture/query/act/chat callers work through one provider completion boundary; users who already have a valid Anthropic key keep Anthropic by default, while new/no-key profiles follow deployment order (Copilot first).
+- **Copilot boundary:** every feature constructs and previews the exact prompt locally in a focus-trapped shared modal. Only an explicit **Copy and open Copilot** confirmation writes it to the clipboard and navigates to the fixed Microsoft 365 Copilot URL. Thinking Hub does not authenticate to Microsoft, call a Microsoft API, paste, submit, receive, persist, or auto-apply the response. Cancel/backdrop/Escape produce zero clipboard, navigation, or API activity.
+- **Policy:** immutable `enterprise-config.js` now has `allowedAiProviders`; a stored `hub-settings-v1.aiProvider` preference cannot override it. Anthropic key testing/saving and requests also fail when Anthropic is not allowed. Master AI-off blocks both clipboard and network behavior and hides all marked surfaces.
+- **Provider-aware UI:** Settings shows only allowed providers and reveals the relevant Copilot explanation or Anthropic key controls. Drawer status, Briefing, Focus Energy Insights, Journal Draft, and AI badges use provider-aware guidance; Copilot completion/cancel is reported as a handoff rather than a false API failure.
+- **Direct integration deferred:** Microsoft 365 Copilot Chat API is preview/unsupported for production and currently demands broad delegated Graph read scopes. Secured Copilot Studio embedding requires a server-side Direct Line secret-to-token exchange. Neither belongs in the v1.1 static architecture.
+- **Docs-first contract:** README, security, privacy, deployment, changelog, and new `docs/AI-PROVIDERS.md` were updated before runtime code, per user request.
+
+**Key decisions:**
+- **Decision:** Implement a user-mediated Copilot handoff rather than a direct Microsoft API client. **Why:** it removes the personal API-key requirement while preserving zero backend, no Microsoft secret/token storage, explicit disclosure review, and organization-managed Copilot authentication. **Alternative:** Graph Chat API — preview, production-unsupported, license-bound, and broad delegated permissions. **Confidence:** high.
+- **Decision:** Keep Anthropic as an optional provider rather than remove it. **Why:** it supports the fully integrated structured-response/action workflow today; provider choice reduces dependency without regressing existing personal use. **Confidence:** high.
+- **Decision:** Put provider allowlisting in immutable deployment policy and preference in the existing settings object. **Why:** administrators control permitted boundaries while users can select only within them; no new storage key or import authority is created. **Confidence:** high.
+- **Decision:** Require preview before clipboard/navigation for every Copilot handoff. **Why:** opening a destination is not meaningful consent to disclose the full prompt; the user must see the exact payload and be able to cancel with zero side effects. **Confidence:** high.
+
+**Verified:** full `tests/npm test` green. Expanded smoke proves: direct Anthropic request contract and selectable integrated provider; Copilot exact-prompt preview; cancel with zero clipboard/navigation/API activity; confirmation copies the reviewed context and opens only `https://m365.cloud.microsoft/chat/`; Copilot-only policy overrides a stored Anthropic preference and blocks key save/test/network; master AI-off hides shell/Focus/Journal surfaces and causes zero clipboard/navigation/network; all 30 pages and all 13 interaction flows pass, including the byte-identical 28-key backup round trip. No new storage key, color token, runtime dependency, CSP origin, or script-order change.
+
+**Files:** `docs/AI-PROVIDERS.md` (new), `README.md`, `SECURITY.md`, `PRIVACY.md`, `docs/DEPLOYMENT.md`, `CHANGELOG.md`, `enterprise-config.js`, `hub-ai.js`, `index.html`, `focus-hub.html`, `journal-hub.html`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
 **The reframe (the whole point):** "enterprise-ready" ≠ "paid" and ≠ "has a sales team" — it means **passing an IT security + legal + procurement review** (see VS Code / Obsidian / free-tier Postman). A free tool clears that bar routinely. **Thinking Hub's local-first architecture (P84 no-cloud) is a massive head start** — no server means no data-residency question, no breach surface, no vendor-trust problem, no DPA to negotiate, and SSO is *moot* (there are no accounts). The P84 decision, made for the user's own reasons, is also the single best enterprise-readiness feature the app has. Most SaaS tools fail review on exactly the things this app gets for free.
 
-**Repo scan findings (updated after P93, 2026-07-21):** legal/reviewer baseline present (`LICENSE`, notices, SECURITY, PRIVACY, deployment guide). Fonts, icons, and runtime libraries are self-hosted; no Google Fonts, Google favicon, or JavaScript CDN request remains. The only application egress is **`api.anthropic.com`**, explicitly user-triggered and deployment-disableable. Automated tests + CI, offline PWA, CSP on all pages, accessibility pass, API-key-stripped exports, no telemetry/analytics.
+**Repo scan findings (updated during P96, 2026-07-21):** legal/reviewer baseline present (`LICENSE`, notices, SECURITY, PRIVACY, deployment/release/AI-provider guides). Fonts, icons, and runtime libraries are self-hosted; no Google Fonts, Google favicon, or JavaScript CDN request remains. Anthropic direct is the only automatic application API egress and is deployment-disableable. Microsoft Copilot handoff is user-mediated clipboard/navigation with local preview and no Microsoft API or stored credential. Automated tests + CI, offline PWA, CSP on all pages, accessibility pass, API-key-stripped exports, no telemetry/analytics.
 
 **Tier 1 — Non-negotiable legal blockers:** ✓ Done (P91)
 1. ~~**Add a LICENSE file.**~~ ✓ Apache License 2.0.
@@ -1720,7 +1745,7 @@ User wants Thinking Hub usable inside enterprises despite being a free tool (con
 
 **Tier 2 — What a security review asks for:**
 3. ~~**Written security & privacy posture.**~~ ✓ `SECURITY.md` + `PRIVACY.md` (P92).
-4. ~~**Eliminate non-user-initiated external calls.**~~ ✓ P93: fonts self-hosted, favicon fetches removed, SDK/CDN dependency eliminated; only optional direct Anthropic API remains.
+4. ~~**Eliminate non-user-initiated external calls.**~~ ✓ P93/P96: fonts self-hosted, favicon fetches removed, SDK/CDN dependency eliminated; optional Anthropic remains explicit, while Copilot is previewed user-mediated clipboard/navigation with no API call.
 5. ~~**`SECURITY.md` with a vulnerability-reporting path.**~~ ✓ P92; private GitHub advisory route plus safe fallback, no invented SLA.
 6. ~~**Content-Security-Policy.**~~ ✓ Tested meta CSP on all 30 pages (P93); deployment guide documents the remaining `unsafe-inline` and header-level `frame-ancestors` boundary.
 

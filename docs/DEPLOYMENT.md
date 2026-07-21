@@ -8,14 +8,20 @@ application server, account service, or environment-variable configuration.
 
 ### Standard connected deployment
 
-All fonts, icons, and runtime libraries are self-hosted. The only application
-egress to consider is `api.anthropic.com`, and only if optional AI is approved
-and `enterprise-config.js` keeps `aiEnabled: true`.
+All fonts, icons, and runtime libraries are self-hosted. Configure
+`allowedAiProviders` in `enterprise-config.js` for the approved AI boundary:
+
+- `['copilot-handoff']`: no API key or automatic AI request; users review and
+  copy prompts into their organization-managed Microsoft 365 Copilot session;
+- `['anthropic']`: direct browser requests to `api.anthropic.com` with a
+  user-supplied key;
+- both values: users may choose either provider.
 
 ### Restricted deployment
 
-Set `aiEnabled: false` in `enterprise-config.js` and block
-`api.anthropic.com` at the proxy, DNS, firewall, and/or managed-browser layer.
+Set `aiEnabled: false` in `enterprise-config.js` and block unapproved external
+destinations, including `api.anthropic.com`, at the proxy, DNS, firewall,
+and/or managed-browser layer.
 The application then uses same-origin resources only and can be deployed on an
 isolated intranet. The policy switch hides AI controls and rejects all Thinking
 Hub AI calls before fetch; network blocking is the defense-in-depth control.
@@ -26,6 +32,11 @@ offline cache fallback, so an online policy change is not delayed by the
 normal stale-while-revalidate asset strategy. Network blocking remains the
 authoritative defense if a previously installed device is indefinitely
 offline with an older cached policy.
+
+Microsoft Copilot handoff opens `https://m365.cloud.microsoft/chat/` only after
+the user reviews and confirms the prompt. It makes no Microsoft API call and
+stores no Microsoft credential. If browser navigation to Microsoft 365 is not
+approved, omit `copilot-handoff` from the allowlist. See `AI-PROVIDERS.md`.
 
 ## 2. Hosting requirements
 
@@ -116,9 +127,9 @@ iframes, workers, exports, and the chosen AI policy.
 
 4. Confirm `sw.js` precache coverage passes.
 5. Confirm the required network allowlist/denylist with the security team.
-6. Decide whether AI is permitted. If it is not, set `aiEnabled: false` in
-   `enterprise-config.js`, block `api.anthropic.com`, and instruct users not to
-   store a key.
+6. Decide whether AI is permitted and set `allowedAiProviders` accordingly. If
+   it is not, set `aiEnabled: false`, block unapproved destinations, and
+   instruct users not to store an Anthropic key or paste data into external AI.
 7. Open every approved browser profile against the final HTTPS origin and test
    a synthetic Full Backup export, read-only verification, wipe in a disposable
    profile, and restore.

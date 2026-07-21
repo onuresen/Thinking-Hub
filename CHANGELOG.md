@@ -5,7 +5,15 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- Provider-neutral AI configuration with a no-key Microsoft Copilot handoff:
+  Thinking Hub previews the exact prompt, then copies it and opens Microsoft
+  365 Copilot only after confirmation; no Microsoft API, token, or automatic
+  submission is involved.
+- Deployment-owned AI provider allowlist and reviewer documentation covering
+  Copilot handoff, Anthropic direct, disabled mode, privacy, and deferred direct
+  Microsoft API/Copilot Studio integration.
 
 ## [1.1.0] - 2026-07-21
 

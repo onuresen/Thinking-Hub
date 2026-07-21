@@ -222,6 +222,7 @@ function appFiles(ext) {
     return !!el && el.style.display !== 'none';
   });
   check('Cmd/Ctrl+K opens global search overlay', searchOpen);
+  await shell.keyboard.press('Escape');
 
   const swRegistered = await shell.evaluate(async () => {
     if (!('serviceWorker' in navigator)) return 'unsupported';
@@ -252,6 +253,101 @@ function appFiles(ext) {
     apiRequest?.headers?.['anthropic-version'] === '2023-06-01' &&
     apiRequest?.headers?.['anthropic-dangerous-direct-browser-access'] === 'true' &&
     apiRequest?.body?.model === 'claude-haiku-4-5');
+  const anthropicProviderProbe = await shell.evaluate(async () => {
+    HubAI.setProvider('anthropic');
+    HubAI.saveKey('sk-ant-smoke-provider');
+    return { text: await HubAI.chat('provider switch test'), provider: HubAI.getProvider() };
+  });
+  check('Anthropic remains an integrated selectable provider',
+    anthropicProviderProbe.provider === 'anthropic' && anthropicProviderProbe.text === 'ok');
+
+  apiRequest = null;
+  await shell.evaluate(() => {
+    HubAI.setProvider('copilot-handoff');
+    window.__copiedPrompts = [];
+    window.__openedUrls = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text) => { window.__copiedPrompts.push(text); } },
+    });
+    window.open = (url) => {
+      window.__openedUrls.push(url);
+      return {
+        opener: window,
+        location: { replace: (next) => window.__openedUrls.push(next) },
+        close: () => {},
+      };
+    };
+    window.__handoffResult = null;
+    HubAI.chat('private user context', 'return three priorities')
+      .catch((error) => { window.__handoffResult = { code: error.code, message: error.message }; });
+  });
+  await shell.getByRole('dialog', { name: 'Review Microsoft Copilot prompt' }).waitFor();
+  const previewPrompt = await shell.getByLabel('Exact prompt to copy').inputValue();
+  const beforeCancel = await shell.evaluate(() => ({ copied: __copiedPrompts.length, opened: __openedUrls.length }));
+  await shell.getByRole('button', { name: 'Cancel' }).click();
+  await shell.waitForFunction(() => window.__handoffResult !== null);
+  const cancelledHandoff = await shell.evaluate(() => ({ result: __handoffResult, copied: __copiedPrompts.length, opened: __openedUrls.length }));
+  check('Copilot handoff previews the exact prompt before disclosure',
+    previewPrompt.includes('return three priorities') && previewPrompt.includes('private user context') &&
+    beforeCancel.copied === 0 && beforeCancel.opened === 0);
+  check('Copilot handoff cancel has zero clipboard, navigation, or API activity',
+    cancelledHandoff.result?.code === 'COPILOT_HANDOFF_CANCELLED' &&
+    cancelledHandoff.copied === 0 && cancelledHandoff.opened === 0 && apiRequest === null);
+
+  await shell.evaluate(() => {
+    window.__handoffResult = null;
+    HubAI.chat('approved context', 'return one recommendation')
+      .catch((error) => { window.__handoffResult = { code: error.code, message: error.message }; });
+  });
+  await shell.getByRole('dialog', { name: 'Review Microsoft Copilot prompt' }).waitFor();
+  await shell.getByRole('button', { name: 'Copy and open Copilot' }).click();
+  await shell.waitForFunction(() => window.__handoffResult !== null);
+  const confirmedHandoff = await shell.evaluate(() => ({
+    result: __handoffResult,
+    copied: __copiedPrompts.slice(),
+    opened: __openedUrls.slice(),
+    provider: HubAI.getProvider(),
+    configured: HubAI.isConfigured(),
+  }));
+  check('Copilot handoff confirmation copies exact context and opens fixed destination',
+    confirmedHandoff.result?.code === 'COPILOT_HANDOFF_COMPLETE' &&
+    confirmedHandoff.provider === 'copilot-handoff' && confirmedHandoff.configured === true &&
+    confirmedHandoff.copied.length === 1 && confirmedHandoff.copied[0].includes('approved context') &&
+    confirmedHandoff.opened.includes('https://m365.cloud.microsoft/chat/') && apiRequest === null);
+
+  const copilotOnlyCtx = await browser.newContext({ serviceWorkers: 'block' });
+  let copilotOnlyApiCalls = 0;
+  await copilotOnlyCtx.route(`${BASE}/enterprise-config.js`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'text/javascript',
+    body: `Object.defineProperty(window,'ThinkingHubPolicy',{value:Object.freeze({aiEnabled:true,allowedAiProviders:Object.freeze(['copilot-handoff'])}),writable:false,configurable:false});document.documentElement.setAttribute('data-ai-enabled','true');`,
+  }));
+  await copilotOnlyCtx.route('https://api.anthropic.com/v1/messages', (route) => {
+    copilotOnlyApiCalls++;
+    return route.abort();
+  });
+  const copilotOnly = await copilotOnlyCtx.newPage();
+  await copilotOnly.goto(`${BASE}/index.html`, { waitUntil: 'load', timeout: 20000 });
+  await copilotOnly.evaluate(() => {
+    localStorage.setItem('hub-settings-v1', JSON.stringify({ aiProvider: 'anthropic', anthropicKey: 'sk-ant-existing' }));
+  });
+  await copilotOnly.reload({ waitUntil: 'load' });
+  const copilotOnlyResult = await copilotOnly.evaluate(async () => ({
+    provider: HubAI.getProvider(),
+    allowed: HubAI.getAllowedProviders(),
+    configured: HubAI.isConfigured(),
+    keyTest: await HubAI.testKey('sk-ant-must-not-send'),
+    keySave: HubAI.saveKey('sk-ant-must-not-save'),
+    selectValues: [...document.querySelectorAll('#ai-provider-select option')].map(option => option.value),
+  }));
+  check('deployment provider allowlist overrides stored user preference',
+    copilotOnlyResult.provider === 'copilot-handoff' && copilotOnlyResult.configured === true &&
+    JSON.stringify(copilotOnlyResult.allowed) === '["copilot-handoff"]' &&
+    JSON.stringify(copilotOnlyResult.selectValues) === '["copilot-handoff"]' &&
+    copilotOnlyResult.keyTest.ok === false && copilotOnlyResult.keySave === false &&
+    copilotOnlyApiCalls === 0);
+  await copilotOnlyCtx.close();
 
   const lockedCtx = await browser.newContext({ serviceWorkers: 'block' });
   let lockedApiCalls = 0;
@@ -267,6 +363,13 @@ function appFiles(ext) {
   const locked = await lockedCtx.newPage();
   await locked.goto(`${BASE}/index.html`, { waitUntil: 'load', timeout: 20000 });
   const lockedResult = await locked.evaluate(async () => {
+    let clipboardCalls = 0;
+    let navigationCalls = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => { clipboardCalls++; } },
+    });
+    window.open = () => { navigationCalls++; return null; };
     let error = '';
     try { await HubAI.chat('must not send'); } catch (e) { error = e.message; }
     const surfaces = [...document.querySelectorAll('.ai-surface')];
@@ -274,6 +377,8 @@ function appFiles(ext) {
       enabled: HubAI.isEnabled(),
       configured: HubAI.isConfigured(),
       allHidden: surfaces.length > 0 && surfaces.every((el) => getComputedStyle(el).display === 'none'),
+      clipboardCalls,
+      navigationCalls,
       error,
     };
   });
@@ -293,7 +398,8 @@ function appFiles(ext) {
     'shell + Focus + Journal');
   check('enterprise AI policy blocks execution before network',
     lockedResult.enabled === false && lockedResult.configured === false &&
-    /disabled by your organization/i.test(lockedResult.error) && lockedApiCalls === 0);
+    /disabled by your organization/i.test(lockedResult.error) && lockedApiCalls === 0 &&
+    lockedResult.clipboardCalls === 0 && lockedResult.navigationCalls === 0);
   await lockedCtx.close();
 
   await browser.close();

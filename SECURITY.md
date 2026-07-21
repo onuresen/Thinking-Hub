@@ -65,20 +65,27 @@ browser profiles.
 
 ### Optional AI boundary
 
-The Anthropic integration is opt-in and requires a user-supplied API key. The
-key is stored in plaintext localStorage. When an AI action is explicitly
-triggered, Thinking Hub's local client sends a Messages API request directly
-from the browser to Anthropic. Depending on the feature, that
-request can include the user's prompt and selected context derived from
-projects, tasks, people, decisions, risks, goals, meetings, schedule, learning,
-reflection, assumptions, stakeholders, journal, focus, capture, and links.
+Thinking Hub supports two optional providers. Microsoft Copilot handoff builds
+and displays the exact prompt locally. It copies the prompt and opens Microsoft
+365 Copilot only after user confirmation; it stores no Microsoft credential,
+calls no Microsoft API, and submits nothing automatically. The user decides
+whether to paste the prompt into their organization-managed Copilot session.
 
-AI-generated changes are proposed for user confirmation before application,
-but AI output must still be treated as untrusted. Organizations that do not
-approve external AI should set `aiEnabled: false` in `enterprise-config.js`
-and block `api.anthropic.com` at the network layer. The policy file is loaded
-before `hub-ai.js`, hides marked AI surfaces, and makes every AI entry point
-fail before a request is created.
+Anthropic direct requires a user-supplied API key stored in plaintext
+localStorage. When an AI action is explicitly triggered, Thinking Hub sends a
+Messages API request directly from the browser to Anthropic. Depending on the
+feature, that request can include the user's prompt and selected context
+derived from projects, tasks, people, decisions, risks, goals, meetings,
+schedule, learning, reflection, assumptions, stakeholders, journal, focus,
+capture, and links.
+
+AI output must be treated as untrusted. Integrated Anthropic changes are
+proposed for confirmation; Copilot handoff responses are transferred manually
+and are never auto-applied. `enterprise-config.js` controls a deployment-owned
+provider allowlist plus the master `aiEnabled` switch. Organizations should
+allow only approved providers and block unapproved destinations at the network
+layer. A disabled provider fails before clipboard or network activity. See
+[`docs/AI-PROVIDERS.md`](docs/AI-PROVIDERS.md).
 
 ### Local-file access
 
