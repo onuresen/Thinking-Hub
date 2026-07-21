@@ -87,8 +87,6 @@
       </div>
       <button class="btn btn-ghost" onclick="showAddProject()">+ Project</button>
       <button class="btn btn-primary" id="main-action-btn" onclick="handleMainAction()">+ Task</button>
-      <button class="btn btn-reset topbar-mob-hide" onclick="resetToDefault()"
-        title="Clear local data and restore defaults">Reset</button>
     </div>
     <div class="content" id="main-content"></div>
   </div>
@@ -512,10 +510,12 @@
 
 
     function resetToDefault() {
-      const ok = confirm(
-        'Reset will clear ALL local data in this browser and restore the default sample content.\n\nContinue?'
+      const ans = prompt(
+        '⚠ This permanently deletes ALL your Project Hub data — every project, task, milestone and goal — and replaces it with the sample content.\n\n' +
+        'This cannot be undone (a local snapshot may be restorable from ⚙ Data & Backup).\n\n' +
+        'Type RESET to confirm:'
       );
-      if (!ok) return;
+      if ((ans || '').trim().toUpperCase() !== 'RESET') { showToast('Reset cancelled'); return; }
 
       HubStorage.set(STORAGE_KEY, null);
 
@@ -1969,6 +1969,17 @@
           onclick="deleteProject('${proj.id}')">
           Delete Project
         </button>
+
+        <div style="margin-top:14px;padding:12px;border:1px solid var(--accent-nope);border-radius:var(--r-sm);background:color-mix(in srgb, var(--accent-nope) 8%, transparent)">
+          <div style="font-size:12px;color:var(--accent-nope);font-weight:700;margin-bottom:4px">⚠ Reset Project Hub</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+            Permanently deletes <b>every project, task, milestone and goal</b> and replaces them with the sample content. This cannot be undone (a snapshot may be restorable from ⚙ Data &amp; Backup).
+          </div>
+          <button class="btn btn-danger" style="width:100%"
+            onclick="resetToDefault()">
+            Reset all Project Hub data…
+          </button>
+        </div>
       `;
         body.appendChild(wrap);
         document.getElementById('ps-status').value = proj.status;
