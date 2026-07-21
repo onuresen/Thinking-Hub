@@ -1552,6 +1552,75 @@ Follow-on from P89's project `updatedAt`: the user asked to generalize timestamp
 
 ---
 
+### ~~Phase 0 (Workspaces prep) — data-safety pass: backup verifier + full round-trip test~~ ✓ Done `[group: workspaces]`
+First concrete step toward the Workspaces model (below) — the user's explicit "make sure existing data + workflows are safe **before** building the workspace layer." No workspace feature yet; this only hardens/verifies the existing backup path.
+
+- **Read-only backup verifier (`index.html`)** — a "🔍 Verify a backup file" button in ⚙ Data & Backup. `verifyBackupFile()` parses a chosen `.json` via `FileReader` and reports exactly what a restore *would* do — format detection (v2 full / v2 curated-or-current / single-tool / v1 legacy / unrecognized), which storage keys it would restore, which known keys are missing (maybe legitimately empty), any extra/unknown sections, and an **API-key-leak warning** if the file contains an `sk-ant` string — **without writing a single byte to storage** (clears the file input, never calls `HubStorage.set`). Lets the user confirm their real backup file is trustworthy before relying on it. v1 branch also flags when none of the keys look like real Hub keys (`-v\d+`/`_v\d+`/in `SCOPE_KEYS.full`).
+- **Full-coverage round-trip test (`tests/flows.js`)** — flow2 rewritten to seed a unique marker into **every** key in `SCOPE_KEYS.full` (28 keys), export a Full Backup, wipe all, re-import via the real `handleImportFile`, and assert **each key restored byte-identical** (guards the P81 "silently-dropped key" bug class going forward). Also asserts the live `anthropicKey` and bulky `obsidianIndex` are stripped from the export (P66) and that `hub-settings-v1` non-secret data survives.
+
+**Key decisions:**
+- **Decision:** The verifier is strictly read-only and mirrors what `handleImportFile` *would* do, rather than being a stricter/independent validator. **Why:** its whole value is honesty about the real import path — if it said "unrecognized" for something import would happily restore (or vice-versa), it would mislead. It reuses the same format-detection branches as `handleImportFile`. **Confidence:** high.
+- **Decision:** Round-trip test seeds *all* `SCOPE_KEYS.full` keys, not a representative few. **Why:** the P81 bug was a key silently missing from the backup list; only full-coverage catches that class, and the test auto-scales as keys are added to `SCOPE_KEYS.full`. **Confidence:** high.
+
+**Verified:** browser checks — clean full backup validates + warns of no leak, a secret-bearing file warns, curated export is blocked, bad JSON flagged, all with storage provably unchanged; full smoke + flows suites green (flow2 now 6 assertions incl. all-28-keys byte-identical).
+
+**Files:** `index.html`, `tests/flows.js`, `CLAUDE.md`
+
+---
+
+### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED (direction chosen, Phase 0 done, Phase 1 not yet built)
+**User decision (2026-07-21):** go with **Model A** (in-browser workspace switcher) — it's **mobile-suitable**, which matters; **folder-in-Explorer browsing (Model B) is NOT important** and is dropped as a requirement (revisit only if the user later asks). **Explicitly not building yet:** the user wants to first **make sure existing data + all current workflows are solid and safe** before adding a workspace layer on top — don't rush this. So: Model A is the agreed shape when the time comes; the immediate priority is data/workflow safety, not this feature. Open questions #1 (folder must-have?) and #2 (mobile?) are now answered — folder no, mobile yes; #3 (scope = everything vs Project-Hub-only) still open, leaning "everything."
+
+**Status update (2026-07-21):** Phase 0 data-safety pass is ✓ Done (see entry above — backup verifier + full-coverage round-trip test). **User will do the Phase-1 build "later, with a calm mind"** — no rush; the recommended next step for them is a personal dry-run (export a Full Backup → "🔍 Verify a backup file" → confirm it reads clean) before Phase 1 (the non-destructive Model A workspace layer) begins. Do NOT start Phase 1 until the user asks.
+
+Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Project Hub "Reset" button into a Settings danger zone (see the reset change), the user noted that *deleting just Project Hub data* is an odd action, and floated a bigger idea — a **Visual-Studio-"Solution"-style workspace model**: create multiple named workspaces, load/unload, auto-open the last one; optionally back them with a **user-accessible folder** (manage/delete files in Explorer, so no in-app "delete data" button is needed). Use cases raised: (a) occasional "fresh start", (b) *potential* future multi-user-on-one-PC "own account each time" (user is the only user today — hypothetical).
+
+**Key framing / findings from the discussion:**
+- **The workspace frame dissolves the reset problem.** "Fresh start" becomes *create a new empty workspace + switch to it* (non-destructive — old data still exists); "delete my data" becomes *delete a workspace / its file*. No destructive "erase everything" button needed.
+- **Browser file/folder access is real and already used here** — `hub-obsidian.js` already calls `window.showDirectoryPicker()` (File System Access API). **Caveats:** Chromium-desktop only (no Firefox/Safari, **no mobile**); needs a user-gesture click to grant, and a re-grant click most sessions after a browser restart (so fully-silent "auto-open last folder" isn't guaranteed); write-back is whole-dataset-on-change (debounced).
+- **~90% of the plumbing already exists:** `hub-snapshots.js` already captures *all* localStorage into IndexedDB and restores point-in-time. A "workspace" is essentially a **named, switchable snapshot** you save into / load out of.
+
+**Two models (recommendation: lead with A, offer B as an optional bridge):**
+- **Model A — in-browser workspace switcher (recommended core):** each workspace = full set of hub keys in IndexedDB; switch = save-current→load-selected; auto-open-last = remember active workspace id. ✅ works in every browser, zero permission prompts, silent auto-open, reuses snapshot code. ❌ data lives in browser storage, not an Explorer-visible folder (Full Backup export still covers portability).
+- **Model B — folder-backed workspaces:** each workspace = a `.json` file in a picked directory; load reads it, edits write back. ✅ files visible/manageable/deletable in Explorer (the user's "delete it yourself" vision), portable. ❌ Chromium-desktop only (no phone), re-grant click most sessions, more complexity.
+
+**Honest caveat recorded:** workspaces give *separation*, not *privacy* — on a shared PC anyone could switch workspaces. True per-user accounts would need a passphrase (browser-local encryption has real limits) — treat as a separate, later question; do NOT build auth as part of this.
+
+**Open questions to resolve before building:** (1) is folder-in-Explorer a must-have (→ accept Chromium-desktop-only, Model B) or nice-to-have (→ Model A first)? (2) does the user ever open this on mobile (rules Model B in/out as primary store)? (3) workspace scope = everything (all tools — argued yes, a true separate world) vs. Project Hub only? **Next step if pursued:** sketch the Model A UX (sidebar workspace picker: New / Switch / Rename / Export-to-folder) before committing. **Compatible with the ⛔ no-cloud standing decision (P84)** — this is all local.
+
+---
+
+### 💭 Proposed / parked — Enterprise-readiness roadmap ("free tool that passes IT/security/legal review") `[group: enterprise-readiness]` — NOT STARTED, recorded 2026-07-21
+User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
+
+**The reframe (the whole point):** "enterprise-ready" ≠ "paid" and ≠ "has a sales team" — it means **passing an IT security + legal + procurement review** (see VS Code / Obsidian / free-tier Postman). A free tool clears that bar routinely. **Thinking Hub's local-first architecture (P84 no-cloud) is a massive head start** — no server means no data-residency question, no breach surface, no vendor-trust problem, no DPA to negotiate, and SSO is *moot* (there are no accounts). The P84 decision, made for the user's own reasons, is also the single best enterprise-readiness feature the app has. Most SaaS tools fail review on exactly the things this app gets for free.
+
+**Repo scan findings (2026-07-21):** **no LICENSE file exists** (the #1 legal blocker). Non-user-initiated external calls today: **Google Fonts** (`fonts.googleapis.com` / `fonts.gstatic.com`, on every page), **Google favicon service** (`google.com/s2/favicons`, stakeholder/tool logos), **`esm.sh`** (the Anthropic SDK is dynamically imported from this CDN at runtime by `hub-ai.js`), and the **Anthropic API** (user-initiated, user's own key). Already-strong signals present: automated tests + CI, offline PWA (P80), pinned self-hosted vis-network/html2canvas (P80), accessibility pass (P87), API key stripped from exports (P66), no telemetry/analytics.
+
+**Tier 1 — Non-negotiable legal blockers (a lawyer says "no" without these):**
+1. **Add a LICENSE file.** None exists today → legally "all rights reserved" → **enterprises cannot use it at all**, free or not. Recommend **Apache-2.0** (grants patent rights, which corporate legal often prefers) or MIT. Single highest-impact item on this list.
+2. **Third-party license inventory** — a `NOTICE` / `THIRD-PARTY-NOTICES` file listing vis-network, html2canvas, the fonts, and the Anthropic SDK with their (all permissive) licenses. Easy — just needs to be *stated*.
+
+**Tier 2 — What a security review asks for:**
+3. **Written security & privacy posture** (`SECURITY.md` + a short privacy statement) — turn the architecture into a review-passing artifact: all data stays in browser localStorage, no telemetry, no analytics, and an explicit list of *every* network call (the four above), when each fires, and what it sends.
+4. **Eliminate the last non-user-initiated external calls → truly zero-egress + air-gap-capable:** self-host the **fonts** (removes the Google Fonts call that leaks every user's IP to Google — a real GDPR flag) and self-host/pin the **AI SDK** instead of `esm.sh`. After that the *only* outbound call is the Anthropic API — user-initiated, user's own key. (Note: self-hosting fonts partly reverses P76's font-delivery approach — weigh against that; P76 kept Google Fonts deliberately for caching. Enterprise air-gap is the countervailing reason.)
+5. **`SECURITY.md`** with a vulnerability-reporting path.
+6. **Content-Security-Policy** (header/meta) locking the app to its own origin + the allowed hosts.
+
+**Tier 3 — Trust & operability signals:**
+7. **Deployment/admin guide** — "drop these static files on any intranet web server, or install as a PWA." The no-build static architecture makes enterprise self-hosting trivial; say so explicitly.
+8. **Org-level kill-switch for the AI feature** — a config flag so an enterprise can disable anything that calls an external API org-wide. Turns "we can't allow tools that call outside APIs" into "fine, we disabled it." High leverage for low effort.
+9. **Versioned releases + changelog** so IT can pin/track a known-good version.
+10. **Surface existing strengths in the README** — tests+CI, offline PWA, pinned self-hosted libs, a11y pass, export-key-stripping. They already exist; reviewers just need to *see* them.
+
+**Honest caveats to disclose (don't hide them):**
+- Anthropic API key is stored in **plaintext localStorage** — fine for personal use; flag it, and the Tier-3 AI kill-switch is the mitigation.
+- No SSO / no central admin console — but both are *moot* with no accounts/server; state that rather than leaving it unaddressed.
+
+**Recommended sequencing:** Tier 1 (LICENSE + third-party notice) is ~an hour and unblocks the entire "can we legally use it" question — do first regardless. Tier 2 (self-host fonts + security/privacy docs + CSP) is the bulk of a real security review and very achievable given the architecture. Tier 3 is polish/trust. **Cross-check against P76** before self-hosting fonts (P76 deliberately used Google Fonts for cross-tool caching) and against the ⛔ P84 no-cloud stance (fully compatible — all of this keeps the app local).
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
