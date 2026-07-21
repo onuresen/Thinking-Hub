@@ -15,7 +15,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
-| `hub-utils.js` | Shared utilities (`HubUtils.esc` for HTML escaping). Load second. |
+| `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
@@ -106,6 +106,15 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 - Do not break `hub-storage.js` load order
 - Do not hardcode colors in JS-injected CSS strings
 - Do not use `var(--font-b)` or `var(--font-d)` (undefined aliases) — use `var(--font-body)` / `var(--font-display)`
+
+## ⏱ Timestamp convention (P90)
+Every persisted **record** should carry a consistent lifecycle-timestamp trio so cross-tool "outdated / busy / stale" insights have a stable base to read. Use the shared helpers in `hub-utils.js` — never hand-roll `new Date().toISOString()` per field:
+- `HubUtils.stampCreate(o)` — set **once** on a brand-new record (`createdAt`). Never overwrites.
+- `HubUtils.stampUpdate(o)` — bump `updatedAt` on every meaningful edit (best-effort backfills `createdAt`).
+- `HubUtils.stampArchive(o, archived)` — sets `archived` + `archivedAt` (cleared on un-archive).
+- `HubUtils.relativeAge(iso)` / `daysSince(iso)` — for age badges + staleness thresholds.
+
+**Cardinal rule: never fabricate `createdAt` for pre-existing records.** Missing timestamp = *unknown age*, which must NOT be treated as "stale" (would flood the Resurface widget / Health Check with every legacy record). Staleness features only surface items that carry a real timestamp, so they "activate" naturally as records get stamped going forward. Stamp at the mutation site (where the record object is in hand), not centrally in a `save()` that doesn't know which record changed.
 
 ## Shared UI primitives (already in theme.css — reuse, don't duplicate)
 `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`, `.ai-badge`
@@ -1516,6 +1525,30 @@ Added a **🕒 Recent** option to the Overview sort dropdown (between Manual and
 - **Decision:** Pure reorder operations (Manual project drag in Overview, group-order drag in Groupings) do NOT bump `updatedAt`. **Why:** rearranging cards under Manual sort isn't "updating a project"; bumping recency there would make the Recent order shuffle every time the user tidies the Manual layout. **Confidence:** high.
 
 **Files:** `project-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 90 — App-wide timestamp base (created / updated / archived) + staleness insights~~ ✓ Done `[group: timestamps]`
+Follow-on from P89's project `updatedAt`: the user asked to generalize timestamps across the app (tasks, learning, tools, etc.) as a **base for future "outdated / busy" insights**. Built as foundation + 3 groups (full scope, user-approved).
+
+**Foundation (`hub-utils.js`):** shared `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` helpers and a documented convention (see "⏱ Timestamp convention" near the top). One code path for record lifecycle stamps so tools do it identically.
+
+**Group 1 — core work items:** Project Hub **tasks** gained `createdAt`/`updatedAt`/`archivedAt`, stamped on add/edit/toggle/rename/checklist/obsidian/kanban-drop/archive (also fixed kanban drop never setting `completedAt`); milestones + goals stamped too. Decision Hub (`updatedAt` on save, `archivedAt` on archive), Risk Hub (`archivedAt`), Assumptions (already had created/updated).
+
+**Group 2 — knowledge & catalog:** Learning Hub (updatedAt on item + all sub-edits, archivedAt), Goals Hub (quarter created/updated/archivedAt, objective updatedAt — KRs already stamped), Meeting Hub (created/updated/archivedAt normalized centrally in `normalizeMeeting`; updatedAt on real edits only, archivedAt on archive), Reflection Board (item updatedAt via `updateItem`, board archivedAt), Tool Portfolio (tool created/updated, updatedAt on field edits). Stakeholder + Capture already carried created/updated — left as-is.
+
+**Group 3 — visible insights (`index.html`, `project-hub.html`):** (a) Resurface widget gained a **stale open tasks** source (open, real timestamp, untouched 30+ days) — impossible before tasks had `updatedAt`; (b) Project Hub task rows show a subtle **relative-age badge** on open tasks 7+ days old (amber past 30d); (c) Data Health Check gained an **"Outdated"** section counting stale open tasks (30d+) and inactive active projects (60d+).
+
+**Key decisions:**
+- **Decision:** Never fabricate `createdAt` for pre-existing records; missing = "unknown age", never "stale". **Why:** backfilling a fake create date is dishonest and would make every legacy record instantly flood the Resurface widget / Health Check. Staleness features require a real timestamp, so they activate naturally as records get stamped going forward. **Alternative rejected:** backfill `createdAt` from `id`-embedded timestamps or file order — unreliable and still a fabrication. **Confidence:** high.
+- **Decision:** Stamp at each mutation site (record in hand), not centrally in `save()`. **Why:** `save()` persists the whole store and doesn't know which record changed; per-site stamping is the only way to attribute `updatedAt` correctly. Repeats P89's `touchProject` reasoning. **Confidence:** high.
+- **Decision:** For Meeting Hub, stamp `updatedAt` in the debounced `scheduleSave` (fires only on real input) + `saveAction`, NOT in `flushCurrentDetail`. **Why:** `flushCurrentDetail` also runs on navigation/open, so stamping there would make `updatedAt` mean "last viewed" instead of "last edited". **Confidence:** high.
+- **Decision:** Age badge only on **open** tasks, 7+ days, amber at 30d — not on every card everywhere. **Why:** timestamps are invisible plumbing until read; one visible signal in the most-used tool proves the base works without cluttering fresh/done rows or 15 render paths. Broader per-card badges can follow if wanted. **Confidence:** med. **Revisit when:** the user wants age badges in other tools.
+- **Decision:** Tool Portfolio's `logToolUsage` keeps writing only `lastUsedAt` (not `updatedAt`). **Why:** "used" ≠ "edited"; a future tool-staleness insight should read `lastUsedAt` (the domain-right signal), leaving `updatedAt` for actual config edits. **Confidence:** med.
+
+**Verified:** all touched files parse (vm.Script); foundation helpers + stale-task/age-badge logic unit-tested in isolation; full **smoke + flows** suites green against the pre-installed browser (incl. the task-lifecycle flow exercising the stamped `toggleTask`, and the export/import round-trip confirming the new fields ride along in Full Backup).
+
+**Files:** `hub-utils.js`, `project-hub.html`, `decision-hub.html`, `risk-hub.html`, `learning-hub.html`, `goals-hub.html`, `meetings-hub.html`, `reflection-hub.html`, `tool-portfolio.html`, `index.html`, `CLAUDE.md`
 
 ---
 
