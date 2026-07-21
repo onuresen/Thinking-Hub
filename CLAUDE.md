@@ -1590,6 +1590,37 @@ Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Projec
 
 ---
 
+### 💭 Proposed / parked — Enterprise-readiness roadmap ("free tool that passes IT/security/legal review") `[group: enterprise-readiness]` — NOT STARTED, recorded 2026-07-21
+User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
+
+**The reframe (the whole point):** "enterprise-ready" ≠ "paid" and ≠ "has a sales team" — it means **passing an IT security + legal + procurement review** (see VS Code / Obsidian / free-tier Postman). A free tool clears that bar routinely. **Thinking Hub's local-first architecture (P84 no-cloud) is a massive head start** — no server means no data-residency question, no breach surface, no vendor-trust problem, no DPA to negotiate, and SSO is *moot* (there are no accounts). The P84 decision, made for the user's own reasons, is also the single best enterprise-readiness feature the app has. Most SaaS tools fail review on exactly the things this app gets for free.
+
+**Repo scan findings (2026-07-21):** **no LICENSE file exists** (the #1 legal blocker). Non-user-initiated external calls today: **Google Fonts** (`fonts.googleapis.com` / `fonts.gstatic.com`, on every page), **Google favicon service** (`google.com/s2/favicons`, stakeholder/tool logos), **`esm.sh`** (the Anthropic SDK is dynamically imported from this CDN at runtime by `hub-ai.js`), and the **Anthropic API** (user-initiated, user's own key). Already-strong signals present: automated tests + CI, offline PWA (P80), pinned self-hosted vis-network/html2canvas (P80), accessibility pass (P87), API key stripped from exports (P66), no telemetry/analytics.
+
+**Tier 1 — Non-negotiable legal blockers (a lawyer says "no" without these):**
+1. **Add a LICENSE file.** None exists today → legally "all rights reserved" → **enterprises cannot use it at all**, free or not. Recommend **Apache-2.0** (grants patent rights, which corporate legal often prefers) or MIT. Single highest-impact item on this list.
+2. **Third-party license inventory** — a `NOTICE` / `THIRD-PARTY-NOTICES` file listing vis-network, html2canvas, the fonts, and the Anthropic SDK with their (all permissive) licenses. Easy — just needs to be *stated*.
+
+**Tier 2 — What a security review asks for:**
+3. **Written security & privacy posture** (`SECURITY.md` + a short privacy statement) — turn the architecture into a review-passing artifact: all data stays in browser localStorage, no telemetry, no analytics, and an explicit list of *every* network call (the four above), when each fires, and what it sends.
+4. **Eliminate the last non-user-initiated external calls → truly zero-egress + air-gap-capable:** self-host the **fonts** (removes the Google Fonts call that leaks every user's IP to Google — a real GDPR flag) and self-host/pin the **AI SDK** instead of `esm.sh`. After that the *only* outbound call is the Anthropic API — user-initiated, user's own key. (Note: self-hosting fonts partly reverses P76's font-delivery approach — weigh against that; P76 kept Google Fonts deliberately for caching. Enterprise air-gap is the countervailing reason.)
+5. **`SECURITY.md`** with a vulnerability-reporting path.
+6. **Content-Security-Policy** (header/meta) locking the app to its own origin + the allowed hosts.
+
+**Tier 3 — Trust & operability signals:**
+7. **Deployment/admin guide** — "drop these static files on any intranet web server, or install as a PWA." The no-build static architecture makes enterprise self-hosting trivial; say so explicitly.
+8. **Org-level kill-switch for the AI feature** — a config flag so an enterprise can disable anything that calls an external API org-wide. Turns "we can't allow tools that call outside APIs" into "fine, we disabled it." High leverage for low effort.
+9. **Versioned releases + changelog** so IT can pin/track a known-good version.
+10. **Surface existing strengths in the README** — tests+CI, offline PWA, pinned self-hosted libs, a11y pass, export-key-stripping. They already exist; reviewers just need to *see* them.
+
+**Honest caveats to disclose (don't hide them):**
+- Anthropic API key is stored in **plaintext localStorage** — fine for personal use; flag it, and the Tier-3 AI kill-switch is the mitigation.
+- No SSO / no central admin console — but both are *moot* with no accounts/server; state that rather than leaving it unaddressed.
+
+**Recommended sequencing:** Tier 1 (LICENSE + third-party notice) is ~an hour and unblocks the entire "can we legally use it" question — do first regardless. Tier 2 (self-host fonts + security/privacy docs + CSP) is the bulk of a real security review and very achievable given the architecture. Tier 3 is polish/trust. **Cross-check against P76** before self-hosting fonts (P76 deliberately used Google Fonts for cross-tool caching) and against the ⛔ P84 no-cloud stance (fully compatible — all of this keeps the app local).
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
