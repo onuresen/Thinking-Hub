@@ -612,6 +612,10 @@ body {
 }
 .ai-badge::before { content: "✦"; font-size: 8px; }
 
+/* Deployment policy: enterprise-config.js sets this before any AI module.
+   Hidden controls are defense-in-depth UX; HubAI also rejects every call. */
+[data-ai-enabled="false"] .ai-surface { display: none !important; }
+
 /* ── Reduced motion (P87 D2) ──────────────────────────────────────────────
    Honor the OS "reduce motion" setting: near-instant animations/transitions,
    stop infinite loops (e.g. the load-bar), no smooth-scroll. theme.css loads

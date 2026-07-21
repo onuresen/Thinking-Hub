@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Journal Hub</title>
   <script src="hub-storage.js"></script>
@@ -10,10 +11,9 @@
   <script src="hub-data.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="enterprise-config.js"></script>
   <script src="hub-ai.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -363,10 +363,10 @@
             <div class="rh-col-title capture-color">◎ Capture</div>
             <div class="rh-col-sub">Wins · learnings · blockers · notes</div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+          <div class="ai-surface" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span class="ai-badge" title="Uses the AI provider selected in the main app">AI</span>
             <button class="btn btn-ghost" id="rh-ai-draft-btn" onclick="rhAiDraft()"
-              title="Draft this review from the week's real activity (fills only empty fields) — uses your API key"
+              title="Draft this review from the week's real activity using the selected AI provider (fills only empty fields)"
               style="font-size:11px;padding:4px 10px;white-space:nowrap">✦ Draft with AI</button>
           </div>
         </div>
@@ -860,8 +860,9 @@
   }
 
   async function rhAiDraft() {
+    if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
     if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
-      showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
+      showToast(typeof HubAI !== 'undefined' ? HubAI.getSetupMessage() : 'AI is unavailable', 'error');
       return;
     }
     const monday = rhGetMonday(rhWeekOffset);
@@ -907,7 +908,7 @@
         showToast('All fields already have your text — nothing overwritten');
       }
     } catch (err) {
-      showToast('AI draft failed: ' + (err.message || err), 'error');
+      showToast(HubAI.isHandoffError(err) ? err.message : 'AI draft failed: ' + (err.message || err), HubAI.isHandoffError(err) ? '' : 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = origLabel;

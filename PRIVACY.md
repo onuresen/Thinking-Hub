@@ -18,7 +18,7 @@ privacy behavior.
 | --- | --- | --- |
 | localStorage | Tool records, settings, links, UI state, and the optional Anthropic API key | Until the user imports/replaces data, resets a tool, clears site data, or the browser removes it |
 | IndexedDB | Automatic, manual, and pre-restore snapshots of localStorage | Automatic daily snapshots: 14 days; older Monday snapshots: up to 60 days; newest 10 manual/safety snapshots |
-| Cache Storage | Offline application assets and Google Font responses | Until replaced by service-worker cache maintenance or cleared as site data |
+| Cache Storage | Offline application assets, including self-hosted fonts | Until replaced by service-worker cache maintenance or cleared as site data |
 | Selected local files/directories | Backup import, Obsidian read access, and explicit MCP file sync | Governed by the browser permission and the user's selected location |
 
 Browser storage is scoped to the exact origin: scheme, host, and port. Moving a
@@ -29,12 +29,9 @@ exports and imports a Full Backup.
 
 | Destination | Trigger | Information sent or exposed | Required for core use? |
 | --- | --- | --- | --- |
-| `fonts.googleapis.com` | Each page requests the font stylesheet | Normal request metadata such as IP address, user agent, and referrer | No; system-font fallbacks render if blocked |
-| `fonts.gstatic.com` | The Google Fonts stylesheet requests font files; the service worker may cache responses | Normal request metadata and requested font asset | No |
-| `www.google.com/s2/favicons` | Stakeholder Map or Tool Portfolio renders an entry with a URL | The URL's domain in the query string plus normal request metadata | No; the UI falls back to generated initials |
-| `esm.sh` | The first explicit AI action or API-key test in a page session loads `@anthropic-ai/sdk@0.52.0` | Requested package/version plus normal request metadata; the Anthropic API key and workspace context are not intentionally sent to esm.sh | No; AI features fail if blocked |
 | `api.anthropic.com` | A user explicitly tests a key or invokes an AI capture, query, act, briefing, drafting, or insight feature | Anthropic API key, prompt, applicable system instructions, and feature-dependent workspace context | No |
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
+| `m365.cloud.microsoft` | User confirms **Copy and open Copilot** after reviewing a locally prepared prompt | Normal browser navigation metadata; the prompt remains on the clipboard until the user pastes it | No |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
 
 The Open Graph and Twitter preview URLs in `index.html` may be fetched by
@@ -46,10 +43,13 @@ crash-reporting, or telemetry code. Same-origin service-worker requests fetch
 application assets from the deployment host and may appear in that host's
 access logs.
 
+Fonts, tool/stakeholder icons, and runtime JavaScript libraries are self-hosted.
+Thinking Hub does not contact Google Fonts, Google's favicon service, or a
+JavaScript CDN during application use.
+
 ## What optional AI can include
 
-AI traffic is sent directly from the browser to Anthropic, not through a
-Thinking Hub server. Depending on the chosen feature, the request can include:
+Depending on the provider and feature, the prepared prompt can include:
 
 - the text the user entered and up to four recent AI conversation turns;
 - active project and task names, status, priority, due dates, assignees, and
@@ -60,13 +60,22 @@ Thinking Hub server. Depending on the chosen feature, the request can include:
   cross-tool links.
 
 The capture feature uses a narrower context of active project names and known
-people. The API-key test sends only a short connectivity message. Users should
-review organizational policy and avoid AI features for data that may not be
-sent to Anthropic.
+people. The Anthropic API-key test sends only a short connectivity message.
 
-Anthropic independently governs its processing and retention under the terms
-applicable to the user's API account. Thinking Hub does not control those
-terms.
+With Microsoft Copilot handoff, Thinking Hub shows the exact prepared prompt
+before copying. Closing the dialog copies and sends nothing. Confirming copies
+the text and opens Microsoft 365 Copilot, but does not paste or submit it; the
+user controls the final disclosure. Thinking Hub stores no Microsoft token or
+conversation. Clipboard contents remain subject to the browser and operating
+system clipboard boundary.
+
+With Anthropic direct, the prompt is sent from the browser to Anthropic, not
+through a Thinking Hub server. Users should follow organizational policy and
+avoid either provider for data that is not approved for that destination.
+
+Anthropic and Microsoft independently govern processing and retention under
+the terms applicable to the user's account and organization. Thinking Hub does
+not control those terms.
 
 ## Exports and local files
 

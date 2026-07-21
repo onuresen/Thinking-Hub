@@ -1,17 +1,21 @@
-<?xml version="1.0" ?>
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-<defs>
-<style>.cls-1{fill:#a4b0c0;}.cls-2{fill:#fed049;}.cls-3{fill:#f6b445;}.cls-4{fill:#d0d7df;}</style>
-</defs>
-<title/>
-<g id="Idea">
-<rect class="cls-1" height="4" rx="1" ry="1" width="16" x="16" y="41"/>
-<ellipse class="cls-1" cx="24" cy="47" rx="3" ry="1"/>
-<path class="cls-2" d="M40.944,15.605a16.993,16.993,0,0,1-8.881,16.366A3.96,3.96,0,0,0,30,35.464V36H18v-.535a3.94,3.94,0,0,0-2.045-3.484A17,17,0,1,1,40.944,15.605Z"/>
-<path class="cls-3" d="M32.06,31.97A3.957,3.957,0,0,0,30,35.46V36H23.64a4.3,4.3,0,0,1,1.74-3.25c4.777-3.185,9.427-7.229,10.533-13.153A21.093,21.093,0,0,0,32.6,4.756,9.682,9.682,0,0,0,25.83.1a17,17,0,0,1,6.23,31.87Z"/>
-<rect class="cls-1" height="4" rx="1" ry="1" width="16" x="16" y="36"/>
-<path class="cls-4" d="M18,45H30l-1.414,1.414A2,2,0,0,1,27.172,47H20.828a2,2,0,0,1-1.414-.586Z"/>
-<rect class="cls-4" height="1" width="12" x="18" y="40"/>
-</g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Thinking Hub Convergence</title>
+  <desc id="desc">Three connected thoughts converge into one clear spark.</desc>
+  <rect width="64" height="64" rx="14" fill="#0b0b0d"/>
+  <g fill="none" stroke="#b8f033" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 20c9 0 11 7 22 11"/>
+    <path d="M18 32h22"/>
+    <path d="M18 44c9 0 11-7 22-11"/>
+  </g>
+  <g fill="#b8f033">
+    <circle cx="17" cy="20" r="4.5"/>
+    <circle cx="17" cy="32" r="4.5"/>
+    <circle cx="17" cy="44" r="4.5"/>
+    <path d="M43 22c1.2 6.4 3.6 8.8 10 10-6.4 1.2-8.8 3.6-10 10-1.2-6.4-3.6-8.8-10-10 6.4-1.2 8.8-3.6 10-10Z"/>
+  </g>
+  <g fill="#ff8a5c">
+    <rect x="50" y="20" width="3" height="6" rx="1.5" transform="rotate(38 51.5 23)"/>
+    <rect x="51" y="30.5" width="6" height="3" rx="1.5"/>
+    <rect x="50" y="38" width="3" height="6" rx="1.5" transform="rotate(-38 51.5 41)"/>
+  </g>
+</svg>

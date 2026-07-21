@@ -1,7 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stakeholder Map</title>
   <script src="hub-storage.js"></script>
@@ -10,9 +11,7 @@
   <script src="hub-data.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -475,10 +474,7 @@
 
   function shAvatarHtml(sh) {
     const fb = _esc(initials(sh.name));
-    const domain = sh.url ? urlDomain(sh.url) : null;
-    if (!domain) return `<span class="sh-avatar-fallback">${fb}</span>`;
-    return `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-      `<span class="sh-avatar-fallback" style="display:none">${fb}</span>`;
+    return `<span class="sh-avatar-fallback">${fb}</span>`;
   }
 
   function renderUrlPreview() {
@@ -488,11 +484,9 @@
     if (!domain) { el.innerHTML = ''; return; }
     const fb = _esc(initials(document.getElementById('dp-name').value));
     el.innerHTML = `<div class="url-preview-row">
-      <div class="url-preview-icon">
-        <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64" alt="" onerror="this.parentElement.innerHTML='${fb}'">
-      </div>
+      <div class="url-preview-icon">${fb}</div>
       <span class="url-preview-domain">${_esc(domain)}</span>
-      <span class="url-preview-auto">auto</span>
+      <span class="url-preview-auto">local</span>
     </div>`;
   }
 

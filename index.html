@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thinking Hub — 20+ Tools. One Browser Tab.</title>
   <meta name="description"
@@ -28,9 +29,7 @@
     content="A personal productivity suite in a single HTML file. No install. No server. Just open and work.">
   <meta name="twitter:image" content="https://onuresen.github.io/Kit-of-Parts/og-preview.png">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
 
   <script src="hub-storage.js"></script>
@@ -43,6 +42,7 @@
   <script src="hub-search.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
+  <script src="enterprise-config.js"></script>
   <script src="hub-ai.js"></script>
   <link rel="stylesheet" href="styles/index.css">
 </head>
@@ -56,7 +56,7 @@
   <!-- Sidebar -->
   <nav class="sidebar" id="main-sidebar">
     <div class="sidebar-logo" onclick="goHome()" title="Home">
-      <div class="sidebar-logo-mark">TH</div>
+      <img class="sidebar-logo-mark" src="favicon.svg" alt="">
       <div class="sidebar-logo-text">Thinking Hub</div>
     </div>
 
@@ -181,21 +181,31 @@
       <div class="settings-pane active" id="spane-integrations">
 
         <!-- AI Assistant -->
-        <div class="sfield-group">
-          <div class="sfield-group-title">✦ AI Assistant <span class="badge">Claude Haiku</span></div>
-          <div class="sfield-hint" style="margin-bottom:8px">Your key is stored locally only — never sent anywhere
-            except Anthropic's API.</div>
+        <div class="sfield-group ai-surface">
+          <div class="sfield-group-title">✦ AI Assistant <span class="badge" id="ai-provider-badge">Provider</span></div>
           <div class="sfield-row">
-            <input type="password" id="ai-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
-              oninput="onAiKeyInput(this.value)">
-            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap"
-              onclick="toggleAiKeyVisible()">Show</button>
-            <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" id="ai-key-test-btn"
-              onclick="testAiKey()">Test</button>
+            <select id="ai-provider-select" aria-label="AI provider" onchange="onAiProviderChange(this.value)"></select>
           </div>
-          <div class="sfield-status" id="ai-key-status"></div>
-          <div class="sfield-hint">Powers the AI Assistant drawer (bottom of screen). Get a key at <a
-              href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
+          <div class="sfield-hint" id="ai-provider-policy-hint" style="margin-bottom:10px"></div>
+
+          <div id="ai-anthropic-settings">
+            <div class="sfield-hint" style="margin-bottom:8px">Your key is stored in browser localStorage and sent only to Anthropic's API when you explicitly invoke AI.</div>
+            <div class="sfield-row">
+              <input type="password" id="ai-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
+                oninput="onAiKeyInput(this.value)">
+              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap"
+                onclick="toggleAiKeyVisible()">Show</button>
+              <button class="btn btn-ghost" style="font-size:12px;white-space:nowrap" id="ai-key-test-btn"
+                onclick="testAiKey()">Test</button>
+            </div>
+            <div class="sfield-status" id="ai-key-status"></div>
+            <div class="sfield-hint">Get a key at <a href="https://console.anthropic.com" target="_blank"
+                style="color:var(--accent)">console.anthropic.com</a>.</div>
+          </div>
+
+          <div id="ai-copilot-settings" style="display:none">
+            <div class="sfield-status info" style="display:block">No key required · no Microsoft API connection</div>
+            <div class="sfield-hint">Each AI action shows the exact prompt first. Confirming copies it and opens Microsoft 365 Copilot; Thinking Hub never pastes or submits it automatically.</div>
           </div>
         </div>
 
@@ -1399,12 +1409,13 @@
 
     function buildBriefingCard() {
       const card = document.createElement('div');
-      card.className = 'stat-card';
+      card.className = 'stat-card ai-surface';
       card.style.borderColor = 'color-mix(in srgb, var(--accent2) 35%, var(--border))';
       let rec = null;
       try { rec = HubStorage.get(BRIEFING_KEY); } catch { }
       const today = new Date().toISOString().slice(0, 10);
       const fresh = rec && rec.date === today && rec.text;
+      const aiProviderLabel = typeof HubAI !== 'undefined' ? HubAI.getProviderLabel() : 'AI';
       const body = fresh
         ? `<div style="white-space:normal;font-size:12.5px;line-height:1.65;color:var(--text2)">${_briefingFmt(rec.text)}</div>`
         : `<div style="padding:4px 2px;color:var(--text3);font-size:12px">A quick read on today: top priorities, overdue items, meetings, and decisions due for revisit.</div>`;
@@ -1412,18 +1423,19 @@
         <div class="stat-card-header">
           <span class="stat-card-icon">✦</span>
           <span class="stat-card-title">Briefing</span>
-          <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+          <span class="ai-badge" title="Uses the selected AI provider">AI</span>
           <button id="briefing-btn" onclick="event.stopPropagation();generateBriefing()"
             style="margin-left:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;color:var(--text2);cursor:pointer;padding:3px 9px;font-family:var(--font-body);white-space:nowrap">${fresh ? '↻ Refresh' : '✦ Brief me'}</button>
         </div>
         <div class="stat-card-body">${body}</div>
-        <div class="stat-card-footer"><span>${fresh ? 'generated today' : 'manual · one API call'}</span><span></span></div>`;
+        <div class="stat-card-footer"><span>${fresh ? 'generated today' : `manual · ${aiProviderLabel}`}</span><span></span></div>`;
       return card;
     }
 
     async function generateBriefing() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       if (typeof HubAI === 'undefined' || !HubAI.isConfigured()) {
-        showToast('Add your Anthropic API key in ⚙ Settings → Integrations first', 'error');
+        showToast(typeof HubAI !== 'undefined' ? HubAI.getSetupMessage() : 'AI is unavailable', 'error');
         return;
       }
       const btn = document.getElementById('briefing-btn');
@@ -1435,7 +1447,7 @@
         HubStorage.set(BRIEFING_KEY, { date: new Date().toISOString().slice(0, 10), text: (text || '').trim() });
         buildTodayView();
       } catch (e) {
-        showToast('Briefing failed: ' + (e.message || e), 'error');
+        showToast(HubAI.isHandoffError(e) ? e.message : 'Briefing failed: ' + (e.message || e), HubAI.isHandoffError(e) ? '' : 'error');
         if (btn) { btn.disabled = false; btn.textContent = '✦ Brief me'; }
       }
     }
@@ -2473,9 +2485,48 @@
       } catch (e) { }
     }, 4000);
 
-    // ── AI key helpers ────────────────────────────────────────────────────────────
+    // ── AI provider + key helpers ─────────────────────────────────────────────────
+
+    function _refreshAiProviderUI() {
+      if (typeof HubAI === 'undefined') return;
+      const allowed = HubAI.getAllowedProviders();
+      const provider = HubAI.getProvider();
+      const select = document.getElementById('ai-provider-select');
+      if (select) {
+        select.replaceChildren();
+        allowed.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = HubAI.getProviderLabel(value);
+          option.selected = value === provider;
+          select.appendChild(option);
+        });
+        select.disabled = allowed.length < 2;
+      }
+      const badge = document.getElementById('ai-provider-badge');
+      if (badge) badge.textContent = HubAI.getProviderLabel(provider);
+      const policyHint = document.getElementById('ai-provider-policy-hint');
+      if (policyHint) policyHint.textContent = allowed.length > 1
+        ? 'Choose from the providers allowed by this deployment.'
+        : `Your organization allows ${HubAI.getProviderLabel(provider)} only.`;
+      const anthropic = document.getElementById('ai-anthropic-settings');
+      const copilot = document.getElementById('ai-copilot-settings');
+      if (anthropic) anthropic.style.display = provider === 'anthropic' ? '' : 'none';
+      if (copilot) copilot.style.display = provider === 'copilot-handoff' ? '' : 'none';
+      const title = provider === 'copilot-handoff'
+        ? 'Previews and copies a prompt for Microsoft 365 Copilot; nothing is submitted automatically'
+        : 'Uses your Anthropic API key · consumes tokens';
+      document.querySelectorAll('.ai-badge').forEach(el => el.title = title);
+      _updateAiDrawerHint();
+    }
+
+    function onAiProviderChange(provider) {
+      if (typeof HubAI === 'undefined' || !HubAI.setProvider(provider)) return;
+      _refreshAiProviderUI();
+    }
 
     function onAiKeyInput(val) {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       if (typeof HubAI !== 'undefined') HubAI.saveKey(val);
       _updateAiKeyStatus('');
       _updateAiDrawerHint();
@@ -2503,6 +2554,7 @@
     }
 
     async function testAiKey() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       const inp = document.getElementById('ai-key-input');
       const key = inp ? inp.value.trim() : '';
       if (!key) { _setAiKeyStatus('Enter a key first', 'err'); return; }
@@ -2530,6 +2582,7 @@
       document.getElementById('obsidian-vault-name').value = s.obsidianVault || '';
       if (typeof HubAI !== 'undefined') {
         document.getElementById('ai-key-input').value = HubAI.getKey();
+        _refreshAiProviderUI();
       }
 
       if (typeof HubObsidian !== 'undefined' && HubObsidian.isAvailable()) {
@@ -2889,6 +2942,7 @@
 
     let _aiHistoryLoaded = false;
     function toggleAiDrawer() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       _aiDrawerOpen = !_aiDrawerOpen;
       document.getElementById('ai-drawer').classList.toggle('open', _aiDrawerOpen);
       if (_aiDrawerOpen) {
@@ -2903,8 +2957,10 @@
       const noKeyEl = document.getElementById('ai-no-key-hint');
       const sendBtn = document.getElementById('ai-send-btn');
       const configured = typeof HubAI !== 'undefined' && HubAI.isConfigured();
-      if (hintEl) hintEl.textContent = configured ? '· ask anything' : '· key not set';
+      const providerLabel = typeof HubAI !== 'undefined' ? HubAI.getProviderLabel() : 'AI';
+      if (hintEl) hintEl.textContent = configured ? `· ${providerLabel}` : '· setup needed';
       if (noKeyEl) noKeyEl.style.display = configured ? 'none' : '';
+      if (noKeyEl && !configured && typeof HubAI !== 'undefined') noKeyEl.textContent = HubAI.getSetupMessage();
       if (sendBtn) sendBtn.disabled = !configured;
     }
 
@@ -2925,6 +2981,7 @@
 
     // ── Drag-to-resize ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
+      _refreshAiProviderUI();
       const handle = document.getElementById('ai-resize-handle');
       const panel = document.getElementById('ai-panel');
       if (!handle || !panel) return;
@@ -2995,6 +3052,7 @@
     }
 
     async function aiCaptureSend() {
+      if (typeof HubAI !== 'undefined' && !HubAI.isEnabled()) return;
       const inp = document.getElementById('ai-input');
       const text = inp ? inp.value.trim() : '';
       if (!text) return;
@@ -3037,7 +3095,10 @@
         if (plainText) _saveAiHistory();
         _renderAiConversation();
       } catch (err) {
-        thinkEl.querySelector('.ai-turn-a').innerHTML = `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
+        const handoff = typeof HubAI !== 'undefined' && HubAI.isHandoffError(err);
+        thinkEl.querySelector('.ai-turn-a').innerHTML = handoff
+          ? `<span style="color:var(--text2)">${HubUtils.esc(err.message)}</span>`
+          : `<span style="color:var(--accent-nope)">Error: ${HubUtils.esc(err.message)}</span>`;
       } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
@@ -3751,7 +3812,7 @@
 
       <!-- Header -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-        <div style="width:42px;height:42px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:17px;font-weight:800;color:#111;flex-shrink:0">TH</div>
+        <img src="favicon.svg" alt="" width="42" height="42" style="display:block;border-radius:11px;flex-shrink:0">
         <div>
           <div style="font-family:var(--font-display);font-size:1.25rem;font-weight:800;color:var(--text);line-height:1.1">Welcome to Thinking Hub</div>
           <div style="font-size:.8rem;color:var(--text3);margin-top:2px">Your personal workspace for projects, goals, decisions &amp; learning</div>
@@ -3809,7 +3870,7 @@
     </div>
   </div>
   <!-- AI Floating Chat Panel -->
-  <div id="ai-drawer">
+  <div id="ai-drawer" class="ai-surface">
     <!-- Collapsed tab -->
     <div id="ai-tab">
       <span id="ai-drag-grip" title="Drag to reposition">⠿</span>
@@ -3826,7 +3887,7 @@
       <div id="ai-panel-header">
         <span class="ai-tab-icon">✦</span>
         <span id="ai-panel-title">AI Assistant</span>
-        <span class="ai-badge" title="Uses your Anthropic API key · consumes tokens">AI</span>
+        <span class="ai-badge" title="Uses the selected AI provider">AI</span>
         <button id="ai-panel-close" onclick="toggleAiDrawer()" title="Close">×</button>
       </div>
 
@@ -3844,8 +3905,7 @@
       </div>
 
       <div id="ai-no-key-hint" style="display:none">
-        Add your Anthropic API key in <a href="#" onclick="openDataModal('integrations');return false;"
-          style="color:var(--accent)">Settings → Integrations</a> to enable AI.
+        AI setup is required in Settings → Integrations.
       </div>
 
       <div id="ai-input-row">

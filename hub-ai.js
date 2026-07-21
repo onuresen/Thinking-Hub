@@ -1,53 +1,272 @@
 /**
  * hub-ai.js — AI Assistant module for Thinking Hub
- * Uses the official Anthropic JS SDK (loaded via esm.sh CDN).
+ * Provider-neutral manual AI layer. Anthropic calls its Messages API directly;
+ * Microsoft Copilot handoff previews/copies locally and opens Copilot only
+ * after confirmation. No runtime SDK or CDN dependency; enterprise-config.js
+ * owns the deployment-level AI policy and provider allowlist.
  */
 
 const HubAI = (() => {
   const SETTINGS_KEY = 'hub-settings-v1';
   const MODEL = 'claude-haiku-4-5';
-  const SDK_URL = 'https://esm.sh/@anthropic-ai/sdk@0.52.0'; // pinned — update manually after testing
+  const API_URL = 'https://api.anthropic.com/v1/messages';
+  const API_VERSION = '2023-06-01';
+  const PROVIDER_ANTHROPIC = 'anthropic';
+  const PROVIDER_COPILOT = 'copilot-handoff';
+  const KNOWN_PROVIDERS = [PROVIDER_COPILOT, PROVIDER_ANTHROPIC];
+  const COPILOT_URL = 'https://m365.cloud.microsoft/chat/';
 
-  let _sdkPromise = null;
-  let _clientCache = null;
+  function isEnabled() {
+    const policy = window.ThinkingHubPolicy;
+    if (policy?.aiEnabled === false) return false;
+    if (Array.isArray(policy?.allowedAiProviders)) {
+      return policy.allowedAiProviders.some(provider => KNOWN_PROVIDERS.includes(provider));
+    }
+    return true;
+  }
+
+  function _assertEnabled() {
+    if (!isEnabled()) {
+      throw new Error('AI features are disabled by your organization.');
+    }
+  }
+
+  function _settings() {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  function getAllowedProviders() {
+    if (!isEnabled()) return [];
+    const configured = window.ThinkingHubPolicy?.allowedAiProviders;
+    const allowed = Array.isArray(configured)
+      ? configured.filter((p, i) => KNOWN_PROVIDERS.includes(p) && configured.indexOf(p) === i)
+      : [PROVIDER_ANTHROPIC];
+    return allowed.length ? allowed : [];
+  }
+
+  function getProvider() {
+    const allowed = getAllowedProviders();
+    if (!allowed.length) return '';
+    const s = _settings();
+    if (allowed.includes(s.aiProvider)) return s.aiProvider;
+    // Preserve existing integrated behavior for users who already have a key;
+    // new/no-key profiles follow deployment preference order (Copilot first).
+    if (allowed.includes(PROVIDER_ANTHROPIC) && (s.anthropicKey || '').trim().length > 10) {
+      return PROVIDER_ANTHROPIC;
+    }
+    return allowed[0];
+  }
+
+  function setProvider(provider) {
+    if (!getAllowedProviders().includes(provider)) return false;
+    try {
+      const s = _settings();
+      s.aiProvider = provider;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+      document.documentElement.setAttribute('data-ai-provider', provider);
+      return true;
+    } catch { return false; }
+  }
+
+  function getProviderLabel(provider = getProvider()) {
+    if (provider === PROVIDER_COPILOT) return 'Microsoft Copilot';
+    if (provider === PROVIDER_ANTHROPIC) return 'Anthropic direct';
+    return 'AI disabled';
+  }
+
+  function isHandoffProvider() { return getProvider() === PROVIDER_COPILOT; }
+
+  function getSetupMessage() {
+    if (!isEnabled() || !getAllowedProviders().length) return 'AI is disabled by your organization.';
+    if (getProvider() === PROVIDER_ANTHROPIC && !isConfigured()) {
+      return 'Add your Anthropic API key in ⚙ Settings → Integrations first.';
+    }
+    return '';
+  }
 
   // ── Key management ────────────────────────────────────────────────────────────
 
   function getKey() {
-    try {
-      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-      return (s.anthropicKey || '').trim();
-    } catch { return ''; }
+    return (_settings().anthropicKey || '').trim();
   }
 
   function saveKey(key) {
+    if (!isEnabled() || !getAllowedProviders().includes(PROVIDER_ANTHROPIC)) return false;
     try {
-      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      const s = _settings();
       s.anthropicKey = key.trim();
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-      _clientCache = null;
-    } catch {}
+      return true;
+    } catch { return false; }
   }
 
-  function isConfigured() { return getKey().length > 10; }
+  function isConfigured() {
+    const provider = getProvider();
+    return isEnabled() && (
+      provider === PROVIDER_COPILOT ||
+      (provider === PROVIDER_ANTHROPIC && getKey().length > 10)
+    );
+  }
 
-  // ── SDK ───────────────────────────────────────────────────────────────────────
+  // ── Direct Anthropic API client ───────────────────────────────────────────────
 
-  async function _loadSDK() {
-    if (!_sdkPromise) {
-      _sdkPromise = import(SDK_URL).then(m => m.default || m.Anthropic || m);
+  async function _createMessage(key, body) {
+    _assertEnabled();
+    if (!getAllowedProviders().includes(PROVIDER_ANTHROPIC)) {
+      throw new Error('Anthropic direct is not allowed by this deployment.');
     }
-    return _sdkPromise;
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = payload?.error?.message || payload?.message || response.statusText;
+      throw new Error(`Anthropic API ${response.status}: ${detail || 'request failed'}`);
+    }
+    return payload;
   }
 
-  async function _getClient() {
-    const key = getKey();
+  async function _getClient(keyOverride) {
+    _assertEnabled();
+    const key = (keyOverride || getKey()).trim();
     if (!key) throw new Error('No API key configured. Add your Anthropic API key in Settings → Integrations.');
-    if (_clientCache && _clientCache._key === key) return _clientCache._client;
-    const Anthropic = await _loadSDK();
-    const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
-    _clientCache = { _key: key, _client: client };
-    return client;
+    return { messages: { create: (body) => _createMessage(key, body) } };
+  }
+
+  function _formatHandoffPrompt(title, body) {
+    const lines = [
+      'Thinking Hub — Microsoft Copilot handoff',
+      `Task: ${title}`,
+      '',
+      'Instructions:',
+      body.system || 'Be concise, practical, and grounded only in the supplied context.',
+      '',
+      'Conversation and context:',
+    ];
+    (body.messages || []).forEach((message) => {
+      lines.push(`${message.role === 'assistant' ? 'Assistant' : 'User'}:`);
+      lines.push(String(message.content || ''));
+      lines.push('');
+    });
+    lines.push('Return only the requested answer. Do not claim to have changed Thinking Hub data.');
+    return lines.join('\n').trim();
+  }
+
+  function _handoffError(code, message) {
+    const error = new Error(message);
+    error.code = code;
+    error.provider = PROVIDER_COPILOT;
+    return error;
+  }
+
+  function isHandoffError(error) {
+    return error?.code === 'COPILOT_HANDOFF_COMPLETE' || error?.code === 'COPILOT_HANDOFF_CANCELLED';
+  }
+
+  function _copyText(textarea, text) {
+    if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand && document.execCommand('copy');
+    window.getSelection()?.removeAllRanges();
+    return copied ? Promise.resolve() : Promise.reject(new Error('Clipboard copy is unavailable in this browser.'));
+  }
+
+  function _handoffToCopilot(title, body) {
+    _assertEnabled();
+    if (!getAllowedProviders().includes(PROVIDER_COPILOT)) {
+      return Promise.reject(new Error('Microsoft Copilot handoff is not allowed by this deployment.'));
+    }
+    const prompt = _formatHandoffPrompt(title, body);
+    return new Promise((resolve, reject) => {
+      const trigger = document.activeElement;
+      const overlay = document.createElement('div');
+      overlay.className = 'ui-modal-overlay is-open';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-label', 'Review Microsoft Copilot prompt');
+      overlay.style.zIndex = 'var(--z-toast)';
+
+      const modal = document.createElement('div');
+      modal.className = 'ui-modal';
+      modal.style.cssText = 'max-width:680px;max-height:90vh;overflow:auto;';
+      const heading = document.createElement('h2');
+      heading.textContent = 'Review prompt for Microsoft Copilot';
+      heading.style.cssText = 'margin:0 0 8px;font:800 18px var(--font-display);color:var(--text);';
+      const explanation = document.createElement('p');
+      explanation.textContent = 'Nothing has been copied or sent. Review the exact prompt below. Confirming copies it and opens Microsoft 365 Copilot; you still choose whether to paste and submit it.';
+      explanation.style.cssText = 'margin:0 0 12px;font:12px/1.55 var(--font-body);color:var(--text2);';
+      const textarea = document.createElement('textarea');
+      textarea.readOnly = true;
+      textarea.value = prompt;
+      textarea.setAttribute('aria-label', 'Exact prompt to copy');
+      textarea.style.cssText = 'width:100%;min-height:280px;box-sizing:border-box;resize:vertical;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;color:var(--text);font:11px/1.55 var(--font-mono);';
+      const status = document.createElement('div');
+      status.setAttribute('aria-live', 'polite');
+      status.style.cssText = 'min-height:18px;margin-top:8px;font:11px var(--font-body);color:var(--accent-nope);';
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:8px;flex-wrap:wrap;';
+      const cancel = document.createElement('button');
+      cancel.className = 'btn btn-ghost';
+      cancel.textContent = 'Cancel';
+      const confirm = document.createElement('button');
+      confirm.className = 'btn btn-primary';
+      confirm.textContent = 'Copy and open Copilot';
+      actions.append(cancel, confirm);
+      modal.append(heading, explanation, textarea, status, actions);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      const untrap = window.HubUtils?.trapFocus ? window.HubUtils.trapFocus(modal) : () => {};
+
+      const finish = (error) => {
+        document.removeEventListener('keydown', onKeydown);
+        untrap();
+        overlay.remove();
+        if (trigger?.focus) trigger.focus();
+        reject(error);
+      };
+      const onKeydown = (event) => {
+        if (event.key === 'Escape') finish(_handoffError('COPILOT_HANDOFF_CANCELLED', 'Copilot handoff cancelled. Nothing was copied or sent.'));
+      };
+      document.addEventListener('keydown', onKeydown);
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) finish(_handoffError('COPILOT_HANDOFF_CANCELLED', 'Copilot handoff cancelled. Nothing was copied or sent.'));
+      });
+      cancel.addEventListener('click', () => finish(_handoffError('COPILOT_HANDOFF_CANCELLED', 'Copilot handoff cancelled. Nothing was copied or sent.')));
+      confirm.addEventListener('click', async () => {
+        confirm.disabled = true;
+        const copilotWindow = window.open('about:blank', '_blank');
+        if (copilotWindow) copilotWindow.opener = null;
+        try {
+          await _copyText(textarea, prompt);
+          if (copilotWindow) copilotWindow.location.replace(COPILOT_URL);
+          else window.open(COPILOT_URL, '_blank', 'noopener,noreferrer');
+          finish(_handoffError('COPILOT_HANDOFF_COMPLETE', 'Prompt copied. Paste it into Microsoft 365 Copilot; Thinking Hub did not submit it.'));
+        } catch (error) {
+          if (copilotWindow) copilotWindow.close();
+          status.textContent = error.message || 'Could not copy the prompt.';
+          confirm.disabled = false;
+        }
+      });
+      cancel.focus();
+    });
+  }
+
+  async function _completeMessage(title, body) {
+    _assertEnabled();
+    const provider = getProvider();
+    if (provider === PROVIDER_COPILOT) return _handoffToCopilot(title, body);
+    if (provider !== PROVIDER_ANTHROPIC) throw new Error('No AI provider is allowed by this deployment.');
+    const client = await _getClient();
+    return client.messages.create(body);
   }
 
   // ── Context ───────────────────────────────────────────────────────────────────
@@ -277,7 +496,6 @@ const HubAI = (() => {
   // ── Capture ───────────────────────────────────────────────────────────────────
 
   async function capture(text) {
-    const client = await _getClient();
     const { today, projects, members } = _getContext();
 
     const systemPrompt = `You are a project management assistant for Thinking Hub. Extract structured data from the user's natural language input.
@@ -300,7 +518,7 @@ Return ONLY valid JSON:
   "clarificationNeeded": "one short question if ambiguous (optional)"
 }`;
 
-    const msg = await client.messages.create({
+    const msg = await _completeMessage('Capture a structured Thinking Hub item', {
       model: MODEL, max_tokens: 512, system: systemPrompt,
       messages: [{ role: 'user', content: text }]
     });
@@ -313,7 +531,6 @@ Return ONLY valid JSON:
   // ── Act ───────────────────────────────────────────────────────────────────────
 
   async function act(text) {
-    const client = await _getClient();
     const { today, lines, items } = _getRichContext();
 
     const systemPrompt = `You are an AI assistant for Thinking Hub that PROPOSES ACTIONS for the user to review and confirm before applying.
@@ -389,7 +606,7 @@ Rules:
 - If you cannot find a required ID, explain in "message" and return empty actions
 - Keep "message" to 1-2 sentences`;
 
-    const msg = await client.messages.create({
+    const msg = await _completeMessage('Propose reviewed Thinking Hub actions', {
       model: MODEL, max_tokens: 1500, system: systemPrompt,
       messages: [{ role: 'user', content: text }]
     });
@@ -404,7 +621,6 @@ Rules:
   // ── Query ─────────────────────────────────────────────────────────────────────
 
   async function query(userMessage, history) {
-    const client = await _getClient();
     const { today, lines } = _getRichContext();
 
     const system = `You are a helpful productivity assistant for Thinking Hub. Answer questions about the user's work concisely.
@@ -424,7 +640,7 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
     });
     messages.push({ role: 'user', content: userMessage });
 
-    const msg = await client.messages.create({
+    const msg = await _completeMessage('Answer a Thinking Hub workspace question', {
       model: MODEL, max_tokens: 800, system, messages
     });
     return msg.content?.[0]?.text || '';
@@ -433,8 +649,7 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
   // ── Chat ──────────────────────────────────────────────────────────────────────
 
   async function chat(userMessage, systemContext = '') {
-    const client = await _getClient();
-    const msg = await client.messages.create({
+    const msg = await _completeMessage('Complete a Thinking Hub AI request', {
       model: MODEL, max_tokens: 1024,
       system: systemContext || 'You are a helpful productivity assistant for Thinking Hub. Be concise and practical.',
       messages: [{ role: 'user', content: userMessage }]
@@ -445,11 +660,14 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
   // ── Test key ──────────────────────────────────────────────────────────────────
 
   async function testKey(keyOverride) {
+    if (!isEnabled()) return { ok: false, message: 'AI features are disabled by your organization.' };
+    if (!getAllowedProviders().includes(PROVIDER_ANTHROPIC)) {
+      return { ok: false, message: 'Anthropic direct is not allowed by this deployment.' };
+    }
     const key = keyOverride || getKey();
     if (!key) return { ok: false, message: 'No key provided' };
     try {
-      const Anthropic = await _loadSDK();
-      const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+      const client = await _getClient(key);
       await client.messages.create({ model: MODEL, max_tokens: 16, messages: [{ role: 'user', content: 'Hi' }] });
       return { ok: true, message: `Connected · ${MODEL}` };
     } catch (err) {
@@ -457,5 +675,26 @@ Keep answers short and actionable. Use bullet points for lists. Where relevant, 
     }
   }
 
-  return { getKey, saveKey, isConfigured, capture, act, chat, query, detectIntent, testKey, getRichContext: _getRichContext };
+  document.documentElement.setAttribute('data-ai-provider', getProvider() || 'disabled');
+
+  return {
+    isEnabled,
+    getAllowedProviders,
+    getProvider,
+    setProvider,
+    getProviderLabel,
+    isHandoffProvider,
+    isHandoffError,
+    getSetupMessage,
+    getKey,
+    saveKey,
+    isConfigured,
+    capture,
+    act,
+    chat,
+    query,
+    detectIntent,
+    testKey,
+    getRichContext: _getRichContext,
+  };
 })();

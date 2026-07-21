@@ -7,10 +7,14 @@ dependency, local-device, or optional AI risks.
 
 ## Supported versions
 
-Until versioned releases begin, security fixes target the latest commit on
-`main`. Older commits, forks, downloaded copies, and modified deployments are
-not maintained by this project. Versioned support information will replace
-this section when the release process is introduced in Enterprise Group D.
+For releases from `v1.1.0` onward, security fixes target only the latest
+published GitHub Release. The `main` branch is development state and is not a
+supported deployment channel. The historical `v1.0` tag predates this policy
+and is not maintained. Older releases remain available for audit and rollback;
+fixes ship as a new version rather than changing an existing tag or asset.
+Forks and modified deployments are maintained by their operators. See
+`VERSION`, `CHANGELOG.md`, and `docs/RELEASING.md` for the current release line,
+change history, and verification contract.
 
 ## Reporting a vulnerability
 
@@ -61,19 +65,27 @@ browser profiles.
 
 ### Optional AI boundary
 
-The Anthropic integration is opt-in and requires a user-supplied API key. The
-key is stored in plaintext localStorage. When an AI action is explicitly
-triggered, Thinking Hub loads a pinned Anthropic SDK from `esm.sh` and sends a
-request directly from the browser to Anthropic. Depending on the feature, that
-request can include the user's prompt and selected context derived from
-projects, tasks, people, decisions, risks, goals, meetings, schedule, learning,
-reflection, assumptions, stakeholders, journal, focus, capture, and links.
+Thinking Hub supports two optional providers. Microsoft Copilot handoff builds
+and displays the exact prompt locally. It copies the prompt and opens Microsoft
+365 Copilot only after user confirmation; it stores no Microsoft credential,
+calls no Microsoft API, and submits nothing automatically. The user decides
+whether to paste the prompt into their organization-managed Copilot session.
 
-AI-generated changes are proposed for user confirmation before application,
-but AI output must still be treated as untrusted. Organizations that do not
-approve external AI should not configure an API key and should block
-`esm.sh` and `api.anthropic.com` at the network layer until the planned
-organization-level AI control ships in Enterprise Group C.
+Anthropic direct requires a user-supplied API key stored in plaintext
+localStorage. When an AI action is explicitly triggered, Thinking Hub sends a
+Messages API request directly from the browser to Anthropic. Depending on the
+feature, that request can include the user's prompt and selected context
+derived from projects, tasks, people, decisions, risks, goals, meetings,
+schedule, learning, reflection, assumptions, stakeholders, journal, focus,
+capture, and links.
+
+AI output must be treated as untrusted. Integrated Anthropic changes are
+proposed for confirmation; Copilot handoff responses are transferred manually
+and are never auto-applied. `enterprise-config.js` controls a deployment-owned
+provider allowlist plus the master `aiEnabled` switch. Organizations should
+allow only approved providers and block unapproved destinations at the network
+layer. A disabled provider fails before clipboard or network activity. See
+[`docs/AI-PROVIDERS.md`](docs/AI-PROVIDERS.md).
 
 ### Local-file access
 
@@ -85,14 +97,17 @@ Thinking Hub does not upload selected files to its own server.
 
 ### Supply chain and browser controls
 
-- `vis-network` and `html2canvas` are pinned and distributed from `vendor/`.
-- The Anthropic SDK is version-pinned but currently fetched from `esm.sh`.
-- Fonts are currently fetched from Google Fonts.
+- `vis-network`, `html2canvas`, and all font subsets are pinned and distributed
+  locally from `vendor/`.
+- Optional AI uses a small local direct client; there is no runtime SDK/CDN.
 - Third-party attributions are recorded in `THIRD-PARTY-NOTICES`.
 - CI runs page smoke checks, service-worker precache coverage, and interaction
   flows on pushes to `main` and pull requests.
-- A repository Content Security Policy and self-hosted remaining runtime
-  dependencies are planned for Enterprise Group C.
+- Every application page carries a repository Content Security Policy. It
+  limits runtime connections to same-origin resources and the optional
+  Anthropic API, while retaining `unsafe-inline` for the current no-build
+  inline-script/event-handler architecture. Operators can add a stricter
+  HTTP-header policy after testing their deployment.
 
 ## Operator responsibilities
 
@@ -108,6 +123,6 @@ The following are not security vulnerabilities in Thinking Hub by themselves:
 - another user reading data from an intentionally shared browser/OS profile;
 - loss of browser storage without a current exported backup;
 - a modified or third-party deployment behaving differently from this source;
-- availability or policy decisions made by Google, esm.sh, Anthropic, GitHub,
-  or an organization's hosting provider;
+- availability or policy decisions made by Anthropic, GitHub, or an
+  organization's hosting provider;
 - AI output being incorrect when it has not bypassed the confirmation boundary.

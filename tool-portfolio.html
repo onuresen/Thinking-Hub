@@ -1,8 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tool Portfolio Hub</title>
     <script src="hub-storage.js"></script>
@@ -11,9 +12,7 @@
     <script src="hub-toast.js"></script>
     <script src="hub-data.js"></script>
     <script src="hub-bootstrap.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/fonts.css">
     <link rel="stylesheet" href="theme.css">
     <style>
         body {
@@ -1505,16 +1504,6 @@
         // ── Helpers ───────────────────────────────
 
         function toolIconHtml(t, sz) {
-            sz = sz || 20;
-            if (t.url) {
-                try {
-                    const domain = new URL(t.url).hostname;
-                    if (domain) {
-                        const fb = escapeHtml(t.icon || '🛠');
-                        return `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" width="${sz}" height="${sz}" style="object-fit:contain;border-radius:3px;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display=''" alt=""><span style="display:none">${fb}</span>`;
-                    }
-                } catch {}
-            }
             return escapeHtml(t.icon || '🛠');
         }
 
@@ -1526,7 +1515,7 @@
                 return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);margin-bottom:6px">
                     <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:7px;font-size:14px;flex-shrink:0">${toolIconHtml(t, 18)}</div>
                     <span style="font-size:11px;color:var(--text2);font-family:var(--font-mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(domain)}</span>
-                    <span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.5px">auto</span>
+                    <span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.5px">local icon</span>
                 </div>`;
             } catch { return ''; }
         }
