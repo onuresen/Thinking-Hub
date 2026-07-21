@@ -313,6 +313,9 @@
     if (m.time === undefined) m.time = '';
     if (m.durationMins === undefined) m.durationMins = null;
     if (m.recurring === undefined) m.recurring = false;
+    if (m.createdAt === undefined) m.createdAt = '';
+    if (m.updatedAt === undefined) m.updatedAt = '';
+    if (m.archivedAt === undefined) m.archivedAt = '';
     if (m.recurring) {
       if (!Array.isArray(m.occurrenceDates)) m.occurrenceDates = [];
       if (!Array.isArray(m.icsOccKeys)) m.icsOccKeys = m.occurrenceDates.map(o => o.date);
@@ -1611,6 +1614,7 @@
     const ind = document.getElementById('save-indicator');
     if (ind) ind.textContent = 'saving…';
     saveTimer = setTimeout(() => {
+      const m = activeMeeting(); if (m) HubUtils.stampUpdate(m);
       flushCurrentDetail();
       const ind2 = document.getElementById('save-indicator');
       if (ind2) { ind2.textContent = 'saved'; setTimeout(() => { if (ind2) ind2.textContent = ''; }, 1500); }
@@ -1709,6 +1713,7 @@
     if (!target.actionItems) target.actionItems = [];
     const dueDate = document.getElementById('action-due').value || null;
     target.actionItems.push({ id: uid(), text, done: false, taskCreated: false, dueDate, createdAt: new Date().toISOString() });
+    HubUtils.stampUpdate(m);
     save(); showToast('Action saved'); closeActionModal(); renderDetail(); renderList();
   }
 
@@ -1731,7 +1736,8 @@
   function archiveMeeting() {
     if (!activeId) return;
     const m = data.meetings.find(x => x.id === activeId); if (!m) return;
-    m.archived = !m.archived;
+    HubUtils.stampArchive(m, !m.archived);
+    HubUtils.stampUpdate(m);
     save(); activeId = null; renderList();
     document.getElementById('detail-empty').style.display = 'flex';
     document.getElementById('detail-content').style.display = 'none';

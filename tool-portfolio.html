@@ -787,7 +787,9 @@
                 order: 999999, // appended at end of its category
                 lastUsedAt: null,
                 useCount: 0,
-                mastery: 0
+                mastery: 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
             tools.push(t);
             normalizeOrdersInCategory(normCat(t.category));
@@ -838,6 +840,7 @@
         function updateField(key, value) {
             const t = tools.find(x => x.id === currentId);
             if (!t) return;
+            HubUtils.stampUpdate(t);
 
             // Text inputs: update in-memory immediately, debounce save so cursor never jumps
             if (key === 'name' || key === 'icon' || key === 'url' || key === 'note') {
@@ -883,6 +886,7 @@
             const t = tools.find(x => x.id === currentId);
             if (!t) return;
             t[key] = !t[key];
+            HubUtils.stampUpdate(t);
             save();
             renderDetail();
         }

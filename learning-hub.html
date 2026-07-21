@@ -683,13 +683,13 @@
   function saveNotes() {
     const item = data.items.find(it => it.id === activeId);
     const ta = document.getElementById('notes-textarea');
-    if (item && ta) { item.notes = ta.value; save(); }
+    if (item && ta) { item.notes = ta.value; HubUtils.stampUpdate(item); save(); }
   }
 
   function saveKeyInsight() {
     const item = data.items.find(it => it.id === activeId);
     const ta = document.getElementById('key-insight-textarea');
-    if (item && ta) { item.keyInsight = ta.value; save(); }
+    if (item && ta) { item.keyInsight = ta.value; HubUtils.stampUpdate(item); save(); }
   }
 
   // ── Tags ─────────────────────────────────────────────────────────────────────
@@ -703,7 +703,7 @@
     if (!item) return;
     if (typeof HubTags !== 'undefined') tag = HubTags.ensure(tag);
     if (!item.tags) item.tags = [];
-    if (!item.tags.includes(tag)) { item.tags.push(tag); save(); renderDetail(); }
+    if (!item.tags.includes(tag)) { item.tags.push(tag); HubUtils.stampUpdate(item); save(); renderDetail(); }
     inp.value = '';
   }
 
@@ -711,6 +711,7 @@
     const item = data.items.find(it => it.id === activeId);
     if (!item) return;
     item.tags = (item.tags||[]).filter(t => t !== tag);
+    HubUtils.stampUpdate(item);
     save(); renderDetail();
   }
 
@@ -726,6 +727,7 @@
     if (!item) return;
     if (!item.highlights) item.highlights = [];
     item.highlights.push({ id: uid(), text, createdAt: new Date().toISOString() });
+    HubUtils.stampUpdate(item);
     save(); inp.value = ''; renderDetail();
   }
 
@@ -798,6 +800,7 @@
           if (status === 'done') { item.completedAt = new Date().toISOString(); item.progress = 100; }
           else if (status === 'to-read') { item.progress = 0; }
         }
+        HubUtils.stampUpdate(item);
       }
     } else {
       const newItem = {
@@ -809,8 +812,8 @@
         url:      document.getElementById('am-url').value.trim(),
         progress: status === 'done' ? 100 : 0,
         owned: document.getElementById('am-owned').checked,
-        tags: [], highlights: [], notes: '', keyInsight: '',
-        createdAt: new Date().toISOString(),
+        tags: [], highlights: [], notes: '', keyInsight: '', archivedAt: '',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       };
       data.items.unshift(newItem);
       activeId = newItem.id;
@@ -822,7 +825,8 @@
     if (!editingId) return;
     const it = data.items.find(x => x.id === editingId);
     if (!it) return;
-    it.archived = !it.archived;
+    HubUtils.stampArchive(it, !it.archived);
+    HubUtils.stampUpdate(it);
     save(); closeAddModal(); renderList();
     showToast(it.archived ? 'Item archived' : 'Item restored');
   }
