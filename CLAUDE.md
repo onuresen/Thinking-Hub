@@ -1552,7 +1552,23 @@ Follow-on from P89's project `updatedAt`: the user asked to generalize timestamp
 
 ---
 
-### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED (direction chosen, deliberately not building yet)
+### ~~Phase 0 (Workspaces prep) — data-safety pass: backup verifier + full round-trip test~~ ✓ Done `[group: workspaces]`
+First concrete step toward the Workspaces model (below) — the user's explicit "make sure existing data + workflows are safe **before** building the workspace layer." No workspace feature yet; this only hardens/verifies the existing backup path.
+
+- **Read-only backup verifier (`index.html`)** — a "🔍 Verify a backup file" button in ⚙ Data & Backup. `verifyBackupFile()` parses a chosen `.json` via `FileReader` and reports exactly what a restore *would* do — format detection (v2 full / v2 curated-or-current / single-tool / v1 legacy / unrecognized), which storage keys it would restore, which known keys are missing (maybe legitimately empty), any extra/unknown sections, and an **API-key-leak warning** if the file contains an `sk-ant` string — **without writing a single byte to storage** (clears the file input, never calls `HubStorage.set`). Lets the user confirm their real backup file is trustworthy before relying on it. v1 branch also flags when none of the keys look like real Hub keys (`-v\d+`/`_v\d+`/in `SCOPE_KEYS.full`).
+- **Full-coverage round-trip test (`tests/flows.js`)** — flow2 rewritten to seed a unique marker into **every** key in `SCOPE_KEYS.full` (28 keys), export a Full Backup, wipe all, re-import via the real `handleImportFile`, and assert **each key restored byte-identical** (guards the P81 "silently-dropped key" bug class going forward). Also asserts the live `anthropicKey` and bulky `obsidianIndex` are stripped from the export (P66) and that `hub-settings-v1` non-secret data survives.
+
+**Key decisions:**
+- **Decision:** The verifier is strictly read-only and mirrors what `handleImportFile` *would* do, rather than being a stricter/independent validator. **Why:** its whole value is honesty about the real import path — if it said "unrecognized" for something import would happily restore (or vice-versa), it would mislead. It reuses the same format-detection branches as `handleImportFile`. **Confidence:** high.
+- **Decision:** Round-trip test seeds *all* `SCOPE_KEYS.full` keys, not a representative few. **Why:** the P81 bug was a key silently missing from the backup list; only full-coverage catches that class, and the test auto-scales as keys are added to `SCOPE_KEYS.full`. **Confidence:** high.
+
+**Verified:** browser checks — clean full backup validates + warns of no leak, a secret-bearing file warns, curated export is blocked, bad JSON flagged, all with storage provably unchanged; full smoke + flows suites green (flow2 now 6 assertions incl. all-28-keys byte-identical).
+
+**Files:** `index.html`, `tests/flows.js`, `CLAUDE.md`
+
+---
+
+### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED (direction chosen, Phase 0 done, Phase 1 not yet built)
 **User decision (2026-07-21):** go with **Model A** (in-browser workspace switcher) — it's **mobile-suitable**, which matters; **folder-in-Explorer browsing (Model B) is NOT important** and is dropped as a requirement (revisit only if the user later asks). **Explicitly not building yet:** the user wants to first **make sure existing data + all current workflows are solid and safe** before adding a workspace layer on top — don't rush this. So: Model A is the agreed shape when the time comes; the immediate priority is data/workflow safety, not this feature. Open questions #1 (folder must-have?) and #2 (mobile?) are now answered — folder no, mobile yes; #3 (scope = everything vs Project-Hub-only) still open, leaning "everything."
 
 Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Project Hub "Reset" button into a Settings danger zone (see the reset change), the user noted that *deleting just Project Hub data* is an odd action, and floated a bigger idea — a **Visual-Studio-"Solution"-style workspace model**: create multiple named workspaces, load/unload, auto-open the last one; optionally back them with a **user-accessible folder** (manage/delete files in Explorer, so no in-app "delete data" button is needed). Use cases raised: (a) occasional "fresh start", (b) *potential* future multi-user-on-one-PC "own account each time" (user is the only user today — hypothetical).
