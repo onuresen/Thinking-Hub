@@ -1354,6 +1354,11 @@
       const typeBadge = task.taskType ? `<span style="font-size:10px;color:var(--text3)">${task.taskType}</span>` : '';
       const focusMin = _focusMap[task.id] || 0;
       const focusBadge = focusMin > 0 ? `<span class="focus-time-badge" title="Focus time logged">⏱ ${focusMin >= 60 ? Math.floor(focusMin/60)+'h '+(focusMin%60 ? focusMin%60+'m' : '') : focusMin+'m'}</span>` : '';
+      const ageStamp = task.updatedAt || task.createdAt;
+      const ageDays = ageStamp ? HubUtils.daysSince(ageStamp) : Infinity;
+      const ageBadge = (!task.done && ageStamp && ageDays >= 7)
+        ? `<span style="font-size:10px;font-family:var(--font-mono);color:${ageDays >= 30 ? 'var(--accent-super)' : 'var(--text3)'}" title="Last updated ${new Date(ageStamp).toLocaleString()}">${HubUtils.relativeAge(ageStamp)}</span>`
+        : '';
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
       const checklist = task.checklist || [];
@@ -1380,6 +1385,7 @@
           ${assignee ? `<span class="task-assignee"><div class="avatar" style="background:${bg};color:${fg};width:16px;height:16px;font-size:8px">${initials(assignee.name)}</div>${assignee.name}</span>` : ''}
           ${task.due ? `<span class="task-due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : ''}${formatDate(task.due)}</span>` : ''}
           ${focusBadge}
+          ${ageBadge}
           ${linkBadge}
           ${obsidianBadge}
         </div>
