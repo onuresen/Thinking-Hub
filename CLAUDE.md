@@ -1508,6 +1508,17 @@ A two-part decluttering pass driven by the user reviewing what they actually use
 
 ---
 
+### ~~Priority 89 — Project Hub: "Recent" overview sort~~ ✓ Done `[group: project-ux]`
+Added a **🕒 Recent** option to the Overview sort dropdown (between Manual and A–Z Name) that orders recently-updated projects first. Projects had no update timestamp, so a `proj.updatedAt` field was introduced and stamped by a `touchProject(projId)` / `touchProjectOfTask(taskId, projectId)` helper pair on every meaningful mutation: task add/edit/toggle/delete/archive/rename/checklist-toggle/obsidian-note, kanban status-drop, in-project drag reorder, project create/settings/group-tag edit, milestone + goal add/edit/delete, goal progress slider, and member add/remove/role. Sort uses `projectRecency(p)` = `updatedAt` else newest task `completedAt` else 0, so existing projects (no stamp) still sort sensibly by their last task completion and never-touched projects sink to the bottom. `loadState()` backfills `updatedAt: ''` on load.
+
+**Key decisions:**
+- **Decision:** Store an explicit `proj.updatedAt` stamped at mutation sites, with a `completedAt` fallback — rather than deriving recency purely from existing timestamps. **Why:** projects have no single activity timestamp; task `completedAt` alone would miss edits, settings changes, and non-completion task work. An explicit stamp captures all real activity going forward; the fallback keeps historical data reasonable without a migration. **Alternative rejected:** stamp centrally in `saveState()` — it doesn't know which project changed. **Confidence:** high.
+- **Decision:** Pure reorder operations (Manual project drag in Overview, group-order drag in Groupings) do NOT bump `updatedAt`. **Why:** rearranging cards under Manual sort isn't "updating a project"; bumping recency there would make the Recent order shuffle every time the user tidies the Manual layout. **Confidence:** high.
+
+**Files:** `project-hub.html`, `CLAUDE.md`
+
+---
+
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)
 A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html` + `machi-engine.js` + `machi-achievements.js` + `machi-hires.js`) across its own Priorities 79–86, which lived only in AGENTS.md until P81 consolidated docs. Condensed record of the decisions that still bind:
 
