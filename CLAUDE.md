@@ -1552,7 +1552,9 @@ Follow-on from P89's project `updatedAt`: the user asked to generalize timestamp
 
 ---
 
-### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED, awaiting user decision
+### 💭 Proposed / parked — Workspaces ("Solutions") model `[group: workspaces]` — NOT STARTED (direction chosen, deliberately not building yet)
+**User decision (2026-07-21):** go with **Model A** (in-browser workspace switcher) — it's **mobile-suitable**, which matters; **folder-in-Explorer browsing (Model B) is NOT important** and is dropped as a requirement (revisit only if the user later asks). **Explicitly not building yet:** the user wants to first **make sure existing data + all current workflows are solid and safe** before adding a workspace layer on top — don't rush this. So: Model A is the agreed shape when the time comes; the immediate priority is data/workflow safety, not this feature. Open questions #1 (folder must-have?) and #2 (mobile?) are now answered — folder no, mobile yes; #3 (scope = everything vs Project-Hub-only) still open, leaning "everything."
+
 Brainstormed 2026-07-21 (no code written). Origin: after moving the risky Project Hub "Reset" button into a Settings danger zone (see the reset change), the user noted that *deleting just Project Hub data* is an odd action, and floated a bigger idea — a **Visual-Studio-"Solution"-style workspace model**: create multiple named workspaces, load/unload, auto-open the last one; optionally back them with a **user-accessible folder** (manage/delete files in Explorer, so no in-app "delete data" button is needed). Use cases raised: (a) occasional "fresh start", (b) *potential* future multi-user-on-one-PC "own account each time" (user is the only user today — hypothetical).
 
 **Key framing / findings from the discussion:**
