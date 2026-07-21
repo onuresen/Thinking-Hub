@@ -117,36 +117,66 @@ function startServer() {
     await shell.close();
   }
 
-  // ── Flow 2: export / import round-trip ──
+  // ── Flow 2: export / import round-trip — EVERY backup key ──
+  // Seeds a unique marker into every key in SCOPE_KEYS.full, exports a Full
+  // Backup, wipes everything, re-imports, and asserts each key restored
+  // byte-identical (so no key is ever silently dropped from backup — the P81
+  // bug class). Also verifies the live API key is stripped from the export.
   {
     const page = await ctx.newPage();
     await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
     page.on('dialog', (d) => d.accept());
-    const seed = {
-      'project-hub-v1': { projects: [{ id: 'p9', name: 'Seeded', tasks: [] }], members: [] },
-      'decision-hub-v1': [{ id: 'd9', title: 'A decision', status: 'open' }],
-      'risk-hub-v1': [{ id: 'r9', title: 'A risk', status: 'open' }],
-    };
-    const result = await page.evaluate(async (seed) => {
+    const result = await page.evaluate(async () => {
       window.location.reload = () => {}; // prevent the post-import reload
+      // Build a unique marker per backup key
+      const seed = {};
+      SCOPE_KEYS.full.forEach((k, i) => { seed[k] = { _marker: k, n: i }; });
+      // hub-settings-v1 carries a secret + a bulky index that MUST be stripped on export,
+      // plus a normal field that MUST survive.
+      seed['hub-settings-v1'] = { _marker: 'hub-settings-v1', profile: { name: 'Onur' }, anthropicKey: 'sk-ant-SECRET-should-not-export', obsidianIndex: [1, 2, 3, 4] };
       for (const [k, v] of Object.entries(seed)) HubStorage.set(k, v);
+
       const payload = buildExportPayload('full', SCOPE_KEYS.full);
       const json = JSON.stringify(payload);
-      // wipe the seeded keys
+
+      // Every seeded key must appear as a restorable section (none dropped)
+      const restoredKeysInPayload = Object.values(payload.storageKeys || {});
+      const missingFromPayload = SCOPE_KEYS.full.filter(k => !restoredKeysInPayload.includes(k));
+
+      // Secret + bulky index must be gone from the exported text
+      const secretLeaked = json.includes('sk-ant-SECRET-should-not-export');
+      const indexLeaked = json.includes('obsidianIndex');
+
+      // Wipe ALL seeded keys
       for (const k of Object.keys(seed)) localStorage.removeItem(k);
-      const gone = Object.keys(seed).every(k => localStorage.getItem(k) === null);
-      // import via the real handler (File + FileReader)
+      const allGone = Object.keys(seed).every(k => localStorage.getItem(k) === null);
+
+      // Import via the real handler (File + FileReader)
       const file = new File([json], 'backup.json', { type: 'application/json' });
       handleImportFile({ target: { files: [file] } });
-      await new Promise(r => setTimeout(r, 600)); // FileReader + restore
-      const restored = {};
-      for (const k of Object.keys(seed)) restored[k] = HubStorage.get(k);
-      return { gone, restored };
-    }, seed);
-    check('flow2: keys wiped before import', result.gone === true);
-    check('flow2: project-hub restored byte-identical', JSON.stringify(result.restored['project-hub-v1']) === JSON.stringify(seed['project-hub-v1']));
-    check('flow2: decision-hub restored byte-identical', JSON.stringify(result.restored['decision-hub-v1']) === JSON.stringify(seed['decision-hub-v1']));
-    check('flow2: risk-hub restored byte-identical', JSON.stringify(result.restored['risk-hub-v1']) === JSON.stringify(seed['risk-hub-v1']));
+      await new Promise(r => setTimeout(r, 700));
+
+      // Compare each restored key
+      const mismatches = [];
+      for (const k of Object.keys(seed)) {
+        const restored = HubStorage.get(k);
+        if (k === 'hub-settings-v1') continue; // settings is intentionally transformed
+        if (JSON.stringify(restored) !== JSON.stringify(seed[k])) mismatches.push(k);
+      }
+      const settings = HubStorage.get('hub-settings-v1') || {};
+      return {
+        missingFromPayload, secretLeaked, indexLeaked, allGone, mismatches,
+        totalKeys: SCOPE_KEYS.full.length,
+        settingsMarkerKept: settings._marker === 'hub-settings-v1',
+        settingsProfileKept: settings.profile && settings.profile.name === 'Onur',
+      };
+    });
+    check('flow2: Full Backup covers every key (none dropped)', result.missingFromPayload.length === 0, result.missingFromPayload.join(', '));
+    check('flow2: live API key stripped from export', result.secretLeaked === false);
+    check('flow2: bulky obsidian index stripped from export', result.indexLeaked === false);
+    check('flow2: all keys wiped before import', result.allGone === true);
+    check(`flow2: every backup key restored byte-identical (${result.totalKeys} keys)`, result.mismatches.length === 0, result.mismatches.join(', '));
+    check('flow2: hub-settings non-secret data restored', result.settingsMarkerKept && result.settingsProfileKept);
     await page.close();
   }
 

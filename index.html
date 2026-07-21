@@ -309,6 +309,12 @@
         </div>
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
 
+        <div style="margin-top:10px">
+          <button class="data-btn secondary" style="width:100%" onclick="triggerVerifyBackup()">🔍 Verify a backup file (read-only, changes nothing)</button>
+          <input type="file" id="verify-file" style="display:none" accept=".json" onchange="verifyBackupFile(event)">
+          <div id="verify-results" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);font-size:12px;line-height:1.6;color:var(--text2)"></div>
+        </div>
+
       </div><!-- /data pane -->
 
       <div class="data-modal-footer">
@@ -2801,6 +2807,78 @@
         } catch (err) {
           showToast('Failed to parse backup file: ' + err.message, 'error');
         }
+      };
+      reader.readAsText(file);
+    }
+
+    function triggerVerifyBackup() { document.getElementById('verify-file').click(); }
+
+    // Read-only backup validator — parses a chosen .json and reports exactly what a
+    // restore WOULD do, without writing a single byte to storage. Lets the user
+    // confirm their real backup file is good before ever trusting it.
+    function verifyBackupFile(e) {
+      const file = e.target.files[0];
+      const box = document.getElementById('verify-results');
+      e.target.value = ''; // allow re-picking the same file
+      if (!file) return;
+      const show = (html) => { box.style.display = 'block'; box.innerHTML = html; };
+      if (file.size > 52_428_800) { show('❌ File too large (max 50 MB).'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        let parsed;
+        try { parsed = JSON.parse(ev.target.result); }
+        catch (err) { show('❌ <b>Not valid JSON</b> — this file cannot be imported.<br><span style="color:var(--text3)">' + HubUtils.esc(err.message) + '</span>'); return; }
+
+        const lines = [];
+        const kb = (file.size / 1024).toFixed(0);
+        lines.push(`📄 <b>${HubUtils.esc(file.name)}</b> · ${kb} KB` + (parsed.exportedAt ? ` · exported ${HubUtils.esc(String(parsed.exportedAt).slice(0, 10))}` : ''));
+
+        // Detect format
+        const isV2Full = parsed.version === 2 && parsed.storageKeys && parsed.data && (parsed.scope === 'full' || !parsed.scope);
+        const isV2NonRestorable = parsed.version === 2 && (parsed.scope === 'curated' || parsed.scope === 'current');
+        const isSingleTool = parsed.storageKey && parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data);
+        const isV1 = !parsed.version && !parsed.storageKey && Object.values(parsed).some(v => typeof v === 'string');
+
+        if (isV2NonRestorable) {
+          show(lines.join('<br>') + `<br>⚠ <b>This is an AI Context / Current-Tool export</b> (scope: ${HubUtils.esc(parsed.scope)}) — read-only, <b>cannot restore a full backup</b>. Export a "Full Backup" for restore.`);
+          return;
+        }
+
+        if (isV2Full) {
+          const sections = Object.entries(parsed.storageKeys || {});
+          const restoredKeys = sections.filter(([label]) => parsed.data[label] !== undefined).map(([, sk]) => sk);
+          const missing = SCOPE_KEYS.full.filter(k => !restoredKeys.includes(k));
+          const unknown = restoredKeys.filter(k => !SCOPE_KEYS.full.includes(k));
+          const hasSecret = JSON.stringify(parsed.data).includes('sk-ant');
+
+          lines.push(`✓ <b>Valid Full Backup</b> (v2) — would restore <b>${restoredKeys.length}</b> section(s).`);
+          lines.push(`<span style="color:var(--text3)">Keys: ${restoredKeys.map(HubUtils.esc).join(', ') || '—'}</span>`);
+          if (missing.length) lines.push(`ℹ ${missing.length} known key(s) not in this file (may simply be empty when you backed up): <span style="color:var(--text3)">${missing.map(HubUtils.esc).join(', ')}</span>`);
+          if (unknown.length) lines.push(`ℹ ${unknown.length} extra section(s) not in the current backup set (still restored): <span style="color:var(--text3)">${unknown.map(HubUtils.esc).join(', ')}</span>`);
+          lines.push(hasSecret
+            ? '⚠ This file appears to contain an API key string — delete it before sharing the file externally.'
+            : '✓ No API key found in the file (safe to keep as your backup).');
+          lines.push('<span style="color:var(--accent-like)">This file would import cleanly. Nothing was changed by this check.</span>');
+          show(lines.join('<br>'));
+          return;
+        }
+
+        if (isSingleTool) {
+          show(lines.join('<br>') + `<br>✓ <b>Single-tool export</b> for <code>${HubUtils.esc(parsed.storageKey)}</code> — imports (restores just that one tool's data). Not a full backup.`);
+          return;
+        }
+
+        if (isV1) {
+          const keys = Object.keys(parsed).filter(k => typeof parsed[k] === 'string');
+          const looksReal = keys.some(k => SCOPE_KEYS.full.includes(k) || /-v\d+$/.test(k) || /_v\d+$/.test(k));
+          lines.push(`✓ <b>Legacy (v1) backup</b> — would restore ${keys.length} key(s): <span style="color:var(--text3)">${keys.map(HubUtils.esc).join(', ')}</span>.`);
+          if (!looksReal) lines.push('⚠ None of these look like Thinking Hub storage keys — double-check this is actually a Hub backup before importing.');
+          else lines.push('<span style="color:var(--accent-like)">Imports cleanly. Nothing was changed by this check.</span>');
+          show(lines.join('<br>'));
+          return;
+        }
+
+        show(lines.join('<br>') + '<br>❓ <b>Unrecognized structure</b> — this doesn\'t match any known Thinking Hub backup format. Import would likely do nothing.');
       };
       reader.readAsText(file);
     }
