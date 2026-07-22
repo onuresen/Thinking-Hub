@@ -37,7 +37,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
-| `focus-hub.html` | Pomodoro focus timer, task session log. ⚠ Real-usage review (2026-07-13): near-zero actual use (Pomodoro-style timing doesn't seem to be Onur's working style) — but *not* retired, unlike Matrix/Assumptions/Review/Log. It's woven into 6 other files (Project Hub's `⏱ Xm` task badges, index.html's Today dashboard, achievements-hub XP, Journal/Review Hub reads, hub-search, hub-links routing), so removal risk outweighs the benefit of cutting an unused feature. Kept as-is; flagged as a candidate to *repurpose* later (same session-log data model, different framing) rather than delete. |
+| `focus-hub.html` | **Time Journal** (P100 repurpose of the old Focus Timer). Primary flow = retrospective work-block logging (task/duration/energy/context/note) with a running daily total; the Pomodoro countdown is kept as an optional collapsed `<details>`. Same `focus-hub-v1` session data model (so the 6 consumers below are unchanged): Project Hub's `⏱ Xm` task badges, index.html's Today dashboard ("Time Today"), achievements-hub XP, Journal/Review Hub reads, hub-search, hub-links routing. Tool id + storage key stay `focus-hub` / `focus-hub-v1`; only user-facing labels changed. |
 | `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
 | `retro-hub.html` | ⚠ Retired from sidebar — data can be imported into Reflection Board via "Import Retro" button |
 | `reflection-hub.html` | Reflection Board — Signal / Friction / Question / Action board; replaces KMQT + Retro; cross-column SVG links, snapshots, reactions, drag-drop, inline editing |
@@ -1777,6 +1777,24 @@ Two "make the data you've been entering reflect back at you" features (user pick
 - **Verified** end-to-end (Playwright, seeded cross-tool data): One-Pager renders every section correctly (overdue flag, goal %, revisit-due decision, question pill, risk severity 20, series next-occurrence excluding past dates, stakeholders) with correct parallel Markdown; Pulse shows completed-throughput, flags 45d/90d stale items, excludes fresh tasks, surfaces quiet projects + calibration debt, `pulseNav` global wired. Full smoke + flows green.
 
 **Files:** `project-hub.html`, `styles/project-hub.css`, `index.html`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 100 — Repurpose Focus Timer → Time Journal~~ ✓ Done `[group: make-data-pay-off]`
+Theme C, item 1 (user picked "Time Journal — log after the fact"; deferred the graph/canvas a11y item). The Focus Timer had near-zero real use (Pomodoro's start-and-wait never suited the user) but was load-bearing for 6 consumers, so it was a standing *repurpose* candidate rather than a delete. Reframed the tool around retrospective work-logging while keeping the exact `focus-hub-v1` session shape, so every consumer keeps working untouched.
+
+- **New primary UI (`focus-hub.html`):** a "Log a work block" form (task select from Project Hub, duration quick-chips 15/30/45/60/90 + custom, a `started` time input, energy ⚡🌤🌙, context `@tag`, optional note) + a "Today" timeline with a running `Xh Ym · N blocks` total and per-row delete. `logBlock()` writes a session with the **same fields** the timer produced (`taskId/taskTitle/projectId/durationMin/elapsedSec/completed/startedAt/endedAt/energy/context/pomodoroEst`) plus `note` + `logged:true`; `completed:true` so the Today-dashboard "done" count and time badges include logged blocks. `startedAt` is derived from the entered time (defaults to now), `endedAt = start + duration`.
+- **Timer demoted, not deleted:** the whole ring/countdown/controls moved into a collapsed `<details>` ("⏱ Prefer to run a live timer?"). All timer functions (`startTimer`/`recordSession`/…) are intact and still record sessions; `recordSession` now also refreshes the Today log.
+- **Rename (labels only, id/storage unchanged — P53 precedent):** `<title>`, sidebar logo, mob header → "Time Journal"; `index.html` APPS label/icon/desc + the home "Focus Today" widget → "Time Today"; `help-hub.html` card (desc/whenToUse/features/sample) + 4 framework `tools:` label refs. Tool id `focus-hub` and key `focus-hub-v1` untouched.
+- **Latent bug fixed:** `focus-hub.html` called `showToast` but never loaded `hub-toast.js` — so the timer's own completion toast would have thrown a `ReferenceError`. Added the missing `<script src="hub-toast.js">` (fixes both the new logging path and the pre-existing timer path).
+
+**Key decisions:**
+- **Decision:** Keep the same `focus-hub-v1` session object shape (add only `note`/`logged`), rather than a new data model. **Why:** 6 tools read these sessions (time badges, Today, achievements, AI Energy Insights, search, links); a new shape would break all of them. Repurposing the *framing* over the *same data* is the whole point of why this tool was kept instead of deleted. **Confidence:** high.
+- **Decision:** Logged blocks are `completed:true`. **Why:** a retrospectively-logged block is real finished work; consumers that count "completed" sessions (Today dashboard) and sum duration should include them. **Confidence:** high.
+- **Decision:** Demote the timer into a collapsed `<details>` instead of removing it. **Why:** some deep-work blocks are still worth timing live, and the timer code already feeds the same session log; keeping it costs nothing and preserves the option. **Confidence:** high.
+- **Verified** end-to-end (Playwright, seeded task): the log form renders, `logBlock()` writes the exact expected session shape with the entered 09:30 start time, Today's timeline shows the block + note + 45m total, the form resets, the timer markup/functions are preserved, and no console errors. Full smoke + flows green.
+
+**Files:** `focus-hub.html`, `index.html`, `help-hub.html`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 

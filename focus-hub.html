@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Focus Timer</title>
+  <title>Time Journal</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <script src="enterprise-config.js"></script>
   <script src="hub-ai.js"></script>
@@ -198,6 +199,38 @@
       .mob-header { display: flex; }
       .main { flex-direction: column; }
     }
+    /* ── Time Journal (P100 repurpose) ── */
+    .tj-wrap { max-width: 660px; margin: 0 auto; padding: 26px 20px 44px; display: flex; flex-direction: column; gap: 22px; }
+    .tj-card-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
+    .tj-log-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
+    .tj-form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .tj-field { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 4px; }
+    .tj-field.wide { flex-basis: 100%; }
+    .tj-field-label { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+    .tj-field select, .tj-field input { width: 100%; padding: 7px 9px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-sm); color: var(--text); font-family: var(--font-body); font-size: 13px; }
+    .tj-dur-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .tj-dur-chip { padding: 6px 11px; border: 1px solid var(--border2); border-radius: var(--r-chip, 5px); background: var(--surface); color: var(--text2); font-size: 12px; cursor: pointer; }
+    .tj-dur-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .tj-dur-custom { width: 62px !important; flex: 0 0 auto; }
+    .tj-add-btn { margin-top: 14px; width: 100%; padding: 10px; background: var(--accent); color: #12140b; border: none; border-radius: var(--r-sm); font-family: var(--font-body); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+    .tj-add-btn:hover { filter: brightness(1.05); }
+    .tj-today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .tj-today-summary { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
+    .tj-log-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px dashed var(--border); }
+    .tj-log-time { font-family: var(--font-mono); font-size: 11.5px; color: var(--text3); white-space: nowrap; min-width: 44px; }
+    .tj-log-body { flex: 1; min-width: 0; }
+    .tj-log-task { font-size: 13.5px; color: var(--text); }
+    .tj-log-sub { font-size: 11px; color: var(--text3); margin-top: 1px; display: flex; gap: 7px; flex-wrap: wrap; }
+    .tj-log-dur { font-family: var(--font-mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
+    .tj-log-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px; padding: 2px 5px; opacity: 0; transition: opacity .12s; }
+    .tj-log-row:hover .tj-log-del { opacity: 1; }
+    .tj-today-empty { font-size: 12.5px; color: var(--text3); font-style: italic; padding: 8px 0; }
+    .tj-timer-details { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface2); }
+    .tj-timer-summary { cursor: pointer; padding: 12px 16px; font-size: 13px; color: var(--text2); list-style: none; }
+    .tj-timer-summary::-webkit-details-marker { display: none; }
+    .tj-timer-details[open] .tj-timer-summary { border-bottom: 1px solid var(--border); color: var(--text); }
+    .tj-timer-details .timer-wrap { padding-top: 18px; }
+    @media (max-width: 560px) { .tj-wrap { padding: 16px 12px 32px; } }
   </style>
 </head>
 <body>
@@ -205,8 +238,8 @@
 
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">⏱</div>
-      <span class="logo-text">Focus Timer</span>
+      <div class="logo-mark">📓</div>
+      <span class="logo-text">Time Journal</span>
     </div>
     <div class="session-list" id="session-list">
       <div class="session-empty">No sessions yet.<br>Start your first focus block.</div>
@@ -229,9 +262,26 @@
   <main class="main">
     <div class="mob-header">
       <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open sessions">☰</button>
-      <span class="mob-header-title">Focus Timer</span>
+      <span class="mob-header-title">Time Journal</span>
     </div>
-    <div class="timer-wrap">
+
+    <div class="tj-wrap">
+      <div class="tj-log-card">
+        <div class="tj-card-title">Log a work block</div>
+        <div id="tj-log-form"></div>
+      </div>
+
+      <div class="tj-today">
+        <div class="tj-today-head">
+          <span class="tj-card-title">Today</span>
+          <span class="tj-today-summary" id="tj-today-summary"></span>
+        </div>
+        <div id="tj-today-list"></div>
+      </div>
+
+      <details class="tj-timer-details">
+        <summary class="tj-timer-summary">⏱ Prefer to run a live timer? Start a focus countdown</summary>
+        <div class="timer-wrap">
 
       <div class="ring-container">
         <svg class="ring-svg" width="220" height="220" viewBox="0 0 220 220">
@@ -259,6 +309,8 @@
         <button class="ctrl-btn danger" id="stop-btn" onclick="stopTimer()" style="display:none">End Session</button>
       </div>
 
+        </div>
+      </details>
     </div>
   </main>
 
@@ -481,6 +533,129 @@
       saveData(); showToast(completed ? 'Session complete!' : 'Session logged');
       renderSessionList();
       renderHistogram();
+      renderTodayLog();
+    }
+
+    // ── Time Journal: retrospective work logging (P100) ──
+    let _tjDur = 30;
+    function setTjDur(m, btn) {
+      _tjDur = m;
+      document.querySelectorAll('#tj-dur-chips .tj-dur-chip').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const c = document.getElementById('tj-dur-custom'); if (c) c.value = '';
+    }
+    function setTjDurCustom(v) {
+      const n = Math.max(1, parseInt(v) || 0);
+      if (n) { _tjDur = n; document.querySelectorAll('#tj-dur-chips .tj-dur-chip').forEach(b => b.classList.remove('active')); }
+    }
+    function renderLogForm() {
+      const wrap = document.getElementById('tj-log-form'); if (!wrap) return;
+      const tasks = (() => { try { return HubData.getAllTasks(); } catch { return []; } })();
+      const openTasks = tasks.filter(t => !t.done);
+      const opts = openTasks.map(t => `<option value="${t.id}" data-project="${esc(t._projectName || '')}" data-pid="${t._projectId || ''}">${esc(t.title)}${t._projectName ? ` — ${esc(t._projectName)}` : ''}</option>`).join('');
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0');
+      const preset = [15, 30, 45, 60, 90];
+      wrap.innerHTML = `
+        <div class="tj-form-row">
+          <div class="tj-field wide">
+            <div class="tj-field-label">What did you work on?</div>
+            <select id="tj-task"><option value="">— No specific task —</option>${opts}</select>
+          </div>
+        </div>
+        <div class="tj-form-row">
+          <div class="tj-field">
+            <div class="tj-field-label">Duration</div>
+            <div class="tj-dur-chips" id="tj-dur-chips">
+              ${preset.map(m => `<button type="button" class="tj-dur-chip${_tjDur === m ? ' active' : ''}" onclick="setTjDur(${m},this)">${m}m</button>`).join('')}
+              <input type="number" class="tj-dur-custom" id="tj-dur-custom" min="1" max="600" placeholder="min" value="${preset.includes(_tjDur) ? '' : (_tjDur || '')}" oninput="setTjDurCustom(this.value)" />
+            </div>
+          </div>
+          <div class="tj-field" style="max-width:110px">
+            <div class="tj-field-label">Started</div>
+            <input type="time" id="tj-time" value="${hh}:${mm}" />
+          </div>
+          <div class="tj-field">
+            <div class="tj-field-label">Energy</div>
+            <select id="tj-energy">
+              <option value="">— not set —</option>
+              <option value="high">⚡ High</option>
+              <option value="medium">🌤 Medium</option>
+              <option value="low">🌙 Low</option>
+            </select>
+          </div>
+          <div class="tj-field">
+            <div class="tj-field-label">Context</div>
+            <input list="tj-context-list" id="tj-context" placeholder="@deep-work" />
+            <datalist id="tj-context-list"><option value="@deep-work"><option value="@admin"><option value="@calls"><option value="@creative"><option value="@learning"><option value="@errands"></datalist>
+          </div>
+        </div>
+        <div class="tj-form-row">
+          <div class="tj-field wide">
+            <div class="tj-field-label">Note (optional)</div>
+            <input type="text" id="tj-note" placeholder="what got done…" onkeydown="if(event.key==='Enter')logBlock()" />
+          </div>
+        </div>
+        <button class="tj-add-btn" onclick="logBlock()">+ Add to today's log</button>`;
+    }
+    function logBlock() {
+      const dur = Math.max(1, parseInt(_tjDur) || 0);
+      if (!dur) { showToast('Enter a duration first'); return; }
+      const taskSel = document.getElementById('tj-task');
+      const opt = taskSel && taskSel.selectedIndex >= 0 ? taskSel.options[taskSel.selectedIndex] : null;
+      const taskId = taskSel && taskSel.value ? taskSel.value : null;
+      const taskTitle = taskId && opt ? opt.text.split(' — ')[0] : null;
+      const projectName = taskId && opt ? (opt.dataset.project || '') : '';
+      const projectId = taskId && opt ? (opt.dataset.pid || '') : '';
+      const timeVal = (document.getElementById('tj-time') || {}).value || '';
+      const energy = (document.getElementById('tj-energy') || {}).value || '';
+      const context = (document.getElementById('tj-context') || {}).value || '';
+      const note = (document.getElementById('tj-note') || {}).value || '';
+      const start = new Date();
+      if (/^\d{1,2}:\d{2}$/.test(timeVal)) { const [h, m] = timeVal.split(':').map(Number); start.setHours(h, m, 0, 0); }
+      const startedAt = start.toISOString();
+      const endedAt = new Date(start.getTime() + dur * 60000).toISOString();
+      data.sessions.unshift({
+        id: 's-' + Date.now().toString(36),
+        taskId, taskTitle, projectName, projectId,
+        durationMin: dur, elapsedSec: dur * 60,
+        completed: true, logged: true,
+        startedAt, endedAt,
+        energy, context, note, pomodoroEst: 1,
+      });
+      data.sessions = data.sessions.slice(0, 100);
+      saveData();
+      showToast('Logged ' + dur + 'm' + (taskTitle ? ' · ' + taskTitle : ''));
+      renderLogForm(); renderTodayLog(); renderSessionList(); renderHistogram();
+    }
+    function renderTodayLog() {
+      const list = document.getElementById('tj-today-list');
+      const sumEl = document.getElementById('tj-today-summary');
+      if (!list) return;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todays = data.sessions.filter(s => (s.startedAt || '').slice(0, 10) === todayStr);
+      const totalMin = todays.reduce((sum, x) => sum + (x.durationMin || Math.round((x.elapsedSec || 0) / 60)), 0);
+      if (sumEl) sumEl.textContent = todays.length ? `${Math.floor(totalMin / 60)}h ${totalMin % 60}m · ${todays.length} block${todays.length !== 1 ? 's' : ''}` : '';
+      if (!todays.length) { list.innerHTML = '<div class="tj-today-empty">No blocks logged today yet. Add one above ↑</div>'; return; }
+      const energyMap = { high: '⚡', medium: '🌤', low: '🌙' };
+      const rows = todays.slice().sort((a, b) => (a.startedAt || '') < (b.startedAt || '') ? -1 : 1);
+      list.innerHTML = rows.map(s => {
+        const t = s.startedAt ? new Date(s.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        const dur = s.durationMin || Math.round((s.elapsedSec || 0) / 60);
+        const sub = [s.energy ? energyMap[s.energy] : '', s.context ? esc(s.context) : '', s.note ? esc(s.note) : ''].filter(Boolean).join(' · ');
+        return `<div class="tj-log-row">
+          <span class="tj-log-time">${t}</span>
+          <span class="tj-log-body"><span class="tj-log-task">${esc(s.taskTitle || '(no task)')}</span>${sub ? `<span class="tj-log-sub">${sub}</span>` : ''}</span>
+          <span class="tj-log-dur">${dur}m</span>
+          <button class="tj-log-del" title="Delete entry" onclick="deleteLogRow('${s.id}')">✕</button>
+        </div>`;
+      }).join('');
+    }
+    function deleteLogRow(id) {
+      data.sessions = data.sessions.filter(s => s.id !== id);
+      saveData();
+      renderTodayLog(); renderSessionList(); renderHistogram();
+      showToast('Entry removed');
     }
 
     // ── Done modal ──
@@ -660,6 +835,8 @@
     loadData();
     updateDisplay();
     renderTaskArea();
+    renderLogForm();
+    renderTodayLog();
     renderSessionList();
     renderHistogram();
     renderInsights();

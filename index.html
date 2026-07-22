@@ -364,7 +364,7 @@
       { id: 'reflection-hub', label: 'Reflection Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⟲', file: 'reflection-hub.html', desc: 'Collect signals, friction points, open questions and actions — great for team retrospectives' },
       { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg and V-Model process map' },
       // ── Tools & Focus ─────────────────────────────────────────────────
-      { id: 'focus-hub', label: 'Focus Timer', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◉', file: 'focus-hub.html', desc: 'Start a Pomodoro session tied to a task — stay in flow and track where your time goes' },
+      { id: 'focus-hub', label: 'Time Journal', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◷', file: 'focus-hub.html', desc: 'Log what you worked on — a running record of where your time actually goes (optional timer included)' },
       { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
       { id: 'tags-hub', label: 'Tags', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏷', file: 'tags-hub.html', desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere' },
       { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
@@ -1019,8 +1019,8 @@
           </div>`).join('');
           const h = Math.floor(totalMin / 60), m = totalMin % 60;
           widgets.push({
-            id: 'focus-hub', icon: '⏱', title: 'Focus Today',
-            count: `${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} · ${completed} done`,
+            id: 'focus-hub', icon: '⏱', title: 'Time Today',
+            count: `${h ? h + 'h ' : ''}${m ? m + 'm' : (h ? '' : '0m')} · ${todaySessions.length} block${todaySessions.length !== 1 ? 's' : ''}`,
             body: rows,
             more: todaySessions.length > 3 ? `+${todaySessions.length - 3} more` : '',
             staleness: relativeAge(latestTimestamp(todaySessions, ['endedAt', 'startedAt']))
