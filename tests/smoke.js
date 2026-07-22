@@ -108,11 +108,11 @@ function appFiles(ext) {
     const png = fs.readFileSync(path.join(ROOT, 'icons', filename));
     return [png.readUInt32BE(16), png.readUInt32BE(20)];
   };
-  check('Convergence is the canonical favicon',
-    favicon.includes('Thinking Hub Convergence') &&
-    favicon.includes('#b8f033') && favicon.includes('#ff8a5c'));
+  check('the golden hub is the canonical favicon',
+    favicon.includes('<title id="title">Thinking Hub</title>') &&
+    favicon.includes('data:image/png;base64,'));
   const shellHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  check('shell and welcome surfaces use Convergence',
+  check('shell and welcome surfaces use the hub favicon',
     shellHtml.includes('<img class="sidebar-logo-mark" src="favicon.svg" alt="">') &&
     (shellHtml.match(/<img src="favicon\.svg" alt=""/g) || []).length >= 1 &&
     !/>TH<\//.test(shellHtml));

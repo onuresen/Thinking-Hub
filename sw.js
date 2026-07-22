@@ -72,6 +72,8 @@ const PRECACHE = [
   './vendor/fonts/OFL.txt',
   './vendor/fonts/SOURCES.md',
   // PWA icons
+  './icons/icon-16.png',
+  './icons/icon-32.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',

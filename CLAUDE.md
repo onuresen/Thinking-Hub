@@ -69,11 +69,11 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `docs/RELEASING.md` | Maintainer and administrator contract for preparing, publishing, verifying, pinning, and rolling back immutable releases. |
 | `docs/AI-PROVIDERS.md` | Reviewer/operator contract for Copilot handoff, Anthropic direct, deployment allowlist, privacy boundary, and deferred direct Microsoft APIs. |
 | `.github/workflows/release.yml` | Tag-triggered release gate: validates tag/version/changelog, reruns tests, builds an export-filtered archive + SHA-256 file, then publishes GitHub Release assets. |
-| `favicon.svg` | Canonical Convergence identity mark (three thoughts → one clarity spark); source for all PWA icon PNGs. |
+| `favicon.svg` | App identity mark (golden network hub — central spark radiating to interconnected thought nodes). Embeds the same raster used by the PWA icons so the browser tab, sidebar logo, and welcome header all match. The golden PNGs under `icons/` are the design source of truth (user-supplied). |
 | `scripts/render-icons.js` | Dev-only Playwright renderer that regenerates the 192/512/maskable PNG set from `favicon.svg`. |
 | `vendor/` | Self-hosted pinned libraries and fonts: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1, plus OFL WOFF2 subsets under `vendor/fonts/` (P80/P93 — no runtime CDN dependency) |
 | `styles/` | Shared `fonts.css` plus extracted tool stylesheets (P85 B1). The five largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) keep extracted CSS for browser caching. ⚠ New files here must be added to `sw.js` PRECACHE. |
-| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the canonical Convergence SVG |
+| `icons/` | PWA install + favicon icons (16/32/192/512/maskable-512 PNG) — golden network-hub mark |
 | `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
@@ -1729,6 +1729,20 @@ Reduce dependence on personal Anthropic keys without weakening the local-first/s
 **Verified:** full `tests/npm test` green. Expanded smoke proves: direct Anthropic request contract and selectable integrated provider; Copilot exact-prompt preview; cancel with zero clipboard/navigation/API activity; confirmation copies the reviewed context and opens only `https://m365.cloud.microsoft/chat/`; Copilot-only policy overrides a stored Anthropic preference and blocks key save/test/network; master AI-off hides shell/Focus/Journal surfaces and causes zero clipboard/navigation/network; all 30 pages and all 13 interaction flows pass, including the byte-identical 28-key backup round trip. No new storage key, color token, runtime dependency, CSP origin, or script-order change.
 
 **Files:** `docs/AI-PROVIDERS.md` (new), `README.md`, `SECURITY.md`, `PRIVACY.md`, `docs/DEPLOYMENT.md`, `CHANGELOG.md`, `enterprise-config.js`, `hub-ai.js`, `index.html`, `focus-hub.html`, `journal-hub.html`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 97 — New golden network-hub icon~~ ✓ Done `[group: visual-identity]`
+User supplied a new app mark (golden network hub — a central spark radiating to interconnected thought nodes) as PNGs copied into `icons/` and asked to have it used everywhere, replacing the P95 Convergence mark. The PWA PNGs (`icon-192/512/maskable-512`, plus new `icon-16`/`icon-32`) were already committed; the one remaining old-design file was `favicon.svg` (still the lime Convergence vector), which drives the browser tab, sidebar logo, and welcome header via three `<img src="favicon.svg">` references.
+
+- **`favicon.svg` rebuilt** to embed the new golden mark (the crisp 192px raster as a `data:image/png` inside a titled SVG wrapper), so the favicon/logo/welcome now render pixel-identical to the PWA icons. Transparent background (matches the supplied PNGs).
+- **Shell head** gained `icon-32`/`icon-16` PNG favicon links + an `apple-touch-icon` (192), wiring the smaller sizes the user copied.
+- **`sw.js`** precaches the two new icon sizes; **`tests/smoke.js`** favicon assertion updated (title "Thinking Hub" + embedded PNG, replacing the old Convergence title + lime/coral hex check); **`scripts/render-icons.js`** comment/log de-Convergence'd and noted the PNGs are now the design source of truth.
+
+**Key decisions:**
+- **Decision:** Embed the user's raster inside `favicon.svg` rather than hand-author a fresh golden vector. **Why:** the design is a detailed multi-node network the user chose exactly; embedding guarantees the favicon/logo match the PWA icons pixel-for-pixel with zero risk of a "close but different" redraw. The SVG is only loaded by `index.html` (≤42px uses) so the ~37 KB embed is fine. **Alternative rejected:** re-vectorize the hub — cleaner engineering but risks a visibly different mark than the one the user copied. **Confidence:** high. **Revisit when:** a true scalable vector master is wanted — re-author `favicon.svg` as geometry and re-run `render-icons.js`.
+
+**Files:** `favicon.svg`, `index.html`, `sw.js`, `scripts/render-icons.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 

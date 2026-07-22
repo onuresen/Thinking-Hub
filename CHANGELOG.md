@@ -15,6 +15,12 @@ All notable changes to Thinking Hub are recorded here. Releases follow
   Copilot handoff, Anthropic direct, disabled mode, privacy, and deferred direct
   Microsoft API/Copilot Studio integration.
 
+### Changed
+
+- Refreshed the app identity to the golden network-hub mark: the browser tab
+  favicon, in-app sidebar logo, welcome header, and all PWA install icons now
+  share the same design. Added 16px/32px favicons and an apple-touch-icon.
+
 ## [1.1.0] - 2026-07-21
 
 ### Added
