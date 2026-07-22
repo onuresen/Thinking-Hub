@@ -69,11 +69,11 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `docs/RELEASING.md` | Maintainer and administrator contract for preparing, publishing, verifying, pinning, and rolling back immutable releases. |
 | `docs/AI-PROVIDERS.md` | Reviewer/operator contract for Copilot handoff, Anthropic direct, deployment allowlist, privacy boundary, and deferred direct Microsoft APIs. |
 | `.github/workflows/release.yml` | Tag-triggered release gate: validates tag/version/changelog, reruns tests, builds an export-filtered archive + SHA-256 file, then publishes GitHub Release assets. |
-| `favicon.svg` | Canonical Convergence identity mark (three thoughts → one clarity spark); source for all PWA icon PNGs. |
+| `favicon.svg` | App identity mark (golden network hub — central spark radiating to interconnected thought nodes). Embeds the same raster used by the PWA icons so the browser tab, sidebar logo, and welcome header all match. The golden PNGs under `icons/` are the design source of truth (user-supplied). |
 | `scripts/render-icons.js` | Dev-only Playwright renderer that regenerates the 192/512/maskable PNG set from `favicon.svg`. |
 | `vendor/` | Self-hosted pinned libraries and fonts: `vis-network.min.js` 9.1.9, `html2canvas.min.js` 1.4.1, plus OFL WOFF2 subsets under `vendor/fonts/` (P80/P93 — no runtime CDN dependency) |
 | `styles/` | Shared `fonts.css` plus extracted tool stylesheets (P85 B1). The five largest tools (`project-hub`, `idea-swiper`, `index`, `schedule`, `meetings-hub`) keep extracted CSS for browser caching. ⚠ New files here must be added to `sw.js` PRECACHE. |
-| `icons/` | PWA install icons (192/512/maskable-512 PNG), generated from the canonical Convergence SVG |
+| `icons/` | PWA install + favicon icons (16/32/192/512/maskable-512 PNG) — golden network-hub mark |
 | `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
@@ -1729,6 +1729,38 @@ Reduce dependence on personal Anthropic keys without weakening the local-first/s
 **Verified:** full `tests/npm test` green. Expanded smoke proves: direct Anthropic request contract and selectable integrated provider; Copilot exact-prompt preview; cancel with zero clipboard/navigation/API activity; confirmation copies the reviewed context and opens only `https://m365.cloud.microsoft/chat/`; Copilot-only policy overrides a stored Anthropic preference and blocks key save/test/network; master AI-off hides shell/Focus/Journal surfaces and causes zero clipboard/navigation/network; all 30 pages and all 13 interaction flows pass, including the byte-identical 28-key backup round trip. No new storage key, color token, runtime dependency, CSP origin, or script-order change.
 
 **Files:** `docs/AI-PROVIDERS.md` (new), `README.md`, `SECURITY.md`, `PRIVACY.md`, `docs/DEPLOYMENT.md`, `CHANGELOG.md`, `enterprise-config.js`, `hub-ai.js`, `index.html`, `focus-hub.html`, `journal-hub.html`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 97 — New golden network-hub icon~~ ✓ Done `[group: visual-identity]`
+User supplied a new app mark (golden network hub — a central spark radiating to interconnected thought nodes) as PNGs copied into `icons/` and asked to have it used everywhere, replacing the P95 Convergence mark. The PWA PNGs (`icon-192/512/maskable-512`, plus new `icon-16`/`icon-32`) were already committed; the one remaining old-design file was `favicon.svg` (still the lime Convergence vector), which drives the browser tab, sidebar logo, and welcome header via three `<img src="favicon.svg">` references.
+
+- **`favicon.svg` rebuilt** to embed the new golden mark (the crisp 192px raster as a `data:image/png` inside a titled SVG wrapper), so the favicon/logo/welcome now render pixel-identical to the PWA icons. Transparent background (matches the supplied PNGs).
+- **Shell head** gained `icon-32`/`icon-16` PNG favicon links + an `apple-touch-icon` (192), wiring the smaller sizes the user copied.
+- **`sw.js`** precaches the two new icon sizes; **`tests/smoke.js`** favicon assertion updated (title "Thinking Hub" + embedded PNG, replacing the old Convergence title + lime/coral hex check); **`scripts/render-icons.js`** comment/log de-Convergence'd and noted the PNGs are now the design source of truth.
+
+**Key decisions:**
+- **Decision:** Embed the user's raster inside `favicon.svg` rather than hand-author a fresh golden vector. **Why:** the design is a detailed multi-node network the user chose exactly; embedding guarantees the favicon/logo match the PWA icons pixel-for-pixel with zero risk of a "close but different" redraw. The SVG is only loaded by `index.html` (≤42px uses) so the ~37 KB embed is fine. **Alternative rejected:** re-vectorize the hub — cleaner engineering but risks a visibly different mark than the one the user copied. **Confidence:** high. **Revisit when:** a true scalable vector master is wanted — re-author `favicon.svg` as geometry and re-run `render-icons.js`.
+
+**Files:** `favicon.svg`, `index.html`, `sw.js`, `scripts/render-icons.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 98 — Enterprise-review polish + v1.2.0 release~~ ✓ Done `[group: enterprise-readiness]`
+A small batch of recognized IT/security/procurement-review signals, bundled and shipped as the **v1.2.0** release (which also carries the P96 Copilot handoff + P97 icon work — those landed *after* v1.1.0 was already cut, so they were in no release). User picked all four items.
+
+- **`security.txt` (RFC 9116)** — new `/.well-known/security.txt` with `Contact`/`Policy`/`Expires`, pointing at the GitHub private-advisory reporting path already in `SECURITY.md` (which now links it).
+- **CycloneDX SBOM** — new `sbom.cdx.json` inventorying pinned deps (vis-network 9.1.9, html2canvas 1.4.1, the four OFL fonts, dev-only Playwright 1.61.1) with the app component pinned to `VERSION`. Linked from `THIRD-PARTY-NOTICES` + README.
+- **Accessibility statement** — new `docs/ACCESSIBILITY.md`: honest self-assessment (keyboard, focus-trap, reduced-motion, ARIA, theming) + explicit known limitations (no external WCAG audit; canvas/graph/matrix tools not AT-exposed). Linked from README.
+- **API-key UX hardening** — the Settings key field was *already* `type="password"`; strengthened the adjacent hint into an explicit ⚠ plaintext-at-rest / shared-device warning (also notes it's excluded from backups).
+- **Release plumbing** — `VERSION` → `1.2.0`; `CHANGELOG.md` `[1.2.0] - 2026-07-22` (folded the Unreleased Copilot/icon items + the four above) with updated compare links; three new smoke assertions (security.txt contact+expiry, SBOM validity + version pin, accessibility doc present). New reviewer artifacts ship in the release archive (not export-ignored).
+
+**Key decisions:**
+- **Decision:** Release the current work as **v1.2.0**, not by moving `v1.1.0`. **Why:** `v1.1.0` is an already-published, immutable GitHub Release (cut 2026-07-21 at `6d0e746`, before the Copilot feature/logo/icons); moving a published tag violates the release contract's immutability principle and destroys provenance. The post-1.1.0 work includes a real feature (Copilot handoff) → SemVer **minor** bump. **Alternative rejected:** overwrite v1.1.0 (immutability breach) or v1.1.1 patch (understates a feature add). **Confidence:** high.
+- **Decision:** SBOM app-component version is asserted `=== VERSION` in smoke. **Why:** couples the SBOM to the release so a future version bump can't silently ship a stale SBOM. **Confidence:** high.
+- **Decision:** Accessibility statement is an honest partial self-assessment, not a WCAG/VPAT conformance claim. **Why:** the canvas/graph/matrix tools genuinely aren't AT-exposed; a false "AA conformant" claim is worse than a documented-gaps statement for a real reviewer. **Confidence:** high.
+
+**Files:** `.well-known/security.txt` (new), `sbom.cdx.json` (new), `docs/ACCESSIBILITY.md` (new), `SECURITY.md`, `THIRD-PARTY-NOTICES`, `README.md`, `index.html`, `VERSION`, `CHANGELOG.md`, `tests/smoke.js`, `CLAUDE.md`
 
 ---
 

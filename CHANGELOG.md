@@ -5,6 +5,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-22
+
 ### Added
 
 - Provider-neutral AI configuration with a no-key Microsoft Copilot handoff:
@@ -14,6 +16,22 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - Deployment-owned AI provider allowlist and reviewer documentation covering
   Copilot handoff, Anthropic direct, disabled mode, privacy, and deferred direct
   Microsoft API/Copilot Studio integration.
+- Machine-readable security contact at `/.well-known/security.txt` (RFC 9116).
+- A CycloneDX Software Bill of Materials (`sbom.cdx.json`) inventorying the
+  pinned runtime and development dependencies.
+- An accessibility statement (`docs/ACCESSIBILITY.md`) documenting the current
+  WCAG posture and known limitations.
+
+### Changed
+
+- Refreshed the app identity to the golden network-hub mark: the browser tab
+  favicon, in-app sidebar logo, welcome header, and all PWA install icons now
+  share the same design. Added 16px/32px favicons and an apple-touch-icon.
+
+### Security
+
+- Made the Anthropic API-key field's plaintext-at-rest and shared-device risk
+  explicit in the Settings panel (the key input was already masked).
 
 ## [1.1.0] - 2026-07-21
 
@@ -56,6 +74,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 First tagged project snapshot. This historical tag predates the formal
 release process, Semantic Versioning policy, and enterprise review package.
 
-[Unreleased]: https://github.com/onuresen/Thinking-Hub/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/onuresen/Thinking-Hub/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/onuresen/Thinking-Hub/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/onuresen/Thinking-Hub/releases/tag/v1.1.0
 [1.0]: https://github.com/onuresen/Thinking-Hub/releases/tag/v1.0

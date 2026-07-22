@@ -269,7 +269,9 @@ The current external-service boundary and architectural decisions are documented
 - [AI providers and Microsoft Copilot handoff](docs/AI-PROVIDERS.md)
 - [Release, verification, and rollback process](docs/RELEASING.md)
 - [Version history and security-relevant changes](CHANGELOG.md)
-- [Third-party notices](THIRD-PARTY-NOTICES)
+- [Third-party notices](THIRD-PARTY-NOTICES) and [CycloneDX SBOM](sbom.cdx.json)
+- [Accessibility statement](docs/ACCESSIBILITY.md)
+- [Security contact (`/.well-known/security.txt`, RFC 9116)](.well-known/security.txt)
 
 ---
 

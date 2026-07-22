@@ -1,4 +1,8 @@
-/** Render the canonical favicon.svg into the PWA PNG icon set. */
+/** Render favicon.svg into the PWA PNG icon set.
+ * Note: the golden hub PNGs under icons/ are the design source of truth
+ * (supplied directly). favicon.svg embeds that mark for the browser tab and
+ * in-app logo. Re-running this rasterizes from that embed, so only use it if
+ * you have re-authored favicon.svg as a fresh vector. */
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('../tests/node_modules/playwright');
@@ -26,7 +30,7 @@ async function render(page, size, filename) {
   await render(page, 512, 'icon-512.png');
   await render(page, 512, 'icon-maskable-512.png');
   await browser.close();
-  console.log('Rendered Convergence icons: 192px, 512px, maskable 512px');
+  console.log('Rendered hub icons: 192px, 512px, maskable 512px');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
