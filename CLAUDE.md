@@ -1746,6 +1746,24 @@ User supplied a new app mark (golden network hub — a central spark radiating t
 
 ---
 
+### ~~Priority 98 — Enterprise-review polish + v1.2.0 release~~ ✓ Done `[group: enterprise-readiness]`
+A small batch of recognized IT/security/procurement-review signals, bundled and shipped as the **v1.2.0** release (which also carries the P96 Copilot handoff + P97 icon work — those landed *after* v1.1.0 was already cut, so they were in no release). User picked all four items.
+
+- **`security.txt` (RFC 9116)** — new `/.well-known/security.txt` with `Contact`/`Policy`/`Expires`, pointing at the GitHub private-advisory reporting path already in `SECURITY.md` (which now links it).
+- **CycloneDX SBOM** — new `sbom.cdx.json` inventorying pinned deps (vis-network 9.1.9, html2canvas 1.4.1, the four OFL fonts, dev-only Playwright 1.61.1) with the app component pinned to `VERSION`. Linked from `THIRD-PARTY-NOTICES` + README.
+- **Accessibility statement** — new `docs/ACCESSIBILITY.md`: honest self-assessment (keyboard, focus-trap, reduced-motion, ARIA, theming) + explicit known limitations (no external WCAG audit; canvas/graph/matrix tools not AT-exposed). Linked from README.
+- **API-key UX hardening** — the Settings key field was *already* `type="password"`; strengthened the adjacent hint into an explicit ⚠ plaintext-at-rest / shared-device warning (also notes it's excluded from backups).
+- **Release plumbing** — `VERSION` → `1.2.0`; `CHANGELOG.md` `[1.2.0] - 2026-07-22` (folded the Unreleased Copilot/icon items + the four above) with updated compare links; three new smoke assertions (security.txt contact+expiry, SBOM validity + version pin, accessibility doc present). New reviewer artifacts ship in the release archive (not export-ignored).
+
+**Key decisions:**
+- **Decision:** Release the current work as **v1.2.0**, not by moving `v1.1.0`. **Why:** `v1.1.0` is an already-published, immutable GitHub Release (cut 2026-07-21 at `6d0e746`, before the Copilot feature/logo/icons); moving a published tag violates the release contract's immutability principle and destroys provenance. The post-1.1.0 work includes a real feature (Copilot handoff) → SemVer **minor** bump. **Alternative rejected:** overwrite v1.1.0 (immutability breach) or v1.1.1 patch (understates a feature add). **Confidence:** high.
+- **Decision:** SBOM app-component version is asserted `=== VERSION` in smoke. **Why:** couples the SBOM to the release so a future version bump can't silently ship a stale SBOM. **Confidence:** high.
+- **Decision:** Accessibility statement is an honest partial self-assessment, not a WCAG/VPAT conformance claim. **Why:** the canvas/graph/matrix tools genuinely aren't AT-exposed; a false "AA conformant" claim is worse than a documented-gaps statement for a real reviewer. **Confidence:** high.
+
+**Files:** `.well-known/security.txt` (new), `sbom.cdx.json` (new), `docs/ACCESSIBILITY.md` (new), `SECURITY.md`, `THIRD-PARTY-NOTICES`, `README.md`, `index.html`, `VERSION`, `CHANGELOG.md`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

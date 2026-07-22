@@ -103,6 +103,18 @@ function appFiles(ext) {
     releaseWorkflow.includes('sha256sum "$archive"') &&
     releaseWorkflow.includes('gh release create'));
 
+  const securityTxt = fs.readFileSync(path.join(ROOT, '.well-known', 'security.txt'), 'utf8');
+  check('security.txt exposes a contact and expiry (RFC 9116)',
+    /^Contact:\s*\S+/m.test(securityTxt) && /^Expires:\s*\S+/m.test(securityTxt));
+  const sbom = JSON.parse(fs.readFileSync(path.join(ROOT, 'sbom.cdx.json'), 'utf8'));
+  check('CycloneDX SBOM is valid and lists runtime components',
+    sbom.bomFormat === 'CycloneDX' &&
+    Array.isArray(sbom.components) &&
+    sbom.components.some((c) => c.name === 'vis-network') &&
+    sbom.metadata && sbom.metadata.component && sbom.metadata.component.version === version);
+  check('accessibility statement is present',
+    fs.existsSync(path.join(ROOT, 'docs', 'ACCESSIBILITY.md')));
+
   const favicon = fs.readFileSync(path.join(ROOT, 'favicon.svg'), 'utf8');
   const pngDimensions = (filename) => {
     const png = fs.readFileSync(path.join(ROOT, 'icons', filename));

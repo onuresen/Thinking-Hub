@@ -1,0 +1,7 @@
+# Thinking Hub — security contact information (RFC 9116)
+# Served at /.well-known/security.txt
+
+Contact: https://github.com/onuresen/Thinking-Hub/security/advisories/new
+Policy: https://github.com/onuresen/Thinking-Hub/blob/main/SECURITY.md
+Preferred-Languages: en
+Expires: 2027-07-22T00:00:00.000Z

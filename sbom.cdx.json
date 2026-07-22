@@ -1,0 +1,174 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:fc9645e9-997a-4ed5-943e-e7a04c83384b",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-22T02:44:10Z",
+    "authors": [
+      {
+        "name": "Thinking Hub maintainers"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "Thinking Hub",
+      "version": "1.2.0",
+      "description": "Local-first, no-build personal thinking & productivity web app.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/onuresen/Thinking-Hub"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "vis-network",
+      "version": "9.1.9",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/vis-network@9.1.9",
+      "scope": "required",
+      "description": "Dependency graph rendering. Dual-licensed Apache-2.0/MIT; used under Apache-2.0. Self-hosted at vendor/vis-network.min.js.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/visjs/vis-network"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "html2canvas",
+      "version": "1.4.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/html2canvas@1.4.1",
+      "scope": "required",
+      "description": "Canvas export. Self-hosted at vendor/html2canvas.min.js.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/niklasvh/html2canvas"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "DM Sans",
+      "licenses": [
+        {
+          "license": {
+            "id": "OFL-1.1"
+          }
+        }
+      ],
+      "scope": "required",
+      "description": "WOFF2 subset, self-hosted under vendor/fonts/.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/googlefonts/dm-fonts"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Fraunces",
+      "licenses": [
+        {
+          "license": {
+            "id": "OFL-1.1"
+          }
+        }
+      ],
+      "scope": "required",
+      "description": "WOFF2 subset, self-hosted under vendor/fonts/.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/undercasetype/Fraunces"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "JetBrains Mono",
+      "licenses": [
+        {
+          "license": {
+            "id": "OFL-1.1"
+          }
+        }
+      ],
+      "scope": "required",
+      "description": "WOFF2 subset, self-hosted under vendor/fonts/.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/JetBrains/JetBrainsMono"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "Syne",
+      "licenses": [
+        {
+          "license": {
+            "id": "OFL-1.1"
+          }
+        }
+      ],
+      "scope": "required",
+      "description": "WOFF2 subset, self-hosted under vendor/fonts/.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/bonjour-monde/syne-typeface"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "playwright",
+      "version": "1.61.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/playwright@1.61.1",
+      "scope": "excluded",
+      "description": "Development/test only; not part of the distributed runtime.",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/microsoft/playwright"
+        }
+      ]
+    }
+  ]
+}

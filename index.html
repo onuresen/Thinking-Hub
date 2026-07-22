@@ -192,7 +192,7 @@
           <div class="sfield-hint" id="ai-provider-policy-hint" style="margin-bottom:10px"></div>
 
           <div id="ai-anthropic-settings">
-            <div class="sfield-hint" style="margin-bottom:8px">Your key is stored in browser localStorage and sent only to Anthropic's API when you explicitly invoke AI.</div>
+            <div class="sfield-hint" style="margin-bottom:8px">⚠ Stored in <strong>plaintext</strong> in this browser's localStorage on this device — anyone with access to this browser profile can read it. It is sent only to Anthropic's API when you explicitly invoke AI, and is never included in backups/exports. Avoid entering a key on shared or kiosk devices.</div>
             <div class="sfield-row">
               <input type="password" id="ai-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"
                 oninput="onAiKeyInput(this.value)">

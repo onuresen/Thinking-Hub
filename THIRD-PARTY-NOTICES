@@ -5,6 +5,9 @@ This file identifies third-party software and fonts used by Thinking Hub.
 Thinking Hub's own source code is licensed under Apache License 2.0; see
 LICENSE. Third-party components remain under their respective licenses.
 
+A machine-readable inventory of the same components is published as a
+CycloneDX Software Bill of Materials at `sbom.cdx.json`.
+
 Runtime components distributed with this repository
 ---------------------------------------------------
 

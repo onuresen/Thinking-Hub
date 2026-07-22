@@ -29,6 +29,9 @@ risk.
    private reporting channel. Do not include exploit details in a public issue
    or discussion.
 
+A machine-readable copy of this contact information is published at
+`/.well-known/security.txt` (RFC 9116).
+
 Include, when safe to do so:
 
 - the affected commit, deployment URL pattern, and browser version;
