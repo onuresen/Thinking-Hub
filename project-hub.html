@@ -99,6 +99,7 @@
         <div class="panel-project-desc" id="panel-project-desc"></div>
         <div id="panel-project-links"></div>
       </div>
+      <button class="panel-close" id="panel-onepager-btn" title="One-Pager brief (print / copy)" onclick="openOnePager()" style="font-size:14px">📄</button>
       <button class="panel-close" id="panel-link-btn" title="Link to another tool" style="font-size:13px">🔗</button>
       <button class="panel-close" title="View Profile &amp; Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},window.location.origin||'*')" style="font-size:14px">🏅</button>
       <button class="panel-close" onclick="closePanel()">✕</button>
@@ -111,6 +112,20 @@
       <div class="panel-tab" onclick="setTab('settings')" id="tab-settings">Settings</div>
     </div>
     <div class="panel-body" id="panel-body"></div>
+  </div>
+
+  <div id="op-overlay" class="op-overlay hidden" onclick="if(event.target===this)closeOnePager()">
+    <div class="op-sheet" id="op-sheet" role="dialog" aria-label="Project one-pager">
+      <div class="op-toolbar">
+        <span class="op-toolbar-title">One-Pager</span>
+        <div class="op-toolbar-actions">
+          <button class="btn btn-ghost" onclick="copyOnePagerMd()">📋 Copy Markdown</button>
+          <button class="btn btn-ghost" onclick="printOnePager()">🖨 Print / PDF</button>
+          <button class="btn btn-ghost" onclick="closeOnePager()">✕ Close</button>
+        </div>
+      </div>
+      <div class="op-page" id="op-page"></div>
+    </div>
   </div>
 
   <datalist id="proj-role-suggestions">
@@ -484,6 +499,134 @@
       if (!proj.tasks.length) return 0;
       return Math.round((proj.tasks.filter(t => t.done).length / proj.tasks.length) * 100);
     }
+
+    // ── Project One-Pager (P99): aggregate a printable/exportable brief ──
+    let _opMarkdown = '';
+    function _opToday() { return new Date().toISOString().slice(0, 10); }
+    function _opMeetingNext(m, today) {
+      if (m.recurring && Array.isArray(m.occurrenceDates)) {
+        return m.occurrenceDates.map(o => o.date).filter(d => d && d >= today).sort()[0] || null;
+      }
+      return (m.date && m.date >= today) ? m.date : null;
+    }
+    function _opObjProgress(o) {
+      const krs = o.keyResults || [];
+      if (!krs.length) return null;
+      const vals = krs.map(kr => {
+        if (typeof kr.score === 'number') return Math.max(0, Math.min(1, kr.score)) * 100;
+        const t = parseFloat(kr.target), c = parseFloat(kr.current);
+        if (isFinite(t) && t !== 0 && isFinite(c)) return Math.max(0, Math.min(100, (c / t) * 100));
+        return 0;
+      });
+      return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
+    }
+    function _opPriPill(p) {
+      const cls = { high: 'hi', medium: 'me', low: 'lo' }[p] || 'lo';
+      return p ? `<span class="op-pill ${cls}">${p}</span>` : '';
+    }
+    function buildOnePager(proj) {
+      const esc = HubUtils.esc, today = _opToday(), pid = proj.id;
+      const H = [], M = [];
+      // Header
+      const prog = projectProgress(proj);
+      const openTasksAll = (proj.tasks || []).filter(t => !t.done && !t.archived);
+      const doneCount = (proj.tasks || []).filter(t => t.done).length;
+      H.push(`<div class="op-head"><div class="op-color-bar" style="background:${proj.color || 'var(--accent)'}"></div>
+        <div class="op-title">${esc(proj.name || 'Untitled project')}</div>
+        <div class="op-meta">
+          <span class="op-badge">${esc(statusLabel(proj.status))}</span>
+          <span>Progress: <strong>${prog}%</strong></span>
+          <span>${openTasksAll.length} open · ${doneCount} done</span>
+          ${proj.group ? `<span>Group: ${esc(proj.group)}</span>` : ''}
+        </div></div>`);
+      M.push(`# ${proj.name || 'Untitled project'}\n`);
+      M.push(`**Status:** ${statusLabel(proj.status)} · **Progress:** ${prog}% · **Tasks:** ${openTasksAll.length} open, ${doneCount} done${proj.group ? ` · **Group:** ${proj.group}` : ''}`);
+      M.push(`_Generated ${today} from Thinking Hub_\n`);
+      if (proj.desc) { H.push(`<div class="op-desc">${esc(proj.desc)}</div>`); M.push(`\n${proj.desc}\n`); }
+
+      const section = (title, count, rowsHtml, rowsMd) => {
+        if (!rowsHtml.length) return;
+        H.push(`<div class="op-section"><div class="op-section-h">${title}<span class="op-count">${count}</span></div>${rowsHtml.join('')}</div>`);
+        M.push(`\n## ${title} (${count})`);
+        M.push(rowsMd.join('\n'));
+      };
+
+      // Open tasks (sorted by due, then priority)
+      const prRank = { high: 0, medium: 1, low: 2 };
+      const tks = openTasksAll.slice().sort((a, b) => {
+        const ad = a.due || '9999-99', bd = b.due || '9999-99';
+        if (ad !== bd) return ad < bd ? -1 : 1;
+        return (prRank[a.priority] ?? 1) - (prRank[b.priority] ?? 1);
+      });
+      const tCap = tks.slice(0, 25);
+      section('Open Tasks', openTasksAll.length,
+        tCap.map(t => {
+          const overdue = t.due && t.due < today;
+          return `<div class="op-row"><span class="op-row-main">${esc(t.title || 'Untitled')}</span>${_opPriPill(t.priority)}${t.due ? `<span class="op-row-sub ${overdue ? '' : ''}">${overdue ? '⚠ ' : ''}${t.due}</span>` : ''}</div>`;
+        }),
+        tCap.map(t => `- [ ] ${t.title || 'Untitled'}${t.due ? ` — due ${t.due}${t.due < today ? ' (overdue)' : ''}` : ''}${t.priority ? ` · ${t.priority}` : ''}`)
+          .concat(openTasksAll.length > 25 ? [`- …and ${openTasksAll.length - 25} more`] : []));
+      if (openTasksAll.length > 25) H.push(`<div class="op-empty" style="margin-top:6px">…and ${openTasksAll.length - 25} more open tasks</div>`);
+
+      // Open milestones
+      const ms = (proj.milestones || []).filter(m => !m.done);
+      section('Milestones', ms.length,
+        ms.map(m => `<div class="op-row"><span class="op-row-main">${esc(m.title || m.name || 'Milestone')}</span>${m.due ? `<span class="op-row-sub">${m.due}</span>` : ''}</div>`),
+        ms.map(m => `- ${m.title || m.name || 'Milestone'}${m.due ? ` — ${m.due}` : ''}`));
+
+      // Goals / OKRs
+      const objs = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []).filter(o => o.projectId === pid);
+      section('Goals / OKRs', objs.length,
+        objs.map(o => { const p = _opObjProgress(o); return `<div class="op-row"><span class="op-row-main">${esc(o.title || 'Objective')}</span>${p !== null ? `<span class="op-row-sub">${p}%</span>` : ''}</div>`; }),
+        objs.map(o => { const p = _opObjProgress(o); return `- ${o.title || 'Objective'}${p !== null ? ` (${p}%)` : ''}`; }));
+
+      // Open decisions
+      const decAll = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
+      const decs = decAll.filter(d => d.projectId === pid && (!d.outcome || !d.outcome.result)).slice(0, 12);
+      const decTotal = decAll.filter(d => d.projectId === pid && (!d.outcome || !d.outcome.result)).length;
+      section('Open Decisions', decTotal,
+        decs.map(d => { const due = d.revisitDate && d.revisitDate <= today; return `<div class="op-row"><span class="op-row-main">${esc(d.title || 'Decision')}</span>${d.type && d.type !== 'decision' ? `<span class="op-pill lo">${esc(d.type)}</span>` : ''}${due ? '<span class="op-pill due">↻ revisit due</span>' : ''}</div>`; }),
+        decs.map(d => `- ${d.title || 'Decision'}${d.type && d.type !== 'decision' ? ` · ${d.type}` : ''}${d.revisitDate && d.revisitDate <= today ? ' (revisit due)' : ''}`));
+
+      // Open risks (by severity desc)
+      const rsAll = ((HubStorage.get('risk-hub-v1') || {}).risks || []).filter(r => r.projectId === pid && r.status !== 'closed' && !r.archived);
+      const sev = r => (parseInt(r.probability) || 1) * (parseInt(r.impact) || 1);
+      const rs = rsAll.slice().sort((a, b) => sev(b) - sev(a)).slice(0, 12);
+      section('Open Risks', rsAll.length,
+        rs.map(r => { const s = sev(r); const cls = s >= 15 ? 'hi' : s >= 8 ? 'me' : 'lo'; return `<div class="op-row"><span class="op-row-main">${esc(r.title || 'Risk')}</span>${r.owner ? `<span class="op-row-sub">${esc(r.owner)}</span>` : ''}<span class="op-pill ${cls}">sev ${s}</span></div>`; }),
+        rs.map(r => `- ${r.title || 'Risk'} — severity ${sev(r)}${r.owner ? ` · owner: ${r.owner}` : ''}`));
+
+      // Upcoming meetings
+      const mtAll = ((HubStorage.get('meetings-hub-v1') || {}).meetings || []).filter(m => m.projectId === pid);
+      const mts = mtAll.map(m => ({ m, next: _opMeetingNext(m, today) })).filter(x => x.next).sort((a, b) => a.next < b.next ? -1 : 1).slice(0, 8);
+      section('Upcoming Meetings', mts.length,
+        mts.map(x => `<div class="op-row"><span class="op-row-main">${esc(x.m.title || 'Meeting')}${x.m.recurring ? ' <span class="op-pill lo">🔁</span>' : ''}</span><span class="op-row-sub">${x.next}</span></div>`),
+        mts.map(x => `- ${x.m.title || 'Meeting'}${x.m.recurring ? ' (weekly)' : ''} — ${x.next}`));
+
+      // Stakeholders
+      const shs = ((HubStorage.get('stakeholder-hub-v1') || {}).stakeholders || []).filter(s => (s.projectIds || []).includes(pid));
+      section('Stakeholders', shs.length,
+        shs.map(s => `<div class="op-row"><span class="op-row-main">${esc(s.name || 'Unnamed')}</span>${s.org ? `<span class="op-row-sub">${esc(s.org)}</span>` : ''}</div>`),
+        shs.map(s => `- ${s.name || 'Unnamed'}${s.org ? ` (${s.org})` : ''}`));
+
+      H.push(`<div class="op-foot">Thinking Hub · Project One-Pager · ${today}</div>`);
+      return { html: H.join(''), md: M.join('\n') };
+    }
+    function openOnePager() {
+      const proj = getProject(state.selectedProject); if (!proj) return;
+      const built = buildOnePager(proj);
+      _opMarkdown = built.md;
+      document.getElementById('op-page').innerHTML = built.html;
+      document.getElementById('op-overlay').classList.remove('hidden');
+    }
+    function closeOnePager() { document.getElementById('op-overlay').classList.add('hidden'); }
+    function printOnePager() { window.print(); }
+    function copyOnePagerMd() {
+      (navigator.clipboard ? navigator.clipboard.writeText(_opMarkdown) : Promise.reject())
+        .then(() => showToast('One-pager copied as Markdown'))
+        .catch(() => showToast('Copy failed — select the text manually'));
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { const ov = document.getElementById('op-overlay'); if (ov && !ov.classList.contains('hidden')) closeOnePager(); } });
     // Resolves the user's saved drag-and-drop order for group names (state.groupOrder),
     // appending any newly-seen groups alphabetically at the end. Shared by the Overview
     // grouping and the Groupings view so both stay in sync.

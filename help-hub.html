@@ -231,7 +231,7 @@ const TOOLS = [
     frameworks: ['PMBOK', 'Kanban', 'Eisenhower Matrix', 'RACI / DACI'],
     fwIds: ['PMBOK', 'Kanban', 'Eisenhower-Matrix', 'RACI-DACI'],
     whenToUse: 'You have a named initiative with a deadline, a defined team, or more than a handful of parallel tasks. Great for anything that spans more than a week and involves more than one person — or any solo project complex enough to need structure.',
-    features: ['Projects with tasks, members, priorities, and due dates', 'Kanban board with WIP limits (visualize flow)', 'Priority Matrix (Eisenhower 2×2) for task triage', 'Groupings view — custom drag-to-reorder project groups', 'Member roles (RACI-inspired: Owner, Lead, Contributor…)', 'Goal and risk count badges from connected tools', 'Auto-sync with Schedule for timeline visibility'],
+    features: ['Projects with tasks, members, priorities, and due dates', 'Kanban board with WIP limits (visualize flow)', 'Priority Matrix (Impact × Effort) for task triage', 'Groupings view — custom drag-to-reorder project groups', 'Member roles (RACI-inspired: Owner, Lead, Contributor…)', 'One-Pager brief — printable / copy-as-Markdown project summary', 'Goal and risk count badges from connected tools', 'Auto-sync with Schedule for timeline visibility'],
     sample: 'You\'re kicking off "Brand Refresh Q3". Create the project, add teammates with roles (Design Lead, Content Contributor), break work into tasks. Open Kanban — the "In Progress" WIP limit of 3 lights up when the team is overloaded. Open Priority Matrix to find tasks that can wait vs. must happen this week.'
   },
   {
@@ -365,14 +365,14 @@ const TOOLS = [
     sample: 'Sprint 8: four tasks marked "blocked," nothing moving. Open Frameworks → Blocked Depth. The deepest iceberg is "Finalize API contract" — 6 waiting tasks, 2 milestones at risk, 3 people stalled. One card shows the full blast radius. Prioritize unblocking that one first and the rest start moving automatically.'
   },
   {
-    id: 'focus-hub', label: 'Focus Timer', icon: '◉', group: 'Tools & Focus', wg: 'Tools & Focus',
+    id: 'focus-hub', label: 'Time Journal', icon: '◷', group: 'Tools & Focus', wg: 'Tools & Focus',
     file: 'focus-hub.html',
-    desc: 'Pomodoro-style focus sessions linked to your tasks.',
-    frameworks: ['Pomodoro Technique', 'GTD', 'Systems Thinking'],
-    fwIds: ['Pomodoro-Technique', 'GTD', 'Systems-Thinking'],
-    whenToUse: 'When you need to protect deep work time from interruptions and task-switching. The timer creates a commitment device — starting it is a micro-promise to yourself that makes distractions feel like a betrayal.',
-    features: ['25 / 50 / 5-min session modes (Pomodoro standard)', 'Task selector from Project Hub open tasks', 'Energy level: ⚡ High / 🌤 Medium / 🌙 Low (GTD context matching)', 'Context tag: @deep-work, @admin, @calls, or custom', 'Pomodoro estimate before starting (compare vs. actual)', '✦ AI Energy Insights — correlates 14 days of session energy/timing against your logged daily mood', 'Session history + weekly histogram'],
-    sample: 'Two-hour window before lunch. Select "Write Q3 strategy doc", Energy: ⚡ High, Context: @deep-work, Estimate: 4 🍅. Start. 25 minutes of uninterrupted writing. 5-min break. Repeat. Three complete sessions logged. The fourth pomodoro went over — normal. After two weeks, run AI Energy Insights — it notices your high-energy sessions cluster on days you logged a good mood, and that afternoon @admin blocks correlate with your lowest-rated days.'
+    desc: 'Log what you worked on — a running record of where your time actually goes.',
+    frameworks: ['GTD', 'Pomodoro Technique', 'Systems Thinking'],
+    fwIds: ['GTD', 'Pomodoro-Technique', 'Systems-Thinking'],
+    whenToUse: 'When you want an honest picture of where your hours go, without the friction of running a timer for every task. Log a block after the fact (or as you go): task, duration, energy, a quick note. An optional countdown timer is still there for when you do want to time a deep-work block.',
+    features: ['Log a work block retrospectively: task, duration, energy, context, note', 'Quick duration chips (15/30/45/60/90m) or a custom amount', "Today's log timeline with a running daily total", 'Energy level: ⚡ High / 🌤 Medium / 🌙 Low (GTD context matching)', 'Context tag: @deep-work, @admin, @calls, or custom', 'Optional Pomodoro countdown timer (collapsed by default)', '✦ AI Energy Insights — correlates 14 days of logged energy/timing against your daily mood', 'Feeds the ⏱ time badges on Project Hub tasks + Today dashboard'],
+    sample: 'End of the morning. You log three blocks: "Write Q3 strategy doc — 90m, ⚡ high, @deep-work, finished the outline"; "MEP clash review — 60m, 🌤 medium"; "Email + admin — 30m, 🌙 low". Today\'s total reads 3h 0m across 3 blocks. Over two weeks, run AI Energy Insights — it notices your high-energy blocks cluster on days you logged a good mood, and that afternoon @admin time correlates with your lowest-rated days.'
   },
   {
     id: 'idea-swiper', label: 'Idea Swiper', icon: '⟳', group: 'Learning & Ideas', wg: 'Learning & Ideas',
@@ -460,15 +460,15 @@ const FRAMEWORKS = [
   { id: 'Mendelow-Matrix', label: 'Mendelow Matrix', domain: 'Stakeholder & People', color: 'orange', what: "Aubrey Mendelow's (1981) 2×2 grid mapping stakeholders by Power vs. Interest. Four engagement strategies: Manage Closely (high/high), Keep Satisfied (high/low), Keep Informed (low/high), Monitor (low/low).", certs: [], tools: ['Stakeholder Map'] },
   { id: 'Salience-Model', label: 'Salience Model', domain: 'Stakeholder & People', color: 'orange', what: "Mitchell, Agle & Wood's three-attribute model: Power + Legitimacy + Urgency. A stakeholder who scores high on all three is 'definitive' — the highest priority. Adds nuance that a 2×2 grid can't capture.", certs: [], tools: ['Stakeholder Map'] },
   // Personal Productivity
-  { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub', 'Focus Timer'] },
-  { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Focus Timer'] },
+  { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub', 'Time Journal'] },
+  { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Time Journal'] },
   { id: 'Bullet-Journal-Method', label: 'Bullet Journal', domain: 'Personal Productivity', color: 'cyan', what: "Ryder Carroll's analog rapid logging system using symbols: • task, ○ event, – note. The digital adaptation: daily entries with mood, structured bullets, and a brief evening reflection.", certs: [], tools: ['Journal Hub'] },
   { id: 'KPT-Retrospective', label: 'KPT Retrospective', domain: 'Personal Productivity', color: 'cyan', what: "Keep / Problem / Try — a Japanese Agile/Kaizen retrospective format simpler than the Western 'Went Well / Improve / Actions.' Popular in product teams across Japan and Korea. Every cycle closes with a concrete Try.", certs: [], tools: ['Reflection Board'] },
   // Knowledge & Learning
   { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub'] },
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
-  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Focus Timer', 'Spatial Canvas', 'Frameworks'] },
+  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Time Journal', 'Spatial Canvas', 'Frameworks'] },
   { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: ['Argument Hub'] },
   { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: ['Argument Hub'] },
   { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: ['Argument Hub'] },
@@ -499,7 +499,7 @@ const WORKFLOWS = [
     when: 'Your daily and weekly operating cadence',
     steps: [
       { tool: 'Journal Hub', action: 'Morning: capture intention. Evening: reflect + learn' },
-      { tool: 'Focus Timer', action: 'During work: protect deep work blocks with Pomodoro sessions' },
+      { tool: 'Time Journal', action: 'During work: protect deep work blocks with Pomodoro sessions' },
       { tool: 'Reflection Board', action: 'Mid-week: dump signals and friction, surface open questions' },
       { tool: 'Journal Hub', action: 'Friday: open Weekly tab — review what\'s done, commit next week\'s big rock' },
       { tool: 'Goals Hub', action: 'Update OKR key result progress — are you on track?' },

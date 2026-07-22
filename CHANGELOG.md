@@ -21,12 +21,23 @@ All notable changes to Thinking Hub are recorded here. Releases follow
   pinned runtime and development dependencies.
 - An accessibility statement (`docs/ACCESSIBILITY.md`) documenting the current
   WCAG posture and known limitations.
+- Project One-Pager: a printable / copy-as-Markdown per-project brief that
+  aggregates open tasks, milestones, goals, decisions, risks, upcoming
+  meetings, and stakeholders onto a single page (📄 in the project panel).
+- Pulse section in the home Analytics view: completed-task throughput plus a
+  "what's going stale" readout (untouched open tasks, quiet projects,
+  decisions overdue to score) built on the record-timestamp base.
 
 ### Changed
 
 - Refreshed the app identity to the golden network-hub mark: the browser tab
   favicon, in-app sidebar logo, welcome header, and all PWA install icons now
   share the same design. Added 16px/32px favicons and an apple-touch-icon.
+- Repurposed the Focus Timer into a **Time Journal**: the primary flow is now
+  logging a work block after the fact (task, duration, energy, context, note)
+  with a running daily total, while the Pomodoro countdown is kept as an
+  optional collapsed section. Existing session data and the ⏱ time badges are
+  unchanged. Fixed a latent missing-toast-module bug in the same tool.
 
 ### Security
 
