@@ -1764,6 +1764,22 @@ A small batch of recognized IT/security/procurement-review signals, bundled and 
 
 ---
 
+### ~~Priority 99 — Project One-Pager + Personal Pulse~~ ✓ Done `[group: make-data-pay-off]`
+Two "make the data you've been entering reflect back at you" features (user picked both from a fresh-idea shortlist). Both are read-only aggregation over existing data — no new storage key, no new sidebar tool, no board. Ship in v1.2.0 (pre-tag).
+
+- **Project One-Pager (`project-hub.html`)** — a `📄` button in the project detail-panel header opens a printable / copy-as-Markdown overlay (`#op-overlay`) aggregating one project's scattered data onto a single sheet: header (status/progress/group), description, **Open Tasks** (sorted by due→priority, overdue-flagged, cap 25), **Milestones**, **Goals/OKRs** (with computed %), **Open Decisions** (revisit-due + question pills), **Open Risks** (by severity = probability×impact), **Upcoming Meetings** (next occurrence ≥ today, series-aware), **Stakeholders** (by `projectIds`). `buildOnePager()` emits parallel HTML + Markdown; `🖨 Print` uses a `@media print` block (in `styles/project-hub.css`) that hides everything but the sheet; `📋 Copy Markdown` writes to clipboard. Esc/backdrop close. CSS lives in `styles/project-hub.css` (extracted-CSS convention, P85).
+- **Personal Pulse (`index.html`)** — **enhanced the existing home Analytics view** rather than build a redundant tool (Analytics already had focus heatmap + tasks-created chart + capture breakdown). Added a "Pulse — momentum & what's going stale" section: stat row (Tasks Completed this week [throughput, complements the existing "created" chart], Stale Open Tasks 30d+, Quiet Projects 60d+, Calibration Debt) + a clickable "Going stale — oldest untouched" list (top stale tasks + inactive projects, each `pulseNav(tool,id)` → highlight) + a calibration-debt nudge to Decision Hub. All staleness reads the P90 record timestamps and **only counts records with a real timestamp** (missing = unknown age, never "stale") — honest by construction.
+
+**Key decisions:**
+- **Decision:** Enhance the existing Analytics view for Pulse, not a new `pulse-hub.html` tool. **Why:** Analytics already existed and covered half the pitch; a second metrics surface would duplicate it and add a sidebar/precache/backup surface for read-only data. Same "check before building a 'new' thing" lesson as the v1.1.0-already-released discovery this session. **Alternative rejected:** standalone Pulse tool. **Confidence:** high.
+- **Decision:** One-Pager emits Markdown in parallel with the HTML (not HTML-scraped-to-MD). **Why:** the user's real outputs are management asks / decision write-ups that start as Markdown; a clean parallel build gives copy-paste-ready text without a converter. **Confidence:** high.
+- **Decision:** One-Pager is read-only aggregation with no persisted "report" object. **Why:** it's a live view of current project state; persisting a snapshot would immediately drift and needs a CRUD surface nobody asked for. Print/Markdown are the "save" paths. **Confidence:** high.
+- **Verified** end-to-end (Playwright, seeded cross-tool data): One-Pager renders every section correctly (overdue flag, goal %, revisit-due decision, question pill, risk severity 20, series next-occurrence excluding past dates, stakeholders) with correct parallel Markdown; Pulse shows completed-throughput, flags 45d/90d stale items, excludes fresh tasks, surfaces quiet projects + calibration debt, `pulseNav` global wired. Full smoke + flows green.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `index.html`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

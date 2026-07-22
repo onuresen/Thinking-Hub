@@ -1923,6 +1923,42 @@
           </div>`;
         }).join('');
 
+      // ── Pulse: momentum & staleness (P99, leverages P90 timestamps) ──
+      const esc = (HubUtils && HubUtils.esc) ? HubUtils.esc : (s => s);
+      const nowTs = Date.now();
+      const _days = iso => iso ? Math.floor((nowTs - new Date(iso).getTime()) / 86400000) : null;
+      const completedWeek = allTasks.filter(t => (t.done || t.status === 'done') && t.completedAt && t.completedAt.slice(0, 10) >= weekAgo).length;
+      const openWithProj = [];
+      (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => { if (!t.done && t.status !== 'done' && !t.archived) openWithProj.push({ t, p }); }));
+      const staleTasks = openWithProj.map(x => ({ ...x, age: _days(x.t.updatedAt) })).filter(x => x.age !== null && x.age >= 30).sort((a, b) => b.age - a.age);
+      const projRecency = p => { let latest = p.updatedAt || ''; (p.tasks || []).forEach(t => { if (t.completedAt && t.completedAt > latest) latest = t.completedAt; if (t.updatedAt && t.updatedAt > latest) latest = t.updatedAt; }); return latest || null; };
+      const inactiveProjects = (ph.projects || []).filter(p => ['active', 'maintenance'].includes(p.status)).map(p => ({ p, age: _days(projRecency(p)) })).filter(x => x.age !== null && x.age >= 60).sort((a, b) => b.age - a.age);
+      const calDebt = decArr.filter(d => d.revisitDate && d.revisitDate <= todayStr && (!d.outcome || !d.outcome.result));
+      const staleRows = [
+        ...staleTasks.slice(0, 6).map(x => ({ label: x.t.title || 'Untitled task', sub: (x.p.name || ''), age: x.age, tool: 'project-hub', id: x.t.id })),
+        ...inactiveProjects.slice(0, 3).map(x => ({ label: x.p.name || 'Untitled project', sub: 'project · quiet', age: x.age, tool: 'project-hub', id: x.p.id })),
+      ].sort((a, b) => b.age - a.age).slice(0, 7);
+      const pulseStat = (val, label, sub, warn) => `<div class="an-stat">
+        <div class="an-stat-value"${warn && val > 0 ? ' style="color:var(--accent-super)"' : ''}>${val}</div>
+        <div class="an-stat-label">${label}</div>
+        <div class="an-stat-sub">${sub}</div></div>`;
+      const pulseHTML = `
+        <div class="an-section-head" style="margin-top:26px">Pulse — momentum &amp; what's going stale</div>
+        <div class="an-stats-row">
+          ${pulseStat(completedWeek, 'Tasks Completed', 'this week')}
+          ${pulseStat(staleTasks.length, 'Stale Open Tasks', '30+ days untouched', true)}
+          ${pulseStat(inactiveProjects.length, 'Quiet Projects', '60+ days no activity', true)}
+          ${pulseStat(calDebt.length, 'Calibration Debt', 'decisions to score', true)}
+        </div>
+        ${staleRows.length ? `<div class="an-chart-box" style="margin-top:14px">
+          <div class="an-chart-title">Going stale — oldest untouched, click to open</div>
+          ${staleRows.map(r => `<div onclick="pulseNav('${r.tool}','${r.id}')" style="display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px dashed var(--border);cursor:pointer">
+            <span style="flex:1;color:var(--text);font-size:13px">${esc(r.label)}${r.sub ? ` <span style="color:var(--text3);font-size:11px">· ${esc(r.sub)}</span>` : ''}</span>
+            <span style="font-size:11px;color:var(--accent-super);font-family:var(--font-mono);white-space:nowrap">${r.age}d</span>
+          </div>`).join('')}
+        </div>` : (staleTasks.length + inactiveProjects.length === 0 ? '<div class="an-empty" style="margin-top:10px">Nothing stale — everything with a timestamp is fresh. 🌱</div>' : '')}
+        ${calDebt.length ? `<div class="an-empty" style="margin-top:10px;cursor:pointer" onclick="pulseNav('decision-hub','${calDebt[0].id}')">⚖ ${calDebt.length} decision${calDebt.length !== 1 ? 's are' : ' is'} past their revisit date and unscored — review to calibrate.</div>` : ''}`;
+
       // ── Render ────────────────────────────────────────────────────────
       container.innerHTML = `
         <div class="an-stats-row">
@@ -1977,8 +2013,10 @@
             <div class="an-chart-title">Capture Inbox by Category</div>
             ${hbarHTML}
           </div>
-        </div>`;
+        </div>
+        ${pulseHTML}`;
     }
+    function pulseNav(tool, id) { _pendingHighlight = id || null; openApp(tool); }
 
     function switchDashView(v) {
       saveSession({ dashView: v });
