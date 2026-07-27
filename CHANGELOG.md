@@ -5,6 +5,14 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Changed
+
+- Tool Portfolio fetches favicons again for tools with a URL set (falls back
+  to the tool's emoji/initials icon on failure), reversing a P93 zero-egress
+  decision at the user's request. Stakeholder Map's icons remain local-only.
+  `img-src` in the shared Content-Security-Policy now allows
+  `https://www.google.com` on every page to keep one CSP contract app-wide.
+
 ## [1.2.0] - 2026-07-22
 
 ### Added

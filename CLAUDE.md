@@ -1798,6 +1798,26 @@ Theme C, item 1 (user picked "Time Journal — log after the fact"; deferred the
 
 ---
 
+### ~~Priority 101 — Tool Portfolio: restore favicon auto-fetch~~ ✓ Done `[group: bugfix]`
+User report: "Tools portfolio doesn't get icon from links anymore. it was working previously." Root cause: P93's zero-egress pass had deliberately removed favicon auto-fetching from Tool Portfolio (and Stakeholder Map) to stop sending user-entered domains to Google's favicon service. That was a real, documented tradeoff — not a bug — but the user explicitly asked to have it back for Tool Portfolio when told the tradeoff.
+
+- **`toolIconHtml()` (`tool-portfolio.html`)** restored to its pre-P93 form: an `<img src="https://www.google.com/s2/favicons?domain=<host>&sz=32">` with an `onerror` fallback to the tool's emoji/initials. `_iconPreviewHtml()`'s "local icon" label reverted to "auto" to match.
+- **CSP `img-src` sweep (all 30 pages)** — the app enforces one byte-identical CSP across every page (smoke-tested), so `https://www.google.com` was added to `img-src` app-wide (same precedent as `connect-src https://api.anthropic.com`, added everywhere even though only some tools call it), rather than forking a second CSP just for this one page.
+- **Stakeholder Map is unaffected** — its icons stay local-only (initials/emoji, no favicon fetch); only Tool Portfolio's request was reopened.
+- **`tests/smoke.js`** updated: removed `google.com/s2/favicons` from the "retired egress hosts" list (it's no longer fully retired) and added two new checks — favicon-service use is confined to `tool-portfolio.html` (fails if any other page starts using it, including stakeholder-hub.html) and `tool-portfolio.html`'s CSP actually allows the host it fetches from.
+- **`PRIVACY.md`** outbound-network table gained a `www.google.com` (favicon service) row with trigger/data/required-for-core-use columns, and the "self-hosted, no Google favicon contact" line was corrected to name Tool Portfolio's fetch and Stakeholder Map's continued local-only behavior.
+
+**Key decisions:**
+- **Decision:** Reopen the egress for Tool Portfolio only, not Stakeholder Map. **Why:** that's exactly what the user asked for when given the tradeoff; Stakeholder Map's local-only icons from P93 weren't reported as broken and there's no reason to widen the change beyond the actual complaint. **Confidence:** high.
+- **Decision:** Widen the shared CSP's `img-src` app-wide rather than special-case one page's CSP string. **Why:** the "all app pages share one CSP contract" smoke check (and the CSP-templating convention it enforces) predates this fix and is a deliberate simplicity choice — 29 pages that will never call `google.com` gain a dormant allowance, but that's the same tradeoff already accepted for `api.anthropic.com`. **Alternative rejected:** a second, page-specific CSP just for `tool-portfolio.html` — breaks the "one contract" invariant and its regression test for a single page. **Confidence:** high.
+- **Revisit when:** if another zero-egress pass is done, this is the one page that would need re-litigating with the user again — it's a real, disclosed, opt-in-by-the-user exception to the P93 stance, not an oversight.
+
+**Verified:** full smoke suite green (30/30 pages, CSP-contract check, the two new favicon-scoping checks) + full flows suite green; live-browser check confirmed the `<img>` tag fires a real request to `https://www.google.com/s2/favicons?domain=github.com&sz=32` for a seeded tool with a URL, with zero CSP console violations, and falls back to the emoji icon on network failure (sandbox has no route to google.com, which is expected and exercises the same fallback path a real offline/blocked network would).
+
+**Files:** `tool-portfolio.html`, all 30 root HTML pages (CSP `img-src`), `tests/smoke.js`, `PRIVACY.md`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
