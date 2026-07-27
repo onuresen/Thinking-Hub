@@ -15,6 +15,7 @@
   "share_target": {
     "action": "./capture-hub.html",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": { "title": "title", "text": "text", "url": "url" }
   },
   "shortcuts": [
