@@ -32,6 +32,7 @@ exports and imports a Full Backup.
 | `api.anthropic.com` | A user explicitly tests a key or invokes an AI capture, query, act, briefing, drafting, or insight feature | Anthropic API key, prompt, applicable system instructions, and feature-dependent workspace context | No |
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
 | `m365.cloud.microsoft` | User confirms **Copy and open Copilot** after reviewing a locally prepared prompt | Normal browser navigation metadata; the prompt remains on the clipboard until the user pastes it | No |
+| `www.google.com` (favicon service) | A tool in Tool Portfolio has a URL set | The hostname of that URL, requested as an `<img>` to fetch its favicon | No — falls back to the tool's local emoji/initials icon if blocked or unset |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
 
 The Open Graph and Twitter preview URLs in `index.html` may be fetched by
@@ -43,9 +44,11 @@ crash-reporting, or telemetry code. Same-origin service-worker requests fetch
 application assets from the deployment host and may appear in that host's
 access logs.
 
-Fonts, tool/stakeholder icons, and runtime JavaScript libraries are self-hosted.
-Thinking Hub does not contact Google Fonts, Google's favicon service, or a
-JavaScript CDN during application use.
+Fonts and runtime JavaScript libraries are self-hosted; Thinking Hub does not
+contact Google Fonts or a JavaScript CDN during application use. Tool
+Portfolio fetches favicons for tools with a URL set from Google's favicon
+service (see the outbound inventory above); Stakeholder Map's icons remain
+local-only (initials/emoji, no favicon fetch).
 
 ## What optional AI can include
 

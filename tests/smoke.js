@@ -149,10 +149,20 @@ function appFiles(ext) {
     'theme.css',
     ...styleFiles,
   ];
-  const retiredHosts = /fonts\.googleapis\.com|fonts\.gstatic\.com|esm\.sh|google\.com\/s2\/favicons/;
+  const retiredHosts = /fonts\.googleapis\.com|fonts\.gstatic\.com|esm\.sh/;
   const egressHits = runtimeFiles.filter((f) => retiredHosts.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   check('retired runtime egress hosts are absent', egressHits.length === 0,
-    egressHits.length ? 'found in: ' + egressHits.join(', ') : 'fonts, favicon CDN, esm.sh');
+    egressHits.length ? 'found in: ' + egressHits.join(', ') : 'fonts CDN, esm.sh');
+
+  // tool-portfolio.html intentionally re-enabled Google's favicon service (user
+  // request, 2026-07-27) — every OTHER page must stay favicon-fetch-free.
+  const faviconHost = /google\.com\/s2\/favicons/;
+  const unexpectedFaviconUse = runtimeFiles.filter((f) => f !== 'tool-portfolio.html' && faviconHost.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+  check('favicon CDN use is confined to tool-portfolio.html', unexpectedFaviconUse.length === 0,
+    unexpectedFaviconUse.length ? 'found in: ' + unexpectedFaviconUse.join(', ') : 'ok');
+  check('tool-portfolio.html fetches favicons and CSP allows the host',
+    faviconHost.test(fs.readFileSync(path.join(ROOT, 'tool-portfolio.html'), 'utf8')) &&
+    cspValues[pages.indexOf('tool-portfolio.html')].includes('https://www.google.com'));
 
   // ── 2. every page loads clean ──
   const server = await startServer();
