@@ -33,6 +33,7 @@ exports and imports a Full Backup.
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
 | `m365.cloud.microsoft` | User confirms **Copy and open Copilot** after reviewing a locally prepared prompt | Normal browser navigation metadata; the prompt remains on the clipboard until the user pastes it | No |
 | `www.google.com` (favicon service) | A tool in Tool Portfolio has a URL set | The hostname of that URL, requested as an `<img>` to fetch its favicon | No — falls back to the tool's local emoji/initials icon if blocked or unset |
+| `t0`–`t3`.`gstatic.com` | Same request as above — Google redirects the favicon endpoint to a per-domain static shard | The same hostname, carried in the redirect URL | No — same fallback applies |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
 
 The Open Graph and Twitter preview URLs in `index.html` may be fetched by

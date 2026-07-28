@@ -160,9 +160,16 @@ function appFiles(ext) {
   const unexpectedFaviconUse = runtimeFiles.filter((f) => f !== 'tool-portfolio.html' && faviconHost.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   check('favicon CDN use is confined to tool-portfolio.html', unexpectedFaviconUse.length === 0,
     unexpectedFaviconUse.length ? 'found in: ' + unexpectedFaviconUse.join(', ') : 'ok');
+  // google.com/s2/favicons 301-redirects to a per-domain gstatic shard
+  // (t0-t3.gstatic.com). CSP is enforced on redirect targets too, so allowing
+  // only the entry host silently blocks every favicon (regression fixed
+  // 2026-07-28). Both hosts must stay in img-src.
+  const tpCsp = cspValues[pages.indexOf('tool-portfolio.html')];
   check('tool-portfolio.html fetches favicons and CSP allows the host',
     faviconHost.test(fs.readFileSync(path.join(ROOT, 'tool-portfolio.html'), 'utf8')) &&
-    cspValues[pages.indexOf('tool-portfolio.html')].includes('https://www.google.com'));
+    tpCsp.includes('https://www.google.com'));
+  check('CSP allows the favicon redirect target (gstatic shards)',
+    tpCsp.includes('https://*.gstatic.com'));
 
   // ── 2. every page loads clean ──
   const server = await startServer();

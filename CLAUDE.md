@@ -1818,6 +1818,22 @@ User report: "Tools portfolio doesn't get icon from links anymore. it was workin
 
 ---
 
+### ~~Priority 102 — Bugfix: favicons still blocked after P101 (CSP redirect target)~~ ✓ Done `[group: bugfix]`
+User report: favicons still not showing in Tool Portfolio on the live GitHub Pages deployment, despite P101 restoring the fetch. Verified first that the deployed page was NOT stale: live `tool-portfolio.html` served the P101 `<img>` code and the P101 CSP, with no service worker controlling the page — so neither caching nor deployment lag was involved.
+
+**Root cause:** `https://www.google.com/s2/favicons` **301-redirects** to a per-domain Google static shard (`t0`–`t3.gstatic.com`). **CSP is enforced against redirect targets, not just the initial request URL** — so `img-src … https://www.google.com` allowed the entry request, then blocked the redirect, `onerror` fired, and every icon fell back to its emoji. The browser reports such a violation against the *original* URL (spec-mandated censoring, so the redirect target isn't leaked), which is why the console blamed `www.google.com` — a host the policy plainly allowed. Fix: add `https://*.gstatic.com` to `img-src` across all 30 pages (one shared CSP contract, same precedent as P101).
+
+**Key decisions:**
+- **Decision:** Allow the wildcard `https://*.gstatic.com` rather than pinning the exact shard. **Why:** the redirect target is **not stable** — probing real domains returned `t0` (github, anthropic, autodesk), `t3` (figma, notion), and `t1` (slack). Pinning any single shard would leave most tools broken, reproducing this same bug for a subset of icons. Scope stays narrow in the way that matters: it's `img-src` only, on Google's static-asset CDN. **Alternative rejected:** request `t2.gstatic.com/faviconV2?…` directly to skip the redirect and pin one exact host — tighter policy, but it depends on an undocumented endpoint shape and the shard evidence shows a single host is wrong. **Confidence:** high.
+- **Decision:** Add a dedicated smoke check for the redirect target (`CSP allows the favicon redirect target (gstatic shards)`) instead of folding it into the existing host check. **Why:** the existing check asserted the *entry* host and passed throughout the entire outage — it was structurally blind to the failure. A separate named assertion makes the redirect hop an explicit, independently-failing contract. **Confidence:** high.
+- **Lesson (verification, not code):** P101's verification note recorded that the icon "falls back to the emoji on network failure (sandbox has no route to google.com … expected)". That reasoning is what let the bug ship — a blocked-by-CSP image and an unreachable-network image are the *same observable outcome*, so the check could not distinguish the two and the negative result was read as success. When a verification step can't tell the failure mode from the expected environment noise, it isn't evidence. Here the distinguishing signal was a `securitypolicyviolation` listener plus a same-origin control image; that separated "CSP blocked it" from "no network" in one run.
+
+**Verified:** real browser against the fixed page — three tools whose domains resolve to three *different* gstatic shards (t0/t1/t3) all loaded genuine 32×32 favicons (`naturalWidth: 32`, no emoji fallback) with **zero** `securitypolicyviolation` events; a same-origin control image confirmed the harness could load images at all. Reproduced the original failure on the live site first (both the redirect URL and a direct gstatic request raised `img-src` violations while the control loaded). Full smoke (30/30 pages, one-CSP-contract, both favicon checks) + full flows suite green.
+
+**Files:** all 30 root HTML pages (CSP `img-src`), `tests/smoke.js`, `PRIVACY.md`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
