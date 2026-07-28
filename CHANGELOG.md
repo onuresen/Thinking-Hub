@@ -7,14 +7,22 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
-- Tool Portfolio fetches favicons again for tools with a URL set (falls back
-  to the tool's emoji/initials icon on failure), reversing a P93 zero-egress
-  decision at the user's request. Stakeholder Map's icons remain local-only.
+- Tool Portfolio and Stakeholder Map fetch favicons again for records with a
+  URL set (falling back to the local emoji/initials icon on failure),
+  reversing a P93 zero-egress decision at the user's request. Pages other
+  than these two remain favicon-fetch-free.
   `img-src` in the shared Content-Security-Policy now allows
   `https://www.google.com` and `https://*.gstatic.com` on every page to keep
   one CSP contract app-wide. Both hosts are required: Google's favicon
   endpoint redirects to a per-domain `gstatic.com` shard, and CSP is enforced
   against redirect targets, so allowing only the entry host blocks every icon.
+
+### Fixed
+
+- Tool Portfolio, Decision Hub, and Idea Swiper no longer render blank when
+  their stored data has an unexpected shape (bad import or hand-edited
+  storage). Each now normalizes the value to an array on read and shows its
+  normal empty state instead of failing silently with a console error.
 
 ## [1.2.0] - 2026-07-22
 

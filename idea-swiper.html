@@ -356,7 +356,8 @@ On-demand tutoring market"></textarea>
 
     function loadSwipeHistory() {
       try {
-        swipeHistory = HubStorage.get(HISTORY_KEY) || [];
+        const raw = HubStorage.get(HISTORY_KEY);
+        swipeHistory = Array.isArray(raw) ? raw : [];
       } catch (e) { swipeHistory = []; }
     }
 
