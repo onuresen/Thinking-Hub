@@ -1808,7 +1808,7 @@ User report: "Tools portfolio doesn't get icon from links anymore. it was workin
 - **`PRIVACY.md`** outbound-network table gained a `www.google.com` (favicon service) row with trigger/data/required-for-core-use columns, and the "self-hosted, no Google favicon contact" line was corrected to name Tool Portfolio's fetch and Stakeholder Map's continued local-only behavior.
 
 **Key decisions:**
-- **Decision:** Reopen the egress for Tool Portfolio only, not Stakeholder Map. **Why:** that's exactly what the user asked for when given the tradeoff; Stakeholder Map's local-only icons from P93 weren't reported as broken and there's no reason to widen the change beyond the actual complaint. **Confidence:** high.
+- **Decision:** Reopen the egress for Tool Portfolio only, not Stakeholder Map. **Why:** that's exactly what the user asked for when given the tradeoff; Stakeholder Map's local-only icons from P93 weren't reported as broken and there's no reason to widen the change beyond the actual complaint. **Confidence:** high. — ⚠ **Superseded by P103**: the user later asked for Stakeholder Map parity, so both pages now fetch favicons.
 - **Decision:** Widen the shared CSP's `img-src` app-wide rather than special-case one page's CSP string. **Why:** the "all app pages share one CSP contract" smoke check (and the CSP-templating convention it enforces) predates this fix and is a deliberate simplicity choice — 29 pages that will never call `google.com` gain a dormant allowance, but that's the same tradeoff already accepted for `api.anthropic.com`. **Alternative rejected:** a second, page-specific CSP just for `tool-portfolio.html` — breaks the "one contract" invariant and its regression test for a single page. **Confidence:** high.
 - **Revisit when:** if another zero-egress pass is done, this is the one page that would need re-litigating with the user again — it's a real, disclosed, opt-in-by-the-user exception to the P93 stance, not an oversight.
 
@@ -1831,6 +1831,24 @@ User report: favicons still not showing in Tool Portfolio on the live GitHub Pag
 **Verified:** real browser against the fixed page — three tools whose domains resolve to three *different* gstatic shards (t0/t1/t3) all loaded genuine 32×32 favicons (`naturalWidth: 32`, no emoji fallback) with **zero** `securitypolicyviolation` events; a same-origin control image confirmed the harness could load images at all. Reproduced the original failure on the live site first (both the redirect URL and a direct gstatic request raised `img-src` violations while the control loaded). Full smoke (30/30 pages, one-CSP-contract, both favicon checks) + full flows suite green.
 
 **Files:** all 30 root HTML pages (CSP `img-src`), `tests/smoke.js`, `PRIVACY.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 103 — Wrong-shape storage hardening + Stakeholder Map favicons~~ ✓ Done `[group: bugfix]`
+Two items found while investigating P102, both fixed at the user's request.
+
+**Part 1 — wrong-shape stored data silently blanked a tool.** Discovered by accident: seeding `tool-portfolio-v1` with `{tools:[…]}` instead of a flat array made Tool Portfolio render **completely blank** — no tools, no empty state, no visible error. `load()` used `HubStorage.get(KEY) || []`, which guards `null` but not a wrong *type*; the value then hit `ensureOrderFields()` and threw `TypeError: tools.forEach is not a function` **before** `renderList()` could draw even the "No tools" empty state. Same bug class as the P57 Tags Hub `[].split` crash. Fixed by normalizing on read (`Array.isArray(raw) ? raw : []`) at all four sites: `tool-portfolio.html` (`load()` + the `HubLinks.resolveItems` override), `decision-hub.html` (`loadData`), `idea-swiper.html` (`loadSwipeHistory`).
+
+**Part 2 — Stakeholder Map favicons (P101 parity).** P69 built favicon-from-URL avatars; P93 removed the fetch; P101 restored it for Tool Portfolio only. Now restored for Stakeholder Map too, using the identical pattern (`<img src="…/s2/favicons?domain=…&sz=32">` + `onerror` → local initials). `shAvatarHtml()` and `renderUrlPreview()` updated; the preview row's tag reverted `local` → `auto`. The `.sh-avatar img` / `.url-preview-icon img` CSS rules were still present from P69, so no styling changes were needed.
+
+**Key decisions:**
+- **Decision:** Fix Part 1 by normalizing the type on read, not by wrapping call sites in try/catch. **Why:** `decision-hub` and `idea-swiper` *already had* try/catch around the read and were still vulnerable — a wrong-typed value doesn't throw when read, it throws later at the first array method, well past the catch. The catch gave false confidence; type normalization addresses the actual defect. **Confidence:** high.
+- **Decision:** Keep the favicon URL string inline in both pages rather than extracting a shared `HubUtils.faviconUrl()` helper. **Why:** the smoke suite enforces the egress boundary by grepping runtime files for the literal `google.com/s2/favicons` — routing it through a shared helper would hide the string from exactly the files whose egress is being audited, weakening the check that keeps this exception contained. Two occurrences of a one-line URL is the cheaper tradeoff. **Alternative rejected:** a `hub-utils.js` helper — cleaner deduplication, but it would make "which pages fetch favicons?" unanswerable by static scan. **Confidence:** high.
+- **Decision:** Split the smoke check into "confined to the two opted-in pages" **plus** a new "both opted-in pages actually fetch favicons". **Why:** the old check only asserted that *no other* page fetches favicons — it would have passed just as happily if the feature were silently deleted from both pages, which is the P102 failure mode (a check that can't fail when the feature breaks). The positive assertion closes that. **Confidence:** high.
+
+**Verified** (real browser, local server): Part 1 — the exact `{tools:[…]}` value that previously produced a blank panel now renders the normal "No tools." empty state with no throw, and `HubLinks.resolveItems('tool-portfolio')` still returns an array; wrong-shape values in `decision-hub-v1` and `ideaswipe_history_v6` leave both tools rendering normally with `Array.isArray` true and zero console errors. Part 2 — two stakeholders with URLs resolving to two *different* gstatic shards (t0 github, t3 figma) both loaded genuine 32×32 favicons with the initials fallback correctly hidden, a third stakeholder without a URL correctly showed initials "CN", and there were zero `securitypolicyviolation` events. Full smoke + flows suites green, including both reworked favicon checks.
+
+**Files:** `tool-portfolio.html`, `decision-hub.html`, `idea-swiper.html`, `stakeholder-hub.html`, `tests/smoke.js`, `PRIVACY.md`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 

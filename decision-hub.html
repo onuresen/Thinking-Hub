@@ -622,7 +622,11 @@
 
     function loadData() {
       try {
-        decisions = HubStorage.get(STORAGE_KEY) || [];
+        // Array.isArray, not `|| []`: a wrong-shaped stored value does not
+        // throw on read — it throws later at the first array method call,
+        // past this catch.
+        const raw = HubStorage.get(STORAGE_KEY);
+        decisions = Array.isArray(raw) ? raw : [];
       } catch (e) {
         decisions = [];
       }

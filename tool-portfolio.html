@@ -711,7 +711,11 @@
         }
 
         function load() {
-            tools = HubStorage.get(STORAGE_KEY) || [];
+            // Normalize on read: a wrong-shaped value (bad import, hand-edited
+            // storage) would otherwise throw in ensureOrderFields and leave the
+            // whole tool blank with no empty state. `|| []` only guards null.
+            const _raw = HubStorage.get(STORAGE_KEY);
+            tools = Array.isArray(_raw) ? _raw : [];
             ensureOrderFields();
             ensureUsageFields();
             renderList();
@@ -1490,7 +1494,8 @@
         HubLinks.resolveItems = (function (orig) {
             return function (toolId) {
                 if (toolId === 'tool-portfolio') {
-                    const data = HubStorage.get(STORAGE_KEY) || [];
+                    const _stored = HubStorage.get(STORAGE_KEY);
+                    const data = Array.isArray(_stored) ? _stored : [];
                     return data.map(t => ({
                         id: t.id,
                         label: t.name,
