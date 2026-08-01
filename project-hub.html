@@ -2224,9 +2224,6 @@
       else if (statusSel) statusSel.value = 'todo';
       toggleBlockedReason(statusSel?.value || 'todo');
       openModal('modal-task');
-      if (typeof HubObsidian !== 'undefined') {
-        HubObsidian.attachAutocomplete(document.getElementById('task-obsidian'));
-      }
     }
 
     function populateTaskProjectDependents(projId) {
@@ -2282,9 +2279,6 @@
       document.querySelector('#modal-task .modal-sub').textContent = 'Update task properties';
       document.querySelector('#modal-task .btn-primary').textContent = 'Save Changes';
       openModal('modal-task');
-      if (typeof HubObsidian !== 'undefined') {
-        HubObsidian.attachAutocomplete(document.getElementById('task-obsidian'));
-      }
     }
 
     function saveTask() {

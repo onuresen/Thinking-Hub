@@ -7,7 +7,7 @@
 ![Vanilla JS](https://img.shields.io/badge/Vanilla_JS-no_framework-f7df1e)
 ![No Build Step](https://img.shields.io/badge/build-none-lightgrey)
 ![Tools](https://img.shields.io/badge/tools-20%2B-blueviolet)
-![Obsidian](https://img.shields.io/badge/Obsidian-integrated-483699)
+![Obsidian](https://img.shields.io/badge/Obsidian-note%20links-483699)
 ![Local First](https://img.shields.io/badge/data-100%25_local-3ecf8e)
 
 *Think clearly, plan deliberately, decide confidently — 20+ tools in one shell, no build step required.*
@@ -70,7 +70,7 @@ Tools are grouped by the phase of work they support.
 |------|-------------|
 | **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Choose Microsoft Copilot handoff (no key) or Anthropic direct in ⚙️ Settings → Integrations. |
 
-> **AI boundary:** Microsoft Copilot handoff prepares and previews a prompt locally, then copies it and opens Microsoft 365 Copilot only after confirmation; Thinking Hub stores no Microsoft credential and submits nothing automatically. Anthropic direct remains optional: its key is plaintext browser localStorage and requests go directly to Anthropic. Current Full Backups strip the key and bulky Obsidian index. Organizations can allow only approved providers—or disable every AI surface—through `enterprise-config.js`. See [AI providers and Copilot handoff](docs/AI-PROVIDERS.md).
+> **AI boundary:** Microsoft Copilot handoff prepares and previews a prompt locally, then copies it and opens Microsoft 365 Copilot only after confirmation; Thinking Hub stores no Microsoft credential and submits nothing automatically. Anthropic direct remains optional: its key is plaintext browser localStorage and requests go directly to Anthropic. Current Full Backups strip the key. Organizations can allow only approved providers—or disable every AI surface—through `enterprise-config.js`. See [AI providers and Copilot handoff](docs/AI-PROVIDERS.md).
 
 ### Knowledge & Goals
 
@@ -106,7 +106,6 @@ postMessage ◄─────────────────────�
 | `hub-storage.js` | Storage adapter — `get / set / subscribe`, quota guard |
 | `hub-utils.js` | Shared escaping, focus, and record-timestamp utilities |
 | `hub-starter-data.js` | First-run sample-data seeder (shell only) |
-| `hub-obsidian.js` | Obsidian vault reader — File System Access API, index notes, autocomplete |
 | `hub-tags.js` | Central tag/topic registry and cross-tool rename support |
 | `hub-links.js` | Cross-tool linking via postMessage, picker modal, badges |
 | `hub-search.js` | Global Cmd+K search — injected into shell only |
@@ -117,7 +116,7 @@ postMessage ◄─────────────────────�
 | `hub-ai.js` | Optional AI assistant — direct Anthropic Messages API client, loaded by the shell and manual AI surfaces |
 | `hub-snapshots.js` | IndexedDB rolling snapshots and point-in-time restore (shell only) |
 
-Required order where applicable: `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (shell only) → `hub-obsidian.js` → `hub-tags.js` → `hub-links.js` → `hub-search.js` (shell only) → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (manual AI surfaces).
+Required order where applicable: `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (shell only) → `hub-tags.js` → `hub-links.js` → `hub-search.js` (shell only) → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (manual AI surfaces).
 
 ---
 
@@ -129,8 +128,8 @@ Items across supported tools (projects, decisions, canvas nodes, meetings, risks
 ### Global Cmd+K search
 `hub-search.js` indexes all tools' localStorage data and surfaces results in a fuzzy command palette. Selecting a result navigates to the tool and highlights the item.
 
-### Obsidian vault integration
-`hub-obsidian.js` uses the browser's File System Access API (`showDirectoryPicker()`) to read your vault folder directly — no backend, no Obsidian running. Indexes note titles, frontmatter, and tags. Task and decision modals get live autocomplete suggestions.
+### Obsidian note links
+Set your vault name in ⚙️ → Obsidian, then attach a vault-relative note path to any task or decision. The `⟡ Note` badge opens it via an `obsidian://` link. Paths are vault-relative and the vault is resolved by name, so moving the vault folder on disk does not break links. One-way by design: Thinking Hub can open a note, not read one.
 
 ### Scoped data export
 Three export scopes from the ⚙️ Data & Backup modal:
@@ -173,7 +172,7 @@ This project runs entirely in the browser — no build step, no install required
 ```
 Double-click index.html
 ```
-Open in Chrome, Edge, or Firefox. File System Access API features (Obsidian integration) require Chrome or Edge.
+Open in Chrome, Edge, or Firefox. File System Access API features (MCP file sync) require Chrome or Edge.
 
 **Option B — Local static server (recommended)**
 ```bash
@@ -188,7 +187,7 @@ python -m http.server 5500
 **First run**
 1. The onboarding tour starts automatically on first open.
 2. Create your first project in **Project Hub** to kick off the workflow tour (covers Schedule sync, Idea Swiper pipeline, Decision Hub, and Graph + Cmd+K).
-3. Optional: pick your Obsidian vault folder via ⚙️ → Obsidian Vault to enable note autocomplete.
+3. Optional: set your Obsidian vault name via ⚙️ → Obsidian to enable `⟡ Note` links on tasks and decisions.
 
 <details>
 <summary>Keyboard shortcuts</summary>
@@ -209,7 +208,6 @@ index.html              # Shell — sidebar, iframe router, onboarding
 theme.css               # Global CSS token source — dark/light, all variables
 hub-storage.js          # Storage adapter (localStorage, quota guard)
 hub-utils.js            # Shared utilities (HubUtils.esc)
-hub-obsidian.js         # Obsidian vault reader (File System Access API)
 hub-links.js            # Cross-tool linking (postMessage + picker modal)
 hub-search.js           # Global Cmd+K search
 hub-toast.js            # Toast notifications
@@ -256,7 +254,7 @@ help-hub.html           # Help, framework reference, workflow guides
 - **Content Security Policy** — all application pages restrict scripts, styles, fonts, images, frames, workers, forms, and connections to the documented boundary.
 - **Automated safeguards** — GitHub Actions runs auto-discovered page smoke tests, service-worker coverage checks, and interaction flows on every pull request and push to `main`.
 - **Data recovery** — full export/import, a read-only backup verifier, storage quota warnings, and IndexedDB point-in-time snapshots.
-- **Secret-aware exports** — current Full Backups strip the Anthropic API key and bulky Obsidian index.
+- **Secret-aware exports** — current Full Backups strip the Anthropic API key.
 - **Accessibility baseline** — keyboard focus trapping, semantic modal/navigation attributes, and global reduced-motion support.
 
 The current external-service boundary and architectural decisions are documented in [`CLAUDE.md`](CLAUDE.md). Published releases are immutable, checksummed snapshots; administrators can pin a reviewed version instead of following `main`.

@@ -5,6 +5,21 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Removed
+
+- The in-browser Obsidian vault reader (`hub-obsidian.js`) and its
+  ⚙️ "Pick Vault Folder" / "Re-index" controls. The module was loaded only by
+  the shell while its sole consumers ran inside tool iframes, so the note
+  autocomplete it existed to power never executed and the vault index it wrote
+  to browser storage was never read. Removing it drops a Chromium-desktop-only
+  File System Access API surface and one service-worker asset.
+- Obsidian **note links are unaffected and remain supported**: the vault name
+  setting, the `⟡ Note` badge, the per-task `⟡` button, and every stored note
+  path continue to work exactly as before. Links use the vault's registered
+  name plus a vault-relative path, so relocating the vault folder does not
+  break them. Existing `obsidianIndex` values already in browser storage are
+  left in place and remain excluded from exports.
+
 ### Changed
 
 - Tool Portfolio and Stakeholder Map fetch favicons again for records with a

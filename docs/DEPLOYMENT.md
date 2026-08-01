@@ -100,7 +100,7 @@ iframes, workers, exports, and the chosen AI policy.
 
 - Chromium-based Edge or Chrome is the recommended managed desktop target.
 - Core tools also load in other modern browsers, but File System Access
-  features such as Obsidian directory selection and MCP file sync require a
+  features such as MCP file sync require a
   compatible Chromium browser.
 - Browser storage is isolated by exact origin and browser profile. Keep the
   scheme, host, port, and application path stable.
@@ -145,7 +145,7 @@ iframes, workers, exports, and the chosen AI policy.
 - Require periodic Full Backup downloads at a frequency matching the business
   impact. Store them under the organization's approved encryption, retention,
   and access-control policy.
-- Current Full Backups exclude the Anthropic API key and Obsidian index.
+- Current Full Backups exclude the Anthropic API key.
 - Use the read-only backup verifier before relying on or restoring a backup.
 - Treat exported JSON as potentially confidential even though credentials are
   stripped.

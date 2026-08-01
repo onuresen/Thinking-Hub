@@ -17,7 +17,6 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
 | `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
-| `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-tags.js` | Centralized tag/topic registry: `HubTags.getRegistry/ensure/findCanonical/removeFromRegistry/scanUsage/rename/attachAutocomplete` — `scanUsage`/`rename` operate across all `TAG_SOURCES` (every tool with a `tags` field) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
@@ -77,7 +76,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). Both run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -166,44 +165,19 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - `decision-hub.html` decisions: `obsidianNote` field; input + `⟡ Open` button in Log tab; saved in `saveCurrent()`
 - Link format: `obsidian://open?vault={vaultName}&file={notePath}` — one-way, opens note in Obsidian
 
-**Known limitation:** One-way only — app can open notes but cannot read content back.
+**Known limitation:** One-way only — app can open notes but cannot read content back. This is by design as of P104; the in-browser vault reader that tried to close the gap was removed (see below).
+
+**Path semantics (why links survive a moved vault):** `vault=` is the vault's *registered name* in Obsidian, and `file=` is a *vault-relative* path. Nothing stored is an absolute filesystem path — so moving the vault folder on disk, or syncing it to another machine at a different path, breaks nothing. Renaming the vault means updating one field in Settings. Only moving/renaming a note *inside* the vault breaks that one link.
 
 ---
 
-## ~~Obsidian integration — Option B~~ ✓ Done
+## ~~Obsidian integration — Option B (vault reader)~~ ❌ REMOVED (P104)
 
-**Goal:** Read the Obsidian vault folder directly in the browser, index note titles/frontmatter, and surface related notes next to items — no backend, no Obsidian running required.
+`hub-obsidian.js` and the ⚙️ "Pick Vault Folder" picker were **deleted**. See Priority 104 in the backlog for the full reasoning.
 
-**Approach:** File System Access API (`window.showDirectoryPicker()`)
+**Short version:** the module was only ever loaded by `index.html`, but its only consumers (`attachAutocomplete` on `#task-obsidian` / `#i-obsidian`) ran inside the Project Hub and Decision Hub **iframes**, where `HubObsidian` was undefined. A `typeof HubObsidian !== undefined` guard made it fail silently, so the vault index was written to `hub-settings-v1` and never read by anything except a count in Settings.
 
-**Implementation steps when ready:**
-
-1. **New shared module `hub-obsidian.js`** — exposes `HubObsidian` singleton:
-   - `HubObsidian.pickVault()` — calls `showDirectoryPicker()`, stores the `FileSystemDirectoryHandle` in memory and (if available) the persisted handle via `navigator.storage.getDirectory()`
-   - `HubObsidian.indexVault()` — walks the dir recursively, reads all `.md` files, parses YAML frontmatter (`---` block), returns `[{ path, title, tags, aliases, frontmatter, snippet }]`
-   - `HubObsidian.search(query)` — fuzzy match against indexed titles/aliases/tags
-   - `HubObsidian.isAvailable()` — returns `typeof window.showDirectoryPicker === 'function'`
-   - Store index in `hub-settings-v1` → `{ ..., obsidianIndex: [...], obsidianIndexedAt: ISO }` (refresh on demand)
-
-2. **Frontmatter parsing** — inline micro-parser (no npm): split on `---`, parse `key: value` and `key: [a, b]` lines. No dependency needed for basic Obsidian frontmatter.
-
-3. **UI additions:**
-   - In index.html ⚙️ modal: "Pick Vault Folder" button (shown only when `HubObsidian.isAvailable()`); shows indexed note count + last-indexed time; "Re-index" button
-   - In `project-hub.html` task modal: autocomplete suggestions for `task-obsidian` field — as user types, show matching note titles from the index
-   - In `decision-hub.html` log tab: same autocomplete on `i-obsidian` input
-   - Optional: "Related notes" panel next to a task — shows notes whose title/tags overlap with task title
-
-4. **Browser compatibility fallback:** If `showDirectoryPicker` not available, show a message pointing user to set the vault name manually (Option A still works without B).
-
-5. **Storage key:** Vault `FileSystemDirectoryHandle` cannot be serialised to localStorage — must be re-requested each session. Store only the index (titles/paths/frontmatter) in `hub-settings-v1`. Handle stale index gracefully (show "last indexed X ago, re-index?").
-
-**Implemented files:**
-| File | Change |
-|------|--------|
-| `hub-obsidian.js` ✓ | Full vault reader + index module (`HubObsidian` singleton) |
-| `index.html` ✓ | Loads `hub-obsidian.js`; vault picker UI in ⚙️ modal (File System Access API) |
-| `project-hub.html` ✓ | Autocomplete on `#task-obsidian` input via `HubObsidian.attachAutocomplete()` |
-| `decision-hub.html` ✓ | Autocomplete on `#i-obsidian` input in log tab |
+**Do not rebuild this.** If note-path entry ever needs help again, the batch route (export → match against the real vault → re-import) is strictly more capable and works on mobile. Option A below is unaffected and stays.
 
 ---
 
@@ -1849,6 +1823,31 @@ Two items found while investigating P102, both fixed at the user's request.
 **Verified** (real browser, local server): Part 1 — the exact `{tools:[…]}` value that previously produced a blank panel now renders the normal "No tools." empty state with no throw, and `HubLinks.resolveItems('tool-portfolio')` still returns an array; wrong-shape values in `decision-hub-v1` and `ideaswipe_history_v6` leave both tools rendering normally with `Array.isArray` true and zero console errors. Part 2 — two stakeholders with URLs resolving to two *different* gstatic shards (t0 github, t3 figma) both loaded genuine 32×32 favicons with the initials fallback correctly hidden, a third stakeholder without a URL correctly showed initials "CN", and there were zero `securitypolicyviolation` events. Full smoke + flows suites green, including both reworked favicon checks.
 
 **Files:** `tool-portfolio.html`, `decision-hub.html`, `idea-swiper.html`, `stakeholder-hub.html`, `tests/smoke.js`, `PRIVACY.md`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 104 — Remove the dead Obsidian vault reader (keep the note links)~~ ✓ Done `[group: declutter]`
+User question: "I added markdown vault support but I have never seen its usefulness — shall I remove it or not?" Investigation found the premise was half right, and the interesting half was that **the Obsidian integration is two separate features**, one of which had never worked.
+
+**What was actually there:**
+- **Option A — `obsidian://` deep links** (~15 lines): a vault *name* string in `hub-settings-v1.obsidianVault`, an `obsidianNote` vault-relative path on tasks/decisions, a `⟡ Note` badge, and a `⟡` per-task button. No module, no permissions, works in every browser.
+- **Option B — `hub-obsidian.js` vault reader** (136 lines): `showDirectoryPicker()` → walk the vault → parse frontmatter → cache an index in `hub-settings-v1.obsidianIndex` → power autocomplete on the two path inputs.
+
+**Option B was dead code and had been for a long time.** `hub-obsidian.js` was loaded **only** by `index.html` (the shell), but its sole consumers — `HubObsidian.attachAutocomplete()` in `project-hub.html` and `decision-hub.html` — run inside **iframe documents** that never loaded the script. A `if (typeof HubObsidian !== 'undefined')` guard made it a silent no-op, so the picker would happily read the entire vault, write the index to localStorage, and nothing ever read it back except a "N notes indexed" counter in Settings. Same silent-gap bug class as P57's Cmd+K breakage: the failure lived exactly between "what's loaded" and "what calls it", and the defensive guard hid it.
+
+**Usage evidence (from the real backup, `esen-vault/raw/thinking-hub-2026-07-30-reconciled.json`):** `obsidianVault: "esen-vault"` set; **20 of 139 tasks** carry an `obsidianNote`; 0 of 23 decisions. All 4 distinct target notes exist in the vault. But the 20 links resolve to only **4 notes** (15 → one CDI review note, 3 → one project note), i.e. two bulk operations, not per-task typing. Option A is genuinely used; Option B could not have been (it never ran). `obsidianIndex` absence in the backup proves nothing either way — exports strip it (P66).
+
+**Removed:** `hub-obsidian.js`; the ⚙️ "📁 Pick Vault Folder" / "↻ Re-index" / index-status block; `pickObsidianVault`/`reindexObsidianVault`/`updateObsidianIndexUI`; the `HubObsidian.isAvailable()` reveal in `openDataModal`; the shell `<script>` tag; the `sw.js` PRECACHE entry (83 entries now); both dead `attachAutocomplete` call sites. **Kept, untouched:** the Vault Name field and `saveVaultSetting()`, every `obsidianNote` value, the `⟡ Note` badge, the `⟡` button, `promptObsidianNote()`, and the task/decision note inputs.
+
+**Key decisions:**
+- **Decision:** Delete Option B; keep Option A. **Why:** B was verifiably non-functional, cost a module in the shell + a precache entry + localStorage for a vault index nothing read, and was Chromium-desktop-only with a re-grant click most sessions — while A is ~15 lines, works everywhere including mobile, and has 20 real links in production data. **Alternative rejected:** fix B's load order so autocomplete finally works — it would spend real complexity to save typing a path, when the actual bottleneck is *deciding which note matches which task*, which autocomplete never addressed. **Confidence:** high.
+- **Decision:** Do NOT purge `obsidianIndex`/`obsidianIndexedAt` from any user's stored `hub-settings-v1`, and keep the existing strip in `buildExportPayload()`. **Why:** P50/P88 data-safety precedent — code deletion is reversible via git, silently deleting a user's stored bytes is not; the export strip stays as cheap defense for anyone whose settings still hold a stale index (and `tests/flows.js` asserts it). **Confidence:** high.
+- **Decision:** Record the path semantics in the Option A section rather than leaving them implicit. **Why:** the user's live question was whether links break if the vault folder moves. They don't — `vault=` is the vault's registered *name* and `file=` is *vault-relative*, so nothing stored is an absolute path. Only renaming the vault (one Settings field) or moving a note inside the vault breaks anything. That property is also what makes the batch-linking route below safe. **Confidence:** high.
+- **Standing rule:** do not rebuild an in-browser vault reader. If note-path entry needs help, use the batch route (export → match against the real vault → re-import), which is more capable and works on mobile.
+
+**Verified:** full `npm test` green (30 pages load with zero JS errors, one-CSP-contract, PRECACHE recomputed to 83, all 13 interaction flows incl. the byte-identical 28-key backup round trip and the `obsidianIndex`-stripped assertion). Plus a dedicated 14-check browser pass on the *kept* feature, seeded with the real backup's shape: the `⟡ Note` badge renders and its href is exactly `obsidian://open?vault=esen-vault&file=projects%2FCDI-Review-2026-07-29`; only the task with a note gets a badge; `openEditTask` populates the note field with `HubObsidian` provably `undefined`; Settings keeps the Vault Name field (loaded + persisting) while the picker UI, `pickObsidianVault`, and `HubObsidian` are all gone; zero console errors in both the shell and Project Hub.
+
+**Files:** `index.html`, `project-hub.html`, `decision-hub.html`, `sw.js`, `README.md`, `PRIVACY.md`, `docs/DEPLOYMENT.md`, `CHANGELOG.md`, `CLAUDE.md` · **Deleted:** `hub-obsidian.js`
 
 ---
 

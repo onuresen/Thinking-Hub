@@ -19,7 +19,7 @@ privacy behavior.
 | localStorage | Tool records, settings, links, UI state, and the optional Anthropic API key | Until the user imports/replaces data, resets a tool, clears site data, or the browser removes it |
 | IndexedDB | Automatic, manual, and pre-restore snapshots of localStorage | Automatic daily snapshots: 14 days; older Monday snapshots: up to 60 days; newest 10 manual/safety snapshots |
 | Cache Storage | Offline application assets, including self-hosted fonts | Until replaced by service-worker cache maintenance or cleared as site data |
-| Selected local files/directories | Backup import, Obsidian read access, and explicit MCP file sync | Governed by the browser permission and the user's selected location |
+| Selected local files/directories | Backup import and explicit MCP file sync | Governed by the browser permission and the user's selected location |
 
 Browser storage is scoped to the exact origin: scheme, host, and port. Moving a
 deployment to a different origin creates a separate data store unless the user

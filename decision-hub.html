@@ -1069,10 +1069,6 @@
             </div>
           </div>
         `;
-        if (typeof HubObsidian !== 'undefined') {
-          const obsEl = document.getElementById('i-obsidian');
-          if (obsEl) HubObsidian.attachAutocomplete(obsEl);
-        }
         if (typeof HubTags !== 'undefined') {
           const tagsEl = document.getElementById('i-tags');
           if (tagsEl) HubTags.attachAutocomplete(tagsEl);
