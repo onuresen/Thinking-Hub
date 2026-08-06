@@ -94,6 +94,14 @@ not control those terms.
   write it into workspace storage.
 - Obsidian indexing reads the directory selected by the user. Its generated
   note index remains in browser storage and is excluded from current exports.
+- The Vault Bridge reads Markdown files from the same user-selected vault
+  directory, read-only, to report days with no matching workspace record and to
+  propose decisions written in the canonical schema. It never writes to the
+  vault. Parsing happens entirely in the browser, no note content is sent
+  anywhere, and nothing is imported into workspace storage until the user
+  accepts an individual proposal. Its directory handle is stored in IndexedDB
+  so the browser can re-grant access without a second folder selection; the
+  handle is not a copy of vault content and confers no access on its own.
 - MCP file sync writes only after the user selects a directory and explicitly
   enables that workflow.
 

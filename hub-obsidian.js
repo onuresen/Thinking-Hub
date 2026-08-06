@@ -132,5 +132,12 @@ const HubObsidian = (() => {
 
   function hasHandle() { return !!_dirHandle; }
 
-  return { isAvailable, hasHandle, pickVault, indexVault, search, getIndex, getIndexedAt, attachAutocomplete };
+  // Accept a directory handle obtained elsewhere (hub-vault-bridge.js persists
+  // one in IndexedDB). Without this, re-indexing always required re-picking the
+  // folder, because this module only ever held the handle in memory.
+  function adoptHandle(handle) {
+    if (handle && !_dirHandle) _dirHandle = handle;
+  }
+
+  return { isAvailable, hasHandle, adoptHandle, pickVault, indexVault, search, getIndex, getIndexedAt, attachAutocomplete };
 })();
