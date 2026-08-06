@@ -5,6 +5,23 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Added
+
+- **Vault Bridge** — the Obsidian integration can now read the vault as a
+  source, not only open notes from it. After connecting a vault folder,
+  Thinking Hub reports days your vault has a daily note for but the workspace
+  has no record of, and offers any decisions written in the canonical
+  Decision / Why / Alternative / Revisit-when / Confidence schema as a review
+  queue. Nothing is imported until you accept an individual proposal, and
+  accepted records link back to the source note. The selected directory is
+  remembered between sessions so access can be re-granted with one click
+  instead of picking the folder again. Reading is local and read-only: no note
+  content leaves the browser, and the vault is never written to. The feature
+  requires the File System Access API (Chromium-based desktop browsers) and is
+  hidden where it is unavailable. New storage key `hub-vault-bridge-v1` is
+  included in Full Backup, because it records which proposals were already
+  accepted or ignored.
+
 ### Changed
 
 - Tool Portfolio and Stakeholder Map fetch favicons again for records with a

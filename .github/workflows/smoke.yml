@@ -33,3 +33,7 @@ jobs:
       - name: Run interaction flows
         working-directory: tests
         run: node flows.js
+
+      - name: Run Vault Bridge checks
+        working-directory: tests
+        run: node vault-bridge.js

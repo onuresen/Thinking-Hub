@@ -34,6 +34,7 @@ const PRECACHE = [
   './hub-utils.js',
   './hub-starter-data.js',
   './hub-obsidian.js',
+  './hub-vault-bridge.js',
   './hub-data.js',
   './hub-tags.js',
   './hub-links.js',
