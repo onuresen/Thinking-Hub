@@ -6,11 +6,13 @@
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
 ![Vanilla JS](https://img.shields.io/badge/Vanilla_JS-no_framework-f7df1e)
 ![No Build Step](https://img.shields.io/badge/build-none-lightgrey)
-![Tools](https://img.shields.io/badge/tools-20%2B-blueviolet)
+![Tools](https://img.shields.io/badge/tools-23-blueviolet)
 ![Obsidian](https://img.shields.io/badge/Obsidian-integrated-483699)
 ![Local First](https://img.shields.io/badge/data-100%25_local-3ecf8e)
 
-*Think clearly, plan deliberately, decide confidently — 20+ tools in one shell, no build step required.*
+*Think clearly, plan deliberately, decide confidently — 23 connected tools in one shell, no build step required.*
+
+**[Open Thinking Hub](https://onuresen.github.io/Thinking-Hub/)**
 
 </div>
 
@@ -32,62 +34,71 @@ For managed deployments, use a published [versioned release](https://github.com/
 
 ## Tools
 
-Tools are grouped by the phase of work they support.
+Tools are grouped by the kind of work they support.
 
-### Thinking & Decisions
-
-| Tool | What it does |
-|------|-------------|
-| **Idea Swiper** | Rapid triage — swipe ideas into Like / Super / Nope piles, send survivors straight to Project Hub |
-| **Decision Hub** | Structured decision log with Cynefin domain tags, confidence scores, Assumption tracker, alignment matrix, revisit dates + outcome calibration |
-| **Argument Hub** | Build a case top-down with the Pyramid Principle — SCQA intro, governing thought, MECE supporting pyramid, Markdown export |
-| **Canvas Hub** | Infinite spatial canvas for freeform notes, diagrams, and sticky thoughts |
-| **Assumption Tracker** | Assumption-Based Planning lanes (Assumed → Testing → Validated → Invalidated), accessible via Decision Hub |
-
-### Planning & Execution
+### Daily Work
 
 | Tool | What it does |
 |------|-------------|
-| **Project Hub** | Projects + tasks with member roles, WIP-limited kanban, priority matrix view, and cross-tool badges |
-| **Schedule** | Calendar / timeline view that auto-syncs due dates from Project Hub |
-| **Graph Hub** | Task dependency graph powered by vis-network — trace paths, filter orphans, annotate edges |
-| **Risk Register** | Heat-map risk register with treatment plans, owners, and review dates |
-| **Stakeholder Map** | Power/interest grid with engagement levels (PMBOK-aligned) |
+| **Project Hub** | Projects, tasks, roles, WIP-limited kanban, priority views, and cross-tool links |
+| **Schedule** | Calendar and timeline views that sync due dates from Project Hub |
+| **Meeting Hub** | Structured meeting notes with decisions, participants, and action items |
+| **Capture Hub** | A fast inbox for notes, tasks, ideas, decisions, and references before triage |
+| **Journal Hub** | Daily reflection, mood and energy patterns, Bullet Journal modes, and Feynman prompts |
 
-### Review & Reflection
-
-| Tool | What it does |
-|------|-------------|
-| **Weekly Review** | Structured weekly ritual — wins, blockers, next actions, energy check |
-| **Retrospective** | Async team retro: Went Well / Improve / Actions |
-| **Daily Log** | Private captain's log with mood heatmap, Bullet Journal mode chips, and Feynman learning prompts |
-| **Focus Hub** | Pomodoro timer with GTD energy levels, context tags, and session history |
-| **Profile** | Your identity (name, role, who-is-me) plus milestones, badges, streaks, and an activity heatmap |
-
-### AI Assistant
+### People & Network
 
 | Tool | What it does |
 |------|-------------|
-| **AI Assistant** | Floating chat panel (bottom-right, `Ctrl+Shift+Space`) — three modes: **capture** (NL → structured item), **query** (ask anything about your workspace), **act** (propose multi-step changes with per-action confirm before applying). Choose Microsoft Copilot handoff (no key) or Anthropic direct in ⚙️ Settings → Integrations. |
+| **Dependency Graph** | Visualize task dependencies, trace paths, filter orphans, and annotate edges |
+| **People Hub** | See team roles and workload in one place, including who is over-allocated |
+| **Stakeholder Map** | Power/interest mapping with PMBOK-aligned engagement levels |
+| **Tool Portfolio** | Curate tools and vendors with Technology Radar rings and TOGAF layers |
+| **Machi Hub** | Turn workspace activity into a living pixel city whose districts reflect your work |
+
+### Learning & Ideas
+
+| Tool | What it does |
+|------|-------------|
+| **Learning Hub** | Reading and learning records with Feynman-style key insights |
+| **Idea Swiper** | Rapidly triage ideas into Like / Super / Nope and promote survivors into projects |
+| **Spatial Canvas** | An infinite canvas for freeform notes, diagrams, and spatial thinking |
+
+### Strategy & Decisions
+
+| Tool | What it does |
+|------|-------------|
+| **Decision Hub** | Structured decisions with Cynefin domains, confidence, assumptions, alignment, and outcome calibration |
+| **Goals Hub** | Quarterly OKRs with committed or aspirational key results and linked projects |
+| **Risk Register** | Heat-map risk tracking with owners, treatments, and review dates |
+| **Argument Hub** | Build Pyramid Principle arguments with SCQA, MECE support, and Markdown export |
+
+### Reflection & Methods
+
+| Tool | What it does |
+|------|-------------|
+| **Reflection Board** | Guided reviews and retrospectives across wins, blockers, patterns, and next actions |
+| **Frameworks** | Experiment with visual methods including the blocked-work iceberg and V-Model process map |
+
+### Tools & Focus
+
+| Tool | What it does |
+|------|-------------|
+| **Time Journal** | Log what you worked on, review where time went, and optionally run a timer |
+| **Profile** | Identity, milestones, badges, streaks, and an activity heatmap |
+| **Tags** | A central topic registry with usage visibility and cross-tool rename support |
+| **Help & Guide** | Tool directory, framework reference, and pre-built workflow guides |
+
+### Built-in AI assistance
+
+The floating AI assistant (`Ctrl+Shift+Space`) supports **capture**, **query**, and confirmation-gated **act** flows. Choose Microsoft Copilot handoff (no key) or Anthropic direct in ⚙️ Settings → Integrations.
 
 > **AI boundary:** Microsoft Copilot handoff prepares and previews a prompt locally, then copies it and opens Microsoft 365 Copilot only after confirmation; Thinking Hub stores no Microsoft credential and submits nothing automatically. Anthropic direct remains optional: its key is plaintext browser localStorage and requests go directly to Anthropic. Current Full Backups strip the key and bulky Obsidian index. Organizations can allow only approved providers—or disable every AI surface—through `enterprise-config.js`. See [AI providers and Copilot handoff](docs/AI-PROVIDERS.md).
-
-### Knowledge & Goals
-
-| Tool | What it does |
-|------|-------------|
-| **Goals / OKR Hub** | Quarterly OKR tracking with 0.0–1.0 scoring, committed vs. aspirational key results, and project links |
-| **Learning Log** | Reading and learning log with Feynman "explain it simply" key-insight field |
-| **Meeting Notes** | Structured meeting notes with automatic action-item extraction |
-| **Tool Portfolio** | Curated tool/vendor directory with Technology Radar rings and TOGAF architecture layers |
-| **Help & Guide** | Tool directory, 37-framework reference, and 4 pre-built workflow guides |
-
----
 
 ## Architecture
 
 ```
-index.html  (shell — sidebar, home dashboard, iframe router, cloud panel)
+index.html  (shell — sidebar, home dashboard, iframe router, data/AI settings)
     │
     ▼
 <iframe id="app-frame">  (one tool loaded at a time)
@@ -107,6 +118,7 @@ postMessage ◄─────────────────────�
 | `hub-utils.js` | Shared escaping, focus, and record-timestamp utilities |
 | `hub-starter-data.js` | First-run sample-data seeder (shell only) |
 | `hub-obsidian.js` | Obsidian vault reader — File System Access API, index notes, autocomplete |
+| `hub-vault-bridge.js` | Read-only vault-to-Hub proposal engine with explicit acceptance |
 | `hub-tags.js` | Central tag/topic registry and cross-tool rename support |
 | `hub-links.js` | Cross-tool linking via postMessage, picker modal, badges |
 | `hub-search.js` | Global Cmd+K search — injected into shell only |
@@ -117,7 +129,7 @@ postMessage ◄─────────────────────�
 | `hub-ai.js` | Optional AI assistant — direct Anthropic Messages API client, loaded by the shell and manual AI surfaces |
 | `hub-snapshots.js` | IndexedDB rolling snapshots and point-in-time restore (shell only) |
 
-Required order where applicable: `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (shell only) → `hub-obsidian.js` → `hub-tags.js` → `hub-links.js` → `hub-search.js` (shell only) → `hub-toast.js` → `hub-bootstrap.js` → `hub-ai.js` (manual AI surfaces).
+Required order where applicable: `hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (shell only) → `hub-obsidian.js` → `hub-vault-bridge.js` → `hub-tags.js` → `hub-links.js` → `hub-search.js` (shell only) → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (manual AI surfaces).
 
 ---
 
@@ -130,15 +142,15 @@ Items across supported tools (projects, decisions, canvas nodes, meetings, risks
 `hub-search.js` indexes all tools' localStorage data and surfaces results in a fuzzy command palette. Selecting a result navigates to the tool and highlights the item.
 
 ### Obsidian vault integration
-`hub-obsidian.js` uses the browser's File System Access API (`showDirectoryPicker()`) to read your vault folder directly — no backend, no Obsidian running. Indexes note titles, frontmatter, and tags. Task and decision modals get live autocomplete suggestions.
+`hub-obsidian.js` uses the browser's File System Access API (`showDirectoryPicker()`) to read your vault folder directly — no backend, no Obsidian running. It indexes note titles, frontmatter, and tags for autocomplete. The optional **Vault Bridge** stays read-only: it turns vault signals into reviewable Hub proposals, and nothing changes until you explicitly accept an item.
 
 ### Scoped data export
 Three export scopes from the ⚙️ Data & Backup modal:
 
 | Scope | Contents | Restorable |
 |-------|----------|-----------|
-| **Full Backup** | All 28 registered data keys | ✓ Yes |
-| **AI Context** | 13 high-signal keys (curated, noise-stripped) | Read-only |
+| **Full Backup** | All 29 registered data keys | ✓ Yes |
+| **AI Context** | 16 high-signal keys (curated, noise-stripped) | Read-only |
 | **Current Tool** | Active tool's key(s) only | Read-only |
 
 ### Local-only data (a feature, not a gap)
@@ -151,15 +163,15 @@ Each tool is mapped to one or more established frameworks:
 |-----------|-------|
 | Cynefin | Decision Hub |
 | OKR | Goals Hub |
-| GTD | Focus Hub |
-| Eisenhower Matrix | Project Hub (Priority Matrix view) |
+| GTD | Time Journal |
+| Action Priority Matrix (Impact × Effort) | Project Hub |
 | Assumption-Based Planning (RAND) | Decision Hub → Assumptions tab |
 | Technology Radar (ThoughtWorks) | Tool Portfolio |
 | TOGAF | Tool Portfolio |
 | PMBOK Stakeholder Engagement | Stakeholder Map |
-| Feynman Technique | Learning Log, Daily Log |
+| Feynman Technique | Learning Hub, Journal Hub |
 | Kanban WIP limits | Project Hub |
-| Bullet Journal | Daily Log |
+| Bullet Journal | Journal Hub |
 
 Full framework reference (37 frameworks) is available inside **Help & Guide**.
 
@@ -206,33 +218,41 @@ python -m http.server 5500
 
 ```
 index.html              # Shell — sidebar, iframe router, onboarding
-theme.css               # Global CSS token source — dark/light, all variables
+theme.css               # Global CSS token source — dark/light/ink
 hub-storage.js          # Storage adapter (localStorage, quota guard)
 hub-utils.js            # Shared utilities (HubUtils.esc)
 hub-obsidian.js         # Obsidian vault reader (File System Access API)
+hub-vault-bridge.js     # Read-only vault signal proposals
+hub-tags.js             # Central tags and cross-tool rename support
 hub-links.js            # Cross-tool linking (postMessage + picker modal)
 hub-search.js           # Global Cmd+K search
 hub-toast.js            # Toast notifications
 hub-bootstrap.js        # Init coordinator
+hub-ai.js               # Optional AI assistant and provider handoffs
+hub-snapshots.js        # IndexedDB point-in-time snapshots
 hub-data.js             # Read API for project/task/member data
 
 project-hub.html        # Project + task tracking
 schedule.html           # Calendar / timeline
+meetings-hub.html       # Meeting notes + action items
+capture-hub.html        # Fast capture inbox
+journal-hub.html        # Daily reflection and journal
 idea-swiper.html        # Rapid idea triage (swipe)
 decision-hub.html       # Decision log + assumptions + alignment matrix + calibration
 argument-hub.html       # Pyramid Principle argument builder (SCQA, MECE, export)
 canvas-hub.html         # Infinite spatial canvas
 graph-hub.html          # Task dependency graph (vis-network)
-focus-hub.html          # Pomodoro focus timer + GTD context
-log-hub.html            # Daily captain's log
-retro-hub.html          # Async retrospective board
-review-hub.html         # Structured weekly review
+people-hub.html         # People directory and follow-ups
+town-hub.html           # Machi Hub living pixel city
+focus-hub.html          # Time Journal + optional timer
+reflection-hub.html     # Reviews and retrospectives
 goals-hub.html          # OKR / quarterly goals
-meetings-hub.html       # Meeting notes + action items
 learning-hub.html       # Reading & learning log
 stakeholder-hub.html    # Stakeholder power/interest grid
 risk-hub.html           # Risk register
 achievements-hub.html   # Profile (identity) + milestones & achievements
+tags-hub.html           # Topic registry
+frameworks-hub.html     # Framework reference
 tool-portfolio.html     # Tool/vendor directory (Technology Radar)
 help-hub.html           # Help, framework reference, workflow guides
 ```
@@ -242,8 +262,8 @@ help-hub.html           # Help, framework reference, workflow guides
 ## Design Principles
 
 - **No build step, no npm** — open `index.html` and it works. Every tool is a single self-contained HTML file.
-- **Shell + iframe** — the shell handles navigation, theming, cloud config, and cross-tool state. Tools are isolated and load on demand.
-- **Single CSS token source** — `theme.css` defines every color, font, radius, and z-index. No hardcoded hex values in tools. Both dark (default) and light themes are fully defined.
+- **Shell + iframe** — the shell handles navigation, theming, local data and AI policy, and cross-tool state. Tools are isolated and load on demand.
+- **Single CSS token source** — `theme.css` defines every color, font, radius, and z-index. No hardcoded hex values in tools. Dark (default), light, and ink themes are defined centrally.
 - **postMessage for cross-tool communication** — tools never import each other directly. All coordination goes through the shell via `hub-navigate`, `hub-highlight`, `hub-project-active`, and `hub-links` messages.
 - **Fail-safe storage** — every tool reads from `HubStorage` with a default fallback. Missing or corrupt keys don't break other tools.
 
@@ -291,3 +311,5 @@ For AI-assisted development, see [`CLAUDE.md`](CLAUDE.md) for project convention
 ## License
 
 Thinking Hub is licensed under the [Apache License 2.0](LICENSE). Third-party components and fonts remain under their own permissive licenses; see [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).
+
+More public projects: [Onur Esen's builder portfolio](https://onuresen.github.io/).
