@@ -659,8 +659,13 @@
         byProject[pid].push(d);
       });
 
-      // Render groups
-      for (const pid of Object.keys(byProject)) {
+      // Render groups — alphabetical by project name, "No Project" last
+      const orderedPids = Object.keys(byProject).sort((a, b) => {
+        if (a === 'none') return 1;
+        if (b === 'none') return -1;
+        return getProjectName(a).localeCompare(getProjectName(b));
+      });
+      for (const pid of orderedPids) {
         const group = document.createElement('div');
         group.className = 'nav-group';
 
@@ -951,7 +956,7 @@
       c.innerHTML = '';
 
       if (currentTab === 'log') {
-        const projOpts = HubData.getProjectsSorted().map(p => `<option value="${p.id}" ${dec.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
+        const projOpts = HubData.getProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => `<option value="${p.id}" ${dec.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
         const logHasExtra = !!(dec.projectId || dec.type !== 'decision' || dec.confidence !== 'medium' || dec.tags || dec.reason || dec.obsidianNote || dec.cynefin || dec.alternative || dec.revisitWhen || dec.revisitDate || dec.outcome);
         const obsidianLink = (() => { const v = (HubStorage.get('hub-settings-v1') || {}).obsidianVault || ''; return (dec.obsidianNote && v) ? `<a href="obsidian://open?vault=${encodeURIComponent(v)}&file=${encodeURIComponent(dec.obsidianNote)}" style="display:inline-flex;align-items:center;gap:4px;padding:8px 12px;background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text2);text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap;transition:background 0.12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface3)'">⟡ Open</a>` : ''; })();
