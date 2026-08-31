@@ -1401,7 +1401,7 @@
       if (!sel) return;
       const prev = sel.value;
       sel.innerHTML = '<option value="">— none —</option>';
-      HubData.getProjectsSorted().forEach(p => {
+      HubData.getProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;

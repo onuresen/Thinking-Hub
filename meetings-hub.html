@@ -1416,7 +1416,7 @@
 
     const target = activeLogEntry(m); // notes/actionItems/decisions live here (m itself, or this week's log entry)
 
-    const projects = (() => { try { return HubData.getProjectsSorted(); } catch { return []; } })();
+    const projects = (() => { try { return HubData.getProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')); } catch { return []; } })();
     const projOpts = `<option value="">— No project —</option>` +
       projects.map(p => `<option value="${esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 

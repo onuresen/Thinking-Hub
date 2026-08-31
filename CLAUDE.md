@@ -1900,6 +1900,22 @@ Three small, independent user-reported fixes.
 
 ---
 
+### ~~Priority 106 — Fix flat project-select sorting across 8 lists~~ ✓ Done `[group: bugfix]`
+User report: "meeting hub's Project list doesn't seem to have a proper sorting logic." Root cause: `HubData.getProjectsSorted()` (Priority 63) is a **group-order-aware** sort — it clusters projects by the user's saved Groupings order, then alphabetically *within* each group — designed for views that actually render group headers (Tool Portfolio's "Enabled Projects" checklist, Stakeholder Map's detail-panel checklist). Six **flat** `<select>` dropdowns with no group headers were calling it anyway, so their option order silently followed the user's custom group order instead of reading as alphabetical — exactly the same complaint already raised and fixed once for Stakeholder Map's project filter (Priority 64), but the fix never propagated to these other call sites.
+
+- **6 flat selects switched from `getProjectsSorted()` to plain `getProjects().slice().sort(name)`** (Stakeholder Map's existing pattern): Meeting Hub's detail-panel project select, Decision Hub's Log-tab project select, Goals Hub's objective-modal project select, Risk Hub's detail-panel project select *and* its topbar project filter, Schedule's timeline project filter.
+- **Idea Swiper's "Send to Project" select had no sorting at all** (raw creation order) — added the same alphabetical sort.
+- **Decision Hub's sidebar project-group headers** were ordered by `Object.keys()` on an object built by iterating decisions in storage order — i.e. whichever project a decision happened to reference first, not alphabetically. Sorted by project name via `getProjectName()`, with "No Project" always pinned last (it isn't a real project name to sort against).
+- `HubData.getProjectsSorted()` itself is untouched and no longer has any caller in the app, but is kept as-is — it's a legitimate, documented utility for a future *genuinely grouped* list view, not dead code to delete.
+
+**Key decisions:**
+- **Decision:** Flat lists get plain A–Z; only views that visibly render group headers keep group-order-aware sorting. **Why:** a flat `<select>` has no way to show *why* two adjacent options are next to each other — group clustering there just looks like broken sorting, which is precisely what was reported. This is the same call already made for Stakeholder Map's filter in Priority 64; this pass just finishes applying it everywhere the same shape of bug existed. **Confidence:** high.
+- **Decision:** Leave `getProjectsSorted()` in `hub-data.js` even though nothing calls it anymore. **Why:** it's correctly documented, cheap to keep, and is exactly the function a future grouped view should reach for instead of re-deriving the same logic inline (as Tool Portfolio and Stakeholder Map's detail panel already do locally, per the accepted-duplication note in Priority 64). Deleting a correct, documented, low-cost utility on the chance nothing will ever want it again is the wrong tradeoff. **Confidence:** med.
+
+**Files:** `meetings-hub.html`, `decision-hub.html`, `goals-hub.html`, `risk-hub.html`, `schedule.html`, `idea-swiper.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

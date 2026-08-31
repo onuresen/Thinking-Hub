@@ -1766,7 +1766,7 @@ On-demand tutoring market"></textarea>
 
     function openSendModal(idea) {
       _sendIdea = idea;
-      const projects = HubData.getProjects ? HubData.getProjects() : [];
+      const projects = (HubData.getProjects ? HubData.getProjects() : []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       const sel = document.getElementById('send-project-select');
       if (!projects.length) {
         sel.innerHTML = '<option value="">No projects found — create one in Project Hub first</option>';
