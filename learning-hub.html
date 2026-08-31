@@ -359,7 +359,7 @@
     <div class="sidebar-list" id="sidebar-list"></div>
     <div class="sidebar-add-btn" style="display:flex;gap:6px">
       <button class="btn btn-ghost" onclick="openAddModal(null)" style="flex:1;font-size:12px">+ Add item</button>
-      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived">📦</button>
+      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived">📦 Archived (0)</button>
     </div>
   </aside>
 
@@ -491,7 +491,7 @@
     const q = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
     const archivedCount = (data.items||[]).filter(it => it.archived).length;
     const archBtn = document.getElementById('show-archived-btn');
-    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 (${archivedCount})`;
+    if (archBtn) archBtn.innerHTML = showArchived ? '← Active' : `📦 Archived <span style="${archivedCount ? 'color:var(--accent)' : ''}">(${archivedCount})</span>`;
     // Preserve user-defined array order; no automatic status sort
     return data.items.filter(it => {
       if (showArchived ? !it.archived : it.archived) return false;

@@ -289,7 +289,8 @@
   <div class="logo-text">Reflection<span style="color:var(--accent)">Board</span></div>
   <select id="rb-board-select" class="board-select"></select>
   <button class="btn btn-ghost" id="btn-new-board" style="font-size:11px;padding:4px 10px">+ Board</button>
-  <button class="btn btn-ghost" id="btn-archive-board" title="Archive current board" style="font-size:11px;padding:4px 8px">📦</button>
+  <button class="btn btn-ghost" id="btn-archive-board" title="Archive current board" style="font-size:11px;padding:4px 8px">📦 Archive</button>
+  <button class="btn btn-ghost" id="rb-archived-toggle" onclick="toggleShowArchivedBoards()" style="font-size:11px;padding:4px 8px" title="Show archived boards">🗄 Archived (0)</button>
   <input id="rb-board-desc" class="board-desc-input" placeholder="Add a focus question or description…" maxlength="120">
   <div class="topbar-right">
     <div class="mode-pill" id="rb-mode-pill">select · drag · C to link</div>
@@ -532,19 +533,28 @@
     const data = getData();
     const board = getActiveBoard(data);
     if (!board) return;
-    if (!confirm(`Archive board "${board.name}"?`)) return;
-    HubUtils.stampArchive(board, true);
+    const archiving = !board.archived;
+    if (archiving && !confirm(`Archive board "${board.name}"?`)) return;
+    HubUtils.stampArchive(board, archiving);
     HubUtils.stampUpdate(board);
-    const remaining = data.boards.find(b => !b.archived);
-    data.activeId = remaining ? remaining.id : null;
-    if (!remaining) {
-      const nb = makeNewBoard('Reflection Board');
-      data.boards.push(nb);
-      data.activeId = nb.id;
+    if (archiving) {
+      const remaining = data.boards.find(b => !b.archived);
+      data.activeId = remaining ? remaining.id : null;
+      if (!remaining) {
+        const nb = makeNewBoard('Reflection Board');
+        data.boards.push(nb);
+        data.activeId = nb.id;
+      }
     }
     saveData(data);
     st.selectedItemId = null; st.selectedLinkId = null; st.connectMode = false;
     renderAll();
+    showToast(archiving ? 'Board archived' : 'Board restored');
+  }
+
+  function toggleShowArchivedBoards() {
+    st.showArchived = !st.showArchived;
+    renderTopbar(getData());
   }
 
   /* ══ D — Item CRUD ════════════════════════════════════ */
@@ -1078,11 +1088,23 @@
   function renderTopbar(data, board) {
     const select = document.getElementById('rb-board-select');
     if (!select) return;
-    const active = board || getActiveBoard(data || getData());
-    const visible = (data || getData()).boards.filter(b => st.showArchived || !b.archived);
+    const d = data || getData();
+    const active = board || getActiveBoard(d);
+    const archivedCount = d.boards.filter(b => b.archived).length;
+    const toggleBtn = document.getElementById('rb-archived-toggle');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = st.showArchived ? '← Active boards' : `🗄 Archived <span style="${archivedCount ? 'color:var(--accent)' : ''}">(${archivedCount})</span>`;
+    }
+    const visible = d.boards.filter(b => st.showArchived || !b.archived);
     select.innerHTML = visible.map(b =>
       `<option value="${esc(b.id)}" ${active && b.id === active.id ? 'selected' : ''}>${esc(b.name)}${b.archived ? ' (archived)' : ''}</option>`
     ).join('');
+
+    const archBtn = document.getElementById('btn-archive-board');
+    if (archBtn) {
+      archBtn.textContent = active && active.archived ? '↩ Restore' : '📦 Archive';
+      archBtn.title = active && active.archived ? 'Restore this board' : 'Archive current board';
+    }
 
     const descInput = document.getElementById('rb-board-desc');
     if (descInput && active) {
