@@ -349,6 +349,21 @@
           <div id="verify-results" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);font-size:12px;line-height:1.6;color:var(--text2)"></div>
         </div>
 
+        <!-- Danger Zone -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="sfield-group-title" style="color:var(--accent-nope)">⚠ Danger Zone</div>
+          <div style="padding:12px;border:1px solid var(--accent-nope);border-radius:var(--r-sm);background:color-mix(in srgb, var(--accent-nope) 8%, transparent)">
+            <div style="font-size:12px;color:var(--accent-nope);font-weight:700;margin-bottom:4px">Reset Project Hub</div>
+            <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+              Permanently deletes <b>every project, task, milestone and goal</b>. This cannot be undone (a local snapshot may be restorable above).
+            </div>
+            <button class="data-btn secondary" style="width:100%;color:var(--accent-nope);border-color:var(--accent-nope)"
+              onclick="resetProjectHubData()">
+              Reset all Project Hub data…
+            </button>
+          </div>
+        </div>
+
       </div><!-- /data pane -->
 
       <div class="data-modal-footer">
@@ -3234,6 +3249,30 @@
     }
 
     function triggerVerifyBackup() { document.getElementById('verify-file').click(); }
+
+    // Moved here from Project Hub's per-project Settings panel — a whole-tool
+    // reset doesn't belong buried under one project's danger zone. Operates
+    // directly on localStorage so it works whether or not Project Hub is the
+    // currently open tool; if it IS open, the iframe is refreshed afterward.
+    function resetProjectHubData() {
+      const ans = prompt(
+        '⚠ This permanently deletes ALL your Project Hub data — every project, task, milestone and goal.\n\n' +
+        'This cannot be undone (a local snapshot may be restorable above).\n\n' +
+        'Type RESET to confirm:'
+      );
+      if ((ans || '').trim().toUpperCase() !== 'RESET') { showToast('Reset cancelled'); return; }
+
+      HubStorage.set('project-hub-v1', { members: [], projects: [], concepts: [] });
+
+      const frame = document.getElementById('app-frame');
+      if (frame && frame.src && !frame.src.endsWith('about:blank') && frame.src.includes('project-hub.html')) {
+        const currentSrc = frame.src;
+        frame.src = 'about:blank';
+        setTimeout(() => { frame.src = currentSrc; }, 80);
+      }
+
+      showToast('Project Hub reset');
+    }
 
     // Read-only backup validator — parses a chosen .json and reports exactly what a
     // restore WOULD do, without writing a single byte to storage. Lets the user

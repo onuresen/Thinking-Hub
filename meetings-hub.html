@@ -43,7 +43,7 @@
     <div class="templates-panel" id="templates-panel"></div>
     <div class="list-footer">
       <button class="btn btn-ghost" onclick="newMeeting()" style="flex:1;font-size:12px">+ New meeting</button>
-      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived meetings">📦</button>
+      <button class="btn btn-ghost" id="show-archived-btn" onclick="toggleShowArchived()" style="font-size:11px;padding:4px 8px" title="Show archived meetings">📦 Archived (0)</button>
     </div>
   </div>
 
@@ -488,7 +488,7 @@
     );
     const archivedCount = data.meetings.filter(m => m.archived).length;
     const archBtn = document.getElementById('show-archived-btn');
-    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 (${archivedCount})`;
+    if (archBtn) archBtn.innerHTML = showArchived ? '← Active' : `📦 Archived <span style="${archivedCount ? 'color:var(--accent)' : ''}">(${archivedCount})</span>`;
 
     if (!items.length) {
       list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results.' : 'Create your first meeting above.'}</div></div>`;
@@ -1257,7 +1257,7 @@
       if (totalAdded > 0) parts.push(`Imported ${totalAdded} meeting${totalAdded === 1 ? '' : 's'}`);
       if (totalSkipped > 0) parts.push(`${totalSkipped} already imported`);
       if (failedFiles > 0) parts.push(`${failedFiles} file${failedFiles === 1 ? '' : 's'} failed`);
-      if (!parts.length) parts.push('No upcoming meetings found (checks 7 days back to 90 days ahead)');
+      if (!parts.length) parts.push('No upcoming meetings found (checks 30 days back to 90 days ahead)');
       showToast(parts.join(', '), failedFiles > 0 && totalAdded === 0 ? 'error' : undefined);
 
       event.target.value = '';
@@ -1298,7 +1298,7 @@
     if (!events.length) return { added: 0, skipped: 0 };
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const windowStart = dateFromYMD(todayStr); windowStart.setUTCDate(windowStart.getUTCDate() - 7);
+    const windowStart = dateFromYMD(todayStr); windowStart.setUTCDate(windowStart.getUTCDate() - 30);
     const windowEnd = dateFromYMD(todayStr); windowEnd.setUTCDate(windowEnd.getUTCDate() + 90);
 
     const existingKeys = new Set(data.meetings.filter(m => !m.recurring).map(m => m.icsKey).filter(Boolean));

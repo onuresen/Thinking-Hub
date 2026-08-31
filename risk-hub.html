@@ -477,7 +477,7 @@
       : `${risks.length} of ${total} risk${total!==1?'s':''}`;
     const archivedCount = data.risks.filter(r => r.archived).length;
     const archBtn = document.getElementById('show-archived-btn');
-    if (archBtn) archBtn.textContent = showArchived ? '← Active' : `📦 Archived (${archivedCount})`;
+    if (archBtn) archBtn.innerHTML = showArchived ? '← Active' : `📦 Archived <span style="${archivedCount ? 'color:var(--accent)' : ''}">(${archivedCount})</span>`;
 
     if (!risks.length) {
       const noData = !data.risks.length;

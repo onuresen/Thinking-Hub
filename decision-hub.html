@@ -668,7 +668,7 @@
         label.className = 'nav-group-label';
         const visible = byProject[pid].filter(d => showArchived ? d.archived : !d.archived);
         const archivedCount = byProject[pid].filter(d => d.archived).length;
-        label.innerHTML = `<span>${getProjectName(pid === 'none' ? null : pid)}</span> <span class="nav-badge">${visible.length}</span>${!showArchived && archivedCount ? `<span class="nav-badge" style="background:rgba(148,163,184,0.15);color:var(--text3);cursor:pointer;margin-left:4px" onclick="toggleShowArchived()" title="Show archived">📦 ${archivedCount}</span>` : ''}`;
+        label.innerHTML = `<span>${getProjectName(pid === 'none' ? null : pid)}</span> <span class="nav-badge">${visible.length}</span>${!showArchived && archivedCount ? `<span class="nav-badge" style="background:var(--accent-dim);color:var(--accent);cursor:pointer;margin-left:4px" onclick="toggleShowArchived()" title="Show archived">📦 ${archivedCount}</span>` : ''}`;
         group.appendChild(label);
 
         visible.forEach(d => {
