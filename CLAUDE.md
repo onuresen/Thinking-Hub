@@ -1916,6 +1916,22 @@ User report: "meeting hub's Project list doesn't seem to have a proper sorting l
 
 ---
 
+### ~~Priority 107 — Last-restored tracking + honest Vault Bridge freshness~~ ✓ Done `[group: usability]`
+Two small usability gaps found from a real usage audit (esen-vault session), not new tools.
+
+- **Last restored line (`index.html`)** — Settings → Data & Backup already showed "Last full backup: X" for exports but nothing for imports. That gap mattered: the app's own history shows a reconciled backup getting built but never restored, undiscovered for weeks, four times in a row. `handleImportFile()` now stamps `hub-last-backup-v1.{restoredAt, restoredScope}` on every successful import (Full Backup, single-tool, and legacy v1 alike); a new `#last-restore-line` renders it the same way as the backup line.
+- **Vault Bridge: no more stale flash (`index.html`)** — the Today "Vault Bridge" gap card read `HubVaultBridge`'s last-session cached state on first paint, so for the ~3s before the deferred on-load rescan finished, a days-old count could render looking exactly as current as a fresh one — the actual reason a 3-day-stale scan went unnoticed. New `_vaultBridgeScannedThisSession` flag keeps the gap-mode card hidden until this session's own scan completes (the 'permission' reconnect prompt is exempt — it doesn't depend on scan freshness); once shown, the card also states "checked {time}" so the count's freshness is never ambiguous.
+
+**Key decisions:**
+- **Decision:** Stamp `restoredAt` for every successful import branch, not just the Full Backup path. **Why:** all three branches (`v2 full`, single-tool, `v1` legacy) overwrite real local data — the honest signal is "when did something last get restored," not "when did a full backup specifically land." **Confidence:** high.
+- **Decision:** Hide the gap card until this session has scanned, rather than adding more background scanning. **Why:** the app already rescans on every load when permission allows — there was no missing automation to add. The actual defect was a silent window where old cached data looked identical to fresh data. Confidence: high.
+
+**Verified** (Playwright, driving the real `handleImportFile` and a stubbed `HubVaultBridge`): restore line reads "never" before any import and "today · Full Backup" immediately after a real one; the gap card is absent before this session's scan completes, `HubVaultBridge.init()` fires exactly once on load, and the card appears with a "checked" note only after. Full smoke (30/30 pages) + flows suites green.
+
+**Files:** `index.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
