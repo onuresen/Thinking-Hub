@@ -1916,6 +1916,20 @@ User report: "meeting hub's Project list doesn't seem to have a proper sorting l
 
 ---
 
+### ~~Priority 107 — Machi Hub: drop dead KMQT Board link + stale Time Journal label~~ ✓ Done `[group: bugfix]`
+User report: "Thinking Hub's Machi Hub is outdated. it still shows the obsolete tools such as KMQT etc." `town-hub.html`'s `HUB_PAGES` registry (a local label lookup for the "Hub Pages" lens — buildings lit by real `hub-activity-v1` log entries) still had a `'kmqt-board'` entry pointing at `kmqt-board.html`, a file deleted in P88. Any user with a historic KMQT activity-log entry got a building whose detail panel offered "Open this tool →" straight to a 404. Also fixed `focus-hub`'s stale label ("Focus Timer" — P100 renamed the tool to "Time Journal" in `index.html` but the Machi registry was never updated).
+
+- Removed the `kmqt-board` entry from `HUB_PAGES`. `hubPageEntities()`'s existing fallback (unmapped `appId` → title-cased generic label + `🛠` icon + no navigation link, since the link map checks `HUB_PAGES[m.appId]`) now handles any lingering historic KMQT activity data gracefully — the building still renders (data isn't hidden), but it no longer offers a dead link.
+- `'focus-hub'` label/icon updated to `['Time Journal', '◷', 'Tools & Focus']` to match `index.html`'s current APPS entry.
+
+**Key decisions:**
+- **Decision:** Remove the dead-file entry, don't just re-point it. **Why:** the P88 decision to leave this reference alone ("editing Machi risks the stamped-copy rule") doesn't actually apply — `HUB_PAGES` lives in `town-hub.html` itself (the host/adapter file), not in `machi-engine.js`/`machi-achievements.js` (the actual stamped copies from `Vibe_Coding/MachiHub`). That P88 reasoning was overbroad; this file was always safe to edit directly. **Confidence:** high.
+- **Decision:** Rely on the existing generic-fallback path rather than special-casing "tool was deleted." **Why:** it already does exactly the right thing (keeps historical activity visible, drops the dead link) with no new code — the bug was purely the stale registry entry keeping the dead link alive. **Confidence:** high.
+
+**Files:** `town-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
