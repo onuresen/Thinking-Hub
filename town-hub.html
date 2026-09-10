@@ -284,11 +284,13 @@
       'reflection-hub': ['Reflection Board', '⟲', 'Reflection & Methods'], 'frameworks-hub': ['Frameworks', '▾', 'Reflection & Methods'],
       'focus-hub': ['Time Journal', '◷', 'Tools & Focus'], 'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
       'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
-      'log-hub': ['Log Hub', '≡', 'Daily Work'],
-      'review-hub': ['Review Hub', '☑', 'Reflection & Methods'], 'retro-hub': ['Retro Hub', '⟲', 'Reflection & Methods'],
-      'assumptions-hub': ['Assumptions', '?', 'Strategy & Decisions'], 'matrix-hub': ['Matrix Hub', '▤', 'Strategy & Decisions'],
-      'blocked-depth': ['Blocked Depth', '▽', 'Reflection & Methods'],
     };
+    // Retired tools (kmqt-board, scrum-hub, log-hub, review-hub, retro-hub,
+    // assumptions-hub, matrix-hub, blocked-depth, war-room) are deliberately
+    // absent above. Old hub-activity-v1 log entries for them are left
+    // untouched (data safety), but hubPageEntities() below only renders a
+    // building for ids present in HUB_PAGES — no ghost buildings for tools
+    // that no longer exist or aren't reachable from the sidebar.
     const GROUP_COLORS = {
       'Daily Work': '#5b8cff', 'People & Network': '#ff9f5b', 'Learning & Ideas': '#5bd67a',
       'Strategy & Decisions': '#b28ae8', 'Reflection & Methods': '#8a8f9c', 'Tools & Focus': '#ffd24d',
@@ -308,11 +310,10 @@
 
     function hubPageEntities() {
       const usage = hubUsage();
-      const ids = Object.keys(usage);
+      const ids = Object.keys(usage).filter((appId) => HUB_PAGES[appId]);
       if (!ids.length) return [];
       return ids.map((appId) => {
-        const [label, icon, group] = HUB_PAGES[appId] ||
-          [appId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), '🛠', 'Tools & Focus'];
+        const [label, icon, group] = HUB_PAGES[appId];
         const u = usage[appId];
         const days = daysSince(u.last);
         const activity = activityFrom(days);
