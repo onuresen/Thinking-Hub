@@ -764,6 +764,9 @@
       if (e.data.type === 'hub-project-active') {
         updateProjectContextPanel(e.data.project || null);
       }
+      if (e.data.type === 'hub-open-vault-bridge') {
+        openVaultReview();
+      }
     });
 
     function updateProjectContextPanel(proj) {
