@@ -1940,6 +1940,25 @@ User report: "Thinking Hub's Machi Hub is outdated. it still shows the obsolete 
 
 ---
 
+### ~~Priority 108 — Machi Hub: two civic landmarks (Vault Gap Signpost + Calibration Courthouse)~~ ✓ Done `[group: machi-hub]`
+Follow-up to P107's cleanup — user asked what to add now that the town shows only real, live tools. Picked two ideas grounded in the 2026-09-03 esen-vault usage audit (same session): both read data the Hub already has and reflect a gap that's currently invisible in the town.
+
+- **Vault Gap Signpost** — a new "Civic" district building showing how many real vault work-days haven't reached the Hub (Vault Bridge, P104). Reads `hub-vault-bridge-v1.unrecordedDays` directly — `dismissDay()` already removes a day from that array in storage, so the raw count is exactly the still-open gap, no need to load `hub-vault-bridge.js` in `town-hub.html` at all. Only appears when the gap is > 0. Clicking it doesn't navigate the iframe (there's no standalone Vault Bridge page — it's a modal in the shell); it posts `{type:'hub-open-vault-bridge'}` to the parent, which `index.html` now listens for and calls the existing `openVaultReview()`.
+- **Calibration Courthouse** — a second Civic building that only appears once Decision Hub has real decisions, and only rises (`tier`) as real outcomes get scored. Uses the exact same criteria as Decision Hub's own `⚖ Calibration` modal (`outcome.result` set and not `'tooearly'`), so the two never disagree. `shipped` (flag on the roof) flips true the moment anything is scored; `staleness`/`activity` track the scored ratio.
+- Both wired into `showDetail()`'s `m.lens` branches + the `links` map (Calibration → `decision-hub.html`, same pattern as every other lens).
+
+**Key decisions:**
+- **Decision:** Read `hub-vault-bridge-v1` raw via `HubStorage.get()` instead of loading `hub-vault-bridge.js` in `town-hub.html`. **Why:** the module's `getState()`/`status()` depend on in-memory handle state populated by `init()`, which never runs outside `index.html`; the stored `unrecordedDays` array is already the right number (dismissed days are removed from it at dismiss time, not filtered at render time) so a raw read is both simpler and correct. Avoids a new script-load-order dependency for one field. **Confidence:** high.
+- **Decision:** Vault Gap Signpost only appears when `gapDays > 0`; Calibration Courthouse only appears when `decision-hub-v1` has at least one decision. **Why:** matches this file's "unknown ≠ stale/neglected" convention (P90) — no vault connected or no decisions logged yet is a different state from "caught up," and showing an empty-but-present landmark in either case would misreport which one it is. **Confidence:** high.
+- **Decision:** Didn't add a custom `incident` for either building (no 'fire' on an overdue calibration, etc.), even though the engine supports it. **Why:** the only two building incidents the engine defines (`fire`/`crane`) carry hardcoded label text ("Gone cold — untouched 60+ days") that doesn't accurately describe either landmark's actual condition; the `d-status`/`d-note` lines already say the real numbers, so a mismatched incident label would be actively misleading rather than informative. **Confidence:** high.
+- **Decision:** Vault Gap uses a postMessage handoff to the shell instead of a normal `<a href>` link (every other lens's pattern). **Why:** Vault Bridge has no standalone page — it's a modal inside `index.html` — so a relative-href link (which navigates the *iframe*, per every other lens's existing, slightly-imperfect pattern) can't reach it at all. This is a new, small, justified exception, not a rewrite of the existing link convention. **Confidence:** high.
+
+**Verified** (Playwright against the pre-installed Chromium, seeded `hub-vault-bridge-v1` + `decision-hub-v1`): both entities appear in `_machiTown.entities` with correct math (2 of 6 decisions scored → tier 1, `shipped:true`, `activity:0.33`; 5-day gap → `staleness:0.36`); clicking the signpost renders the correct detail text and fires the exact `{type:'hub-open-vault-bridge'}` postMessage on button click; clicking the courthouse renders the correct detail text and links to `decision-hub.html`. Zero console errors from the app itself.
+
+**Files:** `town-hub.html`, `index.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
