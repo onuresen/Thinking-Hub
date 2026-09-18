@@ -133,6 +133,24 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 ## Shared UI primitives (already in theme.css — reuse, don't duplicate)
 `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`, `.ai-badge`
 
+## Priority 109 — Settings toggle: show/hide the AI Assistant `[group: settings]`
+The AI drawer sits at the bottom of the shell permanently. Onur's company blocks AI, so it was pure obstruction. Added a **Show AI Assistant** checkbox in ⚙ Settings → Integrations → AI Assistant.
+
+- `hub-utils.js` gains `HubUtils.aiVisible() / setAiVisible() / applyAiVisibility()`, stored as `hub-settings-v1.aiAssistantVisible` (default `true`; only an explicit `false` hides). Applied on load — `hub-utils.js` is in every page, so the shell *and* every tool honor it.
+- `theme.css`: `[data-ai-hidden="true"] .ai-surface:not(.ai-settings-group) { display:none !important }`.
+- `index.html`: the checkbox, `onAiVisibleToggle()` + `_syncAiVisibleToggle()`, called from `_refreshAiProviderUI()` **and** `switchSettingsTab('integrations')`.
+
+**Key decisions:**
+- **Decision:** a second root attribute (`data-ai-hidden`) rather than reusing `data-ai-enabled`. **Why:** that attribute is owned by `enterprise-config.js` and is the organization's hard gate; a user preference must never be able to write to it, or turning the drawer back on would look like re-enabling AI against policy. Two attributes, two meanings, policy always wins. **Confidence:** high.
+- **Decision:** exempt `.ai-settings-group` from the preference rule only, not from the policy rule. **Why:** the checkbox lives inside the AI settings group, which is itself `.ai-surface` — hiding it would strand the user with no way back. But when the *policy* disables AI the whole group should still vanish, since there is nothing to configure. **Confidence:** high.
+- **Decision:** reuse `hub-settings-v1`, no new storage key. **Why:** avoids touching the backup/sync key lists (the P81 drift bug class), and the preference surviving a restore is desirable. **Confidence:** high.
+
+Verified in a real browser: drawer hides/returns, preference persists across reload, reaches `focus-hub` in an iframe, the checkbox stays reachable when off, and a deployment policy of `aiEnabled:false` still hides everything including the checkbox. Two regression checks added to `tests/smoke.js`.
+
+**Files:** `hub-utils.js`, `theme.css`, `styles/index.css`, `index.html`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
 ## ⚠ AI feature marker convention (P86)
 **Every control that invokes an AI provider MUST carry the `.ai-badge` marker** — a small coral `✦ AI` pill (theme.css, uses `--accent2`) with provider-aware guidance. This is a standing convention so external processing or token/cost implications are never a surprise. Current AI surfaces all carry it: the shell AI drawer, Today Briefing, Journal Draft, and Focus Energy Insights. Any new AI control must add the badge and route through `HubAI`; Copilot handoff must preview before clipboard/navigation, while Anthropic direct must remain explicit and key-aware.
 
