@@ -436,6 +436,35 @@ function appFiles(ext) {
     lockedResult.clipboardCalls === 0 && lockedResult.navigationCalls === 0);
   await lockedCtx.close();
 
+  // ── User preference: "Show AI Assistant" (separate from the policy above) ──
+  // The trap this guards: the checkbox lives inside a .ai-surface group, so a
+  // careless rule would hide the only way to switch AI back on.
+  const prefCtx = await browser.newContext({ serviceWorkers: 'block' });
+  const prefPage = await prefCtx.newPage();
+  await prefPage.goto(`${BASE}/index.html`, { waitUntil: 'load', timeout: 20000 });
+  const prefOff = await prefPage.evaluate(() => {
+    HubUtils.setAiVisible(false);
+    return {
+      attr: document.documentElement.getAttribute('data-ai-hidden'),
+      drawerHidden: getComputedStyle(document.getElementById('ai-drawer')).display === 'none',
+      toggleReachable: !!document.getElementById('ai-visible-toggle')
+        && getComputedStyle(document.getElementById('ai-visible-toggle')).display !== 'none',
+      stored: JSON.parse(localStorage.getItem('hub-settings-v1') || '{}').aiAssistantVisible,
+    };
+  });
+  await prefPage.reload({ waitUntil: 'load', timeout: 20000 });
+  const prefPersisted = await prefPage.getAttribute('html', 'data-ai-hidden');
+  const prefOn = await prefPage.evaluate(() => {
+    HubUtils.setAiVisible(true);
+    return getComputedStyle(document.getElementById('ai-drawer')).display !== 'none';
+  });
+  check('AI visibility preference hides the drawer and persists',
+    prefOff.attr === 'true' && prefOff.drawerHidden === true && prefOff.stored === false
+    && prefPersisted === 'true' && prefOn === true);
+  check('AI visibility preference never hides its own checkbox',
+    prefOff.toggleReachable === true, 'otherwise AI cannot be switched back on');
+  await prefCtx.close();
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL SMOKE CHECKS PASSED' : `\n${failures} SMOKE CHECK(S) FAILED`);

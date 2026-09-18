@@ -88,5 +88,40 @@ const HubUtils = (() => {
     return (Date.now() - then) / 86400000;
   }
 
-  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince };
+  // ── AI Assistant visibility (user preference) ──────────────────────────────
+  // Distinct from the deployment policy in enterprise-config.js: that one decides
+  // whether AI may run at all, this one only decides whether its controls are in
+  // the way. Stored in hub-settings-v1 so it needs no new storage key, and applied
+  // here because hub-utils.js loads in every page — the shell and every tool.
+  const SETTINGS_KEY = 'hub-settings-v1';
+
+  function aiVisible() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      return s.aiAssistantVisible !== false;   // default on; only an explicit false hides it
+    } catch { return true; }
+  }
+
+  function applyAiVisibility() {
+    try {
+      document.documentElement.setAttribute('data-ai-hidden', aiVisible() ? 'false' : 'true');
+    } catch {}
+  }
+
+  function setAiVisible(on) {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}; } catch {}
+    s.aiAssistantVisible = !!on;
+    try {
+      if (typeof HubStorage !== 'undefined' && HubStorage.set) HubStorage.set(SETTINGS_KEY, s);
+      else localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    } catch {}
+    applyAiVisibility();
+    return !!on;
+  }
+
+  applyAiVisibility();
+
+  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince,
+           aiVisible, setAiVisible, applyAiVisibility };
 })();

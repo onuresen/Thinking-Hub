@@ -185,8 +185,17 @@
       <div class="settings-pane active" id="spane-integrations">
 
         <!-- AI Assistant -->
-        <div class="sfield-group ai-surface">
+        <div class="sfield-group ai-surface ai-settings-group">
           <div class="sfield-group-title">✦ AI Assistant <span class="badge" id="ai-provider-badge">Provider</span></div>
+
+          <label class="sfield-toggle" for="ai-visible-toggle">
+            <input type="checkbox" id="ai-visible-toggle" checked onchange="onAiVisibleToggle(this.checked)">
+            <span class="sfield-toggle-label">Show AI Assistant
+              <small id="ai-visible-hint">The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal Hub.</small>
+            </span>
+          </label>
+
+          <div id="ai-settings-body">
           <div class="sfield-row">
             <select id="ai-provider-select" aria-label="AI provider" onchange="onAiProviderChange(this.value)"></select>
           </div>
@@ -211,6 +220,7 @@
             <div class="sfield-status info" style="display:block">No key required · no Microsoft API connection</div>
             <div class="sfield-hint">Each AI action shows the exact prompt first. Confirming copies it and opens Microsoft 365 Copilot; Thinking Hub never pastes or submits it automatically.</div>
           </div>
+          </div><!-- /ai-settings-body -->
         </div>
 
         <!-- Obsidian -->
@@ -2627,6 +2637,9 @@
       document.getElementById('stab-' + tab).classList.add('active');
       document.getElementById('spane-' + tab).classList.add('active');
       if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); renderSnapshotList(); }
+      // Sync independently of HubAI: _refreshAiProviderUI returns early when the
+      // AI module is absent, and the checkbox has to work in that case too.
+      if (tab === 'integrations') _syncAiVisibleToggle();
     }
 
     // ── Local snapshots UI (P84 — hub-snapshots.js) ─────────────────────────────
@@ -2902,7 +2915,33 @@
         ? 'Previews and copies a prompt for Microsoft 365 Copilot; nothing is submitted automatically'
         : 'Uses your Anthropic API key · consumes tokens';
       document.querySelectorAll('.ai-badge').forEach(el => el.title = title);
+      _syncAiVisibleToggle();
       _updateAiDrawerHint();
+    }
+
+    // ── AI Assistant visibility (user preference, not the deployment policy) ──
+    // Policy decides whether AI may run; this only decides whether its controls
+    // sit on screen. Useful when AI is blocked and the drawer is just in the way.
+    function _syncAiVisibleToggle() {
+      const box = document.getElementById('ai-visible-toggle');
+      if (!box || typeof HubUtils === 'undefined') return;
+      const on = HubUtils.aiVisible();
+      box.checked = on;
+      const body = document.getElementById('ai-settings-body');
+      if (body) body.style.display = on ? '' : 'none';
+      const hint = document.getElementById('ai-visible-hint');
+      if (hint) hint.textContent = on
+        ? 'The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal Hub.'
+        : 'Hidden everywhere. Nothing is deleted — your provider and key settings are kept.';
+    }
+
+    function onAiVisibleToggle(on) {
+      if (typeof HubUtils === 'undefined') return;
+      HubUtils.setAiVisible(on);
+      _syncAiVisibleToggle();
+      if (!on && typeof _aiDrawerOpen !== 'undefined' && _aiDrawerOpen) toggleAiDrawer();
+      if (typeof buildTodayView === 'function') { try { buildTodayView(); } catch (e) {} }
+      showToast(on ? 'AI Assistant shown' : 'AI Assistant hidden — re-enable here any time');
     }
 
     function onAiProviderChange(provider) {
