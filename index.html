@@ -282,6 +282,7 @@
             <div id="storage-usage-bar" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width .3s"></div>
           </div>
           <div class="sfield-hint" id="last-backup-line" style="margin-top:6px">Last full backup: never</div>
+          <div class="sfield-hint" id="last-restore-line" style="margin-top:2px">Last restored: never</div>
         </div>
 
         <!-- Local snapshots (IndexedDB) + health check -->
@@ -1457,6 +1458,13 @@
     // The vault is where the real daily record gets written; the hub only knows
     // what was typed into it. This surfaces the difference.
 
+    // P4: a gap card built from last session's cached scan would look identical
+    // to one built from a scan that just ran — there's no way to tell how stale
+    // the count is. Don't show a gap count at all until THIS session has run its
+    // own scan at least once; the 'permission' prompt is exempt since it doesn't
+    // depend on scan freshness.
+    let _vaultBridgeScannedThisSession = false;
+
     function _vaultBridgeSummary() {
       if (typeof HubVaultBridge === 'undefined' || !HubVaultBridge.isSupported()) {
         return { show: false };
@@ -1466,6 +1474,7 @@
       // never nag someone who has not opted in.
       if (st.needsPermission) return { show: true, mode: 'permission', days: [] };
       if (!st.connected) return { show: false };
+      if (!_vaultBridgeScannedThisSession) return { show: false };
       const days = st.unrecordedDays || [];
       if (!days.length) return { show: false };
       return { show: true, mode: 'gap', days, lastScanAt: st.lastScanAt };
@@ -1507,6 +1516,11 @@
           <div class="stat-item-meta">${age}d ago</div>
         </div>`;
       }).join('');
+      // Always freshly scanned this session (see _vaultBridgeSummary) — say so,
+      // so the count is never mistaken for a stale leftover from last time.
+      const checkedWhen = summary.lastScanAt
+        ? new Date(summary.lastScanAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+        : 'just now';
 
       card.innerHTML = `
         <div class="stat-card-header">
@@ -1516,7 +1530,8 @@
         </div>
         <div class="stat-card-body">
           <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.5">
-            Your vault has notes on ${days.length} day${days.length !== 1 ? 's' : ''} the Hub has no record of.
+            Your vault has notes on ${days.length} day${days.length !== 1 ? 's' : ''} the Hub has no record of
+            <span style="color:var(--text3);opacity:.7">· checked ${checkedWhen}</span>.
           </div>
           ${rows}
         </div>
@@ -2834,13 +2849,23 @@
           : u.percent >= 70 ? 'var(--accent-super)' : 'var(--accent)';
       }
       const line = document.getElementById('last-backup-line');
+      const rec = HubStorage.get(LAST_BACKUP_KEY);
       if (line) {
-        const rec = HubStorage.get(LAST_BACKUP_KEY);
         if (rec && rec.at) {
           const days = Math.floor((Date.now() - new Date(rec.at).getTime()) / 86400000);
           line.textContent = `Last full backup: ${days === 0 ? 'today' : days + 'd ago'} (${rec.at.slice(0, 10)})`;
         } else {
           line.textContent = 'Last full backup: never — export one below';
+        }
+      }
+      const restoreLine = document.getElementById('last-restore-line');
+      if (restoreLine) {
+        if (rec && rec.restoredAt) {
+          const days = Math.floor((Date.now() - new Date(rec.restoredAt).getTime()) / 86400000);
+          const scope = rec.restoredScope ? ` — ${rec.restoredScope}` : '';
+          restoreLine.textContent = `Last restored: ${days === 0 ? 'today' : days + 'd ago'} (${rec.restoredAt.slice(0, 10)})${scope}`;
+        } else {
+          restoreLine.textContent = 'Last restored: never';
         }
       }
     }
@@ -2852,17 +2877,18 @@
     }, 2500);
 
     // Vault Bridge (P104): restore the stored vault handle and run the cheap
-    // filename-only scan. Deferred for the same reason as snapshots. If the
-    // scan finds anything new, refresh Today so the card appears without a
-    // manual reload.
+    // filename-only scan. Deferred for the same reason as snapshots. The gap
+    // card stays hidden (_vaultBridgeScannedThisSession) until this resolves,
+    // so a stale count from last session is never shown as if it were current —
+    // then always refresh Today once, even if the count didn't change, so the
+    // card can reveal its now-verified state.
     setTimeout(async () => {
       if (typeof HubVaultBridge === 'undefined' || !HubVaultBridge.isSupported()) return;
       try {
-        const before = (HubVaultBridge.getState().unrecordedDays || []).join(',');
         await HubVaultBridge.init();
-        const after = (HubVaultBridge.getState().unrecordedDays || []).join(',');
-        if (before !== after && document.getElementById('today-view')) buildTodayView();
       } catch (e) { console.warn('[VaultBridge] init:', e); }
+      _vaultBridgeScannedThisSession = true;
+      if (document.getElementById('today-view')) buildTodayView();
     }, 3000);
 
     // Gentle stale-backup nudge on load: only when there is real data (>100 KB)
@@ -3253,6 +3279,7 @@
 
           if (!confirm('This will OVERWRITE your current local data with the backup.\nAre you sure you want to proceed?')) return;
 
+          let restoreScope;
           if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
             // v2 format — restore each section to its correct storage key
             // Use HubStorage.set() so local MCP file subscribers fire
@@ -3268,10 +3295,12 @@
                 HubStorage.set(storageKey, val);
               }
             }
+            restoreScope = 'Full Backup';
           } else if (parsed.storageKey && parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data)) {
             // Single-tool export format — { storageKey: "project-hub-v1", data: { ... } }
             // Generated by Project Hub's own export button (not Thinking Hub's full backup)
             HubStorage.set(parsed.storageKey, parsed.data);
+            restoreScope = parsed.storageKey;
           } else {
             // v1 legacy format — flat { storageKey: jsonString } map
             for (const k in parsed) {
@@ -3279,7 +3308,14 @@
                 try { HubStorage.set(k, JSON.parse(parsed[k])); } catch { HubStorage.set(k, parsed[k]); }
               }
             }
+            restoreScope = 'legacy format';
           }
+
+          // P1: record when a restore actually happened — the single most repeated
+          // failure in this app's history was a reconciled backup being built but
+          // never restored, discovered only weeks later. This closes that gap.
+          const backupRec = HubStorage.get(LAST_BACKUP_KEY) || {};
+          HubStorage.set(LAST_BACKUP_KEY, { ...backupRec, restoredAt: new Date().toISOString(), restoredScope: restoreScope });
 
           showToast('Import successful — reloading…', 'success');
           setTimeout(() => location.reload(), 1000);
