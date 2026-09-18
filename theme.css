@@ -616,6 +616,12 @@ body {
    Hidden controls are defense-in-depth UX; HubAI also rejects every call. */
 [data-ai-enabled="false"] .ai-surface { display: none !important; }
 
+/* User preference: "Show AI Assistant" unchecked in Settings. Separate attribute
+   from the policy one above so the two never fight — policy is the hard gate, this
+   is only about getting the drawer out of the way. The Settings group that holds
+   the checkbox is exempt, or there would be no way back. */
+[data-ai-hidden="true"] .ai-surface:not(.ai-settings-group) { display: none !important; }
+
 /* ── Reduced motion (P87 D2) ──────────────────────────────────────────────
    Honor the OS "reduce motion" setting: near-instant animations/transitions,
    stop infinite loops (e.g. the load-bar), no smooth-scroll. theme.css loads

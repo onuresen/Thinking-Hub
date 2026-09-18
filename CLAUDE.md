@@ -133,6 +133,24 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 ## Shared UI primitives (already in theme.css — reuse, don't duplicate)
 `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.card`, `.input/.select/.textarea`, `.label`, `.empty-state`, `.ui-modal-overlay / .ui-modal`, `.ui-section-header / .ui-section-title / .ui-section-line`, `.ai-badge`
 
+## Priority 109 — Settings toggle: show/hide the AI Assistant `[group: settings]`
+The AI drawer sits at the bottom of the shell permanently. Onur's company blocks AI, so it was pure obstruction. Added a **Show AI Assistant** checkbox in ⚙ Settings → Integrations → AI Assistant.
+
+- `hub-utils.js` gains `HubUtils.aiVisible() / setAiVisible() / applyAiVisibility()`, stored as `hub-settings-v1.aiAssistantVisible` (default `true`; only an explicit `false` hides). Applied on load — `hub-utils.js` is in every page, so the shell *and* every tool honor it.
+- `theme.css`: `[data-ai-hidden="true"] .ai-surface:not(.ai-settings-group) { display:none !important }`.
+- `index.html`: the checkbox, `onAiVisibleToggle()` + `_syncAiVisibleToggle()`, called from `_refreshAiProviderUI()` **and** `switchSettingsTab('integrations')`.
+
+**Key decisions:**
+- **Decision:** a second root attribute (`data-ai-hidden`) rather than reusing `data-ai-enabled`. **Why:** that attribute is owned by `enterprise-config.js` and is the organization's hard gate; a user preference must never be able to write to it, or turning the drawer back on would look like re-enabling AI against policy. Two attributes, two meanings, policy always wins. **Confidence:** high.
+- **Decision:** exempt `.ai-settings-group` from the preference rule only, not from the policy rule. **Why:** the checkbox lives inside the AI settings group, which is itself `.ai-surface` — hiding it would strand the user with no way back. But when the *policy* disables AI the whole group should still vanish, since there is nothing to configure. **Confidence:** high.
+- **Decision:** reuse `hub-settings-v1`, no new storage key. **Why:** avoids touching the backup/sync key lists (the P81 drift bug class), and the preference surviving a restore is desirable. **Confidence:** high.
+
+Verified in a real browser: drawer hides/returns, preference persists across reload, reaches `focus-hub` in an iframe, the checkbox stays reachable when off, and a deployment policy of `aiEnabled:false` still hides everything including the checkbox. Two regression checks added to `tests/smoke.js`.
+
+**Files:** `hub-utils.js`, `theme.css`, `styles/index.css`, `index.html`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
 ## ⚠ AI feature marker convention (P86)
 **Every control that invokes an AI provider MUST carry the `.ai-badge` marker** — a small coral `✦ AI` pill (theme.css, uses `--accent2`) with provider-aware guidance. This is a standing convention so external processing or token/cost implications are never a surprise. Current AI surfaces all carry it: the shell AI drawer, Today Briefing, Journal Draft, and Focus Energy Insights. Any new AI control must add the badge and route through `HubAI`; Copilot handoff must preview before clipboard/navigation, while Anthropic direct must remain explicit and key-aware.
 
@@ -1929,6 +1947,46 @@ Two small usability gaps found from a real usage audit (esen-vault session), not
 **Verified** (Playwright, driving the real `handleImportFile` and a stubbed `HubVaultBridge`): restore line reads "never" before any import and "today · Full Backup" immediately after a real one; the gap card is absent before this session's scan completes, `HubVaultBridge.init()` fires exactly once on load, and the card appears with a "checked" note only after. Full smoke (30/30 pages) + flows suites green.
 
 **Files:** `index.html`, `CLAUDE.md`
+### ~~Priority 107 — Machi Hub: drop dead KMQT Board link + stale Time Journal label~~ ✓ Done `[group: bugfix]`
+User report: "Thinking Hub's Machi Hub is outdated. it still shows the obsolete tools such as KMQT etc." `town-hub.html`'s `HUB_PAGES` registry (a local label lookup for the "Hub Pages" lens — buildings lit by real `hub-activity-v1` log entries) still had a `'kmqt-board'` entry pointing at `kmqt-board.html`, a file deleted in P88. Any user with a historic KMQT activity-log entry got a building whose detail panel offered "Open this tool →" straight to a 404. Also fixed `focus-hub`'s stale label ("Focus Timer" — P100 renamed the tool to "Time Journal" in `index.html` but the Machi registry was never updated).
+
+- Removed the `kmqt-board` entry from `HUB_PAGES`. `hubPageEntities()`'s existing fallback (unmapped `appId` → title-cased generic label + `🛠` icon + no navigation link, since the link map checks `HUB_PAGES[m.appId]`) now handles any lingering historic KMQT activity data gracefully — the building still renders (data isn't hidden), but it no longer offers a dead link.
+- `'focus-hub'` label/icon updated to `['Time Journal', '◷', 'Tools & Focus']` to match `index.html`'s current APPS entry.
+
+**Key decisions:**
+- **Decision:** Remove the dead-file entry, don't just re-point it. **Why:** the P88 decision to leave this reference alone ("editing Machi risks the stamped-copy rule") doesn't actually apply — `HUB_PAGES` lives in `town-hub.html` itself (the host/adapter file), not in `machi-engine.js`/`machi-achievements.js` (the actual stamped copies from `Vibe_Coding/MachiHub`). That P88 reasoning was overbroad; this file was always safe to edit directly. **Confidence:** high.
+- ~~**Decision:** Rely on the existing generic-fallback path rather than special-casing "tool was deleted."~~ **Superseded same-day by the follow-up below** — a real screenshot showed the fallback still renders a visible "Kmqt Board" ghost building (title-cased from the appId), which is exactly the confusion the user was reporting, not a fix for it.
+
+**Follow-up (same day) — hide retired-tool buildings entirely, don't relabel them.** User sent a screenshot: Machi Hub still showed a "Kmqt Board" building (fallback-generated, 🛠 icon, "opened 20× · last 100d ago") plus five more retired tools rendered as normal-looking buildings on the street labels — `log-hub`, `review-hub`, `retro-hub`, `assumptions-hub`, `matrix-hub` were still full `HUB_PAGES` entries, and `blocked-depth` (never in the sidebar `APPS` list to begin with — only reachable as a tab inside Frameworks) was in there too. The P107 fallback fix above was wrong: falling back to a generic label still shows a building for a tool that either doesn't exist or isn't reachable from the sidebar — visually indistinguishable from a live one.
+
+- Removed all six stale `HUB_PAGES` entries (`log-hub`/`review-hub`/`retro-hub`/`assumptions-hub`/`matrix-hub`/`blocked-depth`), leaving only the 23 tools actually in `index.html`'s `APPS` array.
+- `hubPageEntities()` now filters `Object.keys(usage)` to `HUB_PAGES[appId]` **before** mapping, instead of falling back to a generic label for unmapped ids. A `hub-activity-v1` log entry for a retired tool no longer produces a building at all — old usage data is untouched (data safety), it's simply not rendered.
+
+**Key decisions:**
+- **Decision:** Hide retired-tool buildings entirely rather than show them with a generic/fallback label. **Why:** the fallback approach (first attempt, same day) still failed the actual test — a rendered building with an "Open this tool →" affordance reads as live regardless of label wording. The user's complaint was about buildings existing at all, not about their names. **Alternative rejected:** keep the generic fallback and just make the link visibly disabled — more code for a state (a ghost building for a dead tool) nobody wants to see either way. **Confidence:** high.
+- **Decision:** Treat `blocked-depth` the same as the five explicitly-retired tools, even though it was never formally "retired" — it simply never had a top-level `APPS` entry (only reachable as a Frameworks tab). **Why:** the filter's correctness test is "is this id in the current sidebar," not "was this tool ever deprecated" — `HUB_PAGES` should mirror `APPS` exactly, and `blocked-depth` was never in `APPS`. **Confidence:** high.
+- **Decision:** Filter at read time (`hubPageEntities()`), not by pruning `hub-activity-v1` itself. **Why:** matches this repo's standing data-safety rule — never destroy historical usage data on a tool's retirement; only its *display* changes. **Confidence:** high.
+
+**Files:** `town-hub.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 108 — Machi Hub: two civic landmarks (Vault Gap Signpost + Calibration Courthouse)~~ ✓ Done `[group: machi-hub]`
+Follow-up to P107's cleanup — user asked what to add now that the town shows only real, live tools. Picked two ideas grounded in the 2026-09-03 esen-vault usage audit (same session): both read data the Hub already has and reflect a gap that's currently invisible in the town.
+
+- **Vault Gap Signpost** — a new "Civic" district building showing how many real vault work-days haven't reached the Hub (Vault Bridge, P104). Reads `hub-vault-bridge-v1.unrecordedDays` directly — `dismissDay()` already removes a day from that array in storage, so the raw count is exactly the still-open gap, no need to load `hub-vault-bridge.js` in `town-hub.html` at all. Only appears when the gap is > 0. Clicking it doesn't navigate the iframe (there's no standalone Vault Bridge page — it's a modal in the shell); it posts `{type:'hub-open-vault-bridge'}` to the parent, which `index.html` now listens for and calls the existing `openVaultReview()`.
+- **Calibration Courthouse** — a second Civic building that only appears once Decision Hub has real decisions, and only rises (`tier`) as real outcomes get scored. Uses the exact same criteria as Decision Hub's own `⚖ Calibration` modal (`outcome.result` set and not `'tooearly'`), so the two never disagree. `shipped` (flag on the roof) flips true the moment anything is scored; `staleness`/`activity` track the scored ratio.
+- Both wired into `showDetail()`'s `m.lens` branches + the `links` map (Calibration → `decision-hub.html`, same pattern as every other lens).
+
+**Key decisions:**
+- **Decision:** Read `hub-vault-bridge-v1` raw via `HubStorage.get()` instead of loading `hub-vault-bridge.js` in `town-hub.html`. **Why:** the module's `getState()`/`status()` depend on in-memory handle state populated by `init()`, which never runs outside `index.html`; the stored `unrecordedDays` array is already the right number (dismissed days are removed from it at dismiss time, not filtered at render time) so a raw read is both simpler and correct. Avoids a new script-load-order dependency for one field. **Confidence:** high.
+- **Decision:** Vault Gap Signpost only appears when `gapDays > 0`; Calibration Courthouse only appears when `decision-hub-v1` has at least one decision. **Why:** matches this file's "unknown ≠ stale/neglected" convention (P90) — no vault connected or no decisions logged yet is a different state from "caught up," and showing an empty-but-present landmark in either case would misreport which one it is. **Confidence:** high.
+- **Decision:** Didn't add a custom `incident` for either building (no 'fire' on an overdue calibration, etc.), even though the engine supports it. **Why:** the only two building incidents the engine defines (`fire`/`crane`) carry hardcoded label text ("Gone cold — untouched 60+ days") that doesn't accurately describe either landmark's actual condition; the `d-status`/`d-note` lines already say the real numbers, so a mismatched incident label would be actively misleading rather than informative. **Confidence:** high.
+- **Decision:** Vault Gap uses a postMessage handoff to the shell instead of a normal `<a href>` link (every other lens's pattern). **Why:** Vault Bridge has no standalone page — it's a modal inside `index.html` — so a relative-href link (which navigates the *iframe*, per every other lens's existing, slightly-imperfect pattern) can't reach it at all. This is a new, small, justified exception, not a rewrite of the existing link convention. **Confidence:** high.
+
+**Verified** (Playwright against the pre-installed Chromium, seeded `hub-vault-bridge-v1` + `decision-hub-v1`): both entities appear in `_machiTown.entities` with correct math (2 of 6 decisions scored → tier 1, `shipped:true`, `activity:0.33`; 5-day gap → `staleness:0.36`); clicking the signpost renders the correct detail text and fires the exact `{type:'hub-open-vault-bridge'}` postMessage on button click; clicking the courthouse renders the correct detail text and links to `decision-hub.html`. Zero console errors from the app itself.
+
+**Files:** `town-hub.html`, `index.html`, `CLAUDE.md`
 
 ---
 

@@ -1162,6 +1162,35 @@
       border-color: var(--accent);
     }
 
+    /* Show/hide toggle inside a settings group (AI Assistant visibility). */
+    .sfield-toggle {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      user-select: none;
+    }
+    .sfield-toggle input {
+      margin: 2px 0 0;
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .sfield-toggle-label {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .sfield-toggle-label small {
+      display: block;
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+
     .sfield-hint {
       font-size: 11px;
       color: var(--text3);

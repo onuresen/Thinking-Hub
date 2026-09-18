@@ -146,7 +146,8 @@
       as real incidents: a dead tool catches <strong>fire</strong>, a blocked project <strong>crashes</strong>, an
       overdue one sits with <strong>hazards on</strong>, heavy active work gets a <strong>crane</strong>, and a
       risk you're actively mitigating sends a <strong>response vehicle</strong>. Enough trouble at once and the
-      sky turns to storm. Click anything.
+      sky turns to storm. Two <strong>civic landmarks</strong> show what's true elsewhere but not here yet — a
+      signpost for unrecorded vault days, a courthouse that rises as Decision Hub outcomes get scored. Click anything.
     </p>
 
     <div class="main-tab-bar" id="main-tab-bar">
@@ -282,13 +283,15 @@
       'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
       'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'argument-hub': ['Argument Hub', '△', 'Strategy & Decisions'],
       'reflection-hub': ['Reflection Board', '⟲', 'Reflection & Methods'], 'frameworks-hub': ['Frameworks', '▾', 'Reflection & Methods'],
-      'focus-hub': ['Focus Timer', '◉', 'Tools & Focus'], 'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
+      'focus-hub': ['Time Journal', '◷', 'Tools & Focus'], 'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
       'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
-      'kmqt-board': ['KMQT Board', '⊡', 'Strategy & Decisions'], 'log-hub': ['Log Hub', '≡', 'Daily Work'],
-      'review-hub': ['Review Hub', '☑', 'Reflection & Methods'], 'retro-hub': ['Retro Hub', '⟲', 'Reflection & Methods'],
-      'assumptions-hub': ['Assumptions', '?', 'Strategy & Decisions'], 'matrix-hub': ['Matrix Hub', '▤', 'Strategy & Decisions'],
-      'blocked-depth': ['Blocked Depth', '▽', 'Reflection & Methods'],
     };
+    // Retired tools (kmqt-board, scrum-hub, log-hub, review-hub, retro-hub,
+    // assumptions-hub, matrix-hub, blocked-depth, war-room) are deliberately
+    // absent above. Old hub-activity-v1 log entries for them are left
+    // untouched (data safety), but hubPageEntities() below only renders a
+    // building for ids present in HUB_PAGES — no ghost buildings for tools
+    // that no longer exist or aren't reachable from the sidebar.
     const GROUP_COLORS = {
       'Daily Work': '#5b8cff', 'People & Network': '#ff9f5b', 'Learning & Ideas': '#5bd67a',
       'Strategy & Decisions': '#b28ae8', 'Reflection & Methods': '#8a8f9c', 'Tools & Focus': '#ffd24d',
@@ -308,11 +311,10 @@
 
     function hubPageEntities() {
       const usage = hubUsage();
-      const ids = Object.keys(usage);
+      const ids = Object.keys(usage).filter((appId) => HUB_PAGES[appId]);
       if (!ids.length) return [];
       return ids.map((appId) => {
-        const [label, icon, group] = HUB_PAGES[appId] ||
-          [appId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), '🛠', 'Tools & Focus'];
+        const [label, icon, group] = HUB_PAGES[appId];
         const u = usage[appId];
         const days = daysSince(u.last);
         const activity = activityFrom(days);
@@ -414,6 +416,61 @@
             probability: r.probability, impact: r.impact,
           },
         }));
+    }
+
+    // ── Lens 7: Civic landmarks ──────────────────────────────────────────────
+    // Two buildings about cross-source truth, not tool usage. Both read data
+    // Thinking Hub already has; neither is decorative.
+    function civicEntities() {
+      const out = [];
+
+      // Vault Gap Signpost — how many real vault work-days haven't reached the
+      // Hub yet (Vault Bridge, P104). Read straight from hub-vault-bridge-v1
+      // rather than loading hub-vault-bridge.js here — dismissDay() already
+      // removes a day from unrecordedDays in storage, so the raw list is the
+      // same "still-open gap" the Today card shows. Only appears when there's
+      // a real gap; an empty town shouldn't imply "no gap" vs "not connected".
+      const vbState = HubStorage.get('hub-vault-bridge-v1') || {};
+      const gapDays = (vbState.unrecordedDays || []).length;
+      if (gapDays > 0) {
+        out.push({
+          id: 'civic-vault-gap',
+          name: 'Vault Gap Signpost',
+          kind: 'building',
+          district: 'Civic',
+          color: '#8a8f9c',
+          tier: 1,
+          activity: 0,
+          staleness: Math.min(1, gapDays / 14),
+          meta: { lens: 'vault-gap', gapDays },
+        });
+      }
+
+      // Calibration Courthouse — rises only as real Decision Hub outcomes get
+      // scored (same criteria as Decision Hub's own ⚖ Calibration modal:
+      // outcome.result set and not 'tooearly'). Empty foundation until then.
+      const rawDecs = HubStorage.get('decision-hub-v1');
+      const decs = Array.isArray(rawDecs) ? rawDecs : [];
+      if (decs.length) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const scored = decs.filter((d) => d && d.outcome && d.outcome.result && d.outcome.result !== 'tooearly');
+        const dueUnscored = decs.filter((d) => d && d.revisitDate && d.revisitDate <= todayStr && !d.outcome);
+        const ratio = scored.length / decs.length;
+        out.push({
+          id: 'civic-calibration',
+          name: 'Calibration Courthouse',
+          kind: 'building',
+          district: 'Civic',
+          color: '#b28ae8',
+          tier: 1 + Math.min(3, Math.floor(scored.length / 5)),
+          activity: ratio,
+          staleness: Math.max(0, 1 - ratio),
+          shipped: scored.length > 0,
+          meta: { lens: 'calibration', scored: scored.length, dueUnscored: dueUnscored.length, total: decs.length },
+        });
+      }
+
+      return out;
     }
 
     // Weather = how much of the visible city is in trouble right now.
@@ -560,6 +617,7 @@
       { id: 'people', label: '🚶 People', build: peopleEntities },
       { id: 'responders', label: '🚑 Risk Response', build: responderEntities },
       { id: 'sky', label: '🎈 Achievements', build: skyEntities },
+      { id: 'civic', label: '🏛 Civic', build: civicEntities },
     ];
     const lensOn = Object.fromEntries(LENSES.map((l) => [l.id, true]));
 
@@ -836,6 +894,15 @@
         line(detail, 'd-status', ['🚑 responding', m.owner ? `owner: ${m.owner}` : null,
           (m.probability && m.impact) ? `risk score ${m.probability * m.impact}` : null].filter(Boolean).join(' · '));
         line(detail, 'd-note', m.mitigation || 'Actively being mitigated — no mitigation notes yet.');
+      } else if (m.lens === 'vault-gap') {
+        line(detail, 'd-status', `${m.gapDays} vault day${m.gapDays === 1 ? '' : 's'} not yet in the Hub`);
+        line(detail, 'd-note', 'Real work happened in the vault and has not reached Thinking Hub yet. Open Vault Bridge to review and accept it.');
+      } else if (m.lens === 'calibration') {
+        line(detail, 'd-status', [`${m.scored} of ${m.total} decisions scored`,
+          m.dueUnscored ? `${m.dueUnscored} due now` : null].filter(Boolean).join(' · '));
+        line(detail, 'd-note', m.scored
+          ? 'The courthouse rises as real outcomes get scored.'
+          : 'Empty so far — no decision has a scored outcome yet. Score one in Decision Hub to start building.');
       }
 
       if (e.kind === 'building' || e.kind === 'vehicle') incidentLine(detail, e.incident);
@@ -859,6 +926,16 @@
         btn.textContent = '✓ Used it now';
         btn.addEventListener('click', () => markUsedNow(m.toolId));
         actions.appendChild(btn);
+      } else if (m.lens === 'vault-gap') {
+        // No standalone page for this — Vault Bridge is a modal in the shell,
+        // so ask the parent to open it rather than navigating this iframe.
+        const btn = document.createElement('button');
+        btn.className = 'd-use';
+        btn.textContent = 'Open Vault Bridge →';
+        btn.addEventListener('click', () => {
+          parent.postMessage({ type: 'hub-open-vault-bridge' }, window.location.origin);
+        });
+        actions.appendChild(btn);
       }
       const links = {
         'portfolio': ['tool-portfolio.html', 'Open in Tool Portfolio →'],
@@ -867,6 +944,7 @@
         'person': ['people-hub.html', 'Open in People Hub →'],
         'sky': ['achievements-hub.html', 'Open Profile →'],
         'responder': ['risk-hub.html', 'Open in Risk Register →'],
+        'calibration': ['decision-hub.html', 'Open in Decision Hub →'],
       };
       const [href, label] = links[m.lens] || [];
       if (href) {
