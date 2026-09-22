@@ -1470,7 +1470,8 @@
 
       // Tool Portfolio → linked projects
       try {
-        const tp = JSON.parse(localStorage.getItem('tool-portfolio-v1') || '[]');
+        const tpRaw = JSON.parse(localStorage.getItem('tool-portfolio-v1') || '[]');
+        const tp = Array.isArray(tpRaw) ? tpRaw : [];
         tp.forEach(t => {
           const tId = addNode('tool-portfolio', t.id, t.name || 'Tool');
           (t.projectIds || []).forEach(projId => {
@@ -2522,7 +2523,8 @@
           }
         }
         if (tool === 'decision-hub') {
-          const data = HubStorage.get('decision-hub-v1') || [];
+          const raw = HubStorage.get('decision-hub-v1');
+          const data = Array.isArray(raw) ? raw : [];
           const d = data.find(d => d.id === itemId);
           if (d) return [
             { k: 'Type', v: d.type || '—' },
@@ -2546,7 +2548,8 @@
           ];
         }
         if (tool === 'tool-portfolio') {
-          const data = HubStorage.get('tool-portfolio-v1') || [];
+          const raw = HubStorage.get('tool-portfolio-v1');
+          const data = Array.isArray(raw) ? raw : [];
           const t = data.find(t => t.id === itemId);
           if (t) return [
             { k: 'Ring', v: t.ring || '—' },
