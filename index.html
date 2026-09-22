@@ -2823,7 +2823,8 @@
       if (!ok) return;
       try {
         await HubSnapshots.take('pre-repair');
-        const links = (HubStorage.get('hub-links-v1') || []).filter(l => !_healthDanglingIds.includes(l.id));
+        const danglingSet = new Set(_healthDanglingIds);
+        const links = (HubStorage.get('hub-links-v1') || []).filter(l => !danglingSet.has(l.id));
         HubStorage.set('hub-links-v1', links);
         _healthDanglingIds = [];
         showToast('Dangling links removed (snapshot saved first)', 'success');
