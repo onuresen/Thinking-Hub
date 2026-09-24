@@ -986,6 +986,9 @@
     showToast(`Imported ${imported} items from Retro Board`);
   }
 
+  // kmqt_current_v2 is orphaned data from the deleted KMQT Board tool (P88) —
+  // this is the one sanctioned migration path for it. Do not remove this
+  // read without also deciding what happens to that leftover data.
   function importFromKmqtBoard() {
     const d = HubStorage.get('kmqt_current_v2');
     if (!d || !d.columns) { showToast('No KMQT Board data found'); return; }

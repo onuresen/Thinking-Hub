@@ -1358,7 +1358,7 @@
 
     // ── Auto-node loader ──────────────────────────────────────
 
-    function loadAutoNodes(isDark) {
+    function loadAutoNodes(isDark, ph) {
       const TC = isDark ? TOOL_COLORS_DARK : TOOL_COLORS_LIGHT;
       const fontColor = isDark ? '#e8e8f0' : '#1a1a2e';
       const autoEdgeColor = isDark ? 'rgba(255,255,255,0.20)' : 'rgba(0,0,0,0.25)';
@@ -1419,7 +1419,6 @@
 
       // Projects (parent nodes — always load so edges can reference them)
       try {
-        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
         (ph.projects || []).forEach(p => addNode('project-hub', p.id, p.name));
       } catch { }
 
@@ -1470,7 +1469,8 @@
 
       // Tool Portfolio → linked projects
       try {
-        const tp = JSON.parse(localStorage.getItem('tool-portfolio-v1') || '[]');
+        const tpRaw = JSON.parse(localStorage.getItem('tool-portfolio-v1') || '[]');
+        const tp = Array.isArray(tpRaw) ? tpRaw : [];
         tp.forEach(t => {
           const tId = addNode('tool-portfolio', t.id, t.name || 'Tool');
           (t.projectIds || []).forEach(projId => {
@@ -1516,8 +1516,13 @@
       const accentColor = _gcss.getPropertyValue('--accent').trim() || '#b8f033';
       const edgeHover = _gcss.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.45)';
 
+      // project-hub-v1 is read once per rebuild and shared with loadAutoNodes
+      // (both used to parse it independently on every call).
+      let ph = {};
+      try { ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}'); } catch { }
+
       // Seed with auto-generated nodes + dashed edges
-      const auto = autoLinksEnabled ? loadAutoNodes(isDark) : { nodes: [], edges: [] };
+      const auto = autoLinksEnabled ? loadAutoNodes(isDark, ph) : { nodes: [], edges: [] };
       nodesMap = new Map();
       auto.nodes.forEach(n => nodesMap.set(n.id, n));
       const edges = [...auto.edges];
@@ -1529,7 +1534,6 @@
       // Linked tasks get a dashed "hosted by" edge to their parent project node
       const taskProjectMap = new Map();
       try {
-        const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
         (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => taskProjectMap.set(t.id, p.id)));
       } catch { }
       const taskHostEdgeAdded = new Set();
@@ -2522,7 +2526,8 @@
           }
         }
         if (tool === 'decision-hub') {
-          const data = HubStorage.get('decision-hub-v1') || [];
+          const raw = HubStorage.get('decision-hub-v1');
+          const data = Array.isArray(raw) ? raw : [];
           const d = data.find(d => d.id === itemId);
           if (d) return [
             { k: 'Type', v: d.type || '—' },
@@ -2546,7 +2551,8 @@
           ];
         }
         if (tool === 'tool-portfolio') {
-          const data = HubStorage.get('tool-portfolio-v1') || [];
+          const raw = HubStorage.get('tool-portfolio-v1');
+          const data = Array.isArray(raw) ? raw : [];
           const t = data.find(t => t.id === itemId);
           if (t) return [
             { k: 'Ring', v: t.ring || '—' },

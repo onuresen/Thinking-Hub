@@ -471,7 +471,8 @@
   function buildCtx() {
     const activity  = readActivity();
     const log       = activity.log;
-    const ideas     = HubStorage.get('ideaswipe_history_v6') || [];
+    const _ideasRaw = HubStorage.get('ideaswipe_history_v6');
+    const ideas     = Array.isArray(_ideasRaw) ? _ideasRaw : [];
     const _dl       = HubStorage.get('decision-hub-v1') || [];
     const decisions = Array.isArray(_dl) ? _dl : (_dl.decisions || _dl.entries || []);
     const projects  = (HubStorage.get('project-hub-v1') || {}).projects || [];

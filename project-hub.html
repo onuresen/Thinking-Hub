@@ -1014,7 +1014,8 @@
       (risksData.risks || []).forEach(r => {
         if (r && r.projectId) risksMap[r.projectId] = (risksMap[r.projectId] || 0) + 1;
       });
-      const toolsData = HubStorage.get('tool-portfolio-v1') || [];
+      const toolsDataRaw = HubStorage.get('tool-portfolio-v1');
+      const toolsData = Array.isArray(toolsDataRaw) ? toolsDataRaw : [];
       const toolsMap = {};
       toolsData.forEach(t => {
         (t.projectIds || []).forEach(pid => {

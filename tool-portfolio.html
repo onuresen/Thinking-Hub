@@ -1470,7 +1470,8 @@
             const msg = `Log this radar ring change as a decision?\n\n"${t.name}": ${ringLabels[oldRing]} → ${ringLabels[newRing]}`;
             if (!confirm(msg)) return;
 
-            const decisions = HubStorage.get('decision-hub-v1') || [];
+            const decisions = HubStorage.get('decision-hub-v1');
+            if (!Array.isArray(decisions)) return;
             const d = {
                 id: 'dh-' + Date.now().toString(36),
                 title: `Promote ${t.name} to "${ringLabels[newRing]}" on Technology Radar`,

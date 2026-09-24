@@ -244,7 +244,8 @@
     const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
 
     function portfolioEntities() {
-      const tools = HubStorage.get('tool-portfolio-v1') || [];
+      const toolsRaw = HubStorage.get('tool-portfolio-v1');
+      const tools = Array.isArray(toolsRaw) ? toolsRaw : [];
       return tools.map((t) => {
         const days = daysSince(t.lastUsedAt);
         const activity = activityFrom(days);
@@ -823,7 +824,8 @@
     }
 
     function markUsedNow(toolId) {
-      const tools = HubStorage.get('tool-portfolio-v1') || [];
+      const tools = HubStorage.get('tool-portfolio-v1');
+      if (!Array.isArray(tools)) return;
       const t = tools.find((x) => x.id === toolId);
       if (!t) return;
       t.lastUsedAt = new Date().toISOString();

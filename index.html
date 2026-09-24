@@ -2823,7 +2823,8 @@
       if (!ok) return;
       try {
         await HubSnapshots.take('pre-repair');
-        const links = (HubStorage.get('hub-links-v1') || []).filter(l => !_healthDanglingIds.includes(l.id));
+        const danglingSet = new Set(_healthDanglingIds);
+        const links = (HubStorage.get('hub-links-v1') || []).filter(l => !danglingSet.has(l.id));
         HubStorage.set('hub-links-v1', links);
         _healthDanglingIds = [];
         showToast('Dangling links removed (snapshot saved first)', 'success');
@@ -3895,7 +3896,7 @@
         if (action.type === 'create_schedule_event') {
           const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{"items":[]}');
           raw.items = raw.items || [];
-          const start = action.start || new Date().toISOString().split('T')[0];
+          const start = action.start || HubUtils.todayLocal();
           raw.items.push({
             id: 'sch-' + Date.now(), title: action.title,
             type: action.eventType || 'event', start, end: action.end || start,
@@ -3914,7 +3915,7 @@
           // fields on next open, so recurring/occurrenceDates are NOT set here.
           raw.meetings.unshift({
             id: 'mt-' + Date.now(), title: action.title,
-            date: action.date || new Date().toISOString().split('T')[0],
+            date: action.date || HubUtils.todayLocal(),
             time: action.time || '', durationMins: 30,
             type: action.meetingType || 'custom', desiredOutcome: '',
             attendeesList: [], attendees: '',
@@ -4050,7 +4051,7 @@
           (raw.meetings = raw.meetings || []).push({
             id: 'mtg-' + Date.now(),
             title: r.title || 'New Meeting',
-            date: r.dueDate || new Date().toISOString().split('T')[0],
+            date: r.dueDate || HubUtils.todayLocal(),
             notes: r.description || '',
             projectId: r.projectId || null,
             actionItems: []

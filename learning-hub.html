@@ -980,6 +980,7 @@
     renderDetail();
     // Navigate here from Cmd+K or Graph Hub
     window.addEventListener('message', e => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'hub-highlight' && e.data.id) {
         const it = data.items.find(x => x.id === e.data.id);
         if (it) { activeId = it.id; renderList(); renderDetail(); }

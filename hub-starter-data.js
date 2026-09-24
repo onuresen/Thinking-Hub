@@ -45,11 +45,14 @@ window.HubStarter = (() => {
   };
 
   const NOW = new Date().toISOString();
-  // Dates relative to today for realism
+  // Dates relative to today for realism (local calendar day, not UTC).
   function daysFromNow(n) {
     const d = new Date();
     d.setDate(d.getDate() + n);
-    return d.toISOString().split('T')[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
   function seedProjectHub() {
@@ -383,7 +386,7 @@ window.HubStarter = (() => {
   }
 
   function seedLogHub() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = (typeof HubUtils !== 'undefined' && HubUtils.todayLocal) ? HubUtils.todayLocal() : daysFromNow(0);
     const yesterday = daysFromNow(-1);
     const data = {
       entries: {

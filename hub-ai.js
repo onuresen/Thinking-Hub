@@ -271,8 +271,15 @@ const HubAI = (() => {
 
   // ── Context ───────────────────────────────────────────────────────────────────
 
+  // Local (not UTC) "today" — falls back inline if hub-utils.js isn't loaded.
+  function _todayLocal() {
+    if (typeof HubUtils !== 'undefined' && HubUtils.todayLocal) return HubUtils.todayLocal();
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function _getContext() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = _todayLocal();
     let projects = [], members = [];
     try {
       const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
@@ -283,7 +290,7 @@ const HubAI = (() => {
   }
 
   function _getRichContext() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = _todayLocal();
     const lines = [`Today: ${today}`];
     const items = [];
 
