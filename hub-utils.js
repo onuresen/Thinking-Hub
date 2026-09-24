@@ -44,6 +44,17 @@ const HubUtils = (() => {
   //   archivedAt — set when a record is archived, cleared when un-archived
   const nowISO = () => new Date().toISOString();
 
+  // Local (not UTC) "today" as YYYY-MM-DD. toISOString() is always UTC, which
+  // silently reports yesterday's date for ~9 hours a day for a JST user —
+  // use this wherever "today" means "the calendar day where I am right now".
+  function todayLocal() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   // Call on a brand-new record before pushing it into storage.
   function stampCreate(o) {
     if (o && !o.createdAt) o.createdAt = nowISO();
@@ -122,6 +133,6 @@ const HubUtils = (() => {
 
   applyAiVisibility();
 
-  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince,
+  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince, todayLocal,
            aiVisible, setAiVisible, applyAiVisibility };
 })();
