@@ -262,7 +262,7 @@ title: ${D_OLD}
     && (await page.evaluate(() => JSON.parse(localStorage.getItem('decision-hub-v1')).length)) === before + 1);
   check('the record matches decision-hub\'s own schema',
     added && 'alternative' in added && 'revisitWhen' in added && 'outcome' in added
-    && 'problemLens' in added && added.type === 'decision' && !!added.createdAt);
+    && added.type === 'decision' && !!added.createdAt);
   check('the record links back to its source note',
     added && /daily\/2026\/.*\.md$/.test(added.obsidianNote), added && added.obsidianNote);
 

@@ -416,7 +416,7 @@
     }
 
     function saveState() {
-      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, kanbanWip: state.kanbanWip, concepts: state.concepts, groupOrder: state.groupOrder });
+      HubStorage.set(STORAGE_KEY, { members: state.members, projects: state.projects, concepts: state.concepts, groupOrder: state.groupOrder });
     }
 
     // Stamp a project's last-activity time (drives the "Recent" overview sort).
@@ -437,12 +437,6 @@
         if (t.completedAt) { const ts = new Date(t.completedAt).getTime(); if (ts > latest) latest = ts; }
       });
       return latest || 0;
-    }
-
-    function setKanbanWip(colId, val) {
-      if (!state.kanbanWip) state.kanbanWip = {};
-      state.kanbanWip[colId] = Math.max(0, isNaN(val) ? 0 : val);
-      saveState(); renderContent();
     }
 
     // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -1359,15 +1353,11 @@
         const colTasks = allTasks.filter(t => (t.status || (t.done ? 'done' : 'todo')) === col.id);
         const colEl = document.createElement('div');
         colEl.className = 'kanban-col';
-        const wip = (state.kanbanWip || {})[col.id] || 0;
-        const overWip = wip > 0 && colTasks.length > wip;
-
         colEl.innerHTML = `
       <div class="kanban-col-header">
         <div class="kanban-col-dot" style="background:${col.color}"></div>
         <div class="kanban-col-title">${col.label}</div>
-        <div class="kanban-col-count${overWip ? ' wip-over' : ''}" title="${wip > 0 ? 'WIP limit: '+wip : 'No WIP limit'}">${colTasks.length}${wip > 0 ? '/'+wip : ''}</div>
-        <input class="kanban-wip-input" type="number" min="0" max="99" value="${wip||''}" placeholder="∞" title="WIP limit (0 = no limit, Kanban principle)" onclick="event.stopPropagation()" onchange="setKanbanWip('${col.id}',+this.value)" />
+        <div class="kanban-col-count">${colTasks.length}</div>
       </div>
     `;
 
@@ -1475,15 +1465,6 @@
         : '';
       const blockedNote = (task.blockedReason && (task.status === 'blocked' || task.status === 'onhold'))
         ? `<div class="task-blocked-reason">↳ ${task.blockedReason.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>` : '';
-      const checklist = task.checklist || [];
-      const checklistHTML = checklist.length ? `
-        <div class="task-checklist">
-          ${checklist.map(c => `
-            <div class="task-checklist-item ${c.done ? 'done' : ''}" onclick="event.stopPropagation();toggleChecklistItem('${task.id}','${task.projectId || ''}','${c.id}')">
-              <span class="task-checklist-check">${c.done ? '✓' : '☐'}</span>
-              <span>${(c.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
-            </div>`).join('')}
-        </div>` : '';
       return `
     <div class="task-item" draggable="true" data-drag-id="${task.id}" data-drag-group="${task.done ? 'done' : 'open'}" data-task-id="${task.id}" data-project-id="${task.projectId || ''}">
       <span class="ph-drag-handle">⠿</span>
@@ -1504,7 +1485,6 @@
           ${obsidianBadge}
         </div>
         ${blockedNote}
-        ${checklistHTML}
       </div>
       <div class="task-item-actions">
         <button class="hl-btn" title="Link to tool" onclick="event.stopPropagation();HubLinks.openModal('project-hub','${task.id}','${safeTitle}')">🔗</button>
@@ -1658,19 +1638,6 @@
           return;
         }
       }
-      renderContent();
-      if (state.selectedProject) renderPanel(state.selectedProject);
-    }
-
-    function toggleChecklistItem(taskId, projectId, itemId) {
-      const task = findTask(taskId, projectId);
-      if (!task || !task.checklist) return;
-      const item = task.checklist.find(c => c.id === itemId);
-      if (!item) return;
-      item.done = !item.done;
-      HubUtils.stampUpdate(task);
-      touchProjectOfTask(taskId, projectId);
-      saveState();
       renderContent();
       if (state.selectedProject) renderPanel(state.selectedProject);
     }
