@@ -229,6 +229,14 @@ title: ${D_OLD}
     inline && inline.context);
 
   // ── Today card ────────────────────────────────────────────────────────────
+  // The card is deliberately gated on the page's OWN deferred boot scan
+  // (_vaultBridgeScannedThisSession, set ~3s after load — see index.html),
+  // not on the connect()/scanDays() this test already drove directly above.
+  // That gate exists so a stale cached count is never shown as if it were
+  // current (P107). Wait for the real boot scan to finish before asserting,
+  // rather than calling buildTodayView() the instant this test's own
+  // (separate) connect() call resolves.
+  await page.waitForFunction(() => _vaultBridgeScannedThisSession === true, { timeout: 8000 });
   await page.evaluate(() => buildTodayView());
   const cardText = await page.evaluate(() => {
     const c = [...document.querySelectorAll('#today-view .stat-card')]
