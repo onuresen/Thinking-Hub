@@ -3638,7 +3638,7 @@
         update_task_status: '✅', update_task_priority: '⬆', update_task_due: '📅', assign_task: '👤',
         create_project: '◈', create_task: '📋', create_milestone: '◆',
         create_risk: '⚠', create_decision: '⊕', create_goal: '◎',
-        create_schedule_event: '▦', add_checklist_item: '☐',
+        create_schedule_event: '▦',
         create_meeting: '▣', create_assumption: '◇', create_learning: '📖'
       };
       const actionLabels = {
@@ -3648,7 +3648,6 @@
         create_project: 'New project', create_task: 'New task', create_milestone: 'New milestone',
         create_risk: 'New risk', create_decision: 'New decision', create_goal: 'New goal',
         create_schedule_event: 'Schedule event',
-        add_checklist_item: 'Add checklist item',
         create_meeting: 'New meeting', create_assumption: 'New assumption',
         create_learning: 'New learning item'
       };
@@ -3675,8 +3674,6 @@
           desc = `"${HubUtils.esc(a.name)}" (${a.status || 'planning'})`;
         } else if (a.type === 'create_task') {
           desc = `"${HubUtils.esc(a.title)}" in ${HubUtils.esc(a.projectName || '?')}`;
-        } else if (a.type === 'add_checklist_item') {
-          desc = `"${HubUtils.esc(a.text)}" → checklist on "${HubUtils.esc(a.taskTitle || '?')}"`;
         } else if (a.type === 'create_milestone') {
           desc = `"${HubUtils.esc(a.name)}" in ${HubUtils.esc(a.projectName || '?')}${a.date ? ' · ' + a.date : ''}`;
         } else if (a.type === 'create_risk') {
@@ -3832,18 +3829,6 @@
             priority: action.priority || 'medium', due: action.dueDate || null,
             assigned: action.assignee || null, taskCreated: new Date().toISOString()
           });
-          localStorage.setItem('project-hub-v1', JSON.stringify(raw));
-          return true;
-        }
-
-        if (action.type === 'add_checklist_item') {
-          const raw = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
-          const proj = (raw.projects || []).find(p => p.id === action.projectId);
-          if (!proj) return false;
-          const task = (proj.tasks || []).find(t => t.id === action.taskId);
-          if (!task) return false;
-          task.checklist = task.checklist || [];
-          task.checklist.push({ id: 'chk-' + Date.now(), text: action.text, done: false });
           localStorage.setItem('project-hub-v1', JSON.stringify(raw));
           return true;
         }

@@ -567,10 +567,6 @@ window.HubVaultBridge = (() => {
       links: '',
       obsidianNote: p.path,
       createdAt: new Date().toISOString(),
-      problemLens: {},
-      decisionCanvas: {},
-      optionMap: [],
-      alignment: [],
     };
     if (typeof HubUtils !== 'undefined' && HubUtils.stampCreate) HubUtils.stampCreate(dec);
     arr.push(dec);

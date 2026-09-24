@@ -110,7 +110,6 @@ window.HubStarter = (() => {
           workstreams: [],
         },
       ],
-      kanbanWip: {},
     };
     HubStorage.set('project-hub-v1', data);
   }
@@ -168,18 +167,6 @@ window.HubStarter = (() => {
         reason: 'Team lacks the bandwidth to maintain a custom build. Webflow gives the design team autonomy without developer bottlenecks.',
         tags: 'website, technology, platform',
         links: '', obsidianNote: '',
-        problemLens: {
-          situation: 'Our website is 5 years old and built on a legacy PHP stack. Redesigning means choosing a new platform.',
-          complication: 'Developer time is limited; the design team wants to be self-sufficient for content updates.',
-          question: 'Which CMS gives the best balance of design freedom and long-term maintainability for a small team?',
-        },
-        decisionCanvas: {},
-        optionMap: [
-          { id: 'opt-1', name: 'WordPress', notes: 'Familiar, large ecosystem, but requires dev maintenance.' },
-          { id: 'opt-2', name: 'Webflow',   notes: 'Visual editor, fast for design team, low hosting cost.' },
-          { id: 'opt-3', name: 'Next.js',   notes: 'Full control, best performance, but high maintenance burden.' },
-        ],
-        alignment: [],
         createdAt: NOW,
       },
       {
@@ -194,18 +181,6 @@ window.HubStarter = (() => {
         reason: 'Contractor quality directly determines schedule risk. The permit submission is already under way.',
         tags: 'renovation, procurement, construction',
         links: '', obsidianNote: '',
-        problemLens: {
-          situation: 'Building permit is submitted. We need a contractor ready to mobilise within 4 weeks of approval.',
-          complication: 'Two of the three bidders are competitive on price but have limited public-building experience.',
-          question: 'Which contractor gives us the best risk-adjusted outcome for a community center renovation?',
-        },
-        decisionCanvas: {},
-        optionMap: [
-          { id: 'opt-a', name: 'BuildRight Ltd',   notes: 'Lowest bid, limited public-building track record.' },
-          { id: 'opt-b', name: 'Apex Construction', notes: 'Mid-range price, strong municipal references.' },
-          { id: 'opt-c', name: 'CoreBuild Co.',    notes: 'Highest bid, ISO-certified, proven schedule adherence.' },
-        ],
-        alignment: [],
         createdAt: NOW,
       },
     ];

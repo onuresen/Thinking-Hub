@@ -885,8 +885,7 @@
       summary: item.text,
       reason: `From Reflection Board (${COL_META[found.col].label} column)`,
       tags: (item.tags || []).join(', '),
-      projectId: '', obsidianNote: '', problemLens: {}, decisionCanvas: {}, optionMap: [],
-      alignment: [], createdAt: nowISO(),
+      projectId: '', obsidianNote: '', createdAt: nowISO(),
     };
     entries.push(newEntry);
     HubStorage.set('decision-hub-v1', entries);

@@ -344,102 +344,6 @@
       outline: none;
     }
 
-    /* ── ALIGNMENT MATRIX ───────────────────────────────────── */
-    .align-matrix {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0;
-    }
-
-    .align-matrix th,
-    .align-matrix td {
-      border: 1px solid var(--surface3);
-      padding: 8px 10px;
-      font-size: 12px;
-    }
-
-    .align-matrix th {
-      background: var(--surface);
-      color: var(--text3);
-      font-family: var(--font-mono);
-      font-size: 10px;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    .align-matrix td {
-      background: var(--surface2);
-      vertical-align: middle;
-    }
-
-    .align-matrix td:first-child {
-      color: var(--text);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .align-matrix td:nth-child(2) {
-      color: var(--text3);
-      font-size: 11px;
-      white-space: nowrap;
-    }
-
-    .vote-cell {
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
-      min-width: 80px;
-      font-size: 12px;
-      font-weight: 600;
-      transition: background 0.1s;
-      border-radius: 4px;
-    }
-
-    .vote-cell:hover {
-      background: var(--surface3);
-    }
-
-    .vote-cell[data-v="yes"] {
-      color: var(--accent);
-    }
-
-    .vote-cell[data-v="maybe"] {
-      color: var(--accent-super);
-    }
-
-    .vote-cell[data-v="no"] {
-      color: var(--accent-nope);
-    }
-
-    .score-row td {
-      background: var(--surface);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .score-cell {
-      text-align: center;
-    }
-
-    .score-pos {
-      color: var(--accent);
-    }
-
-    .score-neg {
-      color: var(--accent-nope);
-    }
-
-    .score-neu {
-      color: var(--text3);
-    }
-
-    .align-hint {
-      margin-top: 10px;
-      font-size: 11px;
-      color: var(--text3);
-    }
-
     /* ── BADGES ──────────────────────────────────────────────── */
     .badge {
       padding: 2px 8px;
@@ -562,8 +466,6 @@
 
       <div class="view-toggle" id="view-toggle" style="display:none">
         <button class="view-toggle-btn active" id="tab-log" onclick="switchTab('log')">Log & Summary</button>
-        <button class="view-toggle-btn" id="tab-workspace" onclick="switchTab('workspace')">Workspace</button>
-        <button class="view-toggle-btn" id="tab-alignment" onclick="switchTab('alignment')">Alignment</button>
         <button class="view-toggle-btn" id="tab-assumptions" onclick="switchTab('assumptions')">Assumptions</button>
       </div>
 
@@ -607,18 +509,6 @@
     let currentId = null;
     let currentTab = 'log';
     let showArchived = false;
-
-    const PROBLEM_FIELDS = [
-      { id: 'prob1', label: 'Problem to Be Solved', placeholder: 'What problem are we actually trying to solve?' },
-      { id: 'prob2', label: 'Who Is Affected', placeholder: 'Who experiences the pain?' },
-      { id: 'prob3', label: 'Constraints & Assumptions', placeholder: 'Budget, schedule, regulation, fixed decisions' }
-    ];
-
-    const CANVAS_FIELDS = [
-      { id: 'can1', label: 'Decision Question', placeholder: 'What decision are we making?' },
-      { id: 'can2', label: 'What We Know', placeholder: 'Facts, data, assumptions' },
-      { id: 'can3', label: 'Decision & Next Action', placeholder: 'Chosen option and immediate next step' }
-    ];
 
     function loadData() {
       try {
@@ -719,11 +609,7 @@
         tags: '',
         links: '',
         obsidianNote: '',
-        createdAt: new Date().toISOString(),
-        problemLens: {},
-        decisionCanvas: {},
-        optionMap: [],
-        alignment: []
+        createdAt: new Date().toISOString()
       };
       decisions.push(dec);
       saveData();
@@ -859,17 +745,6 @@
           dec.outcome = null;
         }
       }
-      else if (currentTab === 'workspace') {
-        PROBLEM_FIELDS.forEach(f => {
-          dec.problemLens[f.id] = document.getElementById('pl-' + f.id)?.value || '';
-        });
-        CANVAS_FIELDS.forEach(f => {
-          dec.decisionCanvas[f.id] = document.getElementById('dc-' + f.id)?.value || '';
-        });
-
-        // Option Map Save natively handled on input change
-      }
-
       HubUtils.stampUpdate(dec);
       saveData();
       renderSidebar();
@@ -1083,179 +958,6 @@
           if (tagsEl) HubTags.attachAutocomplete(tagsEl);
         }
       }
-      else if (currentTab === 'workspace') {
-        const plFirst = PROBLEM_FIELDS[0];
-        const plRest  = PROBLEM_FIELDS.slice(1);
-        const dcFirst = CANVAS_FIELDS[0];
-        const dcRest  = CANVAS_FIELDS.slice(1);
-        const plHasExtra = plRest.some(f => dec.problemLens?.[f.id]);
-        const dcHasExtra = dcRest.some(f => dec.decisionCanvas?.[f.id]);
-
-        const fieldHtml = (f, prefix) => `
-          <div class="form-group">
-            <label class="form-label">${f.label}</label>
-            <textarea class="form-textarea" id="${prefix}-${f.id}" placeholder="${f.placeholder}">${dec[prefix === 'pl' ? 'problemLens' : 'decisionCanvas']?.[f.id] || ''}</textarea>
-          </div>`;
-
-        const plHtml = `
-          ${fieldHtml(plFirst, 'pl')}
-          <div class="ws-extra${plHasExtra ? ' open' : ''}" id="pl-extra">
-            ${plRest.map(f => fieldHtml(f, 'pl')).join('')}
-          </div>
-          <button class="ws-expand-btn" id="pl-expand-btn" onclick="toggleWsExtra('pl-extra','pl-expand-btn')">${plHasExtra ? 'Show less ↑' : 'Show more context ↓'}</button>`;
-
-        const dcHtml = `
-          ${fieldHtml(dcFirst, 'dc')}
-          <div class="ws-extra${dcHasExtra ? ' open' : ''}" id="dc-extra">
-            ${dcRest.map(f => fieldHtml(f, 'dc')).join('')}
-          </div>
-          <button class="ws-expand-btn" id="dc-expand-btn" onclick="toggleWsExtra('dc-extra','dc-expand-btn')">${dcHasExtra ? 'Show less ↑' : 'Show more context ↓'}</button>`;
-
-        c.innerHTML = `
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-header"><div class="card-title">Problem Lens</div></div>
-              ${plHtml}
-            </div>
-            <div class="card">
-              <div class="card-header"><div class="card-title">Decision Canvas</div></div>
-              ${dcHtml}
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Option Map</div>
-              <button class="btn-ghost" id="add-opt-btn">+ Add Option</button>
-            </div>
-            <table id="opt-table">
-              <thead><tr><th>Option</th><th>Upside</th><th>Downside</th><th>Owner</th><th style="width:50px"></th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        `;
-
-        document.getElementById('add-opt-btn').onclick = () => {
-          dec.optionMap = dec.optionMap || [];
-          dec.optionMap.push({ option: '', upside: '', downside: '', owner: '' });
-          saveData();
-          renderContent();
-        };
-
-        const tbody = c.querySelector('tbody');
-        const opts = dec.optionMap || [];
-        opts.forEach((opt, idx) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><input value="${opt.option}" onchange="updateOpt(${idx}, 'option', this.value)"></td>
-            <td><input value="${opt.upside}" onchange="updateOpt(${idx}, 'upside', this.value)"></td>
-            <td><input value="${opt.downside}" onchange="updateOpt(${idx}, 'downside', this.value)"></td>
-            <td><input value="${opt.owner}" onchange="updateOpt(${idx}, 'owner', this.value)"></td>
-            <td><button class="btn-danger" onclick="delOpt(${idx})">✕</button></td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-      else if (currentTab === 'alignment') {
-        const opts = dec.optionMap || [];
-        const matrix = dec.alignmentMatrix || { stakeholders: [], votes: {} };
-        const stks = matrix.stakeholders || [];
-        const votes = matrix.votes || {};
-
-        if (!opts.length) {
-          c.innerHTML = `
-            <div class="card" style="max-width:560px;margin:auto">
-              <div class="empty-state">
-                <div class="e-icon">◎</div>
-                <div class="e-title">No options to vote on</div>
-                <div class="e-sub" style="margin-top:6px">Add options in the <b>Workspace → Option Map</b> first,<br>then return here to collect alignment votes.</div>
-              </div>
-            </div>`;
-          return;
-        }
-
-        const VOTE_CYCLE = { '': 'yes', 'yes': 'maybe', 'maybe': 'no', 'no': '' };
-        const VOTE_LABEL = { yes: '✓ Yes', maybe: '~ Maybe', no: '✗ No', '': '—' };
-
-        // Compute consensus score per option
-        const scores = opts.map((_, oi) => {
-          let s = 0;
-          stks.forEach(sk => {
-            const v = votes[`${sk.id}::${oi}`];
-            if (v === 'yes') s++;
-            else if (v === 'no') s--;
-          });
-          return s;
-        });
-
-        const optHeaders = opts.map(o =>
-          `<th>${_esc(o.option || '(option)')}</th>`
-        ).join('');
-
-        const stkRows = stks.map(sk => {
-          const cells = opts.map((_, oi) => {
-            const key = `${sk.id}::${oi}`;
-            const v = votes[key] || '';
-            return `<td class="vote-cell" data-v="${v}" onclick="cycleVote('${sk.id}',${oi})">${VOTE_LABEL[v]}</td>`;
-          }).join('');
-          return `<tr>
-            <td>${_esc(sk.name)}</td>
-            <td>${_esc(sk.role)}</td>
-            ${cells}
-            <td><button class="btn-danger" onclick="removeStakeholder('${sk.id}')" aria-label="Remove ${_esc(sk.name)}">✕</button></td>
-          </tr>`;
-        }).join('');
-
-        const scoreRow = stks.length ? `
-          <tr class="score-row">
-            <td colspan="2" style="color:var(--text3)">Consensus</td>
-            ${scores.map(s => {
-          const cls = s > 0 ? 'score-pos' : s < 0 ? 'score-neg' : 'score-neu';
-          return `<td class="score-cell"><span class="${cls}">${s > 0 ? '+' : ''}${s || '0'}</span></td>`;
-        }).join('')}
-            <td></td>
-          </tr>` : '';
-
-        const emptyMsg = !stks.length
-          ? `<tr><td colspan="${opts.length + 3}" style="text-align:center;color:var(--text3);padding:24px">No stakeholders yet — add one below.</td></tr>`
-          : '';
-
-        c.innerHTML = `
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Alignment Matrix</div>
-            </div>
-            <div style="overflow-x:auto">
-              <table class="align-matrix" role="grid" aria-label="Alignment voting matrix">
-                <thead>
-                  <tr>
-                    <th scope="col">Stakeholder</th>
-                    <th scope="col">Role</th>
-                    ${optHeaders}
-                    <th scope="col"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${emptyMsg}
-                  ${stkRows}
-                  ${scoreRow}
-                </tbody>
-              </table>
-            </div>
-
-            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
-              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Add Stakeholder</div>
-              <div class="form-row" style="flex-wrap:wrap;gap:8px">
-                <input class="form-input" id="sk-name" placeholder="Name" style="width:140px;flex:0 0 140px" aria-label="Stakeholder name">
-                <select class="form-select" id="sk-role" style="width:130px;flex:0 0 130px" aria-label="Stakeholder role">
-                  <option>Lead</option><option>Tech</option><option>Design</option>
-                  <option>Product</option><option>Strategy</option><option>Stakeholder</option>
-                </select>
-                <button class="btn-ghost" onclick="addStakeholder()">+ Add</button>
-              </div>
-            </div>
-            <div class="align-hint">Click a vote cell to cycle: — → ✓ Yes → ~ Maybe → ✗ No → —</div>
-          </div>`;
-      }
       else if (currentTab === 'assumptions') {
         renderAssumptionsTab();
       }
@@ -1269,66 +971,6 @@
       const open = extra.classList.toggle('open');
       btn.textContent = open ? 'Show less ↑' : 'Show more context ↓';
     }
-
-    window.updateOpt = (idx, key, val) => {
-      const dec = decisions.find(d => d.id === currentId);
-      if (dec && dec.optionMap[idx]) {
-        dec.optionMap[idx][key] = val;
-        saveData();
-      }
-    };
-    window.delOpt = (idx) => {
-      const dec = decisions.find(d => d.id === currentId);
-      if (dec) {
-        dec.optionMap.splice(idx, 1);
-        saveData();
-        renderContent();
-      }
-    };
-    function _ensureMatrix(dec) {
-      if (!dec.alignmentMatrix || !Array.isArray(dec.alignmentMatrix.stakeholders)) {
-        dec.alignmentMatrix = { stakeholders: [], votes: {} };
-      }
-      if (!dec.alignmentMatrix.votes) dec.alignmentMatrix.votes = {};
-    }
-
-    window.addStakeholder = () => {
-      const dec = decisions.find(d => d.id === currentId);
-      if (!dec) return;
-      _ensureMatrix(dec);
-      const name = (document.getElementById('sk-name').value || '').trim();
-      if (!name) { document.getElementById('sk-name').focus(); return; }
-      const role = document.getElementById('sk-role').value;
-      dec.alignmentMatrix.stakeholders.push({ id: 'sk-' + Date.now().toString(36), name, role });
-      saveData();
-      renderContent();
-    };
-
-    window.removeStakeholder = (skId) => {
-      const dec = decisions.find(d => d.id === currentId);
-      if (!dec) return;
-      _ensureMatrix(dec);
-      dec.alignmentMatrix.stakeholders = dec.alignmentMatrix.stakeholders.filter(s => s.id !== skId);
-      // Prune votes for this stakeholder
-      Object.keys(dec.alignmentMatrix.votes).forEach(k => {
-        if (k.startsWith(skId + '::')) delete dec.alignmentMatrix.votes[k];
-      });
-      saveData();
-      renderContent();
-    };
-
-    const _VOTE_CYCLE = { '': 'yes', 'yes': 'maybe', 'maybe': 'no', 'no': '' };
-    window.cycleVote = (skId, optIdx) => {
-      const dec = decisions.find(d => d.id === currentId);
-      if (!dec) return;
-      _ensureMatrix(dec);
-      const key = `${skId}::${optIdx}`;
-      const next = _VOTE_CYCLE[dec.alignmentMatrix.votes[key] || ''];
-      if (next === '') delete dec.alignmentMatrix.votes[key];
-      else dec.alignmentMatrix.votes[key] = next;
-      saveData();
-      renderContent();
-    };
 
     // ── Assumptions tab ──────────────────────────────────────────────────────
     const ASM_KEY = 'assumptions-hub-v1';
