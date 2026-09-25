@@ -2143,6 +2143,28 @@ User, right after P116 shipped: "Connect is still not working. There were maybe 
 
 ---
 
+### ~~Priority 118 — Investigation: "Target node is not selected and no connection is still made" — no code bug found; forced a cache-bust instead~~ ✓ Done `[group: canvas-structure]`
+Immediately after P117 shipped, the user reported the two-click Connect flow (arm source → click target) doing nothing at all. Given three prior "fixed" claims (P113/P115/P116) had each turned out incomplete, this was investigated exhaustively before touching any code again.
+
+**What was tested, with the same realistic-click technique this whole saga required (`mouse.move` → `mouse.down` → `waitForTimeout(80)` → `mouse.up`, never `page.click()`):**
+1. Right-click a node → "Connect from here" → click a second node (the flow P114/P117 exercise). **Passed** — source armed, target click created exactly one edge.
+2. The plainer, more common flow: click the toolbar **Connect** button → click a first node → click a second node. **Also passed** once the test waited long enough — see below.
+
+**A real finding, but in the test, not the app.** The toolbar-flow test's *first* pass showed the edge missing from `localStorage` after clicking the target — looking exactly like the reported bug. Instrumentation (temporary `console.log`s in the mousedown handler, reverted before commit) showed `createEdge('n1','n2')` **was** called correctly; the edge just hadn't reached `localStorage` yet, because `createEdge()` calls `pulseSave()`, which debounces writes ~500ms after the last edit (documented in P89's `touchProject`-era save pattern and reused here) — and the test had only waited 200ms before reading storage. Re-run with a 700ms wait: the edge is there, correctly shaped (`{id, from:'n1', to:'n2', relType:'relates'}`). So the underlying Connect logic — arm source, click target, create edge, persist — is confirmed correct for both entry points, with no reproducible bug in either.
+
+**Conclusion and the one change made.** With the code verified correct twice over and no further bug found on inspection (viewport click/contextmenu listeners, window mousemove/mouseup, `renderAll()`'s P116 highlight-reapply, edges-svg's `pointer-events:none` z-order — all re-checked, all fine), the leading explanation for the user seeing "still broken" immediately after each of the last several fixes is `sw.js`'s stale-while-revalidate caching: it serves the *previously cached* `canvas-hub.html` instantly on load and only refreshes the cache in the **background**, so the very first open after any deploy can still run pre-fix code — self-healing only on a *second* open/reload once that background refetch has landed. Four consecutive "still not working" reports arriving right after four consecutive real fixes is consistent with this pattern. Bumped `sw.js`'s `CACHE` constant (`thinking-hub-v1` → `thinking-hub-v2`) — since `sw.js`'s own bytes changed, the browser will detect the update and run a full, immediate `install`/`activate` cycle (fresh `addAll()` of every precached asset, then delete the old-named cache), instead of relying on the fetch-triggered background revalidation having already happened to run at least once.
+
+**Key decisions:**
+- **Decision:** Do not touch `canvas-hub.html`'s Connect logic again without a reproduced failure. **Why:** two independent, realistic-timing reproductions of both Connect entry points came back correct; changing working code to chase a symptom that can't be reproduced risks introducing a real regression while not actually fixing whatever the user is hitting. **Confidence:** high.
+- **Decision:** Treat the SW cache-bust as a one-time, justified exception to `sw.js`'s own documented design ("no build step, so no per-deploy version bumps needed" — i.e., SWR's 1-extra-reload self-heal is normally considered sufficient by design), not a new standing process. **Why:** four consecutive false "still broken" reports in a row is a real cost worth a one-time forced invalidation for this specific batch of fixes; bumping the cache name on every future edit would defeat the whole point of the no-version-bump architecture. **Confidence:** med. **Revisit when:** if stale-cache confusion keeps recurring across ordinary edits (not a rapid-fix burst like this one), reconsider the SWR design itself rather than bumping the cache name each time.
+- **Note for the user, not a code fact:** if the Connect flow still looks broken after this deploy, the next diagnostic step is to fully close and reopen the Canvas Hub tab (or check DevTools → Application → Service Workers that the active worker is the new one) before assuming a code bug — the logic itself is now doubly verified against real click timing.
+
+**Verified:** full `smoke` + `flows` + `vault-bridge` suites green (same counts as P117: 30/30 pages, all flow/vault-bridge checks). No `canvas-hub.html` change in this entry — `sw.js`'s `CACHE` constant is the only diff.
+
+**Files:** `sw.js`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

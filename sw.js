@@ -14,7 +14,7 @@
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
  */
 
-const CACHE = 'thinking-hub-v1';
+const CACHE = 'thinking-hub-v2';
 
 const PRECACHE = [
   './index.html',
