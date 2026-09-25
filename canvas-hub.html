@@ -48,6 +48,17 @@
       cursor: crosshair;
     }
 
+    /* Connect mode: node children set their own cursor (grab / text-edit
+       caret) that overrides the viewport's crosshair on hover — most
+       visibly .node-body's `cursor: text`, which made picking a node look
+       like it was entering text-edit mode instead of being selectable.
+       Force crosshair everywhere inside a node while armed. */
+    .viewport.connect-mode .node,
+    .viewport.connect-mode .node-body,
+    .viewport.connect-mode .nk-head {
+      cursor: crosshair;
+    }
+
     #canvas-layer {
       position: absolute;
       top: 0;

@@ -2165,6 +2165,24 @@ Immediately after P117 shipped, the user reported the two-click Connect flow (ar
 
 ---
 
+### ~~Priority 119 — Bugfix: a FOURTH Connect-mode bug — the visual cursor never showed crosshair over a node~~ ✓ Done `[group: canvas-structure]`
+The user gave the missing clue right after P118: *"cursor becomes plus mark after click connect but when I try to choose a node it becomes text input cursor. So I can not ever select a node without entering it's text input mode."* This is a real, distinct bug from P113/P115/P116/P117 — none of those were about the *visual cursor*, only click-handling logic, and P118's exhaustive click-logic reproduction correctly found nothing wrong there because the underlying JS was never the problem this time.
+
+**Root cause.** `.viewport.connect-mode { cursor: crosshair; }` sets the crosshair only over the viewport's own background. `.node-body` has its own hardcoded `cursor: text` (so typing into a sticky note shows a normal text caret) with no exception for Connect mode — and a per-element CSS `cursor` always wins over whatever an ancestor sets, regardless of when the ancestor's class was added. So hovering a node's body (its largest visible area, and the only reachable content for a plain note or R&D-bet node) always showed the text-edit caret, Connect mode or not — even though the click *itself* (confirmed twice over in P118) correctly ran the Connect source/target logic and never actually entered edit mode. The user had no way to visually tell the difference between "about to click-select this node for Connect" and "about to start typing in it," which reads exactly like "I can never select a node without entering text-input mode."
+
+**Fix:** added `.viewport.connect-mode .node, .viewport.connect-mode .node-body, .viewport.connect-mode .nk-head { cursor: crosshair; }` — narrower selectors than the ancestor rule, so they win the same way `.node-body`'s own rule always did, just now scoped to when Connect mode is armed.
+
+**Key decisions:**
+- **Decision:** Override the cursor for the specific descendants that carry their own `cursor` declaration (`.node-body`'s `text`, plus `.node`'s own `grab` for completeness), rather than relying on inheritance from `.viewport.connect-mode`. **Why:** CSS `cursor` on a more specific/nested selector always overrides whatever the ancestor sets, no matter which rule was added later or which class toggled when — the only fix is a selector that's *at least as specific* on the actual element being hovered. **Confidence:** high.
+- **Decision:** Added `.nk-head` to the override list even though it has no explicit `cursor` of its own (so it was already inheriting `.node`'s `grab`, not text). **Why:** defensive completeness — Goal/Project/Tool nodes (P117's display-only cards) route almost all of their clickable surface through `.nk-head`, and explicitly listing it removes any doubt about inheritance order for that node kind too. **Confidence:** med.
+- **Lesson for this whole saga:** P113/P115/P116/P117's bug class was "a descendant's `stopPropagation()` swallows the click before Connect's real logic ever runs" — a *functional* bug. This one looked identical from the user's description ("I can't select a node") but was purely *visual* — the click was firing correctly the whole time. The tell in hindsight: P118's realistic-timing reproduction of the exact click sequence passed cleanly, which is strong evidence the bug isn't in the click-handling code at all — the next thing to check should have been what the user *sees*, not what the code *does*, once functional reproduction comes back clean twice in a row.
+
+**Verified** (Playwright): `getComputedStyle('.node-body').cursor` reads `text` before Connect mode and `crosshair` immediately after arming it via the toolbar button; `.node` itself also reads `crosshair`. Full smoke (30/30 pages) + flows + vault-bridge suites green.
+
+**Files:** `canvas-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
