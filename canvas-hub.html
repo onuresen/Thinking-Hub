@@ -757,10 +757,11 @@
     }
 
     function liveItemsFor(kind) {
-      if (kind === 'project') return liveProjectItems();
-      if (kind === 'goal') return liveGoalItems();
-      if (kind === 'tool') return liveToolItems();
-      return [];
+      let items = [];
+      if (kind === 'project') items = liveProjectItems();
+      else if (kind === 'goal') items = liveGoalItems();
+      else if (kind === 'tool') items = liveToolItems();
+      return items.sort((a, b) => a.label.localeCompare(b.label));
     }
 
     function toolLinkFor(kind) {
@@ -1463,6 +1464,15 @@
       db.nodes.forEach(n => layer.appendChild(buildNodeEl(n)));
       renderEdges();
       renderMinimap();
+      // A rebuild (e.g. a debounced pulseSave landing while the user is
+      // mid-gesture) recreates node elements from scratch, which would
+      // silently drop the in-progress Connect-mode source highlight even
+      // though `connectSource` itself is untouched — making it look like
+      // the click "did nothing". Reapply it to the rebuilt element.
+      if (connectMode && connectSource) {
+        const srcEl = layer.querySelector(`.node[data-id="${connectSource}"]`);
+        if (srcEl) srcEl.classList.add('connect-source');
+      }
     }
 
     function rebuildActionBar(actions, node) {

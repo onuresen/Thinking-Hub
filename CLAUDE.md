@@ -2106,6 +2106,25 @@ User report: "right click, project, goal or tool is showing the menu and closing
 
 ---
 
+### ~~Priority 116 — Bugfix: Connect still silently failed under normal timing + alphabetize the add-picker lists~~ ✓ Done `[group: bugfix]`
+Two more user reports right after P115 shipped: "connect is still not working. I click connect and nothing happens" and "projects, tools etc are not sorted. Please sort by alphabetically."
+
+**Sorting — straightforward.** `liveItemsFor(kind)` (feeds both the right-click add-picker and a linked node's in-node `<select>`) returned Projects/Goals/Tools in whatever order their source tool's storage array happened to hold them, not alphabetically. Sorted once inside `liveItemsFor()` (`a.label.localeCompare(b.label)`) so every consumer gets alphabetical order for free, instead of sorting at each call site.
+
+**Connect — a real, reproducible race, distinct from P115's.** Reproduced with the same realistic `mouse.down()` → wait → `mouse.up()` technique P115's fix required (`page.click()` again could not show it): create two nodes in quick succession, turn on Connect, click the first node — the click *does* register (`connectSource` is set correctly in memory, confirmed via instrumentation) but the visual highlight never appears, so it looks exactly like "nothing happened." Root cause: `pulseSave()` debounces writes 500ms after the last node edit; if that timer lands while a Connect-mode click is being processed, `HubStorage.set()` fires `HubStorage.subscribe(STORAGE_KEY, …)`, which calls `renderAll()` — and `renderAll()` unconditionally tears down and rebuilds every `.node` element from the underlying data, which has no `connect-source` field (it's a transient CSS class, not app state). The rebuilt element comes back clean, silently erasing the highlight the click had just added a moment earlier, even though `connectSource` itself is still correctly set. Creating two nodes and immediately trying to connect them — the single most natural way to use this feature — is exactly the timing that lands inside that ~500ms window.
+
+**Fix:** `renderAll()` now checks `connectMode && connectSource` after rebuilding, and re-applies the `.connect-source` class to whichever rebuilt node matches (`layer.querySelector('.node[data-id="..."]')`) — a one-line repair that makes a debounced-save-mid-gesture a no-op instead of a silent, confusing reset.
+
+**Key decisions:**
+- **Decision:** Fix by reapplying the highlight class after `renderAll()`, not by suppressing the rebuild during Connect mode (e.g. skipping `HubStorage.subscribe`'s `renderAll()` while `connectMode` is true). **Why:** skipping the rebuild would let the DOM drift from the just-saved data (a different tab's edit, or another debounced write, would go unrendered until Connect mode ends) — a correctness regression to fix a cosmetic one. Reapplying the one transient class after every rebuild keeps `renderAll()` a true "reflect current state" function while still surviving the specific interaction it was breaking. **Confidence:** high.
+- **Decision:** Sort inside `liveItemsFor()` rather than at each of its two call sites (`openAddPicker`, `buildKindStrip`'s `<select>`). **Why:** one sort point can't be forgotten if a third consumer is added later, and both existing call sites already just wanted "the real items, ready to display" — sorting is part of that contract, not a per-caller concern. **Confidence:** high.
+
+**Verified** (Playwright, using the same realistic mousedown→gap→mouseup helper P115's fix needed — `page.click()` cannot reproduce this bug either): seeded distinctly-cased projects/goals/tools and confirmed all three add-picker lists render alphabetically. Reproduced the exact debounce-window race (two dblclicks 300ms apart, Connect clicked 150ms later, first node clicked with an 80ms real-click gap) — before the fix, `renderAll()` fired mid-gesture and the highlight count was 0; after the fix, it's 1, and clicking the second node correctly creates the edge (confirmed via the in-memory board state, not just localStorage, since the edge write is itself debounced). Full smoke (30/30 pages) + flows + vault-bridge suites green throughout.
+
+**Files:** `canvas-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
