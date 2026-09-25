@@ -2089,6 +2089,23 @@ Follow-up ask, right after fixing P113's Connect-mode bug: right-click a node it
 
 ---
 
+### ~~Priority 115 — Bugfix: right-click Project/Goal/Tool picker closed itself instantly~~ ✓ Done `[group: bugfix]`
+User report: "right click, project, goal or tool is showing the menu and closing immediately. Without I could [do] anything from there." Real, and directly caused by P112's own fix for a *different* symptom — the `setTimeout(closeAddMenu, 0)` added there to stop the add-picker from closing itself was based on a false read of why the Playwright test had shown that failure.
+
+**Root cause:** picking "Project…"/"Goal…"/"Tool…" fires on `mousedown`, hides `#add-menu`, and opens `#add-picker` — all synchronous. A **real** human click has a natural gap (tens of ms) between `mousedown` and `mouseup`/`click`; P112's `setTimeout(fn, 0)` reliably fires inside that gap. Once `#add-menu` is hidden mid-gesture, the browser's hit-test for the paired `click` event (fired at the same screen coordinates) no longer finds the now-invisible menu item — it finds whatever is underneath instead — so `click` fires there, and the old bubble-phase `document` "outside click" listener read that as a click outside `#add-picker` and closed it **the instant it had opened**. Playwright's `page.click()` had masked this because it dispatches `mousedown`/`mouseup`/`click` back-to-back with no gap for the timer to fire in between — a real click is not that, which is exactly why this shipped looking verified and then broke for the actual user.
+
+**Fix:** the popover-dismissal logic no longer listens on bubbling `click` at all. It now runs on `mousedown` in the **capture phase** — before any popover's own button handler has mutated anything — so the decision "is this outside the popover?" is made while everything is still in its original position, with no gap for a hit-test to go stale in. `openAddPicker()`'s `closeAddMenu()` call went back to being a plain synchronous call now that nothing depends on `#add-menu` surviving until a later event. As a related correctness fix found while re-reading this code, a node's own `mousedown` handler now ignores non-primary buttons outright (`e.button !== 0`), since right-click is the `contextmenu` event's job (P114) and was previously falling through into the same select/drag-start logic used for a real left-click.
+
+**Key decisions:**
+- **Decision:** Move the generic "click outside → close" listener from bubble-phase `click` to capture-phase `mousedown`, rather than patching the timing of the one place that broke. **Why:** the underlying hazard — a mousedown handler visually moving/hiding something, then a same-click bubbling `click` event reading the post-mutation DOM as "outside" — applies to *any* popover-opens-another-popover interaction, not just this one; P112's own verification note even said the fix "worked," which was true only because the test tool's synthetic click sequence couldn't reproduce the real race. Deciding at mousedown-capture time removes the race by construction instead of by luck of dispatch timing. **Confidence:** high.
+- **Decision:** Verify with a hand-rolled `mouse.down()` → `waitForTimeout(80ms)` → `mouse.up()` sequence, not `page.click()`. **Why:** this is the exact category of bug `page.click()` cannot surface (it doesn't leave the gap a real human click does) — P112's own "verified in a real browser" claim was true of the harness, not of real usage. A test that can't reproduce the failure mode it exists to guard against isn't verification, so this fix's test deliberately reintroduces that gap. **Confidence:** high.
+
+**Verified** (Playwright, using the realistic-gap click helper described above): right-clicking empty canvas still opens the add-menu; clicking "Tool…" with an 80ms mousedown→mouseup gap keeps the add-picker open and showing the seeded tool (previously closed instantly); clicking that row with the same gap correctly creates the linked node and the picker closes only then. Re-ran the P113 (toolbar Connect, center-click) and P114 (right-click node → Connect from here) flows to confirm neither regressed from the button-guard change — both still create edges correctly. Full smoke (30/30 pages) + flows suites green.
+
+**Files:** `canvas-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
