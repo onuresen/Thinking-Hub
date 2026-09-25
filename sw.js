@@ -46,7 +46,6 @@ const PRECACHE = [
   './enterprise-config.js',
   './machi-engine.js',
   './machi-achievements.js',
-  './machi-hires.js',
   // vendored libraries (pinned)
   './vendor/vis-network.min.js',
   './vendor/html2canvas.min.js',
