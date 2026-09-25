@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project (P110) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -1986,6 +1986,32 @@ Follow-up to P107's cleanup — user asked what to add now that the town shows o
 **Verified** (Playwright against the pre-installed Chromium, seeded `hub-vault-bridge-v1` + `decision-hub-v1`): both entities appear in `_machiTown.entities` with correct math (2 of 6 decisions scored → tier 1, `shipped:true`, `activity:0.33`; 5-day gap → `staleness:0.36`); clicking the signpost renders the correct detail text and fires the exact `{type:'hub-open-vault-bridge'}` postMessage on button click; clicking the courthouse renders the correct detail text and links to `decision-hub.html`. Zero console errors from the app itself.
 
 **Files:** `town-hub.html`, `index.html`, `CLAUDE.md`
+
+---
+
+### ~~Priority 110 — Machi Hub: delete Hi-Res Town + Canvas Hub: typed, live-linked nodes~~ ✓ Done `[group: canvas-structure]`
+Two-part request. Part 1 finishes the Machi retirement pattern; Part 2 is the first step of a "make Canvas Hub roadmap-true" brainstorm the user asked for (Miro-inspired, connecting Roadmap ↔ Projects ↔ R&D instead of "totally random projects" on a blank whiteboard).
+
+**Part 1 — Machi Hub: delete Hi-Res Town.** Third of three Machi visual-redesign experiments (Neon District, Fantasy Realm, now Hi-Res Town) tried in real use and confirmed not worth keeping ("we tested but normal town is enough"). Removed the Town/Hi-Res Town tab switcher, the `#view-hires` panel (and its stale adopt/trial/assess/hold legend), the `machi-hires.js` script tag, and all Hi-Res-only JS (`hires`, `activeView`, `HIRES_SCALE`, `activeEngine()`/`activeCanvasEl()`/`colsForHiresContainer()`/`ensureHiresInit()`/`switchMainView()`). `markUsedNow()`/`positionDetail()` now read the town engine/canvas directly instead of through the now-dead dual-view indirection. Deleted `machi-hires.js`; removed it from `sw.js` PRECACHE (85 → 84 entries).
+
+**Part 2 — Canvas Hub: typed nodes + live Project/Goal links.** From a brainstorm of five options (typed nodes, live-linked nodes, swim-lane Roadmap Mode, typed edges, multi-board), the user picked the first two as the starting scope.
+
+- **Node kinds** — a node can now be `note` (unchanged default sticky), `goal` 🎯, `project` 📌, or `rd` 🧪 (R&D bet — dashed border, no link). Toggled via 4 new icon buttons at the front of the existing action bar; switching kind is a full node-rebuild (infrequent action, not drag-perf-critical). Goal/Project kinds get a fixed background/border by kind (overriding the freeform color swatches, which are hidden for those two kinds since their identity is fixed) — the 6-color picker still applies to Note and R&D bet nodes.
+- **Live links** — a Goal or Project node gets a small in-node strip: a `<select>` listing every real Goals Hub objective / Project Hub project (built fresh at render time via `liveGoalItems()`/`liveProjectItems()`, which replicate `objProgress()`/`projectProgress()`'s exact math locally so status/percent always matches the source tool), plus a "↗ open" button (`HubLinks.navigateTo`) and a one-line live status ("Active · 50%", "Q3 2026 · 75%"). `node.link = {tool, id, label}` is the only thing persisted — status is always read fresh, never stale-copied, so a rename or status change in the source tool shows up next render. An unresolvable `link.id` (source item deleted) renders "(item removed)" instead of silently vanishing.
+- **"+ From Projects/Goals" import picker** — new toolbar button opens a `.ui-modal` checklist of every real project and goal objective (with live status shown inline); confirming drops each checked item as a correctly-kinded, correctly-linked node in a cascading grid at the current viewport center. This is the actual fix for "not totally random projects" — real roadmap items get dragged onto the canvas instead of retyped as sticky notes.
+- **Drive-by bugfix** — the `hub-highlight` postMessage handler (the code path Cmd+K search uses when a user clicks a canvas-node result) referenced undefined `canvas-wrap`/`offsetX`/`scale` variables left over from a copy-paste and would have thrown on every use; it was silently unreachable in practice since nothing had exercised it. Fixed to use the real `viewport`/`db.panX`/`db.panY`/`db.zoom` state, so clicking a canvas result from Cmd+K now actually pans to and flashes the right node.
+- `HubLinks.resolveItems('canvas-hub')` now shows a kind-specific subtitle (🎯 Goal / 📌 Project / 🧪 R&D bet) and uses the linked item's cached label when the node's own text is empty.
+
+**Key decisions:**
+- **Decision:** Live status is read fresh from the source tool's storage at every render, with only `{tool, id, label}` persisted on the node. **Why:** the whole point of "not random projects" is that the canvas reflects real state — copying a percentage onto the node would just recreate the staleness problem the brainstorm was trying to solve. **Confidence:** high.
+- **Decision:** Goal/Project nodes hide the freeform color picker (their color is fixed by kind) rather than letting `node.color` fight with the kind CSS. **Why:** two visual identity systems on the same node (kind-color vs. freeform-color) would need a tie-break rule users can't discover; kind wins outright once assigned, keeping "what kind is this" always legible at a glance. **Confidence:** high.
+- **Decision:** No new field to disambiguate a Project Hub id from a Goals Hub objective id in `node.link` — `tool` + `id` is enough, matching the existing app-wide convention (e.g. Priority 56's project/task linking) of not prefixing ids since collisions are negligible at personal-app scale. **Confidence:** high.
+- **Decision:** Fix the dead `hub-highlight` handler in the same pass rather than filing it separately. **Why:** discovered directly while touching this exact code area for the new live-link "open" button, and it's the same kind of "canvas node identity" plumbing this feature depends on — Cmd+K → canvas result → pan-to-node is now a real, working path instead of a silent throw. **Confidence:** high.
+- **Deferred (from the original 5-option brainstorm, not requested yet):** swim-lane Roadmap Mode (C), typed/meaning-carrying edges (D), and multiple named canvas boards (F) — offered as natural next layers once this base is used for a while.
+
+**Verified** (Playwright, seeded `project-hub-v1` + `goals-hub-v1`): import picker lists both items with correct live status text (`Active · 50%`, `Q3 2026 · 75%`); confirming creates two nodes with the exact expected `kind`/`link` shape; the project node's kind badge (📌) and status line render correctly; clicking "↗ open" fires the exact `{type:'hub-navigate', tool:'project-hub', itemId:'p1'}` message; switching a plain note to R&D via the action bar sets `kind:'rd'` and applies the `k-rd` (dashed) CSS class. Zero console errors. Full smoke (30/30 pages) + flows suites green throughout both parts.
+
+**Files:** `town-hub.html`, `sw.js`, `canvas-hub.html`, `CLAUDE.md` · **Deleted:** `machi-hires.js`
 
 ---
 
