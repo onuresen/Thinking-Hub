@@ -571,16 +571,90 @@
       opacity: 0.28;
     }
 
+    .cal-day-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
     .cal-day-num {
       font-size: 11px;
       font-weight: 700;
       color: var(--text2);
       font-family: var(--font-mono);
-      margin-bottom: 4px;
     }
 
     .cal-day-cell.today .cal-day-num {
       color: var(--accent);
+    }
+
+    .cal-day-tag {
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 1px 3px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .cal-day-tag-empty {
+      color: var(--text3);
+      opacity: 0;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      transition: opacity 0.12s;
+    }
+
+    .cal-day-cell:hover .cal-day-tag-empty,
+    .cal-week-label:hover .cal-day-tag-empty {
+      opacity: 0.5;
+    }
+
+    .cal-day-tag-empty:hover {
+      opacity: 1 !important;
+      color: var(--accent);
+    }
+
+    /* ── Day-tag picker popover ───────────────────────────────────── */
+    .day-tag-popover {
+      position: fixed;
+      z-index: 300;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 150px;
+    }
+
+    .day-tag-option {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .day-tag-option:hover {
+      background: var(--surface3);
+    }
+
+    .day-tag-option.clear {
+      color: var(--text3);
+      border-top: 1px solid var(--border);
+      margin-top: 2px;
+      padding-top: 7px;
     }
 
     .cal-pill {
