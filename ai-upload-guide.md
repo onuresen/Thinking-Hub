@@ -227,13 +227,15 @@ appear in a backup file.)
 { "v": 1, "labels": { "K": "Keep", "M": "MoyaMoya", "Q": "Question", "T": "Try" }, "columns": { "K": [...], "M": [...], "Q": [...], "T": [...] }, "links": [] }
 ```
 
+`arguments` (argument-hub-v1) and `reflection_board` (reflection-hub-v1) are retired
+tools too (Argument Hub and Reflection Board were both deleted) — the keys may still
+appear in an older backup file, but there's no tool left to open them from.
+
 ## Sections that exist in the schema but had zero data as of 2026-06-17
 These tools/views are fully built and wired in but you haven't used them yet — an
 empty result for these is expected, not a sign of a missing feature:
 - `assumptions-hub-v1` (Decision Hub → Assumptions tab)
 - `matrix-hub-v1` (Project Hub → Priority Matrix view)
-- `argument-hub-v1` (Argument Hub — Pyramid Principle tool)
-- `reflection-hub-v1` (Reflection Board)
 
 ## What to ask the AI to actually do
 Given the above, useful prompts paired with a backup upload:

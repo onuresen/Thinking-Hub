@@ -250,17 +250,17 @@
       'learning-hub': ['Learning Hub', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
       'canvas-hub': ['Spatial Canvas', '✏', 'Learning & Ideas'],
       'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
-      'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'argument-hub': ['Argument Hub', '△', 'Strategy & Decisions'],
-      'reflection-hub': ['Reflection Board', '⟲', 'Reflection & Methods'], 'frameworks-hub': ['Frameworks', '▾', 'Reflection & Methods'],
+      'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'],
       'focus-hub': ['Time Journal', '◷', 'Tools & Focus'], 'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
       'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
     };
     // Retired tools (kmqt-board, scrum-hub, log-hub, review-hub, retro-hub,
-    // assumptions-hub, matrix-hub, blocked-depth, war-room) are deliberately
-    // absent above. Old hub-activity-v1 log entries for them are left
-    // untouched (data safety), but hubPageEntities() below only renders a
-    // building for ids present in HUB_PAGES — no ghost buildings for tools
-    // that no longer exist or aren't reachable from the sidebar.
+    // assumptions-hub, matrix-hub, blocked-depth, war-room, argument-hub,
+    // reflection-hub, frameworks-hub) are deliberately absent above. Old
+    // hub-activity-v1 log entries for them are left untouched (data safety),
+    // but hubPageEntities() below only renders a building for ids present in
+    // HUB_PAGES — no ghost buildings for tools that no longer exist or
+    // aren't reachable from the sidebar.
     const GROUP_COLORS = {
       'Daily Work': '#5b8cff', 'People & Network': '#ff9f5b', 'Learning & Ideas': '#5bd67a',
       'Strategy & Decisions': '#b28ae8', 'Reflection & Methods': '#8a8f9c', 'Tools & Focus': '#ffd24d',

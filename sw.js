@@ -14,7 +14,7 @@
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
  */
 
-const CACHE = 'thinking-hub-v2';
+const CACHE = 'thinking-hub-v3';
 
 const PRECACHE = [
   './index.html',
@@ -79,14 +79,12 @@ const PRECACHE = [
   './icons/icon-maskable-512.png',
   // tool pages
   './achievements-hub.html',
-  './argument-hub.html',
   './assumptions-hub.html',
   './blocked-depth.html',
   './canvas-hub.html',
   './capture-hub.html',
   './decision-hub.html',
   './focus-hub.html',
-  './frameworks-hub.html',
   './goals-hub.html',
   './graph-hub.html',
   './help-hub.html',
@@ -98,7 +96,6 @@ const PRECACHE = [
   './meetings-hub.html',
   './people-hub.html',
   './project-hub.html',
-  './reflection-hub.html',
   './retro-hub.html',
   './review-hub.html',
   './risk-hub.html',

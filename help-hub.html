@@ -221,7 +221,7 @@ const TOOLS = [
     frameworks: ['GTD'],
     fwIds: ['GTD'],
     whenToUse: 'When your head is full and you want zero friction getting it out — before a meeting, at the start of the day, or after a flood of ideas. Type fast, don\'t stop to categorize; let the classifier do that.',
-    features: ['Free-text dump area — one thought per line, no forms', 'Auto-classifies each line as task / decision / risk / question / event / idea / learning / note', 'Live per-line type gutter so you can sanity-check before sending', 'One click routes every line to its matching tool (Project Hub, Decision Hub, Risk Register, Reflection Board, Schedule, Idea Swiper, Learning Hub, Journal Hub)', 'Nothing is lost to a "where did I write that down" search later'],
+    features: ['Free-text dump area — one thought per line, no forms', 'Auto-classifies each line as task / decision / risk / question / event / idea / learning / note', 'Live per-line type gutter so you can sanity-check before sending', 'One click routes every line to its matching tool (Project Hub, Decision Hub, Risk Register, Schedule, Idea Swiper, Learning Hub, Journal Hub)', 'Nothing is lost to a "where did I write that down" search later'],
     sample: 'Monday morning brain dump: "fix the broken CI pipeline", "decided to use Postgres over Mongo", "risk: vendor contract expires in March", "should we hire a contractor?", "meeting with finance Thursday 2pm", "idea: what if onboarding was a checklist?". One parse pass classifies all six lines correctly — task, decision, risk, question, event, idea — and routes each to its tool with one click.'
   },
   {
@@ -281,7 +281,7 @@ const TOOLS = [
     frameworks: ['Decision Matrix', 'Cynefin Framework', 'Six Thinking Hats', 'Assumption-Based Planning'],
     fwIds: ['Decision-Matrix', 'Cynefin-Framework', 'Six-Thinking-Hats', 'Assumption-Based-Planning'],
     whenToUse: 'When you face a meaningful decision — anything involving trade-offs, multiple stakeholders, or consequences that will last more than a month. Structured decisions age better than gut calls.',
-    features: ['Decision log with type, confidence, status, and reasoning', 'Cynefin domain field (Clear / Complicated / Complex / Chaotic)', 'Alternative considered, revisit-when condition/date, and a scored outcome (held / partly / didn\'t / too-early)', '⚖ Calibration modal — hit-rate per confidence band, an overconfidence read, and a due-for-revisit count', 'Option comparison and pros/cons table; alignment matrix — who agrees, who has concerns', 'Assumptions tab with Signpost and Hedging Actions (ABP)', 'Send to Reflection Board as a question'],
+    features: ['Decision log with type, confidence, status, and reasoning', 'Cynefin domain field (Clear / Complicated / Complex / Chaotic)', 'Alternative considered, revisit-when condition/date, and a scored outcome (held / partly / didn\'t / too-early)', '⚖ Calibration modal — hit-rate per confidence band, an overconfidence read, and a due-for-revisit count', 'Option comparison and pros/cons table; alignment matrix — who agrees, who has concerns', 'Assumptions tab with Signpost and Hedging Actions (ABP)'],
     sample: 'Deciding: build vs. buy a data pipeline. Tag it "Complex" in Cynefin — cause and effect aren\'t obvious. List options, log the alternative you rejected and why, and set a revisit-when condition: "after 2 sprints of integration." Add assumption: "We have 2 engineers available" with signpost: "Confirmed in planning meeting" and hedge: "Outsource if < 2 engineers available." Reach 80% alignment score before committing. Two sprints later, the decision resurfaces on the home dashboard — score the outcome and check your calibration.'
   },
   {
@@ -295,22 +295,12 @@ const TOOLS = [
     sample: 'Launching a mobile app with a new payment provider. Risk: "Integration delays launch by 2+ weeks" (High × High → red). Treatment: Reduce — start integration 3 weeks early. Owner: Tech Lead. Review date: March 15. When March 15 arrives, status changes to Monitoring.'
   },
   {
-    id: 'argument-hub', label: 'Argument Hub', icon: '△', group: 'Strategy & Decisions', wg: 'Strategy & Decisions',
-    file: 'argument-hub.html',
-    desc: 'Structure a persuasive case top-down using Barbara Minto\'s Pyramid Principle.',
-    frameworks: ['Pyramid Principle', 'SCQA', 'MECE'],
-    fwIds: ['Pyramid-Principle', 'SCQA', 'MECE'],
-    whenToUse: 'Before writing anything meant to persuade — a proposal, a management ask, a LinkedIn post, a decision rationale. Structure the argument first so the reader gets the point in the opening lines, not on page three.',
-    features: ['SCQA introduction (Situation / Complication / Question)', 'Governing thought — the single answer at the apex', 'Recursive supporting pyramid with grouping (inductive) vs argument (deductive) logic', 'Ordering principle per group: time / structure / degree', 'Live MECE checks — no single-child groups, ordering set, summary prompt', 'Export to a Markdown outline in document order'],
-    sample: 'Arguing "We should adopt a structured-writing standard." Situation: we write dozens of memos a quarter. Complication: reviewers keep asking "what\'s the point?" Question: how do we make documents land first time? Answer (governing thought): adopt the Pyramid Principle — supported by three MECE reasons, each with its own sub-points. Export the outline straight into the memo.'
-  },
-  {
     id: 'graph-hub', label: 'Dependency Graph', icon: '🕸️', group: 'People & Network', wg: 'People & Network',
     file: 'graph-hub.html',
     desc: 'Visual map of your tasks, decisions, and ideas as a linked graph.',
     frameworks: ['Critical Path Method', 'PERT', 'PMBOK'],
     fwIds: ['Critical-Path-Method', 'PERT', 'PMBOK'],
-    whenToUse: 'When tasks have dependencies and you need to see the critical path. Also powerful for mapping how decisions, tags, and ideas connect — pairs well with Reflection Board, Decision Hub, and Tags.',
+    whenToUse: 'When tasks have dependencies and you need to see the critical path. Also powerful for mapping how decisions, tags, and ideas connect — pairs well with Decision Hub and Tags.',
     features: ['Interactive node graph (vis-network, pan and zoom)', 'Create links between tasks, projects, decisions, tags, and ideas', 'Tags appear as their own nodes, dotted-linked to every item that uses them', 'Edge notes explaining the dependency type', 'Orphan filter and "new since" (24h/7d/30d) filter for recently linked items', 'View Options panel — Ambient Drift, Edge Flow, Breathing Nodes, degree-based sizing', 'Cluster by project or by tool; export the current view as a PNG', 'Searchable via Cmd+K global search'],
     sample: 'You have 20 tasks for a product launch. Add them as nodes, draw links: "Finalize copy" → "Design assets" → "Dev build" → "QA" → "Deploy." The longest chain is 12 days — that\'s your critical path. Cluster by project to declutter the view, switch on Edge Flow to see the direction of dependencies at a glance, and export a PNG for the kickoff deck. You spot "Legal review" as an orphan with no connection — fixed before it blocked launch.'
   },
@@ -343,26 +333,6 @@ const TOOLS = [
     whenToUse: 'When you use (or are evaluating) multiple platforms and vendors, and want one place to see what each is for and where you\'re actually using it.',
     features: ['Tool cards with name, icon, URL, category, and notes', 'Status lifecycle: Exploring → Piloting → Using → Retired', 'SoR / SoE / SoI classification (source of record / engagement / insight), plus a Map view showing where each tool sits', 'Enabled Projects — link a tool to the projects it supports, with a 🔗 count on every list row', 'Freshness × Mastery matrix — real lastUsedAt/mastery tracking, not a subjective adoption rating', 'Category grouping with drag-to-reorder', 'Full-text search'],
     sample: 'You add a new AI writing tool as Exploring. A month in, real use bumps it to Using, and it\'s linked to two projects — the 🔗2 badge shows that at a glance in the list. An old analytics platform with no recent use and no project links is an easy Retire call.'
-  },
-  {
-    id: 'reflection-hub', label: 'Reflection Board', icon: '⟲', group: 'Reflection & Methods', wg: 'Reflection & Methods',
-    file: 'reflection-hub.html',
-    desc: 'Four-column board for team reflection — signals, friction, questions, and actions.',
-    frameworks: ['Agile Retrospectives', 'KPT Retrospective', 'Kaizen', 'Systems Thinking'],
-    fwIds: ['Agile-Retrospectives', 'KPT-Retrospective', 'Kaizen', 'Systems-Thinking'],
-    whenToUse: 'After a sprint, milestone, or any significant event. Also great for ongoing team health monitoring — keep a board open and add items asynchronously throughout a cycle. The four columns cover the full range from observation to action.',
-    features: ['Four columns: 📡 Signal / 🔥 Friction / ❓ Question / ⚡ Action', 'Emoji reactions on cards for async voting and prioritization', 'Drag cards between columns as clarity increases', 'SVG cross-column links to connect related items', 'Snapshots for archiving board state at a point in time', 'Import from legacy KMQT Board or Retro Board'],
-    sample: 'End of Sprint 7. During the week, the team async-added 4 Friction cards: "build times slow," "scope crept twice," "unclear acceptance criteria." By meeting time, the team has reacted to their top issues. Skip the "what went wrong?" brainstorm — go straight to Action items with owners. 45-minute retro becomes 20 minutes.'
-  },
-  {
-    id: 'frameworks-hub', label: 'Frameworks', icon: '▾', group: 'Reflection & Methods', wg: 'Reflection & Methods',
-    file: 'frameworks-hub.html',
-    desc: 'Blocked Depth iceberg cascade and V-Model diagram — framework-specific visualizations.',
-    frameworks: ['Critical Path Method', 'Systems Thinking', 'Theory of Constraints'],
-    fwIds: ['Critical-Path-Method', 'Systems-Thinking', 'Theory-of-Constraints'],
-    whenToUse: 'When you need a framework-specific view that the standard project tools don\'t provide. Blocked Depth for when nothing is moving and you need to find the real constraint. V-Model for aligning development and test activities in formal delivery.',
-    features: ['Blocked Depth — iceberg cards: blocked task above the waterline, downstream cascade below', 'Impact score per blocker: tasks × 1 + milestones × 1.8 + people × 0.8', 'Sort by deepest / longest blocked / milestone risk', 'V-Model diagram — maps development phases to verification activities', 'Reads live from Project Hub — no extra data entry required'],
-    sample: 'Sprint 8: four tasks marked "blocked," nothing moving. Open Frameworks → Blocked Depth. The deepest iceberg is "Finalize API contract" — 6 waiting tasks, 2 milestones at risk, 3 people stalled. One card shows the full blast radius. Prioritize unblocking that one first and the rest start moving automatically.'
   },
   {
     id: 'focus-hub', label: 'Time Journal', icon: '◷', group: 'Tools & Focus', wg: 'Tools & Focus',
@@ -420,8 +390,8 @@ const TOOLS = [
     desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere.',
     frameworks: ['PKM'],
     fwIds: ['PKM'],
-    whenToUse: 'When the same idea has accumulated several spellings ("BIM" / "bim" / "Bim") across Learning Hub, Decision Hub, Meeting Hub, and Reflection Board, or when you want a tag to exist as a standalone topic node in the Dependency Graph even before it\'s used anywhere.',
-    features: ['One registry across every tool with a tags field — Learning Hub, Decision Hub, Meeting Hub, Reflection Board, Reflection Board imports', 'Usage counts per tag, broken down by source tool', 'Inline rename-with-merge — renaming "bim" to "BIM" folds both into one tag everywhere it\'s used', 'Add a topic-only tag with zero current usage, for future planning', 'Cascading delete — removes a tag from every item, not just the registry', 'Every tag appears as a node in the Dependency Graph, dotted-linked to everything tagged with it'],
+    whenToUse: 'When the same idea has accumulated several spellings ("BIM" / "bim" / "Bim") across Learning Hub, Decision Hub, and Meeting Hub, or when you want a tag to exist as a standalone topic node in the Dependency Graph even before it\'s used anywhere.',
+    features: ['One registry across every tool with a tags field — Learning Hub, Decision Hub, Meeting Hub', 'Usage counts per tag, broken down by source tool', 'Inline rename-with-merge — renaming "bim" to "BIM" folds both into one tag everywhere it\'s used', 'Add a topic-only tag with zero current usage, for future planning', 'Cascading delete — removes a tag from every item, not just the registry', 'Every tag appears as a node in the Dependency Graph, dotted-linked to everything tagged with it'],
     sample: 'You notice "Shop drawing" and "shop drawings" both exist as separate tags across Decision Hub and Meeting Hub. Open Tags, rename one to match the other — both merge into a single canonical tag, every affected decision and meeting updates automatically, and the Dependency Graph now shows one tag node instead of two disconnected ones.'
   },
 ];
@@ -431,15 +401,15 @@ const FRAMEWORKS = [
   { id: 'PMBOK', label: 'PMBOK', domain: 'Project & Task', color: 'blue', what: "PMI's Project Management Body of Knowledge — the global standard for project management across 10 knowledge areas, from Integration through Procurement. The foundation most enterprise PM practices build on.", certs: ['PMP', 'CAPM'], tools: ['Project Hub', 'Meeting Notes', 'Risk Register', 'Dependency Graph'] },
   { id: 'Prince2', label: 'PRINCE2', domain: 'Project & Task', color: 'blue', what: "Stage-gate governance framework from the UK Cabinet Office. Every project starts with a Business Case and moves through defined stages with clear roles: Sponsor, Project Manager, and Team Manager.", certs: ['PRINCE2 Foundation', 'PRINCE2 Practitioner'], tools: ['Project Hub'] },
   { id: 'Gantt-Chart', label: 'Gantt Chart', domain: 'Project & Task', color: 'blue', what: "Henry Gantt's (1910s) horizontal bar chart showing tasks against a time axis. The original and still the most universally understood project timeline visualization — every stakeholder can read one.", certs: [], tools: ['Schedule'] },
-  { id: 'Critical-Path-Method', label: 'Critical Path Method', domain: 'Project & Task', color: 'blue', what: "CPM identifies the longest chain of dependent tasks — the critical path determines the minimum possible project duration. Any delay on a critical-path task delays the entire project by the same amount.", certs: ['PMP'], tools: ['Schedule', 'Dependency Graph', 'Frameworks'] },
+  { id: 'Critical-Path-Method', label: 'Critical Path Method', domain: 'Project & Task', color: 'blue', what: "CPM identifies the longest chain of dependent tasks — the critical path determines the minimum possible project duration. Any delay on a critical-path task delays the entire project by the same amount.", certs: ['PMP'], tools: ['Schedule', 'Dependency Graph'] },
   { id: 'PERT', label: 'PERT', domain: 'Project & Task', color: 'blue', what: "Program Evaluation and Review Technique. Uses three-point estimates (optimistic / most likely / pessimistic) to calculate expected task duration under uncertainty. Developed by the US Navy in the 1950s.", certs: ['PMP'], tools: ['Schedule', 'Dependency Graph'] },
   { id: 'RACI-DACI', label: 'RACI / DACI', domain: 'Project & Task', color: 'blue', what: "Responsibility assignment matrix. RACI = Responsible / Accountable / Consulted / Informed. DACI = Driver / Approver / Contributor / Informed. Eliminates role ambiguity before it becomes conflict.", certs: [], tools: ['Project Hub', 'Meeting Notes', 'Stakeholder Map'] },
   // Agile & Lean
   { id: 'MoSCoW', label: 'MoSCoW', domain: 'Agile & Lean', color: 'green', what: "Must have / Should have / Could have / Won't have prioritization from Dai Clegg (DSDM). Forces explicit trade-off conversations before they become last-minute scope cuts during delivery.", certs: ['AgilePM'], tools: ['Project Hub'] },
-  { id: 'Scrum', label: 'Scrum', domain: 'Agile & Lean', color: 'green', what: "Agile framework by Ken Schwaber & Jeff Sutherland. Work in fixed sprints (1–4 weeks) with a Sprint Goal, daily standups, Sprint Review, and Retrospective — all four events inside every cycle.", certs: ['CSM', 'PSM', 'PSPO'], tools: ['Reflection Board'] },
+  { id: 'Scrum', label: 'Scrum', domain: 'Agile & Lean', color: 'green', what: "Agile framework by Ken Schwaber & Jeff Sutherland. Work in fixed sprints (1–4 weeks) with a Sprint Goal, daily standups, Sprint Review, and Retrospective — all four events inside every cycle.", certs: ['CSM', 'PSM', 'PSPO'], tools: [] },
   { id: 'Kanban', label: 'Kanban', domain: 'Agile & Lean', color: 'green', what: "Visual workflow management from Toyota's production system. The core principle: limit Work in Progress (WIP) to expose bottlenecks and improve flow. Pull, don't push work through the system.", certs: ['KMP — Kanban Management Professional'], tools: ['Project Hub'] },
-  { id: 'Kaizen', label: 'Kaizen', domain: 'Agile & Lean', color: 'green', what: "Continuous improvement philosophy from Toyota. Small, incremental changes made regularly compound into transformational improvements over time. 'Change for better' — everyone, every day.", certs: ['Lean Six Sigma Green Belt', 'Lean Six Sigma Black Belt'], tools: ['Reflection Board'] },
-  { id: 'Agile-Retrospectives', label: 'Agile Retrospectives', domain: 'Agile & Lean', color: 'green', what: "Structured team reflection events from Diana Larsen & Esther Derby's book. One of Scrum's four ceremonies. The purpose: inspect the process, not the product, and adapt before the next cycle.", certs: ['CSM', 'PSM'], tools: ['Reflection Board'] },
+  { id: 'Kaizen', label: 'Kaizen', domain: 'Agile & Lean', color: 'green', what: "Continuous improvement philosophy from Toyota. Small, incremental changes made regularly compound into transformational improvements over time. 'Change for better' — everyone, every day.", certs: ['Lean Six Sigma Green Belt', 'Lean Six Sigma Black Belt'], tools: [] },
+  { id: 'Agile-Retrospectives', label: 'Agile Retrospectives', domain: 'Agile & Lean', color: 'green', what: "Structured team reflection events from Diana Larsen & Esther Derby's book. One of Scrum's four ceremonies. The purpose: inspect the process, not the product, and adapt before the next cycle.", certs: ['CSM', 'PSM'], tools: [] },
   // Goal-Setting
   { id: 'OKR', label: 'OKR', domain: 'Goal-Setting', color: 'yellow', what: "Objectives & Key Results — created by Andy Grove at Intel, popularized by Google. Qualitative Objectives answer 'where are we going?' Key Results answer 'how will we know we got there?' A 0.7 score is healthy; 1.0 means you aimed too low.", certs: [], tools: ['Goals Hub'] },
   { id: 'SMART-Goals', label: 'SMART Goals', domain: 'Goal-Setting', color: 'yellow', what: "Specific / Measurable / Achievable / Relevant / Time-bound. The checklist that turns a vague intention into a commitment. Run any goal through SMART — gaps become immediately obvious.", certs: [], tools: ['Goals Hub'] },
@@ -463,15 +433,15 @@ const FRAMEWORKS = [
   { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub', 'Time Journal'] },
   { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Time Journal'] },
   { id: 'Bullet-Journal-Method', label: 'Bullet Journal', domain: 'Personal Productivity', color: 'cyan', what: "Ryder Carroll's analog rapid logging system using symbols: • task, ○ event, – note. The digital adaptation: daily entries with mood, structured bullets, and a brief evening reflection.", certs: [], tools: ['Journal Hub'] },
-  { id: 'KPT-Retrospective', label: 'KPT Retrospective', domain: 'Personal Productivity', color: 'cyan', what: "Keep / Problem / Try — a Japanese Agile/Kaizen retrospective format simpler than the Western 'Went Well / Improve / Actions.' Popular in product teams across Japan and Korea. Every cycle closes with a concrete Try.", certs: [], tools: ['Reflection Board'] },
+  { id: 'KPT-Retrospective', label: 'KPT Retrospective', domain: 'Personal Productivity', color: 'cyan', what: "Keep / Problem / Try — a Japanese Agile/Kaizen retrospective format simpler than the Western 'Went Well / Improve / Actions.' Popular in product teams across Japan and Korea. Every cycle closes with a concrete Try.", certs: [], tools: [] },
   // Knowledge & Learning
   { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub', 'Stakeholder Map'] },
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
-  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Time Journal', 'Spatial Canvas', 'Frameworks'] },
-  { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: ['Argument Hub'] },
-  { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: ['Argument Hub'] },
-  { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: ['Argument Hub'] },
+  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Time Journal', 'Spatial Canvas'] },
+  { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: [] },
+  { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: [] },
+  { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: [] },
   // Design & Ideation
   { id: 'Design-Thinking', label: 'Design Thinking', domain: 'Design & Ideation', color: 'purple', what: "IDEO / Stanford d.school's human-centered innovation process: Empathize → Define → Ideate → Prototype → Test. The Ideate phase is designed for divergent thinking — generating many options before converging on one.", certs: ['IDEO U — Foundations in Design Thinking'], tools: ['Idea Swiper', 'Spatial Canvas'] },
   { id: 'Mind-Mapping', label: 'Mind Mapping', domain: 'Design & Ideation', color: 'purple', what: "Tony Buzan's radial visual organization technique. A central concept branches into related topics, then sub-topics. Externalizes non-linear thinking into a structure you can navigate — and share.", certs: [], tools: ['Idea Swiper', 'Spatial Canvas'] },
@@ -500,7 +470,6 @@ const WORKFLOWS = [
     steps: [
       { tool: 'Journal Hub', action: 'Morning: capture intention. Evening: reflect + learn' },
       { tool: 'Time Journal', action: 'During work: protect deep work blocks with Pomodoro sessions' },
-      { tool: 'Reflection Board', action: 'Mid-week: dump signals and friction, surface open questions' },
       { tool: 'Journal Hub', action: 'Friday: open Weekly tab — review what\'s done, commit next week\'s big rock' },
       { tool: 'Goals Hub', action: 'Update OKR key result progress — are you on track?' },
     ]
@@ -511,12 +480,10 @@ const WORKFLOWS = [
     iconClass: 'wf-icon-2',
     when: 'Facing a meaningful choice with trade-offs and stakeholders',
     steps: [
-      { tool: 'Reflection Board', action: 'Surface and separate the decision from noise — Question column' },
       { tool: 'Decision Hub', action: 'Log it: frame the problem, classify with Cynefin, list options' },
       { tool: 'Stakeholder Map', action: 'Identify who needs to approve vs. who needs to be informed' },
       { tool: 'Risk Register', action: 'Add risks tied to each option before committing' },
       { tool: 'Decision Hub', action: 'Add assumptions with signposts and hedging actions (ABP)' },
-      { tool: 'Argument Hub', action: 'Structure the case top-down (SCQA + pyramid) before presenting it' },
     ]
   },
   {
@@ -529,7 +496,7 @@ const WORKFLOWS = [
       { tool: 'Spatial Canvas', action: 'Explore: map the system, connections, and constraints spatially' },
       { tool: 'Decision Hub', action: 'Log the build vs. alternative decision with full reasoning' },
       { tool: 'Project Hub', action: 'Break into tasks, set priorities and due dates, track progress on the board' },
-      { tool: 'Reflection Board', action: 'After delivery: what worked, what to improve, one committed action' },
+      { tool: 'Journal Hub', action: 'After delivery: what worked, what to improve, one committed action' },
     ]
   },
 ];

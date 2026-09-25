@@ -8,8 +8,8 @@ window.HubSearch = (() => {
 
   const TOOLS = [
     'project-hub', 'schedule', 'idea-swiper', 'decision-hub', 'canvas-hub',
-    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub', 'argument-hub',
-    'tags-hub', 'reflection-hub', 'tool-portfolio', 'journal-hub', 'focus-hub'
+    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub',
+    'tags-hub', 'tool-portfolio', 'journal-hub', 'focus-hub'
   ];
 
   function init() {

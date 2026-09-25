@@ -71,14 +71,6 @@ Tools are grouped by the kind of work they support.
 | **Decision Hub** | Structured decisions with Cynefin domains, confidence, assumptions, alignment, and outcome calibration |
 | **Goals Hub** | Quarterly OKRs with committed or aspirational key results and linked projects |
 | **Risk Register** | Heat-map risk tracking with owners, treatments, and review dates |
-| **Argument Hub** | Build Pyramid Principle arguments with SCQA, MECE support, and Markdown export |
-
-### Reflection & Methods
-
-| Tool | What it does |
-|------|-------------|
-| **Reflection Board** | Guided reviews and retrospectives across wins, blockers, patterns, and next actions |
-| **Frameworks** | Experiment with visual methods including the blocked-work iceberg and V-Model process map |
 
 ### Tools & Focus
 
@@ -239,20 +231,17 @@ capture-hub.html        # Fast capture inbox
 journal-hub.html        # Daily reflection and journal
 idea-swiper.html        # Rapid idea triage (swipe)
 decision-hub.html       # Decision log + assumptions + alignment matrix + calibration
-argument-hub.html       # Pyramid Principle argument builder (SCQA, MECE, export)
 canvas-hub.html         # Infinite spatial canvas
 graph-hub.html          # Task dependency graph (vis-network)
 people-hub.html         # People directory and follow-ups
 town-hub.html           # Machi Hub living pixel city
 focus-hub.html          # Time Journal + optional timer
-reflection-hub.html     # Reviews and retrospectives
 goals-hub.html          # OKR / quarterly goals
 learning-hub.html       # Reading & learning log
 stakeholder-hub.html    # Stakeholder power/interest grid
 risk-hub.html           # Risk register
 achievements-hub.html   # Profile (identity) + milestones & achievements
 tags-hub.html           # Topic registry
-frameworks-hub.html     # Framework reference
 tool-portfolio.html     # Tool/vendor directory (Technology Radar)
 help-hub.html           # Help, framework reference, workflow guides
 ```

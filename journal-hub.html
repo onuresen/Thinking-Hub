@@ -339,7 +339,6 @@
       </div>
       <div class="rh-topbar-spacer"></div>
       <button class="btn btn-ghost" onclick="rhSendToDecision()" style="font-size:11px;padding:5px 10px" title="Create a decision from this week's blockers">→ Decision</button>
-      <button class="btn btn-ghost" onclick="rhSendToReflection()" style="font-size:11px;padding:5px 10px" title="Send free notes to Reflection Board as Questions">→ Reflection Q</button>
       <div class="rh-save-chip" id="rh-save-chip">Saved ✓</div>
     </div>
 
@@ -1145,30 +1144,6 @@
     HubStorage.set('decision-hub-v1', arr);
     showToast('Decision created from blockers');
     if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
-  }
-
-  function rhSendToReflection() {
-    const monday = rhGetMonday(rhWeekOffset);
-    const key = rhWeekKey(monday);
-    const wd = rhGetWeekData(key);
-    const notes = (wd.notes || '').trim();
-    if (!notes) { showToast('Add free notes first, then push to Reflection Board'); return; }
-    const lines = notes.split('\n').map(l => l.trim()).filter(Boolean);
-    const rbData = HubStorage.get('reflection-hub-v1') || { boards: [], activeId: null };
-    const activeBoard = (rbData.boards || []).find(b => b.id === rbData.activeId && !b.archived) || (rbData.boards || []).find(b => !b.archived);
-    if (!activeBoard) { showToast('No Reflection Board yet — create one first'); return; }
-    if (!activeBoard.columns) activeBoard.columns = {};
-    if (!activeBoard.columns.question) activeBoard.columns.question = [];
-    lines.forEach(text => {
-      activeBoard.columns.question.unshift({
-        id: 'ri-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-        text, tags: [], createdAt: new Date().toISOString(),
-        reactions: { '👍': 0, '🔥': 0, '🤔': 0 },
-        assignee: null, dueDate: null, done: null, taskId: null, decisionId: null
-      });
-    });
-    HubStorage.set('reflection-hub-v1', rbData);
-    showToast(lines.length + ' question' + (lines.length !== 1 ? 's' : '') + ' sent to Reflection Board');
   }
 
   function _rhEsc(s) {

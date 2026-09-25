@@ -38,22 +38,6 @@ window.HubTags = (() => {
       }
     },
     {
-      id: 'reflection-hub', label: 'Reflection Board',
-      storageKey: 'reflection-hub-v1',
-      collect(data) {
-        const out = [];
-        (data.boards || []).forEach(b => {
-          Object.keys(b.columns || {}).forEach(col => {
-            (b.columns[col] || []).forEach(it => out.push({
-              get: () => it.tags || [],
-              set: arr => { it.tags = arr; },
-            }));
-          });
-        });
-        return out;
-      }
-    },
-    {
       id: 'meetings-hub', label: 'Meeting Hub',
       storageKey: 'meetings-hub-v1',
       collect(data) {
