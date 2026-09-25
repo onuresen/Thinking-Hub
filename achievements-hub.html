@@ -485,7 +485,8 @@
     const assump    = (HubStorage.get('assumptions-hub-v1') || {}).assumptions || [];
     const risks     = (HubStorage.get('risk-hub-v1') || {}).risks || [];
     const goals     = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []);
-    const canvas    = (HubStorage.get('canvas-v1') || {}).nodes || [];
+    const canvasRaw = HubStorage.get('canvas-v1');
+    const canvas    = canvasRaw ? (Array.isArray(canvasRaw.boards) ? canvasRaw.boards.flatMap(b => b.nodes || []) : (canvasRaw.nodes || [])) : [];
 
     const uniqueAppIds = new Set(log.map(e => e.appId));
     const superLikes   = ideas.filter(i => i.vote === 'super').length;

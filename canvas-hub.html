@@ -12,6 +12,7 @@
   <script src="hub-utils.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-links.js"></script>
+  <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <script src="vendor/html2canvas.min.js"></script>
   <style>
@@ -90,6 +91,114 @@
       display: flex;
       gap: 8px;
       z-index: 100;
+    }
+
+    /* ── Board bar (Canvas Hub: named boards) ──────────────────── */
+    .board-bar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 100;
+    }
+
+    .board-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12px;
+      padding: 5px 8px;
+      outline: none;
+      cursor: pointer;
+      max-width: 170px;
+    }
+
+    .board-select:focus {
+      border-color: var(--accent);
+    }
+
+    .bb-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text2);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bb-btn:hover {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    /* ── Edge type popover ──────────────────────────────────────── */
+    .edge-popover {
+      position: fixed;
+      z-index: 300;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 150px;
+    }
+
+    .ep-type-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .ep-type-btn:hover {
+      background: var(--surface3);
+    }
+
+    .ep-type-btn.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .ep-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    .ep-del {
+      border: none;
+      background: transparent;
+      color: var(--accent-nope);
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .ep-del:hover {
+      background: rgba(232, 69, 90, 0.12);
     }
 
     /* ── Nodes ──────────────────────────────────────────────── */
@@ -436,10 +545,24 @@
 
   <div class="help-text" id="help-text">Double-click canvas to create · Space+Drag to pan · Scroll to zoom</div>
 
+  <div class="board-bar">
+    <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
+    <button class="bb-btn" onclick="createBoard()" title="New board">+</button>
+    <button class="bb-btn" onclick="renameActiveBoard()" title="Rename board">✎</button>
+    <button class="bb-btn" onclick="deleteActiveBoard()" title="Delete board">✕</button>
+  </div>
+
   <div class="viewport" id="viewport">
     <div id="canvas-layer">
       <svg id="edges-svg"></svg>
     </div>
+  </div>
+
+  <!-- Edge type popover: click a connection line to set its relationship type or delete it -->
+  <div class="edge-popover" id="edge-popover">
+    <div class="ep-types"></div>
+    <div class="ep-sep"></div>
+    <button class="ep-del" onclick="deleteEdgeFromPopover()">✕ Delete link</button>
   </div>
 
   <!-- Mini-map -->
@@ -544,25 +667,45 @@
       } catch { return []; }
     }
 
-    // ── State ────────────────────────────────────────────────
+    // ── State: named boards ──────────────────────────────────
+    // Storage stays under the single 'canvas-v1' key (untouched by the
+    // backup/export system, which lists keys by name) — only its internal
+    // shape grows from one flat board to { boards: [...], activeBoardId }.
+    // `db` is always a *reference* to the active board object inside
+    // `fullState.boards`, so it keeps the exact {nodes, edges, panX, panY,
+    // zoom} shape every other function already expects — switching boards
+    // just reassigns which object `db` points at.
 
-    let db = {
-      nodes: [],
-      edges: [],
-      panX: window.innerWidth / 2,
-      panY: window.innerHeight / 2,
-      zoom: 1
-    };
+    function newBoard(name) {
+      return {
+        id: 'board-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        name: name || 'Untitled board',
+        createdAt: new Date().toISOString(),
+        nodes: [], edges: [],
+        panX: window.innerWidth / 2, panY: window.innerHeight / 2, zoom: 1
+      };
+    }
+
+    function migrateShape(raw) {
+      if (raw && Array.isArray(raw.boards) && raw.boards.length) return raw;
+      const board = newBoard('Canvas');
+      board.nodes = (raw && raw.nodes) || [];
+      board.edges = (raw && raw.edges) || [];
+      if (raw && typeof raw.panX === 'number') board.panX = raw.panX;
+      if (raw && typeof raw.panY === 'number') board.panY = raw.panY;
+      if (raw && typeof raw.zoom === 'number') board.zoom = raw.zoom;
+      return { boards: [board], activeBoardId: board.id };
+    }
+
+    let fullState = migrateShape(HubStorage.get(STORAGE_KEY));
+    if (!fullState.boards.find(b => b.id === fullState.activeBoardId)) {
+      fullState.activeBoardId = fullState.boards[0].id;
+    }
+    let db = fullState.boards.find(b => b.id === fullState.activeBoardId);
+    if (!db.edges) db.edges = [];
 
     const viewport = document.getElementById('viewport');
     const layer = document.getElementById('canvas-layer');
-
-    try {
-      const stored = HubStorage.get(STORAGE_KEY);
-      if (stored && stored.nodes) {
-        db = { edges: [], ...stored };
-      }
-    } catch { }
 
     if (!db.nodes.length) {
       db.panX = window.innerWidth / 2;
@@ -574,13 +717,84 @@
     let _saveTimer;
     function pulseSave() {
       clearTimeout(_saveTimer);
-      _saveTimer = setTimeout(() => HubStorage.set(STORAGE_KEY, db), 500);
+      _saveTimer = setTimeout(() => HubStorage.set(STORAGE_KEY, fullState), 500);
     }
 
     HubStorage.subscribe(STORAGE_KEY, () => {
       const stored = HubStorage.get(STORAGE_KEY);
-      if (stored) { db = { edges: [], ...stored }; renderAll(); updateTransform(); }
+      if (!stored) return;
+      fullState = migrateShape(stored);
+      if (!fullState.boards.find(b => b.id === fullState.activeBoardId)) {
+        fullState.activeBoardId = fullState.boards[0].id;
+      }
+      db = fullState.boards.find(b => b.id === fullState.activeBoardId);
+      if (!db.edges) db.edges = [];
+      renderAll(); updateTransform(); renderBoardBar();
     });
+
+    // ── Board management ─────────────────────────────────────
+
+    function renderBoardBar() {
+      const sel = document.getElementById('board-select');
+      if (!sel) return;
+      sel.innerHTML = fullState.boards.map(b =>
+        `<option value="${b.id}"${b.id === db.id ? ' selected' : ''}>${HubUtils.esc(b.name)} (${(b.nodes || []).length})</option>`
+      ).join('');
+    }
+
+    function switchBoard(id) {
+      closeEdgePopover();
+      const b = fullState.boards.find(x => x.id === id);
+      if (!b || b === db) return;
+      db = b;
+      if (!db.edges) db.edges = [];
+      selectedNodeId = null;
+      connectMode = false; connectSource = null;
+      document.getElementById('connect-btn')?.classList.remove('active');
+      viewport.classList.remove('connect-mode');
+      fullState.activeBoardId = id;
+      pulseSave();
+      renderAll(); updateTransform(); renderBoardBar();
+    }
+
+    function createBoard() {
+      const name = prompt('New board name:', 'New Board');
+      if (name === null) return;
+      const board = newBoard(name.trim() || 'Untitled board');
+      fullState.boards.push(board);
+      fullState.activeBoardId = board.id;
+      db = board;
+      selectedNodeId = null;
+      pulseSave();
+      renderAll(); updateTransform(); renderBoardBar();
+      if (window.showToast) showToast('Board created');
+    }
+
+    function renameActiveBoard() {
+      const name = prompt('Rename board:', db.name);
+      if (name === null) return;
+      db.name = name.trim() || db.name;
+      pulseSave();
+      renderBoardBar();
+    }
+
+    function deleteActiveBoard() {
+      if (fullState.boards.length <= 1) {
+        alert('This is your only board — create another one before deleting this one.');
+        return;
+      }
+      if (!confirm(`Delete board "${db.name}"? This removes all its notes and connections and cannot be undone.`)) return;
+      const idx = fullState.boards.findIndex(b => b.id === db.id);
+      fullState.boards.splice(idx, 1);
+      const next = fullState.boards[Math.max(0, idx - 1)];
+      fullState.activeBoardId = next.id;
+      db = next;
+      if (!db.edges) db.edges = [];
+      selectedNodeId = null;
+      pulseSave();
+      renderAll(); updateTransform(); renderBoardBar();
+      if (window.showToast) showToast('Board deleted');
+    }
 
     // ── Viewport transform ───────────────────────────────────
 
@@ -614,6 +828,7 @@
     viewport.addEventListener('mousedown', e => {
       if (e.target !== viewport && !spacePressed) return;
       if (e.button !== 0 && e.button !== 1) return;
+      closeEdgePopover();
       isPanning = true;
       startPanX = e.clientX - db.panX;
       startPanY = e.clientY - db.panY;
@@ -669,6 +884,7 @@
         if (!connectMode) viewport.style.cursor = 'grab';
       }
       if (e.key === 'Escape') {
+        if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('import-overlay').classList.contains('is-open')) { closeImportPicker(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         selectNode(null);
@@ -720,6 +936,17 @@
     }
 
     // ── Edge management ──────────────────────────────────────
+    // Edges carry a relType so a connection means something beyond "these
+    // are related": relates (non-directional), blocks / depends-on (directed,
+    // arrowhead pointing the way impact flows — same relType vocabulary as
+    // Dependency Graph's manual links, P75).
+
+    const EDGE_TYPES = [
+      { id: 'relates', label: '···· Relates', dash: '5 4', color: 'var(--accent-glow)', directed: false },
+      { id: 'blocks', label: '⛔ Blocks', dash: null, color: 'var(--accent-nope)', directed: true },
+      { id: 'depends-on', label: '⏳ Depends on', dash: null, color: 'var(--accent2)', directed: true },
+    ];
+    function edgeTypeInfo(id) { return EDGE_TYPES.find(t => t.id === id) || EDGE_TYPES[0]; }
 
     function createEdge(fromId, toId) {
       if (!db.edges) db.edges = [];
@@ -728,9 +955,15 @@
         (e.from === toId && e.to === fromId)
       );
       if (dup) return;
-      db.edges.push({ id: 'e-' + Date.now().toString(36), from: fromId, to: toId });
+      db.edges.push({ id: 'e-' + Date.now().toString(36), from: fromId, to: toId, relType: 'relates' });
       pulseSave();
       renderEdges();
+    }
+
+    function resolveCssVar(v) {
+      const m = /var\((--[\w-]+)\)/.exec(v);
+      if (!m) return v;
+      return getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() || v;
     }
 
     function renderEdges() {
@@ -738,10 +971,29 @@
       svg.innerHTML = '';
       if (!db.edges || !db.edges.length) return;
 
+      // Arrowhead markers for directed relTypes, colored to match their line
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      EDGE_TYPES.filter(t => t.directed).forEach(t => {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrow-' + t.id);
+        marker.setAttribute('viewBox', '0 0 10 10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5');
+        marker.setAttribute('markerWidth', '7'); marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('orient', 'auto-start-reverse');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+        path.setAttribute('fill', resolveCssVar(t.color));
+        marker.appendChild(path);
+        defs.appendChild(marker);
+      });
+      svg.appendChild(defs);
+
       db.edges.forEach(edge => {
         const fn = db.nodes.find(n => n.id === edge.from);
         const tn = db.nodes.find(n => n.id === edge.to);
         if (!fn || !tn) return;
+        const type = edgeTypeInfo(edge.relType);
+        const color = resolveCssVar(type.color);
 
         // Center anchors (use stored size or fallback to defaults)
         const x1 = fn.x + (fn.w || NODE_W) / 2, y1 = fn.y + (fn.h || NODE_H) / 2;
@@ -753,9 +1005,10 @@
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', x1); line.setAttribute('y1', y1);
         line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-        line.style.stroke = 'var(--accent-glow)';
-        line.setAttribute('stroke-width', '1.5');
-        line.setAttribute('stroke-dasharray', '5 4');
+        line.style.stroke = color;
+        line.setAttribute('stroke-width', type.directed ? '2' : '1.5');
+        if (type.dash) line.setAttribute('stroke-dasharray', type.dash);
+        if (type.directed) line.setAttribute('marker-end', `url(#arrow-${type.id})`);
         line.style.pointerEvents = 'none';
         g.appendChild(line);
 
@@ -764,15 +1017,14 @@
         hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
         hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
         hit.setAttribute('stroke', 'transparent');
-        hit.setAttribute('stroke-width', '12');
+        hit.setAttribute('stroke-width', '14');
         hit.style.pointerEvents = 'stroke';
         hit.style.cursor = 'pointer';
-        hit.addEventListener('mouseenter', () => line.style.stroke = 'var(--accent-nope)');
-        hit.addEventListener('mouseleave', () => line.style.stroke = 'var(--accent-glow)');
+        hit.addEventListener('mouseenter', () => line.style.stroke = resolveCssVar('var(--accent)'));
+        hit.addEventListener('mouseleave', () => line.style.stroke = color);
         hit.addEventListener('click', e => {
           e.stopPropagation();
-          db.edges = db.edges.filter(ed => ed.id !== edge.id);
-          pulseSave(); renderEdges(); renderMinimap();
+          openEdgePopover(edge.id, e.clientX, e.clientY);
         });
         g.appendChild(hit);
 
@@ -782,6 +1034,54 @@
       // re-enable pointer events on SVG so hit lines work
       svg.style.pointerEvents = 'all';
     }
+
+    // ── Edge type popover ─────────────────────────────────────
+
+    let _edgePopoverEdgeId = null;
+
+    function openEdgePopover(edgeId, clientX, clientY) {
+      const edge = db.edges.find(e => e.id === edgeId);
+      if (!edge) return;
+      _edgePopoverEdgeId = edgeId;
+      const pop = document.getElementById('edge-popover');
+      const typesWrap = pop.querySelector('.ep-types');
+      typesWrap.innerHTML = '';
+      EDGE_TYPES.forEach(t => {
+        const btn = document.createElement('button');
+        const isActive = (edge.relType || 'relates') === t.id;
+        btn.className = 'ep-type-btn' + (isActive ? ' active' : '');
+        btn.textContent = t.label;
+        btn.onmousedown = e => {
+          e.stopPropagation();
+          edge.relType = t.id;
+          pulseSave();
+          renderEdges();
+          closeEdgePopover();
+        };
+        typesWrap.appendChild(btn);
+      });
+      pop.style.left = Math.min(clientX, window.innerWidth - 170) + 'px';
+      pop.style.top = Math.min(clientY, window.innerHeight - 140) + 'px';
+      pop.style.display = 'flex';
+    }
+
+    function closeEdgePopover() {
+      _edgePopoverEdgeId = null;
+      const pop = document.getElementById('edge-popover');
+      if (pop) pop.style.display = 'none';
+    }
+
+    function deleteEdgeFromPopover() {
+      if (!_edgePopoverEdgeId) return;
+      db.edges = db.edges.filter(e => e.id !== _edgePopoverEdgeId);
+      pulseSave();
+      renderEdges(); renderMinimap();
+      closeEdgePopover();
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#edge-popover')) closeEdgePopover();
+    });
 
     // ── Node CRUD ────────────────────────────────────────────
 
@@ -1138,6 +1438,7 @@
       // Drag
       el.addEventListener('mousedown', e => {
         if (e.target === body || spacePressed) return;
+        closeEdgePopover();
         if (connectMode) {
           // Connect mode: first click = source, second click = target
           e.stopPropagation();
@@ -1292,12 +1593,17 @@
     HubLinks.resolveItems = (function (old) {
       return function (toolId) {
         if (toolId === 'canvas-hub') {
-          const stored = HubStorage.get(STORAGE_KEY) || { nodes: [] };
-          return stored.nodes.map(n => ({
-            id: n.id,
-            label: (n.link && n.link.label) || (n.text || '').replace(/<[^>]*>/gm, '').slice(0, 50) || '(empty node)',
-            subtitle: n.kind === 'goal' ? '🎯 Goal' : n.kind === 'project' ? '📌 Project' : n.kind === 'rd' ? '🧪 R&D bet' : 'canvas note'
+          const state = migrateShape(HubStorage.get(STORAGE_KEY));
+          const multi = state.boards.length > 1;
+          const items = [];
+          state.boards.forEach(b => (b.nodes || []).forEach(n => {
+            items.push({
+              id: n.id,
+              label: (n.link && n.link.label) || (n.text || '').replace(/<[^>]*>/gm, '').slice(0, 50) || '(empty node)',
+              subtitle: (multi ? b.name + ' · ' : '') + (n.kind === 'goal' ? '🎯 Goal' : n.kind === 'project' ? '📌 Project' : n.kind === 'rd' ? '🧪 R&D bet' : 'canvas note')
+            });
           }));
+          return items;
         }
         return old(toolId);
       };
@@ -1307,6 +1613,7 @@
 
     updateTransform();
     renderAll();
+    renderBoardBar();
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -1323,7 +1630,15 @@
       if (!e.data || e.data.type !== 'hub-highlight') return;
       const nodeId = e.data.itemId;
       if (!nodeId) return;
-      const node = db.nodes.find(n => n.id === nodeId);
+      let node = db.nodes.find(n => n.id === nodeId);
+      if (!node) {
+        // Not on the active board — find it on another board and switch first
+        const owner = fullState.boards.find(b => (b.nodes || []).some(n => n.id === nodeId));
+        if (owner && owner.id !== db.id) {
+          switchBoard(owner.id);
+          node = db.nodes.find(n => n.id === nodeId);
+        }
+      }
       if (!node) return;
 
       // Pan canvas so the node is centred in the viewport
