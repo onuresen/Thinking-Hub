@@ -1595,7 +1595,11 @@
       body.contentEditable = true;
       body.innerHTML = node.text || '';
       body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); });
-      body.addEventListener('mousedown', e => e.stopPropagation()); // don't start drag from text
+      // Don't start a drag/text-select from the body — except in Connect
+      // mode, where a click anywhere on the node (body included, since it
+      // covers most of the node's surface) must reach the connect logic
+      // below instead of being swallowed here.
+      body.addEventListener('mousedown', e => { if (!connectMode) e.stopPropagation(); });
       el.appendChild(body);
 
       // Link badge
@@ -1618,11 +1622,15 @@
 
       // Drag
       el.addEventListener('mousedown', e => {
-        if (e.target === body || spacePressed) return;
+        if (spacePressed) return;
+        if (e.target === body && !connectMode) return; // let normal text-editing clicks through
         closeEdgePopover(); closeAddMenu(); closeAddPicker();
         if (connectMode) {
-          // Connect mode: first click = source, second click = target
+          // Connect mode: first click = source, second click = target.
+          // preventDefault stops a click on the body from also placing a
+          // text caret / stealing focus while we're just picking nodes.
           e.stopPropagation();
+          e.preventDefault();
           if (!connectSource) {
             connectSource = node.id;
             el.classList.add('connect-source');

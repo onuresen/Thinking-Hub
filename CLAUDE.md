@@ -2057,6 +2057,21 @@ Closes E from the original 5-option brainstorm — but reshaped per explicit use
 
 ---
 
+### ~~Priority 113 — Bugfix: Connect mode did nothing when clicking a node's center~~ ✓ Done `[group: bugfix]`
+User report: "connect was not really working. Nothing was happening when clicking nodes." Root cause was pre-existing (not introduced by P110–112, but only exposed once real usage tried Connect mode): `.node-body`'s own `mousedown` listener unconditionally called `e.stopPropagation()` (added originally so dragging never starts from inside the editable text), which meant a click on the body — the part of the node covering most of its visible surface — never reached the outer `.node`'s `mousedown` handler at all, and **that** handler is where all of Connect mode's source/target logic lives. A real user's natural click (anywhere on the node) landed on the body and silently did nothing; only clicking the thin 12px header strip worked.
+
+**Fix:** the body's listener now only calls `stopPropagation()` when Connect mode is off; the outer node handler's early-return for body clicks is likewise skipped while Connect mode is on, and the click also gets `preventDefault()`'d in that branch so it doesn't also drop a text caret into the body while you're just picking source/target nodes.
+
+**Key decisions:**
+- **Decision:** Gate both the body's `stopPropagation()` and the node's `e.target === body` early-return on `connectMode`, rather than adding a separate click target (e.g. requiring users to click the header). **Why:** clicking anywhere on a node is the obvious, discoverable interaction; carving out a special "must click here" zone is the opposite of easy-to-use, and this repo's own D/E-feature test scripts earlier in the session had already worked around this exact limitation by deliberately avoiding the body — a sign the underlying behavior was wrong, not just under-documented. **Confidence:** high.
+- **Decision:** Add `e.preventDefault()` in the Connect-mode branch. **Why:** without it, clicking the body still places a text caret (a contentEditable's default mousedown behavior isn't stopped by `stopPropagation` alone) — cosmetically confusing while a user is trying to pick nodes to connect, not edit them. **Confidence:** high.
+
+**Verified** (Playwright): double-clicking to create two notes, entering Connect mode, then clicking dead-center of each node (not the header) creates the edge; the body never actually receives focus during that flow; text editing outside Connect mode is unaffected. Full smoke (30/30 pages) + flows suites green.
+
+**Files:** `canvas-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
