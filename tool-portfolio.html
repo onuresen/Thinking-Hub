@@ -89,15 +89,6 @@
         .stat-pill.sp-dimmed { opacity: 0.38; }
         .stat-pill .sp-count { font-weight: 700; }
         .stat-pill .sp-label { color: var(--text3); font-size: 10px; }
-        /* Radar ring pills */
-        .stat-pill.sp-adopt  { border-color: var(--accent);       background: var(--accent-dim); }
-        .stat-pill.sp-adopt .sp-count  { color: var(--accent); }
-        .stat-pill.sp-trial  { border-color: #38bdf8;             background: rgba(56,189,248,0.08); }
-        .stat-pill.sp-trial .sp-count  { color: #38bdf8; }
-        .stat-pill.sp-assess { border-color: var(--accent-super); background: rgba(245,158,11,0.08); }
-        .stat-pill.sp-assess .sp-count { color: var(--accent-super); }
-        .stat-pill.sp-hold   { border-color: var(--accent-nope);  background: rgba(239,68,68,0.07); }
-        .stat-pill.sp-hold .sp-count   { color: var(--accent-nope); }
         .stat-pill.sp-total .sp-count  { color: var(--text); }
         /* Status stage pills */
         .stat-pill.sp-piloting { border-color: #38bdf8;             background: rgba(56,189,248,0.08); }
@@ -251,17 +242,7 @@
         .status-using     { background: var(--accent); }
         .status-retired   { background: var(--border); }
 
-        /* ── Ring badge ─────────────────────── */
-        .ring-badge {
-            font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-            padding: 2px 5px; border-radius: 4px; flex-shrink: 0; white-space: nowrap;
-        }
-        .ring-adopt   { background: var(--accent-dim);         color: var(--accent); }
-        .ring-trial   { background: rgba(56,189,248,0.12);     color: #38bdf8; }
-        .ring-assess  { background: rgba(245,158,11,0.12);     color: var(--accent-super); }
-        .ring-hold    { background: rgba(239,68,68,0.10);      color: var(--accent-nope); }
-
-        /* ── Ring selector in detail ─────────── */
+        /* ── SoR/SoE/SoI selector in detail ─────────── */
         .ring-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
         .ring-pill-btn {
             flex: 1; padding: 6px 4px; border-radius: var(--r-sm); border: 1px solid var(--border);
@@ -269,10 +250,6 @@
             cursor: pointer; text-align: center; transition: all 0.15s;
         }
         .ring-pill-btn:hover { border-color: var(--accent); color: var(--text); }
-        .ring-pill-btn.active-adopt   { background: var(--accent-dim);       color: var(--accent);       border-color: var(--accent); }
-        .ring-pill-btn.active-trial   { background: rgba(56,189,248,0.12);   color: #38bdf8;             border-color: #38bdf8; }
-        .ring-pill-btn.active-assess  { background: rgba(245,158,11,0.12);   color: var(--accent-super); border-color: var(--accent-super); }
-        .ring-pill-btn.active-hold    { background: rgba(239,68,68,0.10);    color: var(--accent-nope);  border-color: var(--accent-nope); }
         .ring-pill-btn.active-sor { background: rgba(34,197,94,0.12); color: #22c55e; border-color: #22c55e; }
         .ring-pill-btn.active-soe { background: rgba(56,189,248,0.12); color: #38bdf8; border-color: #38bdf8; }
         .ring-pill-btn.active-soi { background: rgba(245,158,11,0.12); color: var(--accent-super); border-color: var(--accent-super); }
@@ -780,7 +757,6 @@
                 icon: '🛠',
                 url: '',
                 status: 'exploring',
-                ring: 'assess',
                 sor: false,
                 soe: false,
                 soi: false,
@@ -869,22 +845,13 @@
                 return;
             }
 
-            const oldRing = (key === 'ring') ? t.ring : null;
             t[key] = value;
             save();
             document.getElementById('topbar-title').textContent = t.name;
-            if (key === 'ring') {
-                renderDetail(); // re-render so ring pill active states update
-                // Prompt decision log on meaningful ring promotions
-                const promotions = { assess: ['trial','adopt'], trial: ['adopt'], hold: ['trial','adopt'] };
-                if (oldRing && (promotions[oldRing] || []).includes(value)) {
-                    promptRingDecision(t, oldRing, value);
-                }
-            }
         }
 
-        // SoR/SoE/SoI are independent toggles (a tool can be more than one), unlike the
-        // single-select ring — flip in place and re-render so the pill state updates.
+        // SoR/SoE/SoI are independent toggles (a tool can be more than one) —
+        // flip in place and re-render so the pill state updates.
         function toggleArchTag(key) {
             const t = tools.find(x => x.id === currentId);
             if (!t) return;
@@ -934,7 +901,6 @@
         }
 
         let _searchQuery  = '';
-        let _ringFilter   = null; // null = show all, or 'adopt'|'trial'|'assess'|'hold'
         let _statusFilter = null; // null = show all, or 'exploring'|'piloting'|'using'|'retired'
 
         function onSearchInput() {
@@ -950,12 +916,6 @@
             renderList();
         }
 
-        function toggleRingFilter(ring) {
-            _ringFilter = (!ring || _ringFilter === ring) ? null : ring;
-            renderStatsBar();
-            renderList();
-        }
-
         function toggleStatusFilter(status) {
             _statusFilter = (!status || _statusFilter === status) ? null : status;
             renderStatsBar();
@@ -966,32 +926,21 @@
             const bar = document.getElementById('stats-bar');
             if (!bar) return;
 
-            const ringCounts = { adopt: 0, trial: 0, assess: 0, hold: 0 };
             const statusCounts = { exploring: 0, piloting: 0, using: 0, retired: 0 };
             tools.forEach(t => {
-                if (ringCounts[t.ring] !== undefined) ringCounts[t.ring]++;
                 if (statusCounts[t.status] !== undefined) statusCounts[t.status]++;
             });
 
             const total = tools.length;
-            const ringLabels   = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
             const statusLabels = { exploring:'Exploring', piloting:'Piloting', using:'Using', retired:'Retired' };
 
-            const anyFilter = _ringFilter || _statusFilter;
+            const anyFilter = _statusFilter;
             const dim = (active) => active ? '' : (anyFilter ? ' sp-dimmed' : '');
 
             bar.innerHTML = [
-                `<div class="stat-pill sp-total${anyFilter ? ' sp-dimmed' : ''}" title="Clear filters" onclick="toggleRingFilter(null);toggleStatusFilter(null)">
+                `<div class="stat-pill sp-total${anyFilter ? ' sp-dimmed' : ''}" title="Clear filters" onclick="toggleStatusFilter(null)">
                     <span class="sp-count">${total}</span><span class="sp-label">total</span>
                 </div>`,
-                `<div class="stats-divider"></div>`,
-                ...['adopt','trial','assess','hold'].map(r =>
-                    ringCounts[r] > 0
-                        ? `<div class="stat-pill sp-${r}${dim(_ringFilter === r)}" title="Radar: ${ringLabels[r]}" onclick="toggleRingFilter('${r}')">
-                               <span class="sp-count">${ringCounts[r]}</span><span class="sp-label">${ringLabels[r]}</span>
-                           </div>`
-                        : ''
-                ),
                 `<div class="stats-divider"></div>`,
                 ...['exploring','piloting','using','retired'].map(s =>
                     statusCounts[s] > 0
@@ -1007,9 +956,8 @@
             const listEl = document.getElementById('tool-list');
             listEl.innerHTML = '';
 
-            // Apply filters: ring, status, search
+            // Apply filters: status, search
             let filtered = tools;
-            if (_ringFilter)   filtered = filtered.filter(t => t.ring === _ringFilter);
             if (_statusFilter) filtered = filtered.filter(t => t.status === _statusFilter);
             if (_searchQuery)  filtered = filtered.filter(t =>
                 (t.name || '').toLowerCase().includes(_searchQuery) ||
@@ -1018,7 +966,6 @@
 
             if (!filtered.length) {
                 const parts = [
-                    _ringFilter   ? `radar: <strong>${_ringFilter}</strong>`   : '',
                     _statusFilter ? `stage: <strong>${_statusFilter}</strong>` : '',
                     _searchQuery  ? `"${escapeHtml(_searchQuery)}"` : '',
                 ].filter(Boolean).join(', ');
@@ -1087,10 +1034,13 @@
 
                     const statusColors = { exploring:'var(--text3)', piloting:'#38bdf8', using:'var(--accent)', retired:'var(--border)' };
                     const statusDot = t.status ? `<span style="width:7px;height:7px;border-radius:50%;background:${statusColors[t.status]||'var(--text3)'};flex-shrink:0;display:inline-block" title="Stage: ${t.status}"></span>` : '';
+                    const projCount = (t.projectIds || []).length;
+                    const projBadge = projCount ? `<span style="font-size:10px;color:var(--text3);font-family:var(--font-mono);flex-shrink:0" title="Linked to ${projCount} project${projCount===1?'':'s'}">🔗${projCount}</span>` : '';
                     row.innerHTML = `
           <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
           <div class="tool-icon">${toolIconHtml(t)}</div>
           <div class="tool-name">${escapeHtml(t.name)}</div>
+          ${projBadge}
           ${statusDot}
         `;
 
@@ -1173,8 +1123,6 @@
             const tB = tools.find(t => t.id === compareId);
             if (!tA) return;
 
-            const ringLabels = { adopt:'Adopt', trial:'Trial', assess:'Assess', hold:'Hold' };
-            const ringColors = { adopt:'var(--accent)', trial:'#38bdf8', assess:'var(--accent-super)', hold:'var(--accent-nope)' };
             const statusColors = { exploring:'var(--text3)', piloting:'#38bdf8', using:'var(--accent)', retired:'var(--text3)' };
 
             function toolCol(t, isB) {
@@ -1189,14 +1137,13 @@
                 const linkedProjects = (() => {
                     try {
                         const ph = JSON.parse(localStorage.getItem('project-hub-v1')||'{}');
-                        return (ph.projects||[]).filter(p=>(t.linkedProjects||[]).includes(p.id)).map(p=>p.name);
+                        return (ph.projects||[]).filter(p=>(t.projectIds||[]).includes(p.id)).map(p=>p.name);
                     } catch { return []; }
                 })();
 
                 const rows = [
                     ['Category',   t.category  || ''],
                     ['Status',     t.status    ? `<span style="color:${statusColors[t.status]||'var(--text3)'}">${t.status}</span>` : ''],
-                    ['Radar Ring', t.ring      ? `<span style="color:${ringColors[t.ring]||'var(--text3)'}">${ringLabels[t.ring]||t.ring}</span>` : ''],
                     ['SoR · SoE · SoI', [t.sor && 'SoR', t.soe && 'SoE', t.soi && 'SoI'].filter(Boolean).join(' · ')],
                     ['URL',        t.url       ? `<a href="${escapeHtml(t.url)}" target="_blank" style="color:var(--accent);font-size:12px">${escapeHtml(t.url)}</a>` : ''],
                     ['Projects',   linkedProjects.length ? linkedProjects.map(n=>`<span style="font-size:12px;background:var(--surface3);border-radius:3px;padding:1px 5px">${escapeHtml(n)}</span>`).join(' ') : ''],
@@ -1288,19 +1235,6 @@
             <div class="field-hint">Your adoption journey — where are you with this tool?</div>
           </div>
           <div class="field">
-            <div class="field-label">Radar Ring <span style="color:var(--text3);font-size:10px;font-weight:400">(Technology Radar)</span></div>
-            <div class="ring-pill-row">
-              ${['adopt','trial','assess','hold'].map(r => {
-                const labels = { adopt:'✅ Adopt', trial:'🔬 Trial', assess:'🔍 Assess', hold:'⏸ Hold' };
-                const hints  = { adopt:'battle-tested', trial:'worth a project', assess:'worth exploring', hold:'use with caution' };
-                const active = (t.ring || 'assess') === r;
-                return `<button class="ring-pill-btn${active ? ' active-'+r : ''}" onclick="updateField('ring','${r}')" title="${hints[r]}">${labels[r]}</button>`;
-              }).join('')}
-            </div>
-            <div class="field-hint">Your recommendation — would you use this again? (Technology Radar framework)</div>
-          </div>
-
-          <div class="field">
             <div class="field-label" style="text-transform:none">SoR · SoE · SoI <span style="color:var(--text3);font-size:10px;font-weight:400;text-transform:uppercase">(check all that apply)</span></div>
             <div class="ring-pill-row">
               <button class="ring-pill-btn${t.sor ? ' active-sor' : ''}" onclick="toggleArchTag('sor')" title="System of Record — the source of truth for this data">SoR</button>
@@ -1337,10 +1271,7 @@
       </div>
 
       <div class="card">
-        <div class="label" style="display:flex;align-items:center;justify-content:space-between">
-          <span>Enabled Projects</span>
-          ${(t.ring === 'assess' || t.ring === 'trial') ? `<button class="btn" style="font-size:11px;padding:3px 10px" onclick="createEvalTask()">＋ Evaluation Task</button>` : ''}
-        </div>
+        <div class="label">Enabled Projects</div>
         <div class="field-hint" style="margin-bottom:8px">Link this tool to projects it supports or enables — shows a 🛠 chip on project cards.</div>
         <div id="tp-proj-links">${_renderProjectLinksHTML(t)}</div>
       </div>
@@ -1413,83 +1344,6 @@
         }
 
         // ── Evaluation task creator ───────────────────────────────────────────
-
-        function createEvalTask() {
-            const t = tools.find(x => x.id === currentId);
-            if (!t) return;
-
-            const raw = HubStorage.get('project-hub-v1') || {};
-            const projects = (raw.projects || []).filter(p => p.status === 'active' || p.status === 'planning');
-
-            if (!projects.length) {
-                alert('No active or planning projects found.\nCreate a project in Project Hub first.');
-                return;
-            }
-
-            // If tool already linked to projects, offer those first
-            const linked = (t.projectIds || []);
-            const preferred = projects.filter(p => linked.includes(p.id));
-            const rest = projects.filter(p => !linked.includes(p.id));
-            const ordered = [...preferred, ...rest];
-
-            const lines = ordered.map((p, i) => `${i + 1}. ${p.name}${linked.includes(p.id) ? ' ✓' : ''}`).join('\n');
-            const choice = prompt(
-                `Add "Evaluate ${t.name}" task to which project?\n\n${lines}\n\nEnter number (linked projects marked ✓):`
-            );
-            if (!choice) return;
-
-            const idx = parseInt(choice, 10) - 1;
-            if (isNaN(idx) || idx < 0 || idx >= ordered.length) {
-                alert('Invalid selection.');
-                return;
-            }
-
-            const proj = ordered[idx];
-            const taskTitle = `Evaluate ${t.name}`;
-            const newTask = {
-                id: 't-' + Date.now().toString(36),
-                title: taskTitle,
-                status: 'todo',
-                priority: 'medium',
-                due: '',
-                assignee: '',
-                note: `Technology Radar ring: ${t.ring || 'assess'}. ${t.url ? 'URL: ' + t.url : ''}`.trim(),
-                created: new Date().toISOString()
-            };
-
-            if (!proj.tasks) proj.tasks = [];
-            proj.tasks.push(newTask);
-            HubStorage.set('project-hub-v1', raw);
-            alert(`✓ Task "${taskTitle}" added to "${proj.name}"`);
-        }
-
-        // ── Ring promotion → Decision log ─────────────────────────────────────
-
-        function promptRingDecision(t, oldRing, newRing) {
-            const ringLabels = { adopt: 'Adopt', trial: 'Trial', assess: 'Assess', hold: 'Hold' };
-            const msg = `Log this radar ring change as a decision?\n\n"${t.name}": ${ringLabels[oldRing]} → ${ringLabels[newRing]}`;
-            if (!confirm(msg)) return;
-
-            const decisions = HubStorage.get('decision-hub-v1');
-            if (!Array.isArray(decisions)) return;
-            const d = {
-                id: 'dh-' + Date.now().toString(36),
-                title: `Promote ${t.name} to "${ringLabels[newRing]}" on Technology Radar`,
-                type: 'tool',
-                status: 'decided',
-                confidence: newRing === 'adopt' ? 85 : newRing === 'trial' ? 65 : 50,
-                summary: `Changed Technology Radar ring from ${ringLabels[oldRing]} to ${ringLabels[newRing]}.`,
-                reasoning: `Category: ${t.category || 'Uncategorized'}. Lifecycle status: ${t.status || 'exploring'}.${t.url ? ' Reference: ' + t.url : ''}`,
-                tags: ['technology-radar', 'tool-evaluation'],
-                cynefin: 'complicated',
-                obsidianNote: '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-            decisions.push(d);
-            HubStorage.set('decision-hub-v1', decisions);
-            alert(`✓ Decision logged: "${d.title}"`);
-        }
 
         // ── Hub Search integration ─────────────────
         HubLinks.resolveItems = (function (orig) {

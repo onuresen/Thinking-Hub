@@ -2555,9 +2555,9 @@
           const data = Array.isArray(raw) ? raw : [];
           const t = data.find(t => t.id === itemId);
           if (t) return [
-            { k: 'Ring', v: t.ring || '—' },
             { k: 'Status', v: t.status || '—' },
             { k: 'Category', v: t.category || '—' },
+            { k: 'Projects', v: (t.projectIds || []).length ? `${t.projectIds.length} linked` : '—' },
           ];
         }
         if (tool === 'meetings-hub') {
@@ -2593,7 +2593,7 @@
           const sh = (data.stakeholders || []).find(sh => sh.id === itemId);
           if (sh) return [
             { k: 'Role', v: sh.role || '—' },
-            { k: 'Engagement', v: sh.engagement || '—' },
+            { k: 'Waiting on', v: sh.waitingOn || '—' },
           ];
         }
         if (tool === 'tags-hub' && typeof HubTags !== 'undefined') {

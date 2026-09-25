@@ -258,6 +258,16 @@
 
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+    // Day-level status tags — a day is "out of office", not one more timed
+    // item. Reuses the app's existing node/border token pairs (P41's colored
+    // card-variant convention) rather than inventing new colors.
+    const DAY_TAGS = {
+      oof:     { icon: '🏠', label: 'Out of Office',   bg: 'var(--node-blue)',   fg: 'var(--border-blue)' },
+      trip:    { icon: '✈️', label: 'Business Trip',   bg: 'var(--node-purple)', fg: 'var(--border-purple)' },
+      holiday: { icon: '🎌', label: 'Public Holiday',  bg: 'var(--node-red)',    fg: 'var(--border-red)' },
+      off:     { icon: '🌴', label: 'Day Off',         bg: 'var(--node-green)',  fg: 'var(--border-green)' },
+    };
+
     // Week-grid layout constants
     const WG_START_MIN = 6 * 60;   // 06:00
     const WG_END_MIN = 22 * 60;    // 22:00
@@ -305,9 +315,12 @@
     function loadState() {
       try {
         const saved = HubStorage.get(STORAGE_KEY);
-        if (saved) return saved;
+        if (saved) {
+          if (!saved.dayTags) saved.dayTags = {};
+          return saved;
+        }
       } catch { }
-      return { items: [], settings: { defaultZoom: 'month', defaultView: 'timeline' } };
+      return { items: [], settings: { defaultZoom: 'month', defaultView: 'timeline' }, dayTags: {} };
     }
 
     function saveState() {
@@ -594,14 +607,65 @@
         title="${esc(it.title)}">${esc(it.title || '')}${cont}</span>`;
         }).join('');
 
-        return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}${isWE ? ' weekend' : ''}"
+        const dayTag = (state.dayTags || {})[iso];
+        const tagDef = dayTag ? DAY_TAGS[dayTag] : null;
+        const cellStyle = tagDef ? ` style="background:${tagDef.bg}"` : '';
+
+        return `<div class="cal-day-cell${isToday ? ' today' : ''}${!isThisMonth ? ' out-of-month' : ''}${isWE ? ' weekend' : ''}"${cellStyle}
       onclick="openDrawer(null, '${iso}')">
-      <div class="cal-day-num">${d.getDate()}</div>
+      <div class="cal-day-head">
+        <div class="cal-day-num">${d.getDate()}</div>
+        <div class="cal-day-tag${tagDef ? '' : ' cal-day-tag-empty'}"${tagDef ? ` style="color:${tagDef.fg}" title="${esc(tagDef.label)}"` : ' title="Tag this day"'}
+          onclick="event.stopPropagation(); openDayTagPicker(event,'${iso}')">${tagDef ? tagDef.icon : '+'}</div>
+      </div>
       ${meetingPills}
       ${pills}
       ${overflow > 0 ? `<span class="cal-more">+${overflow} more</span>` : ''}
     </div>`;
       }).join('');
+    }
+
+    // ── Day-tag picker (Out of Office / Business Trip / Public Holiday / Day Off) ──
+    let _dayTagPopover = null;
+
+    function closeDayTagPicker() {
+      if (_dayTagPopover) { _dayTagPopover.remove(); _dayTagPopover = null; }
+      document.removeEventListener('click', closeDayTagPicker, true);
+    }
+
+    function openDayTagPicker(event, iso) {
+      if (_dayTagPopover) { closeDayTagPicker(); return; }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const pop = document.createElement('div');
+      pop.className = 'day-tag-popover';
+      const current = (state.dayTags || {})[iso];
+      pop.innerHTML = Object.entries(DAY_TAGS).map(([key, def]) => `
+        <button class="day-tag-option" onclick="setDayTag('${iso}','${key}')">
+          <span>${def.icon}</span><span>${esc(def.label)}</span>${current === key ? '<span style="margin-left:auto;color:var(--accent)">✓</span>' : ''}
+        </button>`).join('') +
+        (current ? `<button class="day-tag-option clear" onclick="setDayTag('${iso}',null)">✕ Clear tag</button>` : '');
+      document.body.appendChild(pop);
+
+      // Position within the viewport — prefer below-right of the badge, flip if it would overflow.
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      let left = rect.left, top = rect.bottom + 4;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      if (top + ph > window.innerHeight - 8) top = rect.top - ph - 4;
+      pop.style.left = Math.max(8, left) + 'px';
+      pop.style.top = Math.max(8, top) + 'px';
+
+      _dayTagPopover = pop;
+      // Deferred so the triggering click (which is already bubbling) doesn't immediately close it.
+      setTimeout(() => document.addEventListener('click', closeDayTagPicker, true), 0);
+    }
+
+    function setDayTag(iso, key) {
+      if (!state.dayTags) state.dayTags = {};
+      if (key) state.dayTags[iso] = key;
+      else delete state.dayTags[iso];
+      saveState();
+      closeDayTagPicker();
+      renderCalendar();
     }
 
     function renderCalWeek() {
@@ -625,7 +689,11 @@
         const iso = days[i];
         const d = isoToDate(iso);
         const lbl = document.getElementById('cwl-' + i);
-        lbl.textContent = `${DAY_NAMES[i]} ${d.getDate()}`;
+        const dayTag = (state.dayTags || {})[iso];
+        const tagDef = dayTag ? DAY_TAGS[dayTag] : null;
+        const tagBadge = `<span class="cal-day-tag${tagDef ? '' : ' cal-day-tag-empty'}"${tagDef ? ` style="color:${tagDef.fg}" title="${esc(tagDef.label)}"` : ' title="Tag this day"'}
+          onclick="event.stopPropagation(); openDayTagPicker(event,'${iso}')">${tagDef ? tagDef.icon : '+'}</span>`;
+        lbl.innerHTML = `<span>${DAY_NAMES[i]} ${d.getDate()}</span>${tagBadge}`;
         lbl.classList.toggle('today', iso === TODAY);
       }
 
