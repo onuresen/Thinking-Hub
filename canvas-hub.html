@@ -365,18 +365,74 @@
       z-index: 2;
     }
 
+    /* Kind strip is the whole content of a Goal/Project/Tool node now (no
+       editable body) — icon + live name are always visible; the select/open
+       row (for changing or opening the link) only appears once the node is
+       selected, so at rest the node just reads as a clean display card. */
     .node-kind-strip {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      padding: 6px 8px 2px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+      gap: 4px;
+      padding: 8px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .nk-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .nk-icon {
+      font-size: 16px;
+      line-height: 1;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nk-icon img {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      display: block;
+    }
+
+    /* Tool nodes lead with the favicon — make it the dominant visual */
+    .node.k-tool .nk-icon {
+      font-size: 20px;
+      width: 26px;
+      height: 26px;
+    }
+
+    .node.k-tool .nk-icon img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .nk-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
 
     .nk-row {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 4px;
+    }
+
+    .node.selected .nk-row {
+      display: flex;
     }
 
     .nk-select {
@@ -1556,6 +1612,20 @@
       const wrap = document.createElement('div');
       wrap.className = 'node-kind-strip';
 
+      // Icon + live name — always visible, this IS the node's content now
+      // that Goal/Project/Tool nodes have no editable text body.
+      const head = document.createElement('div');
+      head.className = 'nk-head';
+      const iconEl = document.createElement('span');
+      iconEl.className = 'nk-icon';
+      head.appendChild(iconEl);
+      const nameEl = document.createElement('span');
+      nameEl.className = 'nk-name';
+      head.appendChild(nameEl);
+      wrap.appendChild(head);
+
+      // Select/open row — only shown once the node is selected (see
+      // `.node.selected .nk-row` in CSS), so the resting card stays clean.
       const row = document.createElement('div');
       row.className = 'nk-row';
 
@@ -1563,15 +1633,22 @@
       sel.className = 'nk-select';
       sel.innerHTML = `<option value="">${KIND_PICK_LABEL[node.kind] || '— pick —'}</option>` +
         items.map(it => `<option value="${it.id}"${node.link && node.link.id === it.id ? ' selected' : ''}>${HubUtils.esc(it.label)}</option>`).join('');
-      sel.addEventListener('mousedown', e => e.stopPropagation());
-      sel.addEventListener('click', e => e.stopPropagation());
+      // Only swallow the click when NOT in Connect mode — otherwise a click
+      // here (which covers most of a linked node's surface) never reaches
+      // the outer node handler and Connect mode silently does nothing.
+      sel.addEventListener('mousedown', e => { if (!connectMode) e.stopPropagation(); });
+      sel.addEventListener('click', e => { if (!connectMode) e.stopPropagation(); });
       row.appendChild(sel);
 
       const openBtn = document.createElement('button');
       openBtn.className = 'nk-open';
       openBtn.textContent = '↗';
       openBtn.title = 'Open in ' + (KIND_TOOL_LABEL[node.kind] || 'source tool');
-      openBtn.onmousedown = e => { e.stopPropagation(); if (node.link) HubLinks.navigateTo(node.link.tool, node.link.id); };
+      openBtn.onmousedown = e => {
+        if (connectMode) return; // let it bubble to the node's connect logic
+        e.stopPropagation();
+        if (node.link) HubLinks.navigateTo(node.link.tool, node.link.id);
+      };
       row.appendChild(openBtn);
 
       wrap.appendChild(row);
@@ -1582,10 +1659,30 @@
 
       function refresh() {
         const it = node.link ? items.find(i => i.id === node.link.id) : null;
+
+        // Icon: the real favicon for a linked Tool, else the kind glyph.
+        iconEl.innerHTML = '';
+        if (node.kind === 'tool') {
+          const fallback = (it && it.icon) || KIND_ICON.tool;
+          const fav = faviconOrIcon(it && it.url, fallback, 24);
+          if (fav.el) {
+            fav.el.onerror = () => { iconEl.textContent = fallback; };
+            iconEl.appendChild(fav.el);
+          } else {
+            iconEl.textContent = fallback;
+          }
+        } else {
+          iconEl.textContent = KIND_ICON[node.kind];
+        }
+
         if (it) {
+          nameEl.textContent = it.label;
+          nameEl.title = it.label;
           status.textContent = it.status;
           openBtn.style.display = '';
         } else {
+          nameEl.textContent = node.link ? node.link.label : (KIND_PICK_LABEL[node.kind] || '— unlinked —');
+          nameEl.title = nameEl.textContent;
           status.textContent = node.link ? '(item removed)' : '';
           openBtn.style.display = node.link ? '' : 'none';
         }
@@ -1623,46 +1720,40 @@
       header.className = 'node-header';
       el.appendChild(header);
 
-      // Kind badge (Goal/Project/Tool/R&D bet) — small role icon overlapping
-      // the top edge. A linked Tool node shows the real favicon (same
-      // fetch-with-emoji-fallback pattern as Tool Portfolio) instead of the
-      // generic wrench, so it reads instantly as "this specific tool."
-      if (node.kind && KIND_ICON[node.kind]) {
+      // Kind badge — small role icon overlapping the top edge, for kinds
+      // that DON'T get the full kind-strip below (currently just R&D bet;
+      // Goal/Project/Tool show their icon inside the strip instead, larger
+      // and next to the item's live name, so a second small copy here would
+      // just be a duplicate).
+      const isLinkedKind = node.kind === 'goal' || node.kind === 'project' || node.kind === 'tool';
+      if (node.kind && KIND_ICON[node.kind] && !isLinkedKind) {
         const badge = document.createElement('div');
         badge.className = 'node-kind-badge';
         badge.title = KINDS.find(k => k.id === node.kind)?.title || node.kind;
-        if (node.kind === 'tool' && node.link) {
-          const toolItem = liveToolItems().find(t => t.id === node.link.id);
-          const fav = faviconOrIcon(toolItem && toolItem.url, KIND_ICON.tool, 14);
-          if (fav.el) {
-            fav.el.onerror = () => { badge.textContent = KIND_ICON.tool; };
-            badge.appendChild(fav.el);
-          } else {
-            badge.textContent = KIND_ICON.tool;
-          }
-        } else {
-          badge.textContent = KIND_ICON[node.kind];
-        }
+        badge.textContent = KIND_ICON[node.kind];
         el.appendChild(badge);
       }
 
-      // Kind strip — Goal/Project/Tool nodes get a live-link selector + status line
-      if (node.kind === 'goal' || node.kind === 'project' || node.kind === 'tool') {
+      // Kind strip — Goal/Project/Tool nodes get a live-link icon+name
+      // display (select/open only shown once selected) and have NO
+      // editable body at all: they're a display card for a real item, not
+      // a free-text note.
+      let body = null;
+      if (isLinkedKind) {
         el.appendChild(buildKindStrip(node));
+      } else {
+        body = document.createElement('div');
+        body.className = 'node-body';
+        body.contentEditable = true;
+        body.innerHTML = node.text || '';
+        body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); });
+        // Don't start a drag/text-select from the body — except in Connect
+        // mode, where a click anywhere on the node (body included, since it
+        // covers most of the node's surface) must reach the connect logic
+        // below instead of being swallowed here.
+        body.addEventListener('mousedown', e => { if (!connectMode) e.stopPropagation(); });
+        el.appendChild(body);
       }
-
-      // Editable body
-      const body = document.createElement('div');
-      body.className = 'node-body';
-      body.contentEditable = true;
-      body.innerHTML = node.text || '';
-      body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); });
-      // Don't start a drag/text-select from the body — except in Connect
-      // mode, where a click anywhere on the node (body included, since it
-      // covers most of the node's surface) must reach the connect logic
-      // below instead of being swallowed here.
-      body.addEventListener('mousedown', e => { if (!connectMode) e.stopPropagation(); });
-      el.appendChild(body);
 
       // Link badge
       const hlBadge = document.createElement('div');
