@@ -669,6 +669,8 @@
     <input type="text" class="qm-search" id="add-picker-search" placeholder="Search…">
     <div class="qm-list" id="add-picker-list"></div>
   </div>
+  <!-- Right-click on a node: quick actions, incl. arming Connect from here -->
+  <div class="quick-menu" id="node-menu"></div>
 
   <script>
     // ── Constants ────────────────────────────────────────────
@@ -941,7 +943,7 @@
     viewport.addEventListener('mousedown', e => {
       if (e.target !== viewport && !spacePressed) return;
       if (e.button !== 0 && e.button !== 1) return;
-      closeEdgePopover(); closeAddMenu(); closeAddPicker();
+      closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
       isPanning = true;
       startPanX = e.clientX - db.panX;
       startPanY = e.clientY - db.panY;
@@ -999,6 +1001,7 @@
       if (e.key === 'Escape') {
         if (document.getElementById('add-picker').style.display === 'flex') { closeAddPicker(); return; }
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
+        if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         selectNode(null);
@@ -1193,14 +1196,26 @@
       closeEdgePopover();
     }
 
-    document.addEventListener('click', e => {
+    // Dismiss any open popover on an outside interaction. This runs on
+    // 'mousedown' in the CAPTURE phase — before any popover's own button
+    // handler mutates the DOM — rather than on a bubbling 'click'. A
+    // bubble-phase 'click' listener was tried first, but for a real human
+    // click (unlike Playwright's synthetic one, which dispatches mousedown/
+    // mouseup/click back-to-back with no gap) there's a real gap between
+    // mousedown and the paired click: if a mousedown handler hides one
+    // popover to open another (e.g. picking "Project…" closes add-menu and
+    // opens add-picker), that hide happens inside the gap, so the browser's
+    // hit-test for the *click* event lands on whatever is now underneath
+    // instead of the button — and a 'click'-based closer then reads that as
+    // an outside click and immediately closes the popover that had just
+    // opened. Deciding at mousedown-capture time, before anything has moved,
+    // has no such race.
+    document.addEventListener('mousedown', e => {
       if (!e.target.closest('#edge-popover')) closeEdgePopover();
       if (!e.target.closest('#add-menu')) closeAddMenu();
-      // Choosing "Project…"/"Goal…"/"Tool…" opens add-picker from a click
-      // still bubbling up from inside add-menu — don't let that same click
-      // immediately close the picker it just opened.
-      if (!e.target.closest('#add-menu') && !e.target.closest('#add-picker')) closeAddPicker();
-    });
+      if (!e.target.closest('#add-picker')) closeAddPicker();
+      if (!e.target.closest('#node-menu')) closeNodeMenu();
+    }, true);
 
     // ── Node CRUD ────────────────────────────────────────────
 
@@ -1336,12 +1351,7 @@
     }
 
     function openAddPicker(kind, clientX, clientY) {
-      // Deferred: hiding add-menu synchronously here (mid mousedown) would
-      // remove it from hit-testing before the browser's paired click event
-      // fires at the same coordinates, so that click falls through to
-      // whatever is underneath instead of the menu item — closing this
-      // picker again the instant it opens. Let the current input finish first.
-      setTimeout(closeAddMenu, 0);
+      closeAddMenu();
       const pop = document.getElementById('add-picker');
       const search = document.getElementById('add-picker-search');
       const list = document.getElementById('add-picker-list');
@@ -1401,6 +1411,48 @@
     function closeAddPicker() {
       const pop = document.getElementById('add-picker');
       if (pop) pop.style.display = 'none';
+    }
+
+    // ── Right-click on a node ──────────────────────────────────
+    // Skips the toolbar Connect button entirely: right-click a node, pick
+    // "Connect from here", then just click the target node like normal.
+
+    function armConnectFrom(nodeId) {
+      if (!connectMode) {
+        connectMode = true;
+        document.getElementById('connect-btn').classList.add('active');
+        viewport.classList.add('connect-mode');
+      }
+      document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
+      connectSource = nodeId;
+      const el = document.querySelector(`.node[data-id="${nodeId}"]`);
+      if (el) el.classList.add('connect-source');
+      document.getElementById('help-text').textContent =
+        'Click a target node — click empty space or Esc to cancel';
+    }
+
+    function openNodeMenu(nodeId, clientX, clientY) {
+      closeEdgePopover(); closeAddMenu(); closeAddPicker();
+      const menu = document.getElementById('node-menu');
+      menu.innerHTML = '';
+      const items = [
+        { icon: '🔗', label: 'Connect from here', action: () => armConnectFrom(nodeId) },
+      ];
+      items.forEach(it => {
+        const btn = document.createElement('button');
+        btn.className = 'qm-item';
+        btn.innerHTML = `<span>${it.icon}</span><span>${it.label}</span>`;
+        btn.onmousedown = e => { e.stopPropagation(); it.action(); closeNodeMenu(); };
+        menu.appendChild(btn);
+      });
+      menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+      menu.style.top = Math.min(clientY, window.innerHeight - 100) + 'px';
+      menu.style.display = 'flex';
+    }
+
+    function closeNodeMenu() {
+      const menu = document.getElementById('node-menu');
+      if (menu) menu.style.display = 'none';
     }
 
     // ── Render ───────────────────────────────────────────────
@@ -1622,9 +1674,9 @@
 
       // Drag
       el.addEventListener('mousedown', e => {
-        if (spacePressed) return;
+        if (e.button !== 0 || spacePressed) return; // right-click is handled by contextmenu below
         if (e.target === body && !connectMode) return; // let normal text-editing clicks through
-        closeEdgePopover(); closeAddMenu(); closeAddPicker();
+        closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
         if (connectMode) {
           // Connect mode: first click = source, second click = target.
           // preventDefault stops a click on the body from also placing a
@@ -1653,6 +1705,12 @@
 
       el.addEventListener('click', e => {
         if (!connectMode) e.stopPropagation();
+      });
+
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openNodeMenu(node.id, e.clientX, e.clientY);
       });
 
       // Resize handle
