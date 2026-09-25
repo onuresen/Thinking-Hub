@@ -142,15 +142,25 @@ window.HubLinks = (() => {
       }
 
       if (toolId === 'canvas-hub') {
-        const data = HubStorage.get('canvas-v1');
-        if (!data || !data.nodes) return [];
-        return data.nodes
-          .filter(n => n.text)
-          .map(n => {
-            // strip HTML tags from rich-text node content
-            const tmp = n.text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-            return { id: n.id, label: tmp.slice(0, 60) || '(canvas node)', subtitle: 'Canvas' };
-          });
+        const raw = HubStorage.get('canvas-v1');
+        if (!raw) return [];
+        // Canvas Hub supports multiple named boards (each board's own
+        // {nodes, edges, panX, panY, zoom}); a pre-multi-board save is a
+        // flat single-board shape — treat it as one unnamed board.
+        const boards = Array.isArray(raw.boards) ? raw.boards : (raw.nodes ? [{ name: '', nodes: raw.nodes }] : []);
+        const multi = boards.length > 1;
+        const items = [];
+        boards.forEach(b => {
+          (b.nodes || [])
+            .filter(n => n.text || (n.link && n.link.label))
+            .forEach(n => {
+              // strip HTML tags from rich-text node content
+              const tmp = (n.text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+              const label = (n.link && n.link.label) || tmp.slice(0, 60) || '(canvas node)';
+              items.push({ id: n.id, label, subtitle: multi && b.name ? b.name : 'Canvas' });
+            });
+        });
+        return items;
       }
 
       if (toolId === 'meetings-hub') {
