@@ -342,6 +342,11 @@
       border-style: dashed;
     }
 
+    .node.k-tool {
+      background: var(--node-yellow);
+      border-color: var(--border-yellow);
+    }
+
     .node-kind-badge {
       position: absolute;
       top: -9px;
@@ -502,48 +507,125 @@
       pointer-events: none;
     }
 
-    /* ── Import picker (Add from Projects/Goals) ───────────────── */
-    .import-section-title {
-      margin: 14px 0 6px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text3);
+    /* ── Quick-add menu (right-click) ──────────────────────────── */
+    .quick-menu {
+      position: fixed;
+      z-index: 300;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 180px;
+      max-height: 320px;
     }
 
-    .import-section-title:first-child {
-      margin-top: 0;
-    }
-
-    .import-row {
+    .qm-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 4px;
-      font-size: 13px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      padding: 7px 8px;
+      border-radius: 6px;
       cursor: pointer;
-      border-radius: var(--r-sm);
+      font-size: 12px;
+      text-align: left;
+      width: 100%;
     }
 
-    .import-row:hover {
+    .qm-item:hover {
       background: var(--surface3);
     }
 
-    .import-row span.ir-label {
-      flex: 1;
+    .qm-item .qm-arrow {
+      margin-left: auto;
+      color: var(--text3);
+      font-size: 10px;
     }
 
-    .import-row span.ir-status {
-      color: var(--text3);
-      font-size: 11px;
+    .qm-search {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 12px;
+      padding: 6px 8px;
+      outline: none;
+      margin-bottom: 4px;
+    }
+
+    .qm-search:focus {
+      border-color: var(--accent);
+    }
+
+    .qm-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .qm-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .qm-row:hover {
+      background: var(--surface3);
+    }
+
+    .qm-row .qm-icon {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .qm-row .qm-icon img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+      border-radius: 3px;
+    }
+
+    .qm-row .qm-label {
+      flex: 1;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .qm-row .qm-status {
+      font-size: 10px;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+
+    .qm-empty {
+      padding: 10px 8px;
+      font-size: 11px;
+      color: var(--text3);
     }
   </style>
 </head>
 
 <body>
 
-  <div class="help-text" id="help-text">Double-click canvas to create · Space+Drag to pan · Scroll to zoom</div>
+  <div class="help-text" id="help-text">Double-click: note · Right-click: add · Space+Drag: pan · Scroll: zoom</div>
 
   <div class="board-bar">
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
@@ -577,24 +659,15 @@
     <button class="btn" onclick="resetView()">Reset View</button>
     <button class="btn" id="connect-btn" onclick="toggleConnectMode()"
       title="Draw connections between nodes">Connect</button>
-    <button class="btn" onclick="openImportPicker()" title="Drop real projects/goals onto the canvas as live nodes">+ From
-      Projects/Goals</button>
     <button class="btn" onclick="exportPNG()" title="Export canvas as PNG">Export PNG</button>
   </div>
 
-  <!-- Import picker: pull real Project Hub / Goals Hub items onto the canvas as live-linked nodes -->
-  <div class="ui-modal-overlay" id="import-overlay">
-    <div class="ui-modal" id="import-modal" style="max-width:420px;max-height:80vh;overflow-y:auto" role="dialog"
-      aria-label="Add from Projects or Goals">
-      <h3 style="margin:0 0 4px;font-family:var(--font-display)">Add to canvas</h3>
-      <p style="margin:0 0 10px;color:var(--text3);font-size:12px">Pick real projects and goals to drop onto the
-        canvas as live-linked nodes.</p>
-      <div id="import-list"></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-        <button class="btn" onclick="closeImportPicker()">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmImportPicker()">Add selected</button>
-      </div>
-    </div>
+  <!-- Right-click quick-add menu: Note / Project… / Goal… / Tool… / R&D bet -->
+  <div class="quick-menu" id="add-menu"></div>
+  <!-- Second-level searchable picker, shown after choosing Project/Goal/Tool -->
+  <div class="quick-menu" id="add-picker" style="max-width:260px">
+    <input type="text" class="qm-search" id="add-picker-search" placeholder="Search…">
+    <div class="qm-list" id="add-picker-list"></div>
   </div>
 
   <script>
@@ -622,9 +695,10 @@
       { id: 'note', icon: '📝', title: 'Note' },
       { id: 'goal', icon: '🎯', title: 'Goal' },
       { id: 'project', icon: '📌', title: 'Project' },
+      { id: 'tool', icon: '🛠', title: 'Tool' },
       { id: 'rd', icon: '🧪', title: 'R&D bet' },
     ];
-    const KIND_ICON = { goal: '🎯', project: '📌', rd: '🧪' };
+    const KIND_ICON = { goal: '🎯', project: '📌', tool: '🛠', rd: '🧪' };
 
     function statusLabelLocal(s) {
       return { active: 'Active', planning: 'Planning', maintenance: 'Maintenance', onhold: 'On Hold', done: 'Done' }[s] || s || '';
@@ -665,6 +739,45 @@
         }
         return items;
       } catch { return []; }
+    }
+
+    function liveToolItems() {
+      try {
+        const raw = HubStorage.get('tool-portfolio-v1');
+        const tools = Array.isArray(raw) ? raw : [];
+        return tools.map(t => ({
+          kind: 'tool', id: t.id,
+          label: t.name || '(untitled tool)',
+          status: t.status ? t.status.charAt(0).toUpperCase() + t.status.slice(1) : '',
+          icon: t.icon, url: t.url
+        }));
+      } catch { return []; }
+    }
+
+    function liveItemsFor(kind) {
+      if (kind === 'project') return liveProjectItems();
+      if (kind === 'goal') return liveGoalItems();
+      if (kind === 'tool') return liveToolItems();
+      return [];
+    }
+
+    function toolLinkFor(kind) {
+      return kind === 'project' ? 'project-hub' : kind === 'tool' ? 'tool-portfolio' : 'goals-hub';
+    }
+
+    // Resolves a linked item's URL hostname to a favicon <img>, falling back
+    // to its own emoji icon on failure — same pattern as Tool Portfolio's own
+    // toolIconHtml(), so a Tool node shows the exact icon you'd see there.
+    function faviconOrIcon(url, fallbackIcon, sz) {
+      let domain = null;
+      if (url) { try { domain = new URL(url).hostname; } catch { } }
+      if (!domain) return { el: null, text: fallbackIcon };
+      const img = document.createElement('img');
+      img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+      img.width = sz; img.height = sz;
+      img.alt = '';
+      img.style.cssText = 'object-fit:contain;border-radius:2px;display:block';
+      return { el: img, text: fallbackIcon };
     }
 
     // ── State: named boards ──────────────────────────────────
@@ -828,7 +941,7 @@
     viewport.addEventListener('mousedown', e => {
       if (e.target !== viewport && !spacePressed) return;
       if (e.button !== 0 && e.button !== 1) return;
-      closeEdgePopover();
+      closeEdgePopover(); closeAddMenu(); closeAddPicker();
       isPanning = true;
       startPanX = e.clientX - db.panX;
       startPanY = e.clientY - db.panY;
@@ -884,8 +997,9 @@
         if (!connectMode) viewport.style.cursor = 'grab';
       }
       if (e.key === 'Escape') {
+        if (document.getElementById('add-picker').style.display === 'flex') { closeAddPicker(); return; }
+        if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
-        if (document.getElementById('import-overlay').classList.contains('is-open')) { closeImportPicker(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         selectNode(null);
       }
@@ -932,7 +1046,7 @@
       const help = document.getElementById('help-text');
       help.textContent = connectMode
         ? 'Click a source node, then click a target node — click empty space or Esc to cancel'
-        : 'Double-click canvas to create · Space+Drag to pan · Scroll to zoom';
+        : 'Double-click: note · Right-click: add · Space+Drag: pan · Scroll: zoom';
     }
 
     // ── Edge management ──────────────────────────────────────
@@ -1081,6 +1195,11 @@
 
     document.addEventListener('click', e => {
       if (!e.target.closest('#edge-popover')) closeEdgePopover();
+      if (!e.target.closest('#add-menu')) closeAddMenu();
+      // Choosing "Project…"/"Goal…"/"Tool…" opens add-picker from a click
+      // still bubbling up from inside add-menu — don't let that same click
+      // immediately close the picker it just opened.
+      if (!e.target.closest('#add-menu') && !e.target.closest('#add-picker')) closeAddPicker();
     });
 
     // ── Node CRUD ────────────────────────────────────────────
@@ -1091,6 +1210,16 @@
       const x = (e.clientX - rect.left - db.panX) / db.zoom;
       const y = (e.clientY - rect.top - db.panY) / db.zoom;
       createNode(x, y);
+    });
+
+    viewport.addEventListener('contextmenu', e => {
+      if (e.target !== viewport) return;
+      e.preventDefault();
+      closeEdgePopover();
+      const rect = viewport.getBoundingClientRect();
+      _pendingAddX = (e.clientX - rect.left - db.panX) / db.zoom;
+      _pendingAddY = (e.clientY - rect.top - db.panY) / db.zoom;
+      openAddMenu(e.clientX, e.clientY);
     });
 
     viewport.addEventListener('click', e => {
@@ -1105,9 +1234,10 @@
       }
     });
 
-    function createNode(x, y) {
+    function createNode(x, y, kind) {
       const id = 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const node = { id, x, y, text: '', color: 'c-gray' };
+      if (kind) node.kind = kind;
       db.nodes.push(node);
       pulseSave();
       const el = buildNodeEl(node);
@@ -1143,7 +1273,7 @@
       const node = db.nodes.find(n => n.id === id);
       if (!node) return;
       node.kind = kindId === 'note' ? undefined : kindId;
-      if (kindId !== 'goal' && kindId !== 'project') node.link = null;
+      if (kindId !== 'goal' && kindId !== 'project' && kindId !== 'tool') node.link = null;
       pulseSave();
       // Kind switches change node composition (kind badge/strip), so a full
       // rebuild is simplest and safe — this is an infrequent action, not a
@@ -1161,82 +1291,117 @@
       renderMinimap();
     }
 
-    // ── Import picker: pull real Project Hub / Goals Hub items onto canvas ──
+    // ── Right-click quick-add menu ────────────────────────────
+    // Right-click empty canvas → pick a type. Note/R&D bet create instantly
+    // at that spot; Project/Goal/Tool open a small searchable list of real
+    // items so you drag in something live instead of retyping it by hand.
 
-    let _importItems = [];
-    let _importUntrap = null;
+    let _pendingAddX = 0, _pendingAddY = 0;
 
-    function openImportPicker() {
-      _importItems = [];
-      const projects = liveProjectItems();
-      const goals = liveGoalItems();
-      const list = document.getElementById('import-list');
-      list.innerHTML = '';
+    const ADD_MENU_ITEMS = [
+      { id: 'note', icon: '📝', label: 'Empty note' },
+      { id: 'project', icon: '📌', label: 'Project…', picker: true },
+      { id: 'goal', icon: '🎯', label: 'Goal…', picker: true },
+      { id: 'tool', icon: '🛠', label: 'Tool…', picker: true },
+      { id: 'rd', icon: '🧪', label: 'R&D bet' },
+    ];
 
-      function section(title, items) {
-        if (!items.length) return;
-        const h = document.createElement('div');
-        h.className = 'import-section-title';
-        h.textContent = title;
-        list.appendChild(h);
-        items.forEach(it => {
-          const idx = _importItems.push(it) - 1;
-          const row = document.createElement('label');
-          row.className = 'import-row';
-          const cb = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.dataset.idx = idx;
-          const nameSpan = document.createElement('span');
-          nameSpan.className = 'ir-label';
-          nameSpan.textContent = it.label;
-          const statSpan = document.createElement('span');
-          statSpan.className = 'ir-status';
-          statSpan.textContent = it.status;
-          row.appendChild(cb);
-          row.appendChild(nameSpan);
-          row.appendChild(statSpan);
+    function openAddMenu(clientX, clientY) {
+      closeAddPicker();
+      const menu = document.getElementById('add-menu');
+      menu.innerHTML = '';
+      ADD_MENU_ITEMS.forEach(it => {
+        const btn = document.createElement('button');
+        btn.className = 'qm-item';
+        btn.innerHTML = `<span>${it.icon}</span><span>${it.label}</span>` + (it.picker ? '<span class="qm-arrow">▸</span>' : '');
+        btn.onmousedown = e => {
+          e.stopPropagation();
+          if (it.picker) {
+            openAddPicker(it.id, clientX, clientY);
+          } else {
+            createNode(_pendingAddX, _pendingAddY, it.id === 'note' ? undefined : it.id);
+            closeAddMenu();
+          }
+        };
+        menu.appendChild(btn);
+      });
+      menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+      menu.style.top = Math.min(clientY, window.innerHeight - 220) + 'px';
+      menu.style.display = 'flex';
+    }
+
+    function closeAddMenu() {
+      const menu = document.getElementById('add-menu');
+      if (menu) menu.style.display = 'none';
+    }
+
+    function openAddPicker(kind, clientX, clientY) {
+      // Deferred: hiding add-menu synchronously here (mid mousedown) would
+      // remove it from hit-testing before the browser's paired click event
+      // fires at the same coordinates, so that click falls through to
+      // whatever is underneath instead of the menu item — closing this
+      // picker again the instant it opens. Let the current input finish first.
+      setTimeout(closeAddMenu, 0);
+      const pop = document.getElementById('add-picker');
+      const search = document.getElementById('add-picker-search');
+      const list = document.getElementById('add-picker-list');
+      const items = liveItemsFor(kind);
+      const kindNoun = kind === 'project' ? 'projects' : kind === 'goal' ? 'goals' : 'tools';
+
+      function renderList(filter) {
+        const f = (filter || '').toLowerCase();
+        const filtered = f ? items.filter(it => it.label.toLowerCase().includes(f)) : items;
+        list.innerHTML = '';
+        if (!filtered.length) {
+          const empty = document.createElement('div');
+          empty.className = 'qm-empty';
+          empty.textContent = items.length ? 'No matches' : `No ${kindNoun} yet`;
+          list.appendChild(empty);
+          return;
+        }
+        filtered.forEach(it => {
+          const row = document.createElement('div');
+          row.className = 'qm-row';
+          const iconWrap = document.createElement('div');
+          iconWrap.className = 'qm-icon';
+          const fallback = kind === 'tool' ? (it.icon || '🛠') : KIND_ICON[kind];
+          const fav = kind === 'tool' ? faviconOrIcon(it.url, fallback, 16) : { el: null, text: fallback };
+          if (fav.el) {
+            fav.el.onerror = () => { iconWrap.textContent = fallback; };
+            iconWrap.appendChild(fav.el);
+          } else {
+            iconWrap.textContent = fallback;
+          }
+          const label = document.createElement('span');
+          label.className = 'qm-label';
+          label.textContent = it.label;
+          const status = document.createElement('span');
+          status.className = 'qm-status';
+          status.textContent = it.status || '';
+          row.appendChild(iconWrap); row.appendChild(label); row.appendChild(status);
+          row.onmousedown = e => {
+            e.stopPropagation();
+            createLinkedNode(_pendingAddX, _pendingAddY, kind, toolLinkFor(kind), it.id, it.label);
+            closeAddPicker();
+          };
           list.appendChild(row);
         });
       }
-      section('Projects', projects);
-      section('Goals', goals);
-      if (!projects.length && !goals.length) {
-        list.innerHTML = '<div class="empty-state" style="padding:20px 0">No projects or goals yet — create some in Project Hub or Goals Hub first.</div>';
-      }
 
-      const overlay = document.getElementById('import-overlay');
-      overlay.classList.add('is-open');
-      if (window.HubUtils && HubUtils.trapFocus) _importUntrap = HubUtils.trapFocus(document.getElementById('import-modal'));
+      search.value = '';
+      renderList('');
+      search.oninput = () => renderList(search.value);
+
+      pop.style.left = Math.min(clientX, window.innerWidth - 280) + 'px';
+      pop.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
+      pop.style.display = 'flex';
+      setTimeout(() => search.focus(), 30);
     }
 
-    function closeImportPicker() {
-      document.getElementById('import-overlay').classList.remove('is-open');
-      if (_importUntrap) { _importUntrap(); _importUntrap = null; }
+    function closeAddPicker() {
+      const pop = document.getElementById('add-picker');
+      if (pop) pop.style.display = 'none';
     }
-
-    function confirmImportPicker() {
-      const checks = [...document.querySelectorAll('#import-list input[type=checkbox]:checked')];
-      if (checks.length) {
-        const rect = viewport.getBoundingClientRect();
-        const baseX = (rect.width / 2 - db.panX) / db.zoom;
-        const baseY = (rect.height / 2 - db.panY) / db.zoom;
-        checks.forEach((cb, i) => {
-          const it = _importItems[+cb.dataset.idx];
-          if (!it) return;
-          const tool = it.kind === 'project' ? 'project-hub' : 'goals-hub';
-          createLinkedNode(
-            baseX + (i % 4) * 200 - 300,
-            baseY + Math.floor(i / 4) * 110 - 100,
-            it.kind, tool, it.id, it.label
-          );
-        });
-      }
-      closeImportPicker();
-    }
-
-    document.getElementById('import-overlay').addEventListener('mousedown', e => {
-      if (e.target.id === 'import-overlay') closeImportPicker();
-    });
 
     // ── Render ───────────────────────────────────────────────
 
@@ -1321,8 +1486,11 @@
       actions.appendChild(delBtn);
     }
 
+    const KIND_TOOL_LABEL = { project: 'Project Hub', goal: 'Goals Hub', tool: 'Tool Portfolio' };
+    const KIND_PICK_LABEL = { project: '— pick a project —', goal: '— pick a goal —', tool: '— pick a tool —' };
+
     function buildKindStrip(node) {
-      const items = node.kind === 'project' ? liveProjectItems() : liveGoalItems();
+      const items = liveItemsFor(node.kind);
       const wrap = document.createElement('div');
       wrap.className = 'node-kind-strip';
 
@@ -1331,8 +1499,7 @@
 
       const sel = document.createElement('select');
       sel.className = 'nk-select';
-      const placeholder = node.kind === 'project' ? '— pick a project —' : '— pick a goal —';
-      sel.innerHTML = `<option value="">${placeholder}</option>` +
+      sel.innerHTML = `<option value="">${KIND_PICK_LABEL[node.kind] || '— pick —'}</option>` +
         items.map(it => `<option value="${it.id}"${node.link && node.link.id === it.id ? ' selected' : ''}>${HubUtils.esc(it.label)}</option>`).join('');
       sel.addEventListener('mousedown', e => e.stopPropagation());
       sel.addEventListener('click', e => e.stopPropagation());
@@ -1341,7 +1508,7 @@
       const openBtn = document.createElement('button');
       openBtn.className = 'nk-open';
       openBtn.textContent = '↗';
-      openBtn.title = 'Open in ' + (node.kind === 'project' ? 'Project Hub' : 'Goals Hub');
+      openBtn.title = 'Open in ' + (KIND_TOOL_LABEL[node.kind] || 'source tool');
       openBtn.onmousedown = e => { e.stopPropagation(); if (node.link) HubLinks.navigateTo(node.link.tool, node.link.id); };
       row.appendChild(openBtn);
 
@@ -1365,7 +1532,7 @@
 
       sel.addEventListener('change', () => {
         const it = items.find(i => i.id === sel.value);
-        node.link = it ? { tool: node.kind === 'project' ? 'project-hub' : 'goals-hub', id: it.id, label: it.label } : null;
+        node.link = it ? { tool: toolLinkFor(node.kind), id: it.id, label: it.label } : null;
         pulseSave();
         refresh();
       });
@@ -1394,17 +1561,31 @@
       header.className = 'node-header';
       el.appendChild(header);
 
-      // Kind badge (Goal/Project/R&D bet) — small role icon overlapping the top edge
+      // Kind badge (Goal/Project/Tool/R&D bet) — small role icon overlapping
+      // the top edge. A linked Tool node shows the real favicon (same
+      // fetch-with-emoji-fallback pattern as Tool Portfolio) instead of the
+      // generic wrench, so it reads instantly as "this specific tool."
       if (node.kind && KIND_ICON[node.kind]) {
         const badge = document.createElement('div');
         badge.className = 'node-kind-badge';
         badge.title = KINDS.find(k => k.id === node.kind)?.title || node.kind;
-        badge.textContent = KIND_ICON[node.kind];
+        if (node.kind === 'tool' && node.link) {
+          const toolItem = liveToolItems().find(t => t.id === node.link.id);
+          const fav = faviconOrIcon(toolItem && toolItem.url, KIND_ICON.tool, 14);
+          if (fav.el) {
+            fav.el.onerror = () => { badge.textContent = KIND_ICON.tool; };
+            badge.appendChild(fav.el);
+          } else {
+            badge.textContent = KIND_ICON.tool;
+          }
+        } else {
+          badge.textContent = KIND_ICON[node.kind];
+        }
         el.appendChild(badge);
       }
 
-      // Kind strip — Goal/Project nodes get a live-link selector + status line
-      if (node.kind === 'goal' || node.kind === 'project') {
+      // Kind strip — Goal/Project/Tool nodes get a live-link selector + status line
+      if (node.kind === 'goal' || node.kind === 'project' || node.kind === 'tool') {
         el.appendChild(buildKindStrip(node));
       }
 
@@ -1438,7 +1619,7 @@
       // Drag
       el.addEventListener('mousedown', e => {
         if (e.target === body || spacePressed) return;
-        closeEdgePopover();
+        closeEdgePopover(); closeAddMenu(); closeAddPicker();
         if (connectMode) {
           // Connect mode: first click = source, second click = target
           e.stopPropagation();
@@ -1600,7 +1781,7 @@
             items.push({
               id: n.id,
               label: (n.link && n.link.label) || (n.text || '').replace(/<[^>]*>/gm, '').slice(0, 50) || '(empty node)',
-              subtitle: (multi ? b.name + ' · ' : '') + (n.kind === 'goal' ? '🎯 Goal' : n.kind === 'project' ? '📌 Project' : n.kind === 'rd' ? '🧪 R&D bet' : 'canvas note')
+              subtitle: (multi ? b.name + ' · ' : '') + (n.kind === 'goal' ? '🎯 Goal' : n.kind === 'project' ? '📌 Project' : n.kind === 'tool' ? '🛠 Tool' : n.kind === 'rd' ? '🧪 R&D bet' : 'canvas note')
             });
           }));
           return items;

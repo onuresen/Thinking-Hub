@@ -154,16 +154,17 @@ function appFiles(ext) {
   check('retired runtime egress hosts are absent', egressHits.length === 0,
     egressHits.length ? 'found in: ' + egressHits.join(', ') : 'fonts CDN, esm.sh');
 
-  // tool-portfolio.html and stakeholder-hub.html intentionally re-enabled
-  // Google's favicon service (user request, 2026-07-27 / 2026-07-28) — every
-  // OTHER page must stay favicon-fetch-free.
+  // tool-portfolio.html, stakeholder-hub.html, and canvas-hub.html (Tool
+  // quick-add nodes, P112) intentionally re-enabled Google's favicon service
+  // (user request, 2026-07-27 / 2026-07-28 / 2026-09-25) — every OTHER page
+  // must stay favicon-fetch-free.
   const faviconHost = /google\.com\/s2\/favicons/;
-  const faviconPages = ['tool-portfolio.html', 'stakeholder-hub.html'];
+  const faviconPages = ['tool-portfolio.html', 'stakeholder-hub.html', 'canvas-hub.html'];
   const unexpectedFaviconUse = runtimeFiles.filter((f) => !faviconPages.includes(f) && faviconHost.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
-  check('favicon CDN use is confined to the two opted-in pages', unexpectedFaviconUse.length === 0,
+  check('favicon CDN use is confined to the opted-in pages', unexpectedFaviconUse.length === 0,
     unexpectedFaviconUse.length ? 'found in: ' + unexpectedFaviconUse.join(', ') : 'ok');
   const missingFaviconFetch = faviconPages.filter((f) => !faviconHost.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
-  check('both opted-in pages actually fetch favicons', missingFaviconFetch.length === 0,
+  check('all opted-in pages actually fetch favicons', missingFaviconFetch.length === 0,
     missingFaviconFetch.length ? 'missing in: ' + missingFaviconFetch.join(', ') : faviconPages.join(', '));
   // google.com/s2/favicons 301-redirects to a per-domain gstatic shard
   // (t0-t3.gstatic.com). CSP is enforced on redirect targets too, so allowing
