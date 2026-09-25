@@ -388,19 +388,6 @@ const HubAI = (() => {
       });
     } catch {}
 
-    // Reflection Board (latest board, per-column)
-    try {
-      const raw = JSON.parse(localStorage.getItem('reflection-hub-v1') || '{}');
-      const board = (raw.boards || [])[raw.boards ? raw.boards.length - 1 : 0];
-      if (board && board.columns) {
-        const colLines = [];
-        ['signal', 'friction', 'question', 'action'].forEach(col => {
-          (board.columns[col] || []).slice(0, 4).forEach(it => colLines.push(`  ${col}: ${String(it.text || '').slice(0, 90)}`));
-        });
-        if (colLines.length) { lines.push('\nReflection Board:'); lines.push(...colLines); }
-      }
-    } catch {}
-
     // Assumptions (unresolved)
     try {
       const raw = JSON.parse(localStorage.getItem('assumptions-hub-v1') || '{}');

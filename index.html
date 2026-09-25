@@ -421,10 +421,6 @@
       { id: 'decision-hub', label: 'Decision Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
       { id: 'goals-hub', label: 'Goals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
       { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
-      { id: 'argument-hub', label: 'Argument Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '△', file: 'argument-hub.html', desc: 'Build a case top-down with the Pyramid Principle — SCQA intro, governing thought, MECE supporting points' },
-      // ── Reflection & Methods ──────────────────────────────────────────
-      { id: 'reflection-hub', label: 'Reflection Board', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '⟲', file: 'reflection-hub.html', desc: 'Collect signals, friction points, open questions and actions — great for team retrospectives' },
-      { id: 'frameworks-hub', label: 'Frameworks', group: 'Reflection & Methods', wg: 'Reflection & Methods', icon: '▾', file: 'frameworks-hub.html', desc: 'Experiment sandbox: blocked-work iceberg and V-Model process map' },
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'focus-hub', label: 'Time Journal', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '◷', file: 'focus-hub.html', desc: 'Log what you worked on — a running record of where your time actually goes (optional timer included)' },
       { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
@@ -434,7 +430,7 @@
 
     const MODES = {
       everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'frameworks-hub', 'goals-hub', 'decision-hub', 'argument-hub', 'reflection-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub', 'tool-portfolio', 'town-hub'] },
+      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'goals-hub', 'decision-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub', 'tool-portfolio', 'town-hub'] },
       bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
       dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
     };
@@ -2518,6 +2514,10 @@
     // scrum-hub-v1 removed 2026-07-13 — the tool was deleted (P50) and this loop writes
     // every key unconditionally (JSON.parse(null) === null), so a dead key here means a
     // literal "scrum-hub-v1": null entry in every synced backup file forever.
+    // (Note: this array still carries several orphaned keys from later tool
+    // retirements — argument-hub-v1/reflection-hub-v1 among them, P120 — kept
+    // for data-safety consistency with the scrum-hub-v1/hub-warroom-v1 precedent
+    // above, even though the above comment argues for removing them.)
 
     async function pickMcpFolder() {
       try {
@@ -2717,7 +2717,7 @@
       'project-hub', 'decision-hub', 'idea-swiper', 'canvas-hub', 'schedule',
       'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub',
       'stakeholder-hub', 'focus-hub', 'journal-hub',
-      'reflection-hub', 'argument-hub', 'tool-portfolio', 'tags-hub',
+      'tool-portfolio', 'tags-hub',
     ];
     let _healthDanglingIds = [];
 
@@ -3103,7 +3103,6 @@
       'idea-swiper.html': ['ideaswipe_history_v6'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
-      'argument-hub.html': ['argument-hub-v1'],
       'focus-hub.html': ['focus-hub-v1'],
       'journal-hub.html': ['log-hub-v1', 'review-hub-v1'],
       'log-hub.html': ['log-hub-v1'],
@@ -3119,7 +3118,6 @@
       'achievements-hub.html': ['hub-activity-v1'],
       'tool-portfolio.html': ['tool-portfolio-v1'],
       'tags-hub.html': ['hub-tags-v1'],
-      'reflection-hub.html': ['reflection-hub-v1'],
       'capture-hub.html': ['capture-hub-v1'],
       'people-hub.html': ['people-hub-v1'],
     };
@@ -3131,7 +3129,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'tool-portfolio-v1', 'reflection-hub-v1', 'people-hub-v1',
+        'retro-hub-v1', 'tool-portfolio-v1', 'people-hub-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
