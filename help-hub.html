@@ -327,22 +327,22 @@ const TOOLS = [
   {
     id: 'stakeholder-hub', label: 'Stakeholder Map', icon: '◇', group: 'People & Network', wg: 'People & Network',
     file: 'stakeholder-hub.html',
-    desc: 'Organizations roster — vendors, consultants, and internal departments — plus a Power/Interest grid for individual stakeholders.',
-    frameworks: ['Mendelow Matrix', 'Salience Model', 'PMBOK'],
-    fwIds: ['Mendelow-Matrix', 'Salience-Model', 'PMBOK'],
-    whenToUse: 'At project start and whenever the team, sponsor, vendor roster, or regulatory situation changes. Knowing who you depend on — and how healthy each relationship is — prevents the biggest project surprises, the ones that come from people, not technology.',
-    features: ['Organizations view (default) — vendor / consultant / internal-dept cards grouped and color-badged', 'Relationship health per org — last contact freshness, avg. responsiveness', 'Drag a person onto a different org card to reassign them; drag org cards to set your own order', 'Auto favicon avatar from a stakeholder\'s website/profile URL', 'Power / Interest grid (Mendelow Matrix) as a secondary tab, for politically tricky individuals', 'Engagement level: Unaware → Resistant → Neutral → Supportive → Leading', 'Project linkage per stakeholder; contact info and relationship notes'],
-    sample: 'You work with three vendors and one consulting firm. Open Organizations — "Acme Construction" shows 4 contacts, last touched 45 days ago (flagged stale), with an avg. responsiveness of 3.2/5. Drag a new hire\'s card from "Unassigned" onto "Acme Construction" to link them. Reorder the org cards so your most active vendor sits first. For the one politically tricky exec across all your projects, flip to the Power/Interest tab and place them in Manage Closely.'
+    desc: 'Organizations roster — vendors, consultants, and internal departments — with what you\'re currently waiting on from each.',
+    frameworks: ['PKM'],
+    fwIds: ['PKM'],
+    whenToUse: 'At project start and whenever the team, sponsor, or vendor roster changes. Knowing who you depend on — and what you\'re waiting on from them — prevents the biggest project surprises, the ones that come from people, not technology.',
+    features: ['Organizations view — vendor / consultant / internal-dept cards grouped and color-badged', 'A single external company shown as one compact row, not a redundant header + card', '"Waiting on" per stakeholder — the current ask or blocking item, shown as a badge in every list', 'Drag a person onto a different org card to reassign them; drag org cards to set your own order', 'Auto favicon avatar from a stakeholder\'s website/profile URL', 'Project linkage per stakeholder, with an optional role note per project; contact info and relationship notes'],
+    sample: 'You work with three vendors and one consulting firm. Open Organizations — "Acme Construction" shows 4 contacts, one flagged ⏳ waiting on a signed SOW. Drag a new hire\'s card from "Unassigned" onto "Acme Construction" to link them. Reorder the org cards so your most active vendor sits first. Check a project box on a contact to also note their role on it.'
   },
   {
     id: 'tool-portfolio', label: 'Tool Portfolio', icon: '🧰', group: 'People & Network', wg: 'People & Network',
     file: 'tool-portfolio.html',
-    desc: 'Curated map of tools, platforms, and vendors with Technology Radar rings.',
-    frameworks: ['Technology Radar', 'TOGAF'],
-    fwIds: ['Technology-Radar', 'TOGAF'],
-    whenToUse: 'When your team uses (or evaluates) multiple platforms and vendors. Brings visibility to tool sprawl — which tools are battle-tested, which are being trialed, which should be avoided for new work.',
-    features: ['Tool cards with name, icon, URL, category, and notes', 'Technology Radar ring: ✅ Adopt / 🔬 Trial / 🔍 Assess / ⏸ Hold', 'TOGAF architecture layer: Business / Data / Application / Technology', 'Status lifecycle: Exploring → Piloting → Using → Retired', 'Category grouping with drag-to-reorder', 'Full-text search'],
-    sample: 'Your team uses 12 tools. Add them all. Figma → Adopt / Application. A new AI writing tool just evaluated → Trial / Application. An old analytics platform nobody uses → Hold. At a glance you see your Application layer has 4 Adopt tools — that\'s your core stack. One Hold tool is a candidate for retirement.'
+    desc: 'Curated map of the tools, platforms, and vendors you actually use, and which of your projects each one is tied to.',
+    frameworks: [],
+    fwIds: [],
+    whenToUse: 'When you use (or are evaluating) multiple platforms and vendors, and want one place to see what each is for and where you\'re actually using it.',
+    features: ['Tool cards with name, icon, URL, category, and notes', 'Status lifecycle: Exploring → Piloting → Using → Retired', 'SoR / SoE / SoI classification (source of record / engagement / insight), plus a Map view showing where each tool sits', 'Enabled Projects — link a tool to the projects it supports, with a 🔗 count on every list row', 'Freshness × Mastery matrix — real lastUsedAt/mastery tracking, not a subjective adoption rating', 'Category grouping with drag-to-reorder', 'Full-text search'],
+    sample: 'You add a new AI writing tool as Exploring. A month in, real use bumps it to Using, and it\'s linked to two projects — the 🔗2 badge shows that at a glance in the list. An old analytics platform with no recent use and no project links is an easy Retire call.'
   },
   {
     id: 'reflection-hub', label: 'Reflection Board', icon: '⟲', group: 'Reflection & Methods', wg: 'Reflection & Methods',
@@ -454,18 +454,18 @@ const FRAMEWORKS = [
   // Risk & Governance
   { id: 'ISO-31000', label: 'ISO 31000', domain: 'Risk & Governance', color: 'red', what: "International standard for risk management principles, framework, and process. Defines risk as 'effect of uncertainty on objectives' — which includes upside opportunities, not just threats. More principled than prescriptive.", certs: [], tools: ['Risk Register'] },
   { id: 'COSO-ERM', label: 'COSO ERM', domain: 'Risk & Governance', color: 'red', what: "Committee of Sponsoring Organizations' Enterprise Risk Management framework. Links risk to strategy and performance. Introduced in 2017 to address risk in the context of setting and executing strategy.", certs: ['CPA', 'CIA'], tools: ['Risk Register', 'Goals Hub'] },
-  { id: 'TOGAF', label: 'TOGAF', domain: 'Risk & Governance', color: 'red', what: "The Open Group Architecture Framework. Structures enterprise architecture across four domains: Business, Data, Application, Technology (BDAT). The ADM (Architecture Development Method) is its iterative process for designing architectures.", certs: ['TOGAF 9 Foundation', 'TOGAF 10 Foundation & Practitioner'], tools: ['Tool Portfolio'] },
+  { id: 'TOGAF', label: 'TOGAF', domain: 'Risk & Governance', color: 'red', what: "The Open Group Architecture Framework. Structures enterprise architecture across four domains: Business, Data, Application, Technology (BDAT). The ADM (Architecture Development Method) is its iterative process for designing architectures.", certs: ['TOGAF 9 Foundation', 'TOGAF 10 Foundation & Practitioner'], tools: [] },
   { id: 'ITIL', label: 'ITIL', domain: 'Risk & Governance', color: 'red', what: "IT service management lifecycle framework. ITIL 4 introduces the Service Value System and the four dimensions model, replacing the process-heavy v3 with a more flexible, value-focused approach.", certs: ['ITIL 4 Foundation', 'ITIL 4 Managing Professional'], tools: ['Tool Portfolio'] },
   // Stakeholder
-  { id: 'Mendelow-Matrix', label: 'Mendelow Matrix', domain: 'Stakeholder & People', color: 'orange', what: "Aubrey Mendelow's (1981) 2×2 grid mapping stakeholders by Power vs. Interest. Four engagement strategies: Manage Closely (high/high), Keep Satisfied (high/low), Keep Informed (low/high), Monitor (low/low).", certs: [], tools: ['Stakeholder Map'] },
-  { id: 'Salience-Model', label: 'Salience Model', domain: 'Stakeholder & People', color: 'orange', what: "Mitchell, Agle & Wood's three-attribute model: Power + Legitimacy + Urgency. A stakeholder who scores high on all three is 'definitive' — the highest priority. Adds nuance that a 2×2 grid can't capture.", certs: [], tools: ['Stakeholder Map'] },
+  { id: 'Mendelow-Matrix', label: 'Mendelow Matrix', domain: 'Stakeholder & People', color: 'orange', what: "Aubrey Mendelow's (1981) 2×2 grid mapping stakeholders by Power vs. Interest. Four engagement strategies: Manage Closely (high/high), Keep Satisfied (high/low), Keep Informed (low/high), Monitor (low/low).", certs: [], tools: [] },
+  { id: 'Salience-Model', label: 'Salience Model', domain: 'Stakeholder & People', color: 'orange', what: "Mitchell, Agle & Wood's three-attribute model: Power + Legitimacy + Urgency. A stakeholder who scores high on all three is 'definitive' — the highest priority. Adds nuance that a 2×2 grid can't capture.", certs: [], tools: [] },
   // Personal Productivity
   { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub', 'Time Journal'] },
   { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Time Journal'] },
   { id: 'Bullet-Journal-Method', label: 'Bullet Journal', domain: 'Personal Productivity', color: 'cyan', what: "Ryder Carroll's analog rapid logging system using symbols: • task, ○ event, – note. The digital adaptation: daily entries with mood, structured bullets, and a brief evening reflection.", certs: [], tools: ['Journal Hub'] },
   { id: 'KPT-Retrospective', label: 'KPT Retrospective', domain: 'Personal Productivity', color: 'cyan', what: "Keep / Problem / Try — a Japanese Agile/Kaizen retrospective format simpler than the Western 'Went Well / Improve / Actions.' Popular in product teams across Japan and Korea. Every cycle closes with a concrete Try.", certs: [], tools: ['Reflection Board'] },
   // Knowledge & Learning
-  { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub'] },
+  { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub', 'Stakeholder Map'] },
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
   { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Time Journal', 'Spatial Canvas', 'Frameworks'] },
@@ -475,7 +475,7 @@ const FRAMEWORKS = [
   // Design & Ideation
   { id: 'Design-Thinking', label: 'Design Thinking', domain: 'Design & Ideation', color: 'purple', what: "IDEO / Stanford d.school's human-centered innovation process: Empathize → Define → Ideate → Prototype → Test. The Ideate phase is designed for divergent thinking — generating many options before converging on one.", certs: ['IDEO U — Foundations in Design Thinking'], tools: ['Idea Swiper', 'Spatial Canvas'] },
   { id: 'Mind-Mapping', label: 'Mind Mapping', domain: 'Design & Ideation', color: 'purple', what: "Tony Buzan's radial visual organization technique. A central concept branches into related topics, then sub-topics. Externalizes non-linear thinking into a structure you can navigate — and share.", certs: [], tools: ['Idea Swiper', 'Spatial Canvas'] },
-  { id: 'Technology-Radar', label: 'Technology Radar', domain: 'Design & Ideation', color: 'purple', what: "ThoughtWorks' quarterly publication categorizing technologies into four rings: Adopt (use now), Trial (try on a real project), Assess (explore), Hold (use with caution for new work). Provides a shared vocabulary for tech strategy decisions.", certs: [], tools: ['Tool Portfolio'] },
+  { id: 'Technology-Radar', label: 'Technology Radar', domain: 'Design & Ideation', color: 'purple', what: "ThoughtWorks' quarterly publication categorizing technologies into four rings: Adopt (use now), Trial (try on a real project), Assess (explore), Hold (use with caution for new work). Provides a shared vocabulary for tech strategy decisions.", certs: [], tools: [] },
 ];
 
 const WORKFLOWS = [
@@ -486,7 +486,7 @@ const WORKFLOWS = [
     when: 'Starting a new initiative with a defined goal and team',
     steps: [
       { tool: 'Project Hub', action: 'Create project, define team members and their roles' },
-      { tool: 'Stakeholder Map', action: 'Map who has power, interest, and what engagement to target' },
+      { tool: 'Stakeholder Map', action: 'Note who\'s involved by organization, and what you need from each' },
       { tool: 'Risk Register', action: 'Identify the 3–5 biggest risks and assign owners' },
       { tool: 'Schedule', action: 'Set milestone dates and spot deadline conflicts early' },
       { tool: 'Goals Hub', action: 'Link the project to a quarterly OKR objective' },

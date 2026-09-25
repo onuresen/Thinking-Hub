@@ -241,7 +241,7 @@
     const INCIDENT_COLORS = { fire: '#ff5b5b', crash: '#ff5b5b', stalled: '#ffb84d', crane: '#5bd67a' };
 
     // ── Lens 1: Tool Portfolio district (buildings) ─────────────────────────
-    const RING_TO_CATEGORY = { adopt: 'shipped', trial: 'assigned', assess: 'personal', hold: 'queued' };
+    const STATUS_TO_CATEGORY = { using: 'shipped', piloting: 'assigned', exploring: 'personal', retired: 'queued' };
 
     function portfolioEntities() {
       const toolsRaw = HubStorage.get('tool-portfolio-v1');
@@ -255,15 +255,15 @@
           name: t.name,
           kind: 'building',
           district: 'Portfolio',
-          category: RING_TO_CATEGORY[t.ring] || 'default',
+          category: STATUS_TO_CATEGORY[t.status] || 'default',
           tier: 1 + Math.min(3, Math.max(0, t.mastery ?? 0)),
           activity,
           staleness,
-          shipped: t.ring === 'adopt',
+          shipped: t.status === 'using',
           incident: buildingIncident(staleness, activity, t.useCount, Boolean(t.lastUsedAt)),
           meta: {
             lens: 'portfolio', toolId: t.id,
-            icon: t.icon, ring: t.ring, status: t.status, note: t.note,
+            icon: t.icon, status: t.status, note: t.note,
             useCount: t.useCount || 0, mastery: t.mastery ?? 0, lastUsedAt: t.lastUsedAt,
           },
         };
@@ -878,7 +878,7 @@
       const lastTxt = m.lastUsedAt ? `last ${Math.floor(days)}d ago` : null;
 
       if (m.lens === 'portfolio') {
-        line(detail, 'd-status', [m.ring, m.status, `${m.useCount}× used`, lastTxt || 'never used'].filter(Boolean).join(' · '));
+        line(detail, 'd-status', [m.status, `${m.useCount}× used`, lastTxt || 'never used'].filter(Boolean).join(' · '));
         line(detail, 'd-note', m.note);
       } else if (m.lens === 'hub-page') {
         line(detail, 'd-status', [m.group, `opened ${m.useCount}×`, lastTxt].filter(Boolean).join(' · '));
