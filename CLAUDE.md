@@ -2072,6 +2072,23 @@ User report: "connect was not really working. Nothing was happening when clickin
 
 ---
 
+### ~~Priority 114 — Canvas Hub: right-click a node to arm Connect from here~~ ✓ Done `[group: canvas-structure]`
+Follow-up ask, right after fixing P113's Connect-mode bug: right-click a node itself (not empty canvas) to start a connection from it directly, instead of always going through the toolbar "Connect" button first.
+
+- Every node now has its own `contextmenu` handler (`e.preventDefault()` + `e.stopPropagation()` so the browser's native menu and the canvas's own empty-space add-menu never also appear) opening a one-item `#node-menu` popover: **🔗 Connect from here**.
+- Picking it calls `armConnectFrom(nodeId)` — turns Connect mode on if it wasn't already (same visual state as clicking the toolbar button: `#connect-btn` gets `.active`, the viewport gets the crosshair cursor), sets `connectSource` to this node, and highlights it. From there the flow is identical to the existing Connect mode: just left-click the target node like normal (this is also what P113 just fixed — a plain click on the node body now reaches that logic).
+- `closeNodeMenu()` wired into every existing "something else happened, dismiss transient popovers" spot (document outside-click, Escape, starting a pan, starting a node drag) alongside the edge/add-menu/add-picker closers already there.
+
+**Key decisions:**
+- **Decision:** One menu item, not a fuller node context menu (delete/link/rename etc.). **Why:** those actions already exist and are one click away via the node's own action bar (select the node, use the toolbar that appears above it) — duplicating them into a second menu would be two ways to do the same thing for no benefit. Connect was the one action that had no per-node shortcut at all before this. **Confidence:** high.
+- **Decision:** Reuse the exact same `connectMode`/`connectSource` state and visual language the toolbar Connect button already drives, rather than a separate "armed from right-click" mode. **Why:** it's the same underlying action (pick a source, click a target) — a parallel state machine for the same behavior would be pure duplication and a second place for the P113 bug class to hide. **Confidence:** high.
+
+**Verified** (Playwright): right-clicking a node (with Connect mode initially off) shows the one-item menu; picking "Connect from here" turns Connect mode on and highlights that node as the source; a plain follow-up left-click on a second node creates the edge and resets `connectSource`. Full smoke (30/30 pages) + flows suites green.
+
+**Files:** `canvas-hub.html`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
