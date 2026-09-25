@@ -32,7 +32,7 @@ exports and imports a Full Backup.
 | `api.anthropic.com` | A user explicitly tests a key or invokes an AI capture, query, act, briefing, drafting, or insight feature | Anthropic API key, prompt, applicable system instructions, and feature-dependent workspace context | No |
 | `console.anthropic.com` | User clicks the API-key help link | Normal browser navigation metadata | No |
 | `m365.cloud.microsoft` | User confirms **Copy and open Copilot** after reviewing a locally prepared prompt | Normal browser navigation metadata; the prompt remains on the clipboard until the user pastes it | No |
-| `www.google.com` (favicon service) | A tool in Tool Portfolio, or a stakeholder in Stakeholder Map, has a URL set | The hostname of that URL, requested as an `<img>` to fetch its favicon | No — falls back to the local emoji/initials icon if blocked or unset |
+| `www.google.com` (favicon service) | A tool in Tool Portfolio, a stakeholder in Stakeholder Map, or a linked Tool node on Canvas Hub, has a URL set | The hostname of that URL, requested as an `<img>` to fetch its favicon | No — falls back to the local emoji/initials icon if blocked or unset |
 | `t0`–`t3`.`gstatic.com` | Same request as above — Google redirects the favicon endpoint to a per-domain static shard | The same hostname, carried in the redirect URL | No — same fallback applies |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
 
@@ -47,10 +47,11 @@ access logs.
 
 Fonts and runtime JavaScript libraries are self-hosted; Thinking Hub does not
 contact Google Fonts or a JavaScript CDN during application use. Tool
-Portfolio and Stakeholder Map fetch favicons for records with a URL set from
-Google's favicon service (see the outbound inventory above); every other page
-uses local icons only. Records without a URL never trigger a request, and a
-blocked or failed fetch falls back to the local emoji/initials icon.
+Portfolio, Stakeholder Map, and Canvas Hub's linked Tool nodes fetch favicons
+for records with a URL set from Google's favicon service (see the outbound
+inventory above); every other page uses local icons only. Records without a
+URL never trigger a request, and a blocked or failed fetch falls back to the
+local emoji/initials icon.
 
 ## What optional AI can include
 
