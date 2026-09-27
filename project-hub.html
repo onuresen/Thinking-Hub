@@ -2777,11 +2777,15 @@
       }, 0);
     }
 
-    function cmSortedConcepts() {
-      const cs = [...(state.concepts || [])];
-      if (cmSort === 'degree') cs.sort((a, b) => cmDegree(b) - cmDegree(a));
-      else cs.sort((a, b) => a.name.localeCompare(b.name));
-      return cs;
+    // Projects are the row axis (P121) — likely to outgrow concepts in count, and a
+    // tall table scrolls vertically far more comfortably than a wide one scrolls
+    // horizontally. Sort/Filter controls apply to this axis; concept columns are
+    // always alphabetical (fewer of them, so a fixed order is enough to scan).
+    function cmSortedProjects() {
+      const ps = [...state.projects];
+      if (cmSort === 'degree') ps.sort((a, b) => cmProjectDegree(b) - cmProjectDegree(a));
+      else ps.sort((a, b) => a.name.localeCompare(b.name));
+      return ps;
     }
 
     function renderConceptMatrix(container) {
@@ -2793,43 +2797,43 @@
         return;
       }
 
-      const sorted = cmSortedConcepts();
+      const sortedProjects = cmSortedProjects();
+      const sortedConcepts = [...concepts].sort((a, b) => a.name.localeCompare(b.name));
 
       let colHeadersHtml = `<th class="cm-corner"></th>`;
-      projects.forEach(p => {
-        const abbr = p.name.length > 12 ? p.name.slice(0, 11) + '…' : p.name;
-        colHeadersHtml += `<th class="cm-proj-th"><div class="cm-rotate"><span class="cm-proj-label" title="${HubUtils.esc(p.name)}">${HubUtils.esc(abbr)}</span></div></th>`;
+      sortedConcepts.forEach(c => {
+        const abbr = c.name.length > 12 ? c.name.slice(0, 11) + '…' : c.name;
+        colHeadersHtml += `<th class="cm-proj-th"><div class="cm-rotate"><span class="cm-proj-label" onclick="openConceptModal('${c.id}')" title="${HubUtils.esc(c.name)}${c.desc ? ' — ' + HubUtils.esc(c.desc) : ''} (click to edit)">${HubUtils.esc(abbr)}</span></div></th>`;
       });
       colHeadersHtml += `<th class="cm-count-th">∑</th>`;
 
       let bodyHtml = '';
-      if (sorted.length === 0) {
-        bodyHtml = `<tr><td colspan="${projects.length + 2}" style="padding:28px;text-align:center;color:var(--text3);font-size:13px">No concepts yet — click "+ Concept" to add your first one.</td></tr>`;
+      if (sortedConcepts.length === 0) {
+        bodyHtml = `<tr><td colspan="2" style="padding:28px;text-align:center;color:var(--text3);font-size:13px">No concepts yet — click "+ Concept" to add your first one.</td></tr>`;
       } else {
-        sorted.forEach(concept => {
-          const deg = cmDegree(concept);
-          const hi = Math.ceil(projects.length * 0.55);
+        sortedProjects.forEach(p => {
+          const deg = cmProjectDegree(p);
+          const hi = Math.ceil(sortedConcepts.length * 0.55);
           const badge = deg >= hi ? 'hi' : deg <= 1 ? 'lo' : '';
           bodyHtml += `<tr>
             <td class="cm-label-cell">
-              <div class="cm-concept-name">${HubUtils.esc(concept.name)}<span class="cm-concept-edit" onclick="openConceptModal('${concept.id}')" title="Edit">✎</span></div>
-              ${concept.desc ? `<div class="cm-concept-desc" title="${HubUtils.esc(concept.desc)}">${HubUtils.esc(concept.desc)}</div>` : ''}
+              <div class="cm-concept-name"><span title="${HubUtils.esc(p.name)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${HubUtils.esc(p.name)}</span><span class="cm-concept-edit" onclick="openProjectTagDrawer('${p.id}')" title="Tag concepts for this project">🏷</span></div>
             </td>`;
-          projects.forEach(p => {
-            const v = (concept.vals || {})[p.id] || 0;
+          sortedConcepts.forEach(c => {
+            const v = (c.vals || {})[p.id] || 0;
             let dot = '';
             if (v === 2) dot = `<span class="cm-dot cm-dot-2"></span>`;
             else if (v === 1 && cmFilter === 'all') dot = `<span class="cm-dot cm-dot-1"></span>`;
-            bodyHtml += `<td class="cm-data-cell" data-cid="${concept.id}" data-pid="${p.id}" data-val="${v}">${dot}</td>`;
+            bodyHtml += `<td class="cm-data-cell" data-cid="${c.id}" data-pid="${p.id}" data-val="${v}">${dot}</td>`;
           });
           bodyHtml += `<td class="cm-count-td"><span class="cm-badge ${badge}">${deg}</span></td></tr>`;
         });
       }
 
-      let totalsHtml = `<tr class="cm-totals"><td class="cm-label-cell">Project depth →</td>`;
-      projects.forEach(p => {
-        const d = cmProjectDegree(p);
-        const hi = Math.ceil(concepts.length * 0.55);
+      let totalsHtml = `<tr class="cm-totals"><td class="cm-label-cell">Concept reach →</td>`;
+      sortedConcepts.forEach(c => {
+        const d = cmDegree(c);
+        const hi = Math.ceil(sortedProjects.length * 0.55);
         const badge = d >= hi ? 'hi' : d <= 1 ? 'lo' : '';
         totalsHtml += `<td class="cm-count-td"><span class="cm-badge ${badge}">${d}</span></td>`;
       });
@@ -2984,7 +2988,7 @@
           const descs = { 1: 'Meaningful connection', 2: 'Fundamental to this project' };
           tip.innerHTML = `<strong>${HubUtils.esc(concept.name)} × ${HubUtils.esc(project.name)}</strong>${HubUtils.esc(descs[v])}<div class="cm-tip-type">${labels[v]}</div>`;
           tip.style.opacity = '1';
-          document.querySelectorAll(`.cm-data-cell[data-pid="${pid}"]`).forEach(el => el.classList.add('col-hl'));
+          document.querySelectorAll(`.cm-data-cell[data-cid="${cid}"]`).forEach(el => el.classList.add('col-hl'));
         });
 
         td.addEventListener('mousemove', e => {
@@ -2995,7 +2999,7 @@
 
         td.addEventListener('mouseleave', () => {
           if (tip) tip.style.opacity = '0';
-          document.querySelectorAll(`.cm-data-cell[data-pid="${pid}"]`).forEach(el => el.classList.remove('col-hl'));
+          document.querySelectorAll(`.cm-data-cell[data-cid="${cid}"]`).forEach(el => el.classList.remove('col-hl'));
         });
       });
     }
@@ -3011,11 +3015,11 @@
       document.getElementById('cm-modal-name').value = c ? c.name : '';
       document.getElementById('cm-modal-desc').value = c ? (c.desc || '') : '';
       document.getElementById('cm-modal-delete').style.display = c ? 'inline-flex' : 'none';
-      document.getElementById('cm-modal-overlay').style.display = 'flex';
+      document.getElementById('cm-modal-overlay').classList.add('is-open');
       setTimeout(() => document.getElementById('cm-modal-name').focus(), 50);
     }
     function closeConceptModal() {
-      document.getElementById('cm-modal-overlay').style.display = 'none';
+      document.getElementById('cm-modal-overlay').classList.remove('is-open');
       _editingConceptId = null;
     }
     function saveConceptModal() {
@@ -3039,6 +3043,62 @@
       saveState();
       closeConceptModal();
       renderContent();
+    }
+
+    // ── Concept Matrix: per-project quick-tag drawer (P121) ──
+    // First-time entry into an N-project × M-concept grid one cell at a time never
+    // happened in practice (every project sat at 0). This walks one project at a
+    // time against every concept as a single-column checklist instead.
+    let _tagDrawerProjectId = null;
+    function openProjectTagDrawer(id) {
+      _tagDrawerProjectId = id;
+      document.getElementById('cm-tag-drawer-overlay').classList.add('is-open');
+      renderProjectTagDrawer();
+    }
+    function closeProjectTagDrawer() {
+      document.getElementById('cm-tag-drawer-overlay').classList.remove('is-open');
+      _tagDrawerProjectId = null;
+      renderContent();
+    }
+    function stepProjectTagDrawer(delta) {
+      const order = cmSortedProjects();
+      const idx = order.findIndex(p => p.id === _tagDrawerProjectId);
+      const next = order[idx + delta];
+      if (next) { _tagDrawerProjectId = next.id; renderProjectTagDrawer(); }
+    }
+    function renderProjectTagDrawer() {
+      const p = state.projects.find(x => x.id === _tagDrawerProjectId);
+      if (!p) { closeProjectTagDrawer(); return; }
+      document.getElementById('cm-tag-drawer-title').textContent = 'Tag: ' + p.name;
+      const order = cmSortedProjects();
+      const idx = order.findIndex(x => x.id === p.id);
+      document.getElementById('cm-tag-drawer-prev').disabled = idx <= 0;
+      document.getElementById('cm-tag-drawer-next').disabled = idx === -1 || idx >= order.length - 1;
+
+      const concepts = [...(state.concepts || [])].sort((a, b) => a.name.localeCompare(b.name));
+      const list = document.getElementById('cm-tag-drawer-list');
+      if (concepts.length === 0) {
+        list.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px 0">No concepts yet — close this and click "+ Concept" first.</div>`;
+        return;
+      }
+      const OPTS = [[0, 'None'], [1, 'Related'], [2, 'Core']];
+      list.innerHTML = concepts.map(c => {
+        const v = (c.vals || {})[p.id] || 0;
+        return `<div class="cm-drawer-row">
+          <span class="cm-drawer-name" title="${HubUtils.esc(c.desc || '')}">${HubUtils.esc(c.name)}</span>
+          <div class="cm-drawer-toggle">
+            ${OPTS.map(([val, label]) => `<button class="cm-drawer-opt ${val === v ? 'active v' + val : ''}" onclick="setDrawerConceptVal('${c.id}',${val})">${label}</button>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function setDrawerConceptVal(conceptId, val) {
+      const c = (state.concepts || []).find(x => x.id === conceptId);
+      if (!c || !_tagDrawerProjectId) return;
+      if (!c.vals) c.vals = {};
+      c.vals[_tagDrawerProjectId] = val;
+      saveState();
+      renderProjectTagDrawer();
     }
 
     // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -3081,7 +3141,7 @@
     </div>
   </div>
   <!-- Concept Matrix modal -->
-  <div class="ui-modal-overlay" id="cm-modal-overlay" onclick="if(event.target===this)closeConceptModal()" style="display:none;z-index:300">
+  <div class="ui-modal-overlay" id="cm-modal-overlay" onclick="if(event.target===this)closeConceptModal()" style="z-index:300">
     <div class="ui-modal" onclick="event.stopPropagation()" style="width:400px">
       <div class="modal-title" id="cm-modal-title">New Concept</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
@@ -3099,6 +3159,20 @@
         <button class="btn btn-ghost" onclick="closeConceptModal()">Cancel</button>
         <div style="flex:1"></div>
         <button class="btn btn-danger" id="cm-modal-delete" onclick="deleteConceptModal()" style="display:none">Delete</button>
+      </div>
+    </div>
+  </div>
+  <!-- Concept Matrix: per-project quick-tag drawer (P121) -->
+  <div class="ui-modal-overlay" id="cm-tag-drawer-overlay" onclick="if(event.target===this)closeProjectTagDrawer()" style="z-index:300">
+    <div class="ui-modal" onclick="event.stopPropagation()" style="width:440px;max-height:78vh;display:flex;flex-direction:column">
+      <div class="modal-title" id="cm-tag-drawer-title">Tag concepts</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">Set how each concept relates to this project, then move to the next.</div>
+      <div id="cm-tag-drawer-list" style="flex:1;overflow-y:auto;margin-top:14px;min-height:0"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
+        <button class="btn btn-ghost" id="cm-tag-drawer-prev" onclick="stepProjectTagDrawer(-1)">← Prev</button>
+        <button class="btn btn-ghost" id="cm-tag-drawer-next" onclick="stepProjectTagDrawer(1)">Next →</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" onclick="closeProjectTagDrawer()">Done</button>
       </div>
     </div>
   </div>
