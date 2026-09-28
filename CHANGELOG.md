@@ -7,6 +7,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Spatial Canvas: Undo/Redo for node and connection edits (Ctrl+Z / Ctrl+Y,
+  plus toolbar icon buttons), scoped per board and coalesced to one entry
+  per drag/resize/text-edit gesture rather than every intermediate change.
+
 - **Vault Bridge** — the Obsidian integration can now read the vault as a
   source, not only open notes from it. After connecting a vault folder,
   Thinking Hub reports days your vault has a daily note for but the workspace
@@ -40,6 +44,13 @@ All notable changes to Thinking Hub are recorded here. Releases follow
   their stored data has an unexpected shape (bad import or hand-edited
   storage). Each now normalizes the value to an array on read and shows its
   normal empty state instead of failing silently with a console error.
+- Spatial Canvas: a node positioned underneath the floating toolbar or board
+  bar was completely unclickable — those bars occupied their full
+  rectangular area (including the gaps between buttons), silently
+  intercepting clicks meant for a node beneath them. This was the real cause
+  of persistent "Connect does nothing" reports once a board filled up
+  through normal use. Both bars now only capture clicks on their actual
+  buttons.
 
 ## [1.2.0] - 2026-07-22
 
