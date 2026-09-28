@@ -257,12 +257,12 @@ const TOOLS = [
   {
     id: 'journal-hub', label: 'Journal Hub', icon: '◷', group: 'Daily Work', wg: 'Daily Work',
     file: 'journal-hub.html',
-    desc: 'Daily log and weekly review in one place — mood, streaks, and planned big rocks.',
-    frameworks: ['GTD', 'Bullet Journal Method'],
-    fwIds: ['GTD', 'Bullet-Journal-Method'],
-    whenToUse: 'Every morning and evening for the daily tab; every Friday or Sunday evening for the weekly tab. Combining both habits into one tool reduces friction — one less reason to skip either ritual.',
-    features: ['Daily log with 5-level mood tracking and mode chips (📓 Journal / ✅ Tasks / 📅 Events)', 'Feynman "What did I learn today?" field', '16-week mood heatmap with streak counter', 'Weekly review: big rocks done, still open, and next week\'s commitment', 'Day chips in weekly view link directly to the relevant daily entries'],
-    sample: 'Tuesday evening. Mood: 🙂 Good. Mode: ✅ Tasks. Log three items completed, one pushed to tomorrow. Feynman field: "ISO 31000 \'Accept\' is a valid treatment — not a failure to mitigate." On Friday, open Weekly tab: mark the big rock done, set next week\'s: "Ship the onboarding redesign." 47-day streak. The heatmap shows this week was productive.'
+    desc: 'Daily log, weekly review, and time journal in one place — mood, streaks, big rocks, and where your hours actually go.',
+    frameworks: ['GTD', 'Bullet Journal Method', 'Pomodoro Technique'],
+    fwIds: ['GTD', 'Bullet-Journal-Method', 'Pomodoro-Technique'],
+    whenToUse: 'Every morning and evening for the daily tab; every Friday or Sunday evening for the weekly tab; any time you want an honest picture of where your hours went for the time journal tab.',
+    features: ['Daily log with 5-level mood tracking and mode chips (📓 Journal / ✅ Tasks / 📅 Events)', 'Feynman "What did I learn today?" field', '16-week mood heatmap with streak counter', 'Weekly review: big rocks done, still open, and next week\'s commitment', 'Day chips in weekly view link directly to the relevant daily entries', 'Time Journal tab: log a work block retrospectively (task/duration/energy/context/note) with an optional Pomodoro countdown timer', '✦ AI Energy Insights — correlates 14 days of logged energy/timing against your daily mood', 'Feeds the ⏱ time badges on Project Hub tasks + Today dashboard'],
+    sample: 'Tuesday evening. Mood: 🙂 Good. Mode: ✅ Tasks. Log three items completed, one pushed to tomorrow. Feynman field: "ISO 31000 \'Accept\' is a valid treatment — not a failure to mitigate." On Friday, open Weekly tab: mark the big rock done, set next week\'s: "Ship the onboarding redesign." 47-day streak. Meanwhile the Time Journal tab shows three logged blocks today totaling 3h — the heatmap and time log agree: this week was productive.'
   },
   {
     id: 'goals-hub', label: 'Goals Hub', icon: '◎', group: 'Strategy & Decisions', wg: 'Strategy & Decisions',
@@ -333,16 +333,6 @@ const TOOLS = [
     whenToUse: 'When you use (or are evaluating) multiple platforms and vendors, and want one place to see what each is for and where you\'re actually using it.',
     features: ['Tool cards with name, icon, URL, category, and notes', 'Status lifecycle: Exploring → Piloting → Using → Retired', 'SoR / SoE / SoI classification (source of record / engagement / insight), plus a Map view showing where each tool sits', 'Enabled Projects — link a tool to the projects it supports, with a 🔗 count on every list row', 'Freshness × Mastery matrix — real lastUsedAt/mastery tracking, not a subjective adoption rating', 'Category grouping with drag-to-reorder', 'Full-text search'],
     sample: 'You add a new AI writing tool as Exploring. A month in, real use bumps it to Using, and it\'s linked to two projects — the 🔗2 badge shows that at a glance in the list. An old analytics platform with no recent use and no project links is an easy Retire call.'
-  },
-  {
-    id: 'focus-hub', label: 'Time Journal', icon: '◷', group: 'Tools & Focus', wg: 'Tools & Focus',
-    file: 'focus-hub.html',
-    desc: 'Log what you worked on — a running record of where your time actually goes.',
-    frameworks: ['GTD', 'Pomodoro Technique', 'Systems Thinking'],
-    fwIds: ['GTD', 'Pomodoro-Technique', 'Systems-Thinking'],
-    whenToUse: 'When you want an honest picture of where your hours go, without the friction of running a timer for every task. Log a block after the fact (or as you go): task, duration, energy, a quick note. An optional countdown timer is still there for when you do want to time a deep-work block.',
-    features: ['Log a work block retrospectively: task, duration, energy, context, note', 'Quick duration chips (15/30/45/60/90m) or a custom amount', "Today's log timeline with a running daily total", 'Energy level: ⚡ High / 🌤 Medium / 🌙 Low (GTD context matching)', 'Context tag: @deep-work, @admin, @calls, or custom', 'Optional Pomodoro countdown timer (collapsed by default)', '✦ AI Energy Insights — correlates 14 days of logged energy/timing against your daily mood', 'Feeds the ⏱ time badges on Project Hub tasks + Today dashboard'],
-    sample: 'End of the morning. You log three blocks: "Write Q3 strategy doc — 90m, ⚡ high, @deep-work, finished the outline"; "MEP clash review — 60m, 🌤 medium"; "Email + admin — 30m, 🌙 low". Today\'s total reads 3h 0m across 3 blocks. Over two weeks, run AI Energy Insights — it notices your high-energy blocks cluster on days you logged a good mood, and that afternoon @admin time correlates with your lowest-rated days.'
   },
   {
     id: 'idea-swiper', label: 'Idea Swiper', icon: '⟳', group: 'Learning & Ideas', wg: 'Learning & Ideas',
@@ -430,15 +420,15 @@ const FRAMEWORKS = [
   { id: 'Mendelow-Matrix', label: 'Mendelow Matrix', domain: 'Stakeholder & People', color: 'orange', what: "Aubrey Mendelow's (1981) 2×2 grid mapping stakeholders by Power vs. Interest. Four engagement strategies: Manage Closely (high/high), Keep Satisfied (high/low), Keep Informed (low/high), Monitor (low/low).", certs: [], tools: [] },
   { id: 'Salience-Model', label: 'Salience Model', domain: 'Stakeholder & People', color: 'orange', what: "Mitchell, Agle & Wood's three-attribute model: Power + Legitimacy + Urgency. A stakeholder who scores high on all three is 'definitive' — the highest priority. Adds nuance that a 2×2 grid can't capture.", certs: [], tools: [] },
   // Personal Productivity
-  { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub', 'Time Journal'] },
-  { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Time Journal'] },
+  { id: 'GTD', label: 'GTD', domain: 'Personal Productivity', color: 'cyan', what: "David Allen's Getting Things Done: Capture → Clarify → Organize → Reflect → Engage. The goal is a trusted external system that frees your mind from remembering — so it can focus on doing.", certs: [], tools: ['Journal Hub'] },
+  { id: 'Pomodoro-Technique', label: 'Pomodoro Technique', domain: 'Personal Productivity', color: 'cyan', what: "Francesco Cirillo's 25-minute focused work blocks followed by 5-minute breaks. Named after his tomato-shaped kitchen timer. Builds focus capacity gradually and makes procrastination patterns visible.", certs: [], tools: ['Journal Hub'] },
   { id: 'Bullet-Journal-Method', label: 'Bullet Journal', domain: 'Personal Productivity', color: 'cyan', what: "Ryder Carroll's analog rapid logging system using symbols: • task, ○ event, – note. The digital adaptation: daily entries with mood, structured bullets, and a brief evening reflection.", certs: [], tools: ['Journal Hub'] },
   { id: 'KPT-Retrospective', label: 'KPT Retrospective', domain: 'Personal Productivity', color: 'cyan', what: "Keep / Problem / Try — a Japanese Agile/Kaizen retrospective format simpler than the Western 'Went Well / Improve / Actions.' Popular in product teams across Japan and Korea. Every cycle closes with a concrete Try.", certs: [], tools: [] },
   // Knowledge & Learning
   { id: 'PKM', label: 'PKM', domain: 'Knowledge & Learning', color: 'green', what: "Personal Knowledge Management — especially Tiago Forte's PARA system (Projects / Areas / Resources / Archives) and Building a Second Brain methodology. The idea: your notes should be organized by actionability, not topic.", certs: [], tools: ['Learning Hub', 'Stakeholder Map'] },
   { id: 'Zettelkasten', label: 'Zettelkasten', domain: 'Knowledge & Learning', color: 'green', what: "Niklas Luhmann's 'slip-box' note system. Each note is atomic (one idea), uniquely numbered, and linked to related notes. The web of links creates emergent insight — the system thinks with you.", certs: [], tools: ['Learning Hub'] },
   { id: 'Feynman-Technique', label: 'Feynman Technique', domain: 'Knowledge & Learning', color: 'green', what: "Richard Feynman's learning method: explain a concept as if teaching a 12-year-old. Gaps in your explanation reveal gaps in your understanding. Find the gaps. Fill them. Re-explain. Repeat until it's truly clear.", certs: [], tools: ['Learning Hub', 'Journal Hub'] },
-  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Time Journal', 'Spatial Canvas'] },
+  { id: 'Systems-Thinking', label: 'Systems Thinking', domain: 'Knowledge & Learning', color: 'green', what: "Peter Senge's approach to understanding feedback loops, delays, and emergent behavior. The Iceberg Model: visible events are caused by patterns, which are caused by structures, which are caused by mental models.", certs: [], tools: ['Profile', 'Journal Hub', 'Spatial Canvas'] },
   { id: 'Pyramid-Principle', label: 'Pyramid Principle', domain: 'Knowledge & Learning', color: 'green', what: "Barbara Minto's (McKinsey) method for structuring thinking and writing. Lead with the governing thought, then support it with grouped ideas where each box answers the question raised by the box above it. Top-down, not bottom-up.", certs: [], tools: [] },
   { id: 'SCQA', label: 'SCQA', domain: 'Knowledge & Learning', color: 'green', what: "Minto's introduction structure: Situation (agreed context) → Complication (what changed) → Question (what the reader now asks) → Answer (your governing thought). Tells the reader a short story that leads them to exactly the question your document answers.", certs: [], tools: [] },
   { id: 'MECE', label: 'MECE', domain: 'Knowledge & Learning', color: 'green', what: "Mutually Exclusive, Collectively Exhaustive — the test for any grouping of ideas. No overlaps (mutually exclusive), no gaps (collectively exhaustive). The discipline that turns a list into a sound argument.", certs: [], tools: [] },
@@ -469,7 +459,7 @@ const WORKFLOWS = [
     when: 'Your daily and weekly operating cadence',
     steps: [
       { tool: 'Journal Hub', action: 'Morning: capture intention. Evening: reflect + learn' },
-      { tool: 'Time Journal', action: 'During work: protect deep work blocks with Pomodoro sessions' },
+      { tool: 'Journal Hub', action: 'During work: protect deep work blocks with the Time Journal tab' },
       { tool: 'Journal Hub', action: 'Friday: open Weekly tab — review what\'s done, commit next week\'s big rock' },
       { tool: 'Goals Hub', action: 'Update OKR key result progress — are you on track?' },
     ]

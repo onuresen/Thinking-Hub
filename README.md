@@ -44,7 +44,7 @@ Tools are grouped by the kind of work they support.
 | **Schedule** | Calendar and timeline views that sync due dates from Project Hub |
 | **Meeting Hub** | Structured meeting notes with decisions, participants, and action items |
 | **Capture Hub** | A fast inbox for notes, tasks, ideas, decisions, and references before triage |
-| **Journal Hub** | Daily reflection, mood and energy patterns, Bullet Journal modes, and Feynman prompts |
+| **Journal Hub** | Daily reflection, weekly review, retrospective time journaling, mood and energy patterns, Bullet Journal modes, and Feynman prompts |
 
 ### People & Network
 
@@ -76,7 +76,6 @@ Tools are grouped by the kind of work they support.
 
 | Tool | What it does |
 |------|-------------|
-| **Time Journal** | Log what you worked on, review where time went, and optionally run a timer |
 | **Profile** | Identity, milestones, badges, streaks, and an activity heatmap |
 | **Tags** | A central topic registry with usage visibility and cross-tool rename support |
 | **Help & Guide** | Tool directory, framework reference, and pre-built workflow guides |
@@ -155,7 +154,7 @@ Each tool is mapped to one or more established frameworks:
 |-----------|-------|
 | Cynefin | Decision Hub |
 | OKR | Goals Hub |
-| GTD | Time Journal |
+| GTD | Journal Hub |
 | Action Priority Matrix (Impact × Effort) | Project Hub |
 | Assumption-Based Planning (RAND) | Decision Hub → Assumptions tab |
 | Technology Radar (ThoughtWorks) | Tool Portfolio |
@@ -235,7 +234,6 @@ canvas-hub.html         # Infinite spatial canvas
 graph-hub.html          # Task dependency graph (vis-network)
 people-hub.html         # People directory and follow-ups
 town-hub.html           # Machi Hub living pixel city
-focus-hub.html          # Time Journal + optional timer
 goals-hub.html          # OKR / quarterly goals
 learning-hub.html       # Reading & learning log
 stakeholder-hub.html    # Stakeholder power/interest grid
