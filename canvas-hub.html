@@ -95,6 +95,12 @@
     }
 
     /* ── Controls ───────────────────────────────────────────── */
+    /* pointer-events:none on the bar + :auto on its buttons only — a plain
+       div with z-index:100 would otherwise swallow clicks in the gaps
+       between buttons for ANY node underneath it, since it sits above the
+       viewport's own stacking context (nodes never exceed z-index:10). A
+       node can easily drift into this screen region as a board fills up
+       through normal panning/dragging, making it silently unclickable. */
     .controls {
       position: absolute;
       bottom: 20px;
@@ -102,6 +108,16 @@
       display: flex;
       gap: 8px;
       z-index: 100;
+      pointer-events: none;
+    }
+
+    .controls > button {
+      pointer-events: auto;
+    }
+
+    .controls > button:disabled {
+      opacity: 0.4;
+      cursor: default;
     }
 
     /* ── Board bar (Canvas Hub: named boards) ──────────────────── */
@@ -113,6 +129,11 @@
       align-items: center;
       gap: 4px;
       z-index: 100;
+      pointer-events: none;
+    }
+
+    .board-bar > * {
+      pointer-events: auto;
     }
 
     .board-select {
@@ -544,6 +565,9 @@
     }
 
     /* ── Mini-map ───────────────────────────────────────────── */
+    /* Purely a rendered overview with no click behavior of its own — must
+       not block clicks to a real node that happens to sit underneath it
+       on screen (same z-index-over-viewport hazard as the toolbars above). */
     #minimap {
       position: absolute;
       bottom: 68px;
@@ -557,6 +581,7 @@
       z-index: 100;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       display: none;
+      pointer-events: none;
     }
 
     #minimap-canvas {
@@ -721,6 +746,8 @@
   </div>
 
   <div class="controls">
+    <button class="btn" id="undo-btn" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
+    <button class="btn" id="redo-btn" onclick="redo()" title="Redo (Ctrl+Y)" disabled>↷</button>
     <button class="btn" onclick="zoomIn()">＋ Zoom</button>
     <button class="btn" onclick="zoomOut()">－ Zoom</button>
     <button class="btn" onclick="resetView()">Reset View</button>
@@ -915,6 +942,70 @@
       renderAll(); updateTransform(); renderBoardBar();
     });
 
+    // ── Undo / Redo ──────────────────────────────────────────
+    // Scoped per board (keyed by board id) — undoing never reaches across a
+    // board switch, matching the multi-board architecture (P111). Only
+    // node/edge content is snapshotted, not pan/zoom or the board list
+    // itself: reverting the camera or resurrecting a deleted board on an
+    // undo keystroke would surprise a user who only meant to undo an edit.
+
+    let historyByBoard = {};
+    const HISTORY_LIMIT = 50;
+
+    function historyStacks() {
+      if (!historyByBoard[db.id]) historyByBoard[db.id] = { undo: [], redo: [] };
+      return historyByBoard[db.id];
+    }
+
+    function snapshotBoard() {
+      return { nodes: JSON.parse(JSON.stringify(db.nodes)), edges: JSON.parse(JSON.stringify(db.edges || [])) };
+    }
+
+    // Call BEFORE a mutation, so the undo stack holds the state right
+    // before the change about to happen. Any new action clears redo — a
+    // fresh edit invalidates whatever "future" redo was pointing at.
+    function pushHistory() {
+      const h = historyStacks();
+      h.undo.push(snapshotBoard());
+      if (h.undo.length > HISTORY_LIMIT) h.undo.shift();
+      h.redo = [];
+      updateUndoRedoButtons();
+    }
+
+    function restoreSnapshot(snap) {
+      db.nodes = snap.nodes;
+      db.edges = snap.edges;
+      selectedNodeId = null;
+      connectMode = false; connectSource = null;
+      document.getElementById('connect-btn')?.classList.remove('active');
+      viewport.classList.remove('connect-mode');
+      renderAll(); renderMinimap(); renderBoardBar();
+      pulseSave();
+      updateUndoRedoButtons();
+    }
+
+    function undo() {
+      const h = historyStacks();
+      if (!h.undo.length) return;
+      h.redo.push(snapshotBoard());
+      restoreSnapshot(h.undo.pop());
+    }
+
+    function redo() {
+      const h = historyStacks();
+      if (!h.redo.length) return;
+      h.undo.push(snapshotBoard());
+      restoreSnapshot(h.redo.pop());
+    }
+
+    function updateUndoRedoButtons() {
+      const h = historyStacks();
+      const ub = document.getElementById('undo-btn');
+      const rb = document.getElementById('redo-btn');
+      if (ub) ub.disabled = !h.undo.length;
+      if (rb) rb.disabled = !h.redo.length;
+    }
+
     // ── Board management ─────────────────────────────────────
 
     function renderBoardBar() {
@@ -938,6 +1029,7 @@
       fullState.activeBoardId = id;
       pulseSave();
       renderAll(); updateTransform(); renderBoardBar();
+      updateUndoRedoButtons();
     }
 
     function createBoard() {
@@ -950,6 +1042,7 @@
       selectedNodeId = null;
       pulseSave();
       renderAll(); updateTransform(); renderBoardBar();
+      updateUndoRedoButtons();
       if (window.showToast) showToast('Board created');
     }
 
@@ -968,6 +1061,7 @@
       }
       if (!confirm(`Delete board "${db.name}"? This removes all its notes and connections and cannot be undone.`)) return;
       const idx = fullState.boards.findIndex(b => b.id === db.id);
+      delete historyByBoard[db.id];
       fullState.boards.splice(idx, 1);
       const next = fullState.boards[Math.max(0, idx - 1)];
       fullState.activeBoardId = next.id;
@@ -976,6 +1070,7 @@
       selectedNodeId = null;
       pulseSave();
       renderAll(); updateTransform(); renderBoardBar();
+      updateUndoRedoButtons();
       if (window.showToast) showToast('Board deleted');
     }
 
@@ -1031,6 +1126,7 @@
         dragState.node.y = dragState.startY + dy;
         dragState.el.style.left = dragState.node.x + 'px';
         dragState.el.style.top = dragState.node.y + 'px';
+        dragState.moved = true;
         renderEdges(); // keep edges attached while dragging
         renderMinimap();
       }
@@ -1041,15 +1137,37 @@
         resizeState.node.h = Math.max(60, resizeState.startH + dy);
         resizeState.el.style.width = resizeState.node.w + 'px';
         resizeState.el.style.height = resizeState.node.h + 'px';
+        resizeState.moved = true;
         renderEdges();
         renderMinimap();
       }
     });
 
+    // Commits a drag/resize gesture's pre-mutation snapshot to the undo
+    // stack, but only if something actually changed — a plain click with no
+    // movement must not leave a no-op entry to undo through.
+    function commitGestureHistory(preSnapshot) {
+      const h = historyStacks();
+      h.undo.push(preSnapshot);
+      if (h.undo.length > HISTORY_LIMIT) h.undo.shift();
+      h.redo = [];
+      updateUndoRedoButtons();
+    }
+
     window.addEventListener('mouseup', () => {
       if (isPanning) { isPanning = false; viewport.classList.remove('panning'); pulseSave(); }
-      if (isDraggingNode) { isDraggingNode = false; dragState = null; pulseSave(); }
-      if (isResizingNode) { isResizingNode = false; resizeState = null; pulseSave(); }
+      if (isDraggingNode) {
+        isDraggingNode = false;
+        if (dragState && dragState.moved) commitGestureHistory(dragState.preSnapshot);
+        dragState = null;
+        pulseSave();
+      }
+      if (isResizingNode) {
+        isResizingNode = false;
+        if (resizeState && resizeState.moved) commitGestureHistory(resizeState.preSnapshot);
+        resizeState = null;
+        pulseSave();
+      }
     });
 
     viewport.addEventListener('wheel', e => {
@@ -1061,6 +1179,24 @@
     // ── Keyboard ─────────────────────────────────────────────
 
     document.addEventListener('keydown', e => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
+        // Let native text-undo run inside a real form control, or a node
+        // body that actually has unsaved keystrokes THIS focus session
+        // (textEditDirty). A brand-new node auto-focuses its empty body so
+        // you can start typing immediately — if nothing's been typed yet,
+        // Ctrl+Z there has nothing textual to undo, so it should fall
+        // through to canvas-level undo instead of silently doing nothing.
+        const ae = document.activeElement;
+        const isTextEditing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' ||
+          ae.tagName === 'SELECT' || (ae.classList.contains('node-body') && textEditDirty));
+        if (!isTextEditing) {
+          e.preventDefault();
+          const isRedo = (e.key === 'y' || e.key === 'Y') || ((e.key === 'z' || e.key === 'Z') && e.shiftKey);
+          if (isRedo) redo(); else undo();
+          return;
+        }
+      }
       if (e.code === 'Space' && document.activeElement.tagName !== 'DIV') {
         e.preventDefault();
         spacePressed = true;
@@ -1094,6 +1230,10 @@
     let dragState = null;
     let isResizingNode = false;
     let resizeState = null;
+    // True while the currently-focused node body has unsaved keystrokes this
+    // focus session — lets the Ctrl+Z/Ctrl+Y handler tell "the caret happens
+    // to be in a note" apart from "I'm actively editing text right now".
+    let textEditDirty = false;
 
     function selectNode(id) {
       selectedNodeId = id;
@@ -1140,6 +1280,7 @@
         (e.from === toId && e.to === fromId)
       );
       if (dup) return;
+      pushHistory();
       db.edges.push({ id: 'e-' + Date.now().toString(36), from: fromId, to: toId, relType: 'relates' });
       pulseSave();
       renderEdges();
@@ -1238,6 +1379,7 @@
         btn.textContent = t.label;
         btn.onmousedown = e => {
           e.stopPropagation();
+          pushHistory();
           edge.relType = t.id;
           pulseSave();
           renderEdges();
@@ -1258,6 +1400,7 @@
 
     function deleteEdgeFromPopover() {
       if (!_edgePopoverEdgeId) return;
+      pushHistory();
       db.edges = db.edges.filter(e => e.id !== _edgePopoverEdgeId);
       pulseSave();
       renderEdges(); renderMinimap();
@@ -1318,6 +1461,7 @@
     });
 
     function createNode(x, y, kind) {
+      pushHistory();
       const id = 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const node = { id, x, y, text: '', color: 'c-gray' };
       if (kind) node.kind = kind;
@@ -1331,6 +1475,7 @@
     }
 
     function deleteNode(id) {
+      pushHistory();
       db.nodes = db.nodes.filter(n => n.id !== id);
       db.edges = (db.edges || []).filter(e => e.from !== id && e.to !== id);
       selectNode(null);
@@ -1341,6 +1486,7 @@
     function setColor(id, colorId) {
       const node = db.nodes.find(n => n.id === id);
       if (!node) return;
+      pushHistory();
       node.color = colorId;
       const el = document.querySelector(`.node[data-id="${id}"]`);
       if (el) {
@@ -1355,6 +1501,7 @@
     function setKind(id, kindId) {
       const node = db.nodes.find(n => n.id === id);
       if (!node) return;
+      pushHistory();
       node.kind = kindId === 'note' ? undefined : kindId;
       if (kindId !== 'goal' && kindId !== 'project' && kindId !== 'tool') node.link = null;
       pulseSave();
@@ -1366,6 +1513,7 @@
     }
 
     function createLinkedNode(x, y, kind, tool, id, label) {
+      pushHistory();
       const nid = 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const node = { id: nid, x, y, text: '', color: 'c-gray', kind, link: { tool, id, label } };
       db.nodes.push(node);
@@ -1702,6 +1850,7 @@
 
       sel.addEventListener('change', () => {
         const it = items.find(i => i.id === sel.value);
+        pushHistory();
         node.link = it ? { tool: toolLinkFor(node.kind), id: it.id, label: it.label } : null;
         pulseSave();
         refresh();
@@ -1757,7 +1906,22 @@
         body.className = 'node-body';
         body.contentEditable = true;
         body.innerHTML = node.text || '';
-        body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); });
+        body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); textEditDirty = true; });
+        // One history entry per edit *session* (focus → blur), not per
+        // keystroke — captured at focus time, only committed on blur if the
+        // text actually changed, so clicking into and back out of a note
+        // untouched doesn't leave a no-op undo entry.
+        let editPreSnapshot = null, editBeforeValue = null;
+        body.addEventListener('focus', () => {
+          editPreSnapshot = snapshotBoard();
+          editBeforeValue = node.text || '';
+          textEditDirty = false;
+        });
+        body.addEventListener('blur', () => {
+          if (editPreSnapshot && (node.text || '') !== editBeforeValue) commitGestureHistory(editPreSnapshot);
+          editPreSnapshot = null; editBeforeValue = null;
+          textEditDirty = false;
+        });
         // Don't start a drag/text-select from the body — except in Connect
         // mode, where a click anywhere on the node (body included, since it
         // covers most of the node's surface) must reach the connect logic
@@ -1811,7 +1975,12 @@
         dragState = {
           node, el,
           startX: node.x, startY: node.y,
-          startMouseX: e.clientX, startMouseY: e.clientY
+          startMouseX: e.clientX, startMouseY: e.clientY,
+          // Captured before any movement — only pushed to the undo stack at
+          // drag-end, and only if the node actually moved. Otherwise a plain
+          // click-to-select (mousedown+mouseup with zero movement) would
+          // pollute history with a no-op entry.
+          preSnapshot: snapshotBoard()
         };
       });
 
@@ -1839,7 +2008,8 @@
           startW: node.w || el.offsetWidth,
           startH: node.h || el.offsetHeight,
           startMouseX: e.clientX,
-          startMouseY: e.clientY
+          startMouseY: e.clientY,
+          preSnapshot: snapshotBoard()
         };
       });
       el.appendChild(resizeHandle);
@@ -1973,6 +2143,7 @@
     updateTransform();
     renderAll();
     renderBoardBar();
+    updateUndoRedoButtons();
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
