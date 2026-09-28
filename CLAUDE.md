@@ -2227,6 +2227,24 @@ Follow-up to P120's decluttering pass — the user flagged Concept Matrix itself
 
 ---
 
+### ~~Priority 122 — Declutter: delete the Everything/Strategy/Project/Core Mode switcher~~ ✓ Done `[group: declutter]`
+User noticed the sidebar's `Everything / Strategy / Project / Core` chip row (P53's "Mode" — renamed from "Profile") while looking at a screenshot, and asked whether it's still needed now that the app is simpler. Checked first: the filtering was still real (Strategy hides 5 tools, Project narrows to 10, Core to 8 — not hollowed out by P120's tool deletions), so this wasn't a case of "the feature became pointless by attrition" the way it might look. Asked the user directly whether they actually switch modes, per this repo's standing "confirm real non-use before deleting" rule (P50/P88/P120) — they confirmed they only ever use Everything. Fourth round of the same pattern, this time on a UI feature rather than a whole tool.
+
+**What was removed (`index.html`, `styles/index.css`):** the `MODES` object and all filtering logic (`buildSidebar()`/`buildHomeDashboard()`/`buildStatusWidgets()` now always show every tool — no `mode.tools` filter); the `#mode-strip` sidebar chip row and its `buildModeStrip()` renderer; `_activeMode` and its `hub-session-v1.mode` read/write; `START_STEPS`'s three per-mode variants collapsed into one fixed onboarding-step list (kept the `everything` set's content, since that's the only one anyone ever saw); the welcome modal's "What best describes your work?" role-card grid (4 buttons: Strategy/DX, Project/BIM, Engineering/IT, Show everything) and its `selectWelcomeMode()`/`_applyWelcomeMode()`/`_welcomeMode` plumbing — the modal now goes straight from the privacy note to the Load-sample-data / Start-fresh buttons. `.mode-strip`/`.mode-chip` CSS (base + mobile media-query override) removed from `styles/index.css`.
+
+**What was deliberately left alone:** `hub-session-v1`'s stored `mode` field (and the older `profile` field it was itself migrated from, P53) — both are inert now, but `hub-session-v1` was never in Full Backup/AI-Context/MCP-sync to begin with (it's ephemeral session state), so there's no backup surface to clean and no data-safety question; a stale key sitting unread in a session-only store costs nothing. No new storage key, no data to preserve — this deletion has no P50-style "keep the localStorage key" step because there was never real user *content* in the mode field, only a UI preference.
+
+**Key decisions:**
+- **Decision:** Ask the user directly whether they use the other three modes, rather than inferring from the P120 tool-count math. **Why:** the filtering was still substantively real post-decluttering (not a case where deleted tools happened to hollow out the mode lists to nothing) — an "is this now pointless?" question can't be answered by counting tools alone; only actual usage settles it, and this repo's whole deletion history (P50, P88, P120) is built on that same discipline of confirming non-use before removing something. **Confidence:** high (explicit user call).
+- **Decision:** Collapse `START_STEPS` to the single `everything` variant's content, not a re-authored generic list. **Why:** every user of this app going forward only ever sees the Everything view, so the `everything` set's copy (Project → Goal → Learning Hub) is already the correct, tested onboarding sequence — the dx/bim/dev variants were dead code the instant the modes themselves were gone. **Confidence:** high.
+- **Decision:** Simplify the welcome modal to drop role selection entirely rather than keep a vestigial single "Show everything" choice. **Why:** with only one outcome possible, a button that always does the same thing regardless of which "role" is picked is UI theater — removing the whole section is more honest than keeping a choice that no longer chooses anything. **Confidence:** high.
+
+**Verified** (Playwright, real browser): sidebar builds all 20 nav items with no `.mode-strip` element present; home dashboard renders all 20 app cards; a fresh (cleared-storage) load shows the welcome modal with zero `.wlc-role-card` elements and no console errors. Full `smoke` (20-item sidebar count updated from the mode-strip era) + `flows` suites green.
+
+**Files:** `index.html`, `styles/index.css`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

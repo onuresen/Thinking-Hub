@@ -64,8 +64,6 @@
       <div class="sidebar-logo-text">Thinking Hub</div>
     </div>
 
-    <div class="mode-strip" id="mode-strip"></div>
-
     <div class="sidebar-nav" id="sidebar-nav"></div>
 
     <div class="proj-ctx-panel" id="proj-ctx-panel" style="display:none">
@@ -428,12 +426,6 @@
       { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
     ];
 
-    const MODES = {
-      everything: { label: 'Everything', icon: '⊞', tools: null },
-      dx: { label: 'Strategy', icon: '◈', tools: ['capture-hub', 'project-hub', 'people-hub', 'goals-hub', 'decision-hub', 'stakeholder-hub', 'risk-hub', 'meetings-hub', 'journal-hub', 'learning-hub', 'focus-hub', 'schedule', 'tags-hub', 'tool-portfolio', 'town-hub'] },
-      bim: { label: 'Project', icon: '⬡', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'meetings-hub', 'risk-hub', 'stakeholder-hub', 'journal-hub', 'decision-hub', 'goals-hub'] },
-      dev: { label: 'Core', icon: '⌥', tools: ['capture-hub', 'project-hub', 'people-hub', 'schedule', 'graph-hub', 'journal-hub', 'meetings-hub', 'goals-hub'] },
-    };
 
     // ── Session state ─────────────────────────────────────────────────────────────
 
@@ -446,8 +438,6 @@
         return { sessionName: '', recentApps: [], mode: 'everything' };
       }
     }
-
-    let _activeMode = loadSession().mode ?? loadSession().profile ?? 'everything';
 
     function saveSession(patch) {
       const s = loadSession();
@@ -471,28 +461,13 @@
 
     // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-    function buildModeStrip() {
-      const strip = document.getElementById('mode-strip');
-      if (!strip) return;
-      strip.innerHTML = '';
-      Object.entries(MODES).forEach(([key, prof]) => {
-        const btn = document.createElement('button');
-        btn.className = 'mode-chip' + (_activeMode === key ? ' active' : '');
-        btn.title = prof.label;
-        btn.textContent = prof.label;
-        btn.onclick = () => { _activeMode = key; saveSession({ mode: key }); buildModeStrip(); buildSidebar(); buildHomeDashboard(); buildStatusWidgets(); };
-        strip.appendChild(btn);
-      });
-    }
-
     const _collapsedGroups = new Set(); // session-only collapse state
 
     function buildSidebar() {
       const nav = document.getElementById('sidebar-nav');
       nav.innerHTML = '';
 
-      const mode = MODES[_activeMode] || MODES.everything;
-      const visibleApps = mode.tools ? APPS.filter(a => mode.tools.includes(a.id)) : APPS;
+      const visibleApps = APPS;
 
       const groups = [...new Set(APPS.map(a => a.wg))];
       groups.forEach(group => {
@@ -538,34 +513,17 @@
 
     // ── Home dashboard ────────────────────────────────────────────────────────────
 
-    const START_STEPS = {
-      dx: [
-        { icon: '◈', label: 'Create a Project', sub: 'Track tasks, milestones and your team', tool: 'project-hub' },
-        { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
-        { icon: '◉', label: 'Log a Decision', sub: 'Record choices with context and reasoning', tool: 'decision-hub' },
-      ],
-      bim: [
-        { icon: '◈', label: 'Create a Project', sub: 'Track tasks, milestones and your team', tool: 'project-hub' },
-        { icon: '▦', label: 'Open Schedule', sub: 'Add milestones and sync with your project', tool: 'schedule' },
-        { icon: '▣', label: 'Start a Meeting Log', sub: 'Record decisions and action items', tool: 'meetings-hub' },
-      ],
-      dev: [
-        { icon: '◈', label: 'Create a Project', sub: 'Track tasks and dependencies', tool: 'project-hub' },
-        { icon: '▦', label: 'Open Schedule', sub: 'Plan sprints and milestones', tool: 'schedule' },
-        { icon: '▤', label: 'Open your Journal', sub: 'Daily log and weekly review in one place', tool: 'journal-hub' },
-      ],
-      everything: [
-        { icon: '◈', label: 'Create a Project', sub: 'Start here — it connects everything else', tool: 'project-hub' },
-        { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
-        { icon: '◑', label: 'Open Learning Hub', sub: 'Track books, articles and courses', tool: 'learning-hub' },
-      ],
-    };
+    const START_STEPS = [
+      { icon: '◈', label: 'Create a Project', sub: 'Start here — it connects everything else', tool: 'project-hub' },
+      { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
+      { icon: '◑', label: 'Open Learning Hub', sub: 'Track books, articles and courses', tool: 'learning-hub' },
+    ];
 
     function buildStartBanner() {
       const banner = document.getElementById('start-banner');
       if (!banner) return;
       if (loadSession().startBannerDismissed) { banner.style.display = 'none'; return; }
-      const steps = START_STEPS[_activeMode] || START_STEPS.everything;
+      const steps = START_STEPS;
       const stepsEl = banner.querySelector('.start-steps');
       if (stepsEl) stepsEl.innerHTML = steps.map((s, i) => `
         <div class="start-step" onclick="openApp('${s.tool}')">
@@ -589,8 +547,7 @@
       buildStartBanner();
       const grid = document.getElementById('app-grid');
       grid.innerHTML = '';
-      const mode = MODES[_activeMode] || MODES.everything;
-      const visibleApps = mode.tools ? APPS.filter(a => mode.tools.includes(a.id)) : APPS;
+      const visibleApps = APPS;
       visibleApps.forEach((app, i) => {
         const card = document.createElement('div');
         card.className = 'app-card' + (i === 0 ? ' app-card--hero' : '');
@@ -1160,9 +1117,7 @@
         }
       } catch { }
 
-      // ── Filter by active mode ───────────────────────────────────────────
-      const _mode = MODES[_activeMode] || MODES.everything;
-      const _visibleWidgets = _mode.tools ? widgets.filter(w => _mode.tools.includes(w.id)) : widgets;
+      const _visibleWidgets = widgets;
 
       if (!_visibleWidgets.length) { section.style.display = 'none'; return; }
 
@@ -4088,7 +4043,6 @@
     // ── Init ──────────────────────────────────────────────────────────────────────
 
     initSession();
-    buildModeStrip();
     buildSidebar();
     buildHomeDashboard();
     switchDashView(loadSession().dashView || 'today');
@@ -4112,33 +4066,12 @@
       return true;
     })();
 
-    let _welcomeMode = 'everything';
-
-    function selectWelcomeMode(key) {
-      _welcomeMode = key;
-      document.querySelectorAll('.wlc-role-card').forEach(c => {
-        const sel = c.dataset.mode === key;
-        c.style.borderColor  = sel ? 'var(--accent)'     : 'var(--border)';
-        c.style.background   = sel ? 'var(--accent-dim)' : 'var(--surface)';
-        c.style.color        = sel ? 'var(--text)'       : 'var(--text2)';
-      });
-    }
-
-    function _applyWelcomeMode() {
-      if (_welcomeMode && _welcomeMode !== _activeMode) {
-        _activeMode = _welcomeMode;
-        saveSession({ mode: _welcomeMode });
-        buildModeStrip();
-        buildSidebar();
-        buildHomeDashboard();
-      }
-    }
-
     function welcomeSeedAndStart() {
       document.getElementById('welcome-overlay').style.display = 'none';
       if (window.HubStarter) HubStarter.seed();
       HubStorage.set('tutorial-seen-v1', true);
-      _applyWelcomeMode();
+      buildSidebar();
+      buildHomeDashboard();
       switchDashView(loadSession().dashView || 'today');
       setTimeout(startTour, 300);
     }
@@ -4146,7 +4079,6 @@
     function welcomeStartFresh() {
       document.getElementById('welcome-overlay').style.display = 'none';
       HubStorage.set('tutorial-seen-v1', true);
-      _applyWelcomeMode();
       setTimeout(startTour, 300);
     }
   </script>
@@ -4293,35 +4225,6 @@
       <div style="display:flex;align-items:center;gap:7px;background:var(--surface3);border-radius:var(--r-sm);padding:7px 12px;margin-bottom:1.4rem;font-size:.78rem;color:var(--text3)">
         <span style="font-size:13px">🔒</span>
         <span>Everything is stored <strong style="color:var(--text2)">in your browser only</strong> — nothing is uploaded to any server.</span>
-      </div>
-
-      <!-- Role selection -->
-      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.65rem">What best describes your work?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.4rem">
-        <button class="wlc-role-card" data-mode="dx" onclick="selectWelcomeMode('dx')"
-          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
-          <div style="font-size:1.1rem;margin-bottom:4px">◈</div>
-          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Strategy / DX</div>
-          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Goals, decisions, OKRs, stakeholder management</div>
-        </button>
-        <button class="wlc-role-card" data-mode="bim" onclick="selectWelcomeMode('bim')"
-          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
-          <div style="font-size:1.1rem;margin-bottom:4px">⬡</div>
-          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Project / BIM</div>
-          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Projects, schedules, meetings, risk, team coordination</div>
-        </button>
-        <button class="wlc-role-card" data-mode="dev" onclick="selectWelcomeMode('dev')"
-          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s">
-          <div style="font-size:1.1rem;margin-bottom:4px">⌥</div>
-          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Engineering / IT</div>
-          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">Tasks, dependencies, journals, development workflow</div>
-        </button>
-        <button class="wlc-role-card" data-mode="everything" onclick="selectWelcomeMode('everything')"
-          style="text-align:left;padding:.75rem .9rem;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent-dim);cursor:pointer;transition:all .15s;color:var(--text)">
-          <div style="font-size:1.1rem;margin-bottom:4px">⊞</div>
-          <div style="font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--font-display)">Show everything</div>
-          <div style="font-size:.73rem;color:var(--text3);margin-top:2px;line-height:1.4">I'll explore all tools and decide later</div>
-        </button>
       </div>
 
       <!-- Divider -->

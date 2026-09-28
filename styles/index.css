@@ -61,39 +61,6 @@
       padding: 10px 8px;
     }
 
-    .mode-strip {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      padding: 6px 10px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .mode-chip {
-      font-size: 9px;
-      font-family: var(--font-mono);
-      letter-spacing: 0.05em;
-      padding: 3px 7px;
-      border-radius: var(--r-sm);
-      background: transparent;
-      color: var(--text3);
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-
-    .mode-chip:hover {
-      color: var(--text);
-      border-color: var(--border);
-    }
-
-    .mode-chip.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-      border-color: var(--accent-glow);
-    }
-
     .nav-group {
       margin-bottom: 6px;
     }
@@ -1727,12 +1694,6 @@
       .nav-icon {
         font-size: 15px;
         width: 18px;
-      }
-
-      /* Mode chips: slightly larger */
-      .mode-chip {
-        font-size: 10.5px;
-        padding: 5px 10px;
       }
 
       /* Main area fills full viewport width */
