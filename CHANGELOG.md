@@ -10,6 +10,9 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - Spatial Canvas: Undo/Redo for node and connection edits (Ctrl+Z / Ctrl+Y,
   plus toolbar icon buttons), scoped per board and coalesced to one entry
   per drag/resize/text-edit gesture rather than every intermediate change.
+- Spatial Canvas: a live rubber-band line now follows the cursor from an
+  armed Connect-mode source node to the pointer, so drawing a connection is
+  visible while it's happening, not just after the second click.
 
 - **Vault Bridge** — the Obsidian integration can now read the vault as a
   source, not only open notes from it. After connecting a vault folder,

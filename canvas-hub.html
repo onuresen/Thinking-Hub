@@ -729,6 +729,13 @@
   <div class="viewport" id="viewport">
     <div id="canvas-layer">
       <svg id="edges-svg"></svg>
+      <!-- Connect-mode rubber-band preview: a live line from the armed source
+           node to the cursor, so it's visually obvious a connection is being
+           drawn (not just the source node's border highlight). Kept as a
+           separate SVG so renderEdges()'s innerHTML reset never wipes it. -->
+      <svg id="connect-preview-svg" style="position:absolute;top:0;left:0;width:0;height:0;overflow:visible;pointer-events:none;">
+        <line id="connect-preview-line" x1="0" y1="0" x2="0" y2="0" stroke-width="2.5" stroke-dasharray="6 5" style="display:none;" />
+      </svg>
     </div>
   </div>
 
@@ -977,6 +984,7 @@
       db.edges = snap.edges;
       selectedNodeId = null;
       connectMode = false; connectSource = null;
+      hideConnectPreview();
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       renderAll(); renderMinimap(); renderBoardBar();
@@ -1024,6 +1032,7 @@
       if (!db.edges) db.edges = [];
       selectedNodeId = null;
       connectMode = false; connectSource = null;
+      hideConnectPreview();
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       fullState.activeBoardId = id;
@@ -1141,6 +1150,7 @@
         renderEdges();
         renderMinimap();
       }
+      if (connectMode && connectSource) updateConnectPreview(e.clientX, e.clientY);
     });
 
     // Commits a drag/resize gesture's pre-mutation snapshot to the undo
@@ -1251,6 +1261,7 @@
       connectMode = !connectMode;
       connectSource = null;
       document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
+      hideConnectPreview();
       const btn = document.getElementById('connect-btn');
       btn.classList.toggle('active', connectMode);
       viewport.classList.toggle('connect-mode', connectMode);
@@ -1258,6 +1269,37 @@
       help.textContent = connectMode
         ? 'Click a source node, then click a target node — click empty space or Esc to cancel'
         : 'Double-click: note · Right-click: add · Space+Drag: pan · Scroll: zoom';
+    }
+
+    // Rubber-band preview line: source node's center → current cursor
+    // position, in the same untransformed canvas coordinate space the real
+    // edges use (canvas-layer carries the pan/zoom transform, so raw node
+    // coordinates are what belongs in the SVG, not screen pixels).
+    const connectPreviewLine = document.getElementById('connect-preview-line');
+
+    function updateConnectPreview(clientX, clientY) {
+      if (!connectMode || !connectSource) { hideConnectPreview(); return; }
+      const srcNode = db.nodes.find(n => n.id === connectSource);
+      if (!srcNode) { hideConnectPreview(); return; }
+      const rect = viewport.getBoundingClientRect();
+      const x1 = srcNode.x + (srcNode.w || NODE_W) / 2;
+      const y1 = srcNode.y + (srcNode.h || NODE_H) / 2;
+      const x2 = (clientX - rect.left - db.panX) / db.zoom;
+      const y2 = (clientY - rect.top - db.panY) / db.zoom;
+      connectPreviewLine.setAttribute('x1', x1);
+      connectPreviewLine.setAttribute('y1', y1);
+      connectPreviewLine.setAttribute('x2', x2);
+      connectPreviewLine.setAttribute('y2', y2);
+      // --border-purple (the .connect-source highlight color) is deliberately
+      // muted for a border and is nearly invisible against the dark
+      // background as a line color — use the bright --accent instead so the
+      // live connection is actually visible while drawing it.
+      connectPreviewLine.style.stroke = resolveCssVar('var(--accent)');
+      connectPreviewLine.style.display = '';
+    }
+
+    function hideConnectPreview() {
+      connectPreviewLine.style.display = 'none';
     }
 
     // ── Edge management ──────────────────────────────────────
@@ -1454,6 +1496,7 @@
           // Cancel connect
           connectSource = null;
           document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
+          hideConnectPreview();
           return;
         }
         selectNode(null);
@@ -1962,10 +2005,12 @@
           if (!connectSource) {
             connectSource = node.id;
             el.classList.add('connect-source');
+            updateConnectPreview(e.clientX, e.clientY);
           } else if (connectSource !== node.id) {
             createEdge(connectSource, node.id);
             document.querySelectorAll('.node').forEach(n => n.classList.remove('connect-source'));
             connectSource = null;
+            hideConnectPreview();
           }
           return;
         }
