@@ -287,7 +287,7 @@
     return `${fmt(monday)} – ${fmt(sun)}`;
   }
 
-  function isoDate(d) { return d.toISOString().slice(0, 10); }
+  function isoDate(d) { return HubUtils.localYmd(d); }
 
   // ── Storage ───────────────────────────────────────────────────────────────
 
@@ -327,7 +327,7 @@
     try {
       const dh = HubStorage.get('decision-hub-v1') || [];
       const count = (Array.isArray(dh) ? dh : []).filter(d => {
-        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(d.updatedAt || d.createdAt || '');
         return at >= monStr && at <= sunStr;
       }).length;
       if (count) chips.push(`◎ ${count} decision${count > 1 ? 's' : ''}`);
@@ -340,7 +340,7 @@
     try {
       const fh = HubStorage.get('focus-hub-v1') || {};
       const sessions = (fh.sessions || []).filter(s => {
-        const at = (s.endedAt || s.startedAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(s.endedAt || s.startedAt || '');
         return at >= monStr && at <= sunStr;
       });
       const totalMin = sessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
@@ -352,7 +352,7 @@
     try {
       const lh = HubStorage.get('learning-hub-v1') || {};
       const count = ((lh.items) || []).filter(it => {
-        const at = (it.updatedAt || it.createdAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(it.updatedAt || it.createdAt || '');
         return at >= monStr && at <= sunStr;
       }).length;
       if (count) chips.push(`◑ ${count} learning item${count > 1 ? 's' : ''}`);

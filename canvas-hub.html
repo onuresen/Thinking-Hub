@@ -122,6 +122,42 @@
       cursor: default;
     }
 
+    /* ── Multi-select + layout menu (P127) ─────────────────────── */
+    .node.in-selection {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .marquee {
+      position: fixed;
+      display: none;
+      border: 1px dashed var(--accent);
+      background: var(--accent-dim);
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .layout-menu { min-width: 220px; gap: 4px; padding: 10px; }
+    .lm-hint { font-size: 11px; color: var(--text3); padding: 0 2px 4px; }
+    .lm-head {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text3); padding: 6px 2px 2px;
+    }
+    .lm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .lm-grid.lm-2 { grid-template-columns: repeat(2, 1fr); }
+    .lm-grid.lm-1 { grid-template-columns: 1fr; margin-top: 4px; }
+    .lm-grid button {
+      background: var(--surface3); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--r-sm); padding: 6px 4px;
+      font-family: var(--font-body); font-size: 12px; cursor: pointer;
+    }
+    .lm-grid button:hover:not(:disabled) { border-color: var(--accent); }
+    .lm-grid button:disabled { opacity: .35; cursor: default; }
+    .lm-toggle {
+      display: flex; align-items: center; gap: 6px; font-size: 12px;
+      color: var(--text2); padding: 8px 2px 0; cursor: pointer;
+    }
+
     /* ── Board bar (Canvas Hub: named boards) ──────────────────── */
     .board-bar {
       position: absolute;
@@ -719,7 +755,7 @@
 
 <body>
 
-  <div class="help-text" id="help-text">Double-click: note · Right-click: add · Space+Drag: pan · Scroll: zoom</div>
+  <div class="help-text" id="help-text">Double-click: note · Right-click: add · Shift: select · Space+Drag: pan · Scroll: zoom</div>
 
   <div class="board-bar">
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
@@ -755,6 +791,8 @@
     <button class="btn" onclick="resetView()">Reset View</button>
     <button class="btn" id="connect-btn" onclick="toggleConnectMode()"
       title="Draw connections between nodes">Connect</button>
+    <button class="btn" id="layout-btn" onclick="toggleLayoutMenu()"
+      title="Align and arrange nodes">Layout ▾</button>
     <button class="btn" onclick="exportPNG()" title="Export canvas as PNG">Export PNG</button>
   </div>
 
@@ -765,6 +803,35 @@
     <input type="text" class="qm-search" id="add-picker-search" placeholder="Search…">
     <div class="qm-list" id="add-picker-list"></div>
   </div>
+  <!-- Layout menu: align / spread / arrange selected nodes (P127) -->
+  <div class="quick-menu layout-menu" id="layout-menu">
+    <div class="lm-hint" id="lm-hint"></div>
+    <div class="lm-head">Align</div>
+    <div class="lm-grid">
+      <button data-need="2" onclick="alignNodes('left')">Left</button>
+      <button data-need="2" onclick="alignNodes('center')">Center</button>
+      <button data-need="2" onclick="alignNodes('right')">Right</button>
+      <button data-need="2" onclick="alignNodes('top')">Top</button>
+      <button data-need="2" onclick="alignNodes('middle')">Middle</button>
+      <button data-need="2" onclick="alignNodes('bottom')">Bottom</button>
+    </div>
+    <div class="lm-head">Spread evenly</div>
+    <div class="lm-grid lm-2">
+      <button data-need="3" onclick="distributeNodes('x')">Across</button>
+      <button data-need="3" onclick="distributeNodes('y')">Down</button>
+    </div>
+    <div class="lm-head">Arrange</div>
+    <div class="lm-grid lm-2">
+      <button data-need="0" onclick="tidyGrid()">Tidy grid</button>
+      <button data-need="0" onclick="arrangeByType()">By type</button>
+    </div>
+    <div class="lm-grid lm-1">
+      <button data-need="0" onclick="fitToScreen()">Fit to screen</button>
+    </div>
+    <label class="lm-toggle"><input type="checkbox" id="lm-snap" onchange="setSnap(this.checked)"> Snap to grid</label>
+  </div>
+  <div class="marquee" id="marquee"></div>
+
   <!-- Right-click on a node: quick actions, incl. arming Connect from here -->
   <div class="quick-menu" id="node-menu"></div>
 
@@ -927,12 +994,21 @@
     // ── Persistence ──────────────────────────────────────────
 
     let _saveTimer;
+    let _ownWrite = false;
     function pulseSave() {
       clearTimeout(_saveTimer);
-      _saveTimer = setTimeout(() => HubStorage.set(STORAGE_KEY, fullState), 500);
+      _saveTimer = setTimeout(() => {
+        _ownWrite = true;
+        try { HubStorage.set(STORAGE_KEY, fullState); } finally { _ownWrite = false; }
+      }, 500);
     }
 
+    // HubStorage notifies synchronously, including for this page's own save.
+    // Reloading our own write swapped every node for a fresh copy — a drag
+    // in progress kept moving the old objects, so its final position was
+    // lost (P127). Only reload for changes made elsewhere.
     HubStorage.subscribe(STORAGE_KEY, () => {
+      if (_ownWrite) return;
       const stored = HubStorage.get(STORAGE_KEY);
       if (!stored) return;
       fullState = migrateShape(stored);
@@ -977,7 +1053,7 @@
     function restoreSnapshot(snap) {
       db.nodes = snap.nodes;
       db.edges = snap.edges;
-      selectedNodeId = null;
+      selectedNodeId = null; selectedIds = new Set();
       connectMode = false; connectSource = null;
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
@@ -1024,7 +1100,7 @@
       if (!b || b === db) return;
       db = b;
       if (!db.edges) db.edges = [];
-      selectedNodeId = null;
+      selectedNodeId = null; selectedIds = new Set();
       connectMode = false; connectSource = null;
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
@@ -1041,7 +1117,7 @@
       fullState.boards.push(board);
       fullState.activeBoardId = board.id;
       db = board;
-      selectedNodeId = null;
+      selectedNodeId = null; selectedIds = new Set();
       pulseSave();
       renderAll(); updateTransform(); renderBoardBar();
       updateUndoRedoButtons();
@@ -1069,7 +1145,7 @@
       fullState.activeBoardId = next.id;
       db = next;
       if (!db.edges) db.edges = [];
-      selectedNodeId = null;
+      selectedNodeId = null; selectedIds = new Set();
       pulseSave();
       renderAll(); updateTransform(); renderBoardBar();
       updateUndoRedoButtons();
@@ -1109,6 +1185,10 @@
       if (e.target !== viewport && !spacePressed) return;
       if (e.button !== 0 && e.button !== 1) return;
       closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
+      if (e.shiftKey && e.button === 0 && !spacePressed && !connectMode) {
+        startMarquee(e);
+        return;
+      }
       isPanning = true;
       startPanX = e.clientX - db.panX;
       startPanY = e.clientY - db.panY;
@@ -1121,13 +1201,23 @@
         db.panY = e.clientY - startPanY;
         updateTransform();
       }
+      if (marquee) moveMarquee(e);
       if (isDraggingNode && dragState) {
         const dx = (e.clientX - dragState.startMouseX) / db.zoom;
         const dy = (e.clientY - dragState.startMouseY) / db.zoom;
-        dragState.node.x = dragState.startX + dx;
-        dragState.node.y = dragState.startY + dy;
-        dragState.el.style.left = dragState.node.x + 'px';
-        dragState.el.style.top = dragState.node.y + 'px';
+        // Snap moves the dragged node to the grid; the rest of the group
+        // keeps its offset from it.
+        let mx = dx, my = dy;
+        if (fullState.snapToGrid) {
+          mx = snap(dragState.startX + dx) - dragState.startX;
+          my = snap(dragState.startY + dy) - dragState.startY;
+        }
+        dragState.group.forEach(g => {
+          g.node.x = g.startX + mx;
+          g.node.y = g.startY + my;
+          g.el.style.left = g.node.x + 'px';
+          g.el.style.top = g.node.y + 'px';
+        });
         dragState.moved = true;
         renderEdges(); // keep edges attached while dragging
         renderMinimap();
@@ -1137,6 +1227,10 @@
         const dy = (e.clientY - resizeState.startMouseY) / db.zoom;
         resizeState.node.w = Math.max(120, resizeState.startW + dx);
         resizeState.node.h = Math.max(60, resizeState.startH + dy);
+        if (fullState.snapToGrid) {
+          resizeState.node.w = Math.max(120, snap(resizeState.node.x + resizeState.node.w) - resizeState.node.x);
+          resizeState.node.h = Math.max(60, snap(resizeState.node.y + resizeState.node.h) - resizeState.node.y);
+        }
         resizeState.el.style.width = resizeState.node.w + 'px';
         resizeState.el.style.height = resizeState.node.h + 'px';
         resizeState.moved = true;
@@ -1157,6 +1251,7 @@
     }
 
     window.addEventListener('mouseup', () => {
+      if (marquee) endMarquee();
       if (isPanning) { isPanning = false; viewport.classList.remove('panning'); pulseSave(); }
       if (isDraggingNode) {
         isDraggingNode = false;
@@ -1208,13 +1303,24 @@
         if (document.getElementById('add-picker').style.display === 'flex') { closeAddPicker(); return; }
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
+        if (document.getElementById('layout-menu').style.display === 'flex') { closeLayoutMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         selectNode(null);
       }
       if ((e.key === 'Backspace' || e.key === 'Delete') &&
-        selectedNodeId && document.activeElement.tagName !== 'DIV') {
-        deleteNode(selectedNodeId);
+        selectedIds.size && document.activeElement.tagName !== 'DIV') {
+        deleteNodes([...selectedIds]);
+      }
+      if (mod && (e.key === 'a' || e.key === 'A')) {
+        const ae = document.activeElement;
+        const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);
+        if (!typing) {
+          e.preventDefault();
+          selectedIds = new Set(db.nodes.map(n => n.id));
+          selectedNodeId = db.nodes.length ? db.nodes[db.nodes.length - 1].id : null;
+          applySelectionClasses();
+        }
       }
     });
 
@@ -1237,11 +1343,32 @@
     // to be in a note" apart from "I'm actively editing text right now".
     let textEditDirty = false;
 
+    // Multi-select (P127): Shift+click or Shift+drag a box. `selectedNodeId`
+    // stays the single "primary" node that owns the action bar; with 2+
+    // nodes selected, none shows its action bar — they just get an outline.
+    let selectedIds = new Set();
+
+    function applySelectionClasses() {
+      const multi = selectedIds.size > 1;
+      document.querySelectorAll('.node').forEach(el => {
+        const on = selectedIds.has(el.dataset.id);
+        el.classList.toggle('selected', on && !multi);
+        el.classList.toggle('in-selection', on && multi);
+      });
+      renderMinimap();
+      refreshLayoutMenu();
+    }
+
     function selectNode(id) {
       selectedNodeId = id;
-      document.querySelectorAll('.node').forEach(el =>
-        el.classList.toggle('selected', el.dataset.id === id)
-      );
+      selectedIds = id ? new Set([id]) : new Set();
+      applySelectionClasses();
+    }
+
+    function toggleSelect(id) {
+      if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+      selectedNodeId = selectedIds.has(id) ? id : ([...selectedIds].pop() || null);
+      applySelectionClasses();
     }
 
     // ── Connect mode ─────────────────────────────────────────
@@ -1259,7 +1386,7 @@
       const help = document.getElementById('help-text');
       help.textContent = connectMode
         ? 'Click a source node, then click a target node — click empty space or Esc to cancel'
-        : 'Double-click: note · Right-click: add · Space+Drag: pan · Scroll: zoom';
+        : 'Double-click: note · Right-click: add · Shift: select · Space+Drag: pan · Scroll: zoom';
     }
 
     // ── Edge management ──────────────────────────────────────
@@ -1428,6 +1555,7 @@
       if (!e.target.closest('#add-menu')) closeAddMenu();
       if (!e.target.closest('#add-picker')) closeAddPicker();
       if (!e.target.closest('#node-menu')) closeNodeMenu();
+      if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
     }, true);
 
     // ── Node CRUD ────────────────────────────────────────────
@@ -1451,6 +1579,7 @@
     });
 
     viewport.addEventListener('click', e => {
+      if (suppressNextClick) { suppressNextClick = false; return; }
       if (e.target === viewport) {
         if (connectMode) {
           // Cancel connect
@@ -1476,10 +1605,14 @@
       renderMinimap();
     }
 
-    function deleteNode(id) {
+    function deleteNode(id) { deleteNodes([id]); }
+
+    function deleteNodes(ids) {
+      if (!ids.length) return;
+      const gone = new Set(ids);
       pushHistory();
-      db.nodes = db.nodes.filter(n => n.id !== id);
-      db.edges = (db.edges || []).filter(e => e.from !== id && e.to !== id);
+      db.nodes = db.nodes.filter(n => !gone.has(n.id));
+      db.edges = (db.edges || []).filter(e => !gone.has(e.from) && !gone.has(e.to));
       selectNode(null);
       renderAll();
       pulseSave();
@@ -1864,7 +1997,7 @@
     function buildNodeEl(node) {
       const el = document.createElement('div');
       el.className = `node ${node.color || 'c-gray'}${node.kind ? ' k-' + node.kind : ''}`;
-      if (node.id === selectedNodeId) el.classList.add('selected');
+      if (selectedIds.has(node.id)) el.classList.add(selectedIds.size > 1 ? 'in-selection' : 'selected');
       el.dataset.id = node.id;
       el.style.left = Math.round(node.x) + 'px';
       el.style.top = Math.round(node.y) + 'px';
@@ -1928,7 +2061,7 @@
         // mode, where a click anywhere on the node (body included, since it
         // covers most of the node's surface) must reach the connect logic
         // below instead of being swallowed here.
-        body.addEventListener('mousedown', e => { if (!connectMode) e.stopPropagation(); });
+        body.addEventListener('mousedown', e => { if (!connectMode && !e.shiftKey) e.stopPropagation(); });
         el.appendChild(body);
       }
 
@@ -1953,7 +2086,7 @@
       // Drag
       el.addEventListener('mousedown', e => {
         if (e.button !== 0 || spacePressed) return; // right-click is handled by contextmenu below
-        if (e.target === body && !connectMode) return; // let normal text-editing clicks through
+        if (e.target === body && !connectMode && !e.shiftKey) return; // let normal text-editing clicks through
         closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
         if (connectMode) {
           // Connect mode: first click = source, second click = target.
@@ -1972,10 +2105,22 @@
           return;
         }
         e.stopPropagation();
-        selectNode(node.id);
+        if (e.shiftKey) {
+          e.preventDefault(); // no text caret while picking nodes
+          toggleSelect(node.id);
+          return;
+        }
+        if (!selectedIds.has(node.id)) selectNode(node.id);
+        else selectedNodeId = node.id;
+        // Dragging any selected node moves the whole selection together.
+        const group = [...selectedIds].map(id => {
+          const n = db.nodes.find(x => x.id === id);
+          const nEl = layer.querySelector(`.node[data-id="${id}"]`);
+          return n && nEl ? { node: n, el: nEl, startX: n.x, startY: n.y } : null;
+        }).filter(Boolean);
         isDraggingNode = true;
         dragState = {
-          node, el,
+          node, el, group,
           startX: node.x, startY: node.y,
           startMouseX: e.clientX, startMouseY: e.clientY,
           // Captured before any movement — only pushed to the undo stack at
@@ -2024,6 +2169,199 @@
       };
 
       return el;
+    }
+
+    // ── Layout (P127) ────────────────────────────────────────
+    // Align / spread / arrange. Acts on the selected nodes; Tidy grid and
+    // By type fall back to the whole board when fewer than 2 are selected.
+    // Every action is one undo step.
+
+    const GRID = 20;          // matches the background dot grid
+    const LAYOUT_GAP = 40;    // space between nodes in Tidy grid / By type
+    const snap = v => Math.round(v / GRID) * GRID;
+    let suppressNextClick = false;
+    let marquee = null;
+
+    // Real rendered size — most nodes have no stored w/h.
+    function nodeBox(n) {
+      const el = layer.querySelector(`.node[data-id="${n.id}"]`);
+      return {
+        n,
+        w: n.w || (el ? el.offsetWidth : NODE_W),
+        h: n.h || (el ? el.offsetHeight : NODE_H),
+      };
+    }
+
+    function selectedBoxes() {
+      return db.nodes.filter(n => selectedIds.has(n.id)).map(nodeBox);
+    }
+
+    function layoutTargets() {
+      const sel = selectedBoxes();
+      return sel.length >= 2 ? sel : db.nodes.map(nodeBox);
+    }
+
+    function commitLayout(boxes, placeAll) {
+      if (!boxes.length) return;
+      pushHistory();
+      placeAll(boxes);
+      if (fullState.snapToGrid) boxes.forEach(b => { b.n.x = snap(b.n.x); b.n.y = snap(b.n.y); });
+      renderAll();
+      pulseSave();
+    }
+
+    function alignNodes(side) {
+      const boxes = selectedBoxes();
+      if (boxes.length < 2) return;
+      const L = Math.min(...boxes.map(b => b.n.x)), R = Math.max(...boxes.map(b => b.n.x + b.w));
+      const T = Math.min(...boxes.map(b => b.n.y)), B = Math.max(...boxes.map(b => b.n.y + b.h));
+      commitLayout(boxes, bs => bs.forEach(b => {
+        if (side === 'left') b.n.x = L;
+        if (side === 'right') b.n.x = R - b.w;
+        if (side === 'center') b.n.x = (L + R) / 2 - b.w / 2;
+        if (side === 'top') b.n.y = T;
+        if (side === 'bottom') b.n.y = B - b.h;
+        if (side === 'middle') b.n.y = (T + B) / 2 - b.h / 2;
+      }));
+    }
+
+    // Equal gaps between neighbours; the first and last node stay put.
+    function distributeNodes(axis) {
+      const boxes = selectedBoxes();
+      if (boxes.length < 3) return;
+      const size = axis === 'x' ? 'w' : 'h';
+      boxes.sort((a, b) => a.n[axis] - b.n[axis]);
+      const first = boxes[0], last = boxes[boxes.length - 1];
+      const span = last.n[axis] + last[size] - first.n[axis];
+      const used = boxes.reduce((s, b) => s + b[size], 0);
+      const gap = (span - used) / (boxes.length - 1);
+      let pos = first.n[axis];
+      commitLayout(boxes, bs => bs.forEach(b => { b.n[axis] = pos; pos += b[size] + gap; }));
+    }
+
+    // Keep the current reading order: group into rows by position, then
+    // left to right inside each row.
+    function readingOrder(boxes) {
+      const byY = boxes.slice().sort((a, b) => a.n.y - b.n.y);
+      const rows = [];
+      byY.forEach(b => {
+        const row = rows[rows.length - 1];
+        if (row && b.n.y - row[0].n.y < row[0].h / 2) row.push(b); else rows.push([b]);
+      });
+      return rows.flatMap(r => r.sort((a, b) => a.n.x - b.n.x));
+    }
+
+    function placeGrid(boxes, x0, y0, cols) {
+      const cw = Math.max(...boxes.map(b => b.w)) + LAYOUT_GAP;
+      const ch = Math.max(...boxes.map(b => b.h)) + LAYOUT_GAP;
+      boxes.forEach((b, i) => {
+        b.n.x = x0 + (i % cols) * cw;
+        b.n.y = y0 + Math.floor(i / cols) * ch;
+      });
+      return Math.ceil(boxes.length / cols) * ch;
+    }
+
+    function tidyGrid() {
+      const boxes = readingOrder(layoutTargets());
+      if (!boxes.length) return;
+      const x0 = snap(Math.min(...boxes.map(b => b.n.x)));
+      const y0 = snap(Math.min(...boxes.map(b => b.n.y)));
+      const cols = Math.max(1, Math.ceil(Math.sqrt(boxes.length * 1.5)));
+      commitLayout(boxes, bs => placeGrid(bs, x0, y0, cols));
+    }
+
+    // One block of rows per node type, in KINDS order, A–Z inside each.
+    function arrangeByType() {
+      const boxes = layoutTargets();
+      if (!boxes.length) return;
+      const x0 = snap(Math.min(...boxes.map(b => b.n.x)));
+      let y = snap(Math.min(...boxes.map(b => b.n.y)));
+      const name = b => ((b.n.link && b.n.link.label) || b.n.text || '').toLowerCase();
+      commitLayout(boxes, bs => KINDS.forEach(k => {
+        const group = bs.filter(b => (b.n.kind || 'note') === k.id)
+          .sort((a, b) => name(a).localeCompare(name(b)));
+        if (group.length) y += placeGrid(group, x0, y, 6) + LAYOUT_GAP;
+      }));
+    }
+
+    // Zoom and pan so every node on the board is in view.
+    function fitToScreen() {
+      const boxes = db.nodes.map(nodeBox);
+      if (!boxes.length) { resetView(); return; }
+      const pad = 60;
+      const L = Math.min(...boxes.map(b => b.n.x)), R = Math.max(...boxes.map(b => b.n.x + b.w));
+      const T = Math.min(...boxes.map(b => b.n.y)), B = Math.max(...boxes.map(b => b.n.y + b.h));
+      const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+      db.zoom = Math.min(1, Math.max(0.15, Math.min((vw - pad * 2) / (R - L), (vh - pad * 2) / (B - T))));
+      db.panX = vw / 2 - ((L + R) / 2) * db.zoom;
+      db.panY = vh / 2 - ((T + B) / 2) * db.zoom;
+      updateTransform(); pulseSave();
+    }
+
+    function setSnap(on) {
+      fullState.snapToGrid = !!on;
+      pulseSave();
+    }
+
+    function refreshLayoutMenu() {
+      const menu = document.getElementById('layout-menu');
+      if (!menu) return;
+      const n = selectedIds.size;
+      menu.querySelectorAll('button[data-need]').forEach(b => {
+        b.disabled = n < Number(b.dataset.need);
+      });
+      document.getElementById('lm-snap').checked = !!fullState.snapToGrid;
+      document.getElementById('lm-hint').textContent = n >= 2
+        ? `${n} nodes selected.`
+        : 'Shift+click or Shift+drag to select nodes. Arrange works on all nodes.';
+    }
+
+    function toggleLayoutMenu() {
+      const menu = document.getElementById('layout-menu');
+      if (menu.style.display === 'flex') { closeLayoutMenu(); return; }
+      refreshLayoutMenu();
+      menu.style.display = 'flex';
+      const r = document.getElementById('layout-btn').getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      document.getElementById('layout-btn').classList.add('active');
+    }
+
+    function closeLayoutMenu() {
+      document.getElementById('layout-menu').style.display = 'none';
+      document.getElementById('layout-btn')?.classList.remove('active');
+    }
+
+    // Marquee: Shift+drag on empty canvas adds the boxed nodes to the selection.
+    function startMarquee(e) {
+      marquee = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
+      drawMarquee();
+    }
+    function moveMarquee(e) {
+      marquee.x1 = e.clientX; marquee.y1 = e.clientY;
+      drawMarquee();
+    }
+    function drawMarquee() {
+      const el = document.getElementById('marquee');
+      el.style.display = 'block';
+      el.style.left = Math.min(marquee.x0, marquee.x1) + 'px';
+      el.style.top = Math.min(marquee.y0, marquee.y1) + 'px';
+      el.style.width = Math.abs(marquee.x1 - marquee.x0) + 'px';
+      el.style.height = Math.abs(marquee.y1 - marquee.y0) + 'px';
+    }
+    function endMarquee() {
+      const L = Math.min(marquee.x0, marquee.x1), R = Math.max(marquee.x0, marquee.x1);
+      const T = Math.min(marquee.y0, marquee.y1), B = Math.max(marquee.y0, marquee.y1);
+      document.getElementById('marquee').style.display = 'none';
+      marquee = null;
+      suppressNextClick = true;
+      if (R - L < 4 && B - T < 4) return;
+      layer.querySelectorAll('.node').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.right > L && r.left < R && r.bottom > T && r.top < B) selectedIds.add(el.dataset.id);
+      });
+      selectedNodeId = [...selectedIds].pop() || null;
+      applySelectionClasses();
     }
 
     // ── Mini-map ─────────────────────────────────────────────
@@ -2081,8 +2419,8 @@
         const nh = Math.max((n.h || NODE_H) * scale, 3);
         ctx.fillStyle = nodeFill(n.color);
         ctx.fillRect(mx, my, nw, nh);
-        ctx.strokeStyle = n.id === selectedNodeId ? _accent : _border2;
-        ctx.lineWidth = n.id === selectedNodeId ? 1.2 : 0.5;
+        ctx.strokeStyle = selectedIds.has(n.id) ? _accent : _border2;
+        ctx.lineWidth = selectedIds.has(n.id) ? 1.2 : 0.5;
         ctx.strokeRect(mx, my, nw, nh);
       });
 

@@ -15,7 +15,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
-| `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90). Load second. |
+| `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90), and the **local-day** helpers `todayLocal`/`localYmd`/`isoToLocalDay` (P126). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-vault-bridge.js` | **Vault Bridge (P104)** — reads the Obsidian vault as a *source*: `HubVaultBridge.init/connect/reconnect/scanDays/scanDecisions/accept/ignore`. Persists the directory handle in IndexedDB (`thinking-hub-vault`) so access survives reloads, reports days the vault recorded and the hub did not, and parses canonical-schema decision blocks into a propose/accept queue. Loaded in `index.html` only. |
@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2302,10 +2302,63 @@ The line was never *painted*. `#edges-svg` was sized `width:0; height:0` with `o
 
 **Key decisions:**
 - **Decision:** Test against the user's real backup data, not seeded fixtures. **Why:** six rounds of click-logic fixes all passed tests. None checked whether a line appeared on screen. The backup split "create" from "display" in one look. **Confidence:** high.
-- **Decision:** Fix only the export filenames for the date bug. **Why:** that is what was reported. About a dozen other `toISOString().slice(0,10)` "today" uses in `index.html` have the same UTC skew. They compare against stored dates, so changing them needs its own careful pass. **Revisit when:** a "today" view looks off before 09:00. **Confidence:** med.
+- ~~**Decision:** Fix only the export filenames for the date bug.~~ Superseded by P126, which fixed the rest.
 - The backup also holds two old edges using `source/target` keys that point at nodes that no longer exist. They are inert and were left alone.
 
 **Files:** `canvas-hub.html`, `index.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 126 — Local day everywhere, not UTC day~~ ✓ Done `[group: bugfix]`
+Follow-up to P125. The app used `toISOString().slice(0,10)` as "today" in about 70 places. That is the UTC day. In Tokyo it is yesterday until 09:00.
+
+The fix had two sides. Fixing only "today" would make things worse. Code compares "today" with slices of saved UTC timestamps (`startedAt.slice(0,10)`). Both sides must move to local time together.
+
+- New helpers in `hub-utils.js`: `localYmd(date)` and `isoToLocalDay(value)`. `todayLocal()` now uses `localYmd`.
+- `isoToLocalDay` turns a full UTC timestamp into its local day. A plain `YYYY-MM-DD` is already local and passes through unchanged.
+- Replaced across 14 pages and 3 modules: "today", dates built from local `Date` objects, and slices of stored timestamps (`createdAt`, `updatedAt`, `startedAt`, `completedAt`, activity `ts`).
+- Vault Bridge now credits Hub activity to the local day. Daily-note filenames are local dates, so early-morning work used to count for the wrong day.
+- Goals Hub quarter dates: `new Date(y, m, 1).toISOString()` gave the previous day in JST (Q start 06-30, not 07-01). Now correct.
+- Weekly Review ranges: Monday 00:00 local was read as Sunday in UTC. Weeks are now Mon–Sun, not Sun–Sat.
+- `sw.js` cache `v5` → `v6`.
+- New smoke check pins the browser to 07:30 JST and checks all helpers.
+
+**Key decisions:**
+- **Decision:** Leave Meeting Hub's `ymdFromDate`/`dateFromYMD` in UTC. **Why:** they pair `Date.UTC` with `toISOString` for ICS date math. They are internally consistent, not a bug. **Confidence:** high.
+- **Decision:** Don't migrate existing saved data. **Why:** Daily Log entries saved before 09:00 may sit under the previous day's key. We can't tell which ones. Moving them would be guessing. New entries are correct. **Confidence:** high.
+- **Decision:** Week keys (`YYYY-Wnn`) unchanged. **Why:** they already use local week numbers, so stored weekly reviews stay findable. **Confidence:** high.
+
+**Files:** `hub-utils.js`, `hub-ai.js`, `hub-snapshots.js`, `hub-vault-bridge.js`, `achievements-hub.html`, `decision-hub.html`, `focus-hub.html`, `goals-hub.html`, `graph-hub.html`, `idea-swiper.html`, `index.html`, `journal-hub.html`, `log-hub.html`, `meetings-hub.html`, `project-hub.html`, `review-hub.html`, `schedule.html`, `town-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 127 — Canvas Hub: layout tools + multi-select~~ ✓ Done `[group: canvas-structure]`
+User asked for layout options: align, place nodes regularly.
+
+- **Select several:** Shift+click toggles a node. Shift+drag on empty canvas draws a selection box. Ctrl+A selects all.
+- **Move together:** dragging any selected node moves the whole selection.
+- **Delete** removes all selected nodes as one undo step.
+- **Layout ▾** menu in the bottom bar:
+  - Align: Left / Center / Right / Top / Middle / Bottom (2+ selected).
+  - Spread evenly: Across / Down, equal gaps, ends stay put (3+ selected).
+  - Tidy grid: regular grid, keeps the current reading order.
+  - By type: one block per node kind (KINDS order), A–Z inside.
+  - Fit to screen: zoom and pan so every node is visible.
+  - Snap to grid: 20px, matches the dot grid. Saved as `canvas-v1.snapToGrid`.
+- With 2+ selected, nodes get an outline and hide their action bars.
+- Every action is one undo step.
+
+**Bug fixed on the way (predates this change):** `HubStorage` notifies listeners synchronously, including for the page's own save. Canvas Hub reloaded its own write as fresh objects. A drag in progress kept moving the old objects, so a save landing mid-drag lost the final position. Own writes no longer reload. Changes from other tabs still do.
+
+**Key decisions:**
+- **Decision:** Tidy grid / By type use the whole board when fewer than 2 nodes are selected. Align / Spread need a selection. **Why:** arranging everything is the common first step on a messy board. Aligning "everything" to one edge is never what anyone wants. **Confidence:** high.
+- **Decision:** Snap saved in `canvas-v1`, not session-only. **Why:** it's a working preference you set once. It rides the existing key, so no backup-list change. **Confidence:** med.
+- **Decision:** Shift for multi-select, not Ctrl. **Why:** Ctrl+click is right-click on macOS, and Shift-to-add is the common whiteboard convention. No existing Shift binding in this tool. **Confidence:** high.
+- **Decision:** Skip reloads from own writes rather than patch drag references after each reload. **Why:** the reload was the root cause. A re-link patch would still leave the drag moving orphaned node objects. **Confidence:** high.
+
+**Verified** on the user's real 24-node board from the 2026-09-29 backup, with real mouse timing. 22 checks: selection, align, spread, group drag, undo, tidy grid with no overlaps, fit to screen, box select, snap + persistence, by type, Ctrl+A/Delete/undo, Shift+click on a note body, Connect. Separate race test: a save landing mid-drag keeps data and drawing in sync. New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
 
 ---
 

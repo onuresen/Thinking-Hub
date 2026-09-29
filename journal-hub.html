@@ -661,7 +661,7 @@
   let lhActiveDate = null;
   let lhSaveTimer = null;
 
-  function lhTodayStr() { return new Date().toISOString().slice(0, 10); }
+  function lhTodayStr() { return HubUtils.todayLocal(); }
 
   function lhLoad() {
     const raw = HubStorage.get(LH_STORAGE_KEY);
@@ -687,10 +687,10 @@
     for (let i = 0; i < WEEKS * 7; i++) {
       const d = new Date(startDay);
       d.setDate(d.getDate() + i);
-      days.push(d.toISOString().slice(0, 10));
+      days.push(HubUtils.localYmd(d));
     }
 
-    const todayISO = today.toISOString().slice(0, 10);
+    const todayISO = HubUtils.localYmd(today);
     const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
     let html = '<div class="lh-heatmap-grid">';
     for (let row = 0; row < 7; row++) {
@@ -906,14 +906,14 @@
     const today = new Date();
     let check = new Date(today);
     while (true) {
-      const ds = check.toISOString().slice(0, 10);
+      const ds = HubUtils.localYmd(check);
       if (lhData.entries[ds] && (lhData.entries[ds].text || lhData.entries[ds].mood)) {
         streak++;
         check.setDate(check.getDate() - 1);
       } else {
         if (streak === 0) {
           check.setDate(check.getDate() - 1);
-          const ds2 = check.toISOString().slice(0, 10);
+          const ds2 = HubUtils.localYmd(check);
           if (lhData.entries[ds2] && (lhData.entries[ds2].text || lhData.entries[ds2].mood)) {
             streak++;
             check.setDate(check.getDate() - 1);
@@ -968,7 +968,7 @@
     return `${fmt(monday)} – ${fmt(sun)}`;
   }
 
-  function rhIsoDate(d) { return d.toISOString().slice(0, 10); }
+  function rhIsoDate(d) { return HubUtils.localYmd(d); }
 
   function rhLoadAll() {
     rhReviewData = HubStorage.get(RH_STORAGE_KEY) || {};
@@ -1024,7 +1024,7 @@
     try {
       const dh = HubStorage.get('decision-hub-v1') || [];
       const decs = (Array.isArray(dh) ? dh : []).filter(d => {
-        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(d.updatedAt || d.createdAt || '');
         return at >= monStr && at <= sunStr;
       });
       if (decs.length) L.push('Decisions logged: ' + decs.slice(0, 8).map(d => `"${d.title}"`).join('; '));
@@ -1041,13 +1041,13 @@
     } catch {}
     try {
       const rh2 = HubStorage.get('risk-hub-v1') || [];
-      const risks = (Array.isArray(rh2) ? rh2 : []).filter(r => (r.createdAt || '').slice(0, 10) >= monStr && (r.createdAt || '').slice(0, 10) <= sunStr);
+      const risks = (Array.isArray(rh2) ? rh2 : []).filter(r => HubUtils.isoToLocalDay(r.createdAt || '') >= monStr && HubUtils.isoToLocalDay(r.createdAt || '') <= sunStr);
       if (risks.length) L.push('New risks: ' + risks.slice(0, 5).map(r => `"${r.title}"`).join('; '));
     } catch {}
     try {
       const fh = HubStorage.get('focus-hub-v1') || {};
       const sess = (fh.sessions || []).filter(s => {
-        const at = (s.startedAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(s.startedAt || '');
         return at >= monStr && at <= sunStr;
       });
       if (sess.length) {
@@ -1131,7 +1131,7 @@
     try {
       const dh = HubStorage.get('decision-hub-v1') || [];
       const count = (Array.isArray(dh) ? dh : []).filter(d => {
-        const at = (d.updatedAt || d.createdAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(d.updatedAt || d.createdAt || '');
         return at >= monStr && at <= sunStr;
       }).length;
       if (count) chips.push(`◎ ${count} decision${count > 1 ? 's' : ''}`);
@@ -1144,7 +1144,7 @@
     try {
       const fh = HubStorage.get('focus-hub-v1') || {};
       const sessions = (fh.sessions || []).filter(s => {
-        const at = (s.endedAt || s.startedAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(s.endedAt || s.startedAt || '');
         return at >= monStr && at <= sunStr;
       });
       const totalMin = sessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
@@ -1156,7 +1156,7 @@
     try {
       const lh = HubStorage.get('learning-hub-v1') || {};
       const count = ((lh.items) || []).filter(it => {
-        const at = (it.updatedAt || it.createdAt || '').slice(0, 10);
+        const at = HubUtils.isoToLocalDay(it.updatedAt || it.createdAt || '');
         return at >= monStr && at <= sunStr;
       }).length;
       if (count) chips.push(`◑ ${count} learning item${count > 1 ? 's' : ''}`);
@@ -1675,8 +1675,8 @@
     const list = document.getElementById('tj-today-list');
     const sumEl = document.getElementById('tj-today-summary');
     if (!list) return;
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const todays = tjData.sessions.filter(s => (s.startedAt || '').slice(0, 10) === todayStr);
+    const todayStr = HubUtils.todayLocal();
+    const todays = tjData.sessions.filter(s => HubUtils.isoToLocalDay(s.startedAt || '') === todayStr);
     const totalMin = todays.reduce((sum, x) => sum + (x.durationMin || Math.round((x.elapsedSec || 0) / 60)), 0);
     if (sumEl) sumEl.textContent = todays.length ? `${Math.floor(totalMin / 60)}h ${totalMin % 60}m · ${todays.length} block${todays.length !== 1 ? 's' : ''}` : '';
     if (!todays.length) { list.innerHTML = '<div class="tj-today-empty">No blocks logged today yet. Add one above ↑</div>'; return; }
@@ -1762,7 +1762,7 @@
       days.push(d);
     }
     const minByDay = days.map(d => {
-      const iso = d.toISOString().split('T')[0];
+      const iso = HubUtils.localYmd(d);
       return tjData.sessions
         .filter(s => s.completed && s.startedAt && s.startedAt.startsWith(iso))
         .reduce((sum, s) => sum + (s.durationMin || 0), 0);
@@ -1827,12 +1827,12 @@
     const sessionsByDay = {};
     tjData.sessions.forEach(s => {
       if (!s.startedAt || !s.completed) return;
-      const day = s.startedAt.slice(0, 10);
+      const day = HubUtils.isoToLocalDay(s.startedAt);
       (sessionsByDay[day] = sessionsByDay[day] || []).push(s);
     });
 
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = HubUtils.localYmd(cutoff);
 
     const lines = Object.keys(sessionsByDay).filter(d => d >= cutoffStr).sort().map(day => {
       const entry = entries[day];

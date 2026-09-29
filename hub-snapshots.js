@@ -70,7 +70,7 @@ window.HubSnapshots = (() => {
     const db = await _open();
     const now = new Date();
     const isAuto = label === 'auto';
-    const id = isAuto ? 'auto-' + now.toISOString().slice(0, 10) : `${label}-${now.getTime()}`;
+    const id = isAuto ? 'auto-' + HubUtils.localYmd(now) : `${label}-${now.getTime()}`;
     const data = _captureAll();
     const rec = {
       id, label: label || 'manual',
@@ -136,7 +136,7 @@ window.HubSnapshots = (() => {
   async function init() {
     try {
       if (!('indexedDB' in window)) return;
-      const todayId = 'auto-' + new Date().toISOString().slice(0, 10);
+      const todayId = 'auto-' + HubUtils.todayLocal();
       const db = await _open();
       const existing = await _tx(db, 'readonly', (s) => s.get(todayId));
       db.close();

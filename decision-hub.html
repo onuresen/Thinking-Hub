@@ -576,7 +576,7 @@
           if (d.type === 'risk') icon = '⚠';
           if (d.type === 'open') icon = '？';
 
-          const revisitDue = d.revisitDate && d.revisitDate <= new Date().toISOString().slice(0, 10) && !d.outcome;
+          const revisitDue = d.revisitDate && d.revisitDate <= HubUtils.todayLocal() && !d.outcome;
           const dueDot = revisitDue ? ` <span title="Revisit due" style="color:var(--accent-super);font-size:10px;flex-shrink:0">↻</span>` : '';
           item.innerHTML = `<span class="nav-icon">${icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${HubUtils.esc(d.title || 'Untitled')}</span>${dueDot}`;
           item.onclick = () => openDecision(d.id);
@@ -755,7 +755,7 @@
     // Scores how well past confidence levels matched real outcomes (Tetlock-style).
     function openCalibration() {
       const body = document.getElementById('calibration-body');
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = HubUtils.todayLocal();
       const decs = decisions.filter(d => d.type === 'decision' && !d.archived);
       const scored = decs.filter(d => d.outcome && d.outcome.result && d.outcome.result !== 'tooearly');
       const dueUnscored = decs.filter(d => d.revisitDate && d.revisitDate <= todayStr && !d.outcome);
@@ -915,7 +915,7 @@
               </div>
 
               ${(() => {
-                const due = dec.revisitDate && dec.revisitDate <= new Date().toISOString().slice(0, 10);
+                const due = dec.revisitDate && dec.revisitDate <= HubUtils.todayLocal();
                 const o = dec.outcome || {};
                 const showOutcome = !!(dec.outcome || due);
                 return `

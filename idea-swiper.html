@@ -1055,7 +1055,7 @@ On-demand tutoring market"></textarea>
       const blob = new Blob([md], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `ideaswipe-${now.toISOString().slice(0, 10)}.md`; a.click();
+      a.href = url; a.download = `ideaswipe-${HubUtils.localYmd(now)}.md`; a.click();
       URL.revokeObjectURL(url);
     }
 

@@ -216,7 +216,9 @@ window.HubVaultBridge = (() => {
    */
   function _hubActiveDays() {
     const days = new Set();
-    const re = /(20\d\d-\d\d-\d\d)T/g;
+    // Capture the whole timestamp so a UTC instant is credited to the LOCAL
+    // day — daily-note filenames are local dates (P126).
+    const re = /(20\d\d-\d\d-\d\d)T(\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)?)/g;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k || NON_EVIDENCE_KEYS.has(k)) continue;
@@ -224,7 +226,7 @@ window.HubVaultBridge = (() => {
       if (!v) continue;
       let m;
       re.lastIndex = 0;
-      while ((m = re.exec(v)) !== null) days.add(m[1]);
+      while ((m = re.exec(v)) !== null) days.add(HubUtils.isoToLocalDay(m[1] + 'T' + m[2]));
     }
     return days;
   }
@@ -262,10 +264,10 @@ window.HubVaultBridge = (() => {
     return found;
   }
 
-  function _todayStr() { return new Date().toISOString().slice(0, 10); }
+  function _todayStr() { return HubUtils.todayLocal(); }
 
   function _cutoff() {
-    return new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10);
+    return HubUtils.localYmd(new Date(Date.now() - LOOKBACK_DAYS * 86400000));
   }
 
   /**

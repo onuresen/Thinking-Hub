@@ -408,8 +408,8 @@
       const end = new Date(year, startMonth + 3, 0);
       data.quarters.push(HubUtils.stampUpdate({
         id: uid(), label: `Q${q} ${year}`, archived: false, archivedAt: '',
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        startDate: HubUtils.localYmd(start),
+        endDate: HubUtils.localYmd(end),
         objectives: []
       }));
       save();

@@ -220,7 +220,49 @@ function appFiles(ext) {
     });
     check('canvas edge layer is renderable (non-zero SVG size) and draws the edge',
       edge.w > 0 && edge.h > 0 && edge.lines >= 1, JSON.stringify(edge));
+
+    // Layout tools (P127): align, tidy grid, and a save must not rebuild nodes.
+    const lay = await page.evaluate(() => {
+      db.nodes.push({ id: 'c', x: 250, y: 30, text: 'C', color: '' });
+      renderAll();
+      const elBefore = document.querySelector('.node[data-id="a"]');
+      pulseSave();
+      return new Promise(res => setTimeout(() => {
+        const kept = document.querySelector('.node[data-id="a"]') === elBefore;
+        selectedIds = new Set(['a', 'b', 'c']); applySelectionClasses();
+        alignNodes('left');
+        const aligned = new Set(db.nodes.map(n => n.x)).size === 1;
+        selectNode(null); tidyGrid();
+        const r = [...document.querySelectorAll('.node')].map(e => e.getBoundingClientRect());
+        let overlaps = 0;
+        for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++)
+          if (r[i].left < r[j].right && r[j].left < r[i].right && r[i].top < r[j].bottom && r[j].top < r[i].bottom) overlaps++;
+        undo(); undo();
+        res({ kept, aligned, overlaps, restored: db.nodes.find(n => n.id === 'c').x === 250 });
+      }, 700));
+    });
+    check('canvas layout: align, tidy grid, undo, and own saves keep nodes',
+      lay.kept && lay.aligned && lay.overlaps === 0 && lay.restored, JSON.stringify(lay));
     await page.close();
+  }
+
+  // "Today" must be the local calendar day. toISOString() is UTC, so in Tokyo
+  // before 09:00 it gave yesterday's date (P126). Pin the clock to 07:30 JST.
+  {
+    const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
+    const page = await tzCtx.newPage();
+    await page.clock.setFixedTime(new Date('2026-09-29T22:30:00Z')); // 07:30 JST on 09-30
+    await page.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });
+    const tz = await page.evaluate(() => ({
+      today: HubUtils.todayLocal(),
+      stamp: HubUtils.isoToLocalDay('2026-09-29T22:37:32.189Z'),
+      plain: HubUtils.isoToLocalDay('2026-09-29'),
+      daily: lhTodayStr(),
+    }));
+    check('local-day helpers use the local calendar day (07:30 JST)',
+      tz.today === '2026-09-30' && tz.stamp === '2026-09-30' && tz.plain === '2026-09-29' && tz.daily === '2026-09-30',
+      JSON.stringify(tz));
+    await tzCtx.close();
   }
 
   const filePage = await ctx.newPage();

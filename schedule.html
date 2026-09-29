@@ -971,7 +971,7 @@
         const logEntry = (m.log || []).find(l => l.date === occDate);
         if (logEntry) logEntry.date = newIso;
         if (m.log) m.log.sort((a, b) => a.date.localeCompare(b.date));
-        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, new Date().toISOString().slice(0, 10));
+        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, HubUtils.todayLocal());
         if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
       } else {
         m.date = newIso;
@@ -990,7 +990,7 @@
         const occ = (m.occurrenceDates || []).find(o => o.date === occDate);
         if (!occ) return;
         occ.durationMins = newDurationMins;
-        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, new Date().toISOString().slice(0, 10));
+        const anchor = seriesAnchorOccurrenceLocal(m.occurrenceDates, HubUtils.todayLocal());
         if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
       } else {
         m.durationMins = newDurationMins;
