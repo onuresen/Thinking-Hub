@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2329,6 +2329,36 @@ The fix had two sides. Fixing only "today" would make things worse. Code compare
 - **Decision:** Week keys (`YYYY-Wnn`) unchanged. **Why:** they already use local week numbers, so stored weekly reviews stay findable. **Confidence:** high.
 
 **Files:** `hub-utils.js`, `hub-ai.js`, `hub-snapshots.js`, `hub-vault-bridge.js`, `achievements-hub.html`, `decision-hub.html`, `focus-hub.html`, `goals-hub.html`, `graph-hub.html`, `idea-swiper.html`, `index.html`, `journal-hub.html`, `log-hub.html`, `meetings-hub.html`, `project-hub.html`, `review-hub.html`, `schedule.html`, `town-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 127 — Canvas Hub: layout tools + multi-select~~ ✓ Done `[group: canvas-structure]`
+User asked for layout options: align, place nodes regularly.
+
+- **Select several:** Shift+click toggles a node. Shift+drag on empty canvas draws a selection box. Ctrl+A selects all.
+- **Move together:** dragging any selected node moves the whole selection.
+- **Delete** removes all selected nodes as one undo step.
+- **Layout ▾** menu in the bottom bar:
+  - Align: Left / Center / Right / Top / Middle / Bottom (2+ selected).
+  - Spread evenly: Across / Down, equal gaps, ends stay put (3+ selected).
+  - Tidy grid: regular grid, keeps the current reading order.
+  - By type: one block per node kind (KINDS order), A–Z inside.
+  - Fit to screen: zoom and pan so every node is visible.
+  - Snap to grid: 20px, matches the dot grid. Saved as `canvas-v1.snapToGrid`.
+- With 2+ selected, nodes get an outline and hide their action bars.
+- Every action is one undo step.
+
+**Bug fixed on the way (predates this change):** `HubStorage` notifies listeners synchronously, including for the page's own save. Canvas Hub reloaded its own write as fresh objects. A drag in progress kept moving the old objects, so a save landing mid-drag lost the final position. Own writes no longer reload. Changes from other tabs still do.
+
+**Key decisions:**
+- **Decision:** Tidy grid / By type use the whole board when fewer than 2 nodes are selected. Align / Spread need a selection. **Why:** arranging everything is the common first step on a messy board. Aligning "everything" to one edge is never what anyone wants. **Confidence:** high.
+- **Decision:** Snap saved in `canvas-v1`, not session-only. **Why:** it's a working preference you set once. It rides the existing key, so no backup-list change. **Confidence:** med.
+- **Decision:** Shift for multi-select, not Ctrl. **Why:** Ctrl+click is right-click on macOS, and Shift-to-add is the common whiteboard convention. No existing Shift binding in this tool. **Confidence:** high.
+- **Decision:** Skip reloads from own writes rather than patch drag references after each reload. **Why:** the reload was the root cause. A re-link patch would still leave the drag moving orphaned node objects. **Confidence:** high.
+
+**Verified** on the user's real 24-node board from the 2026-09-29 backup, with real mouse timing. 22 checks: selection, align, spread, group drag, undo, tidy grid with no overlaps, fit to screen, box select, snap + persistence, by type, Ctrl+A/Delete/undo, Shift+click on a note body, Connect. Separate race test: a save landing mid-drag keeps data and drawing in sync. New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
 
 ---
 
