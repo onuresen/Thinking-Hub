@@ -68,13 +68,15 @@
       transform-origin: 0 0;
     }
 
-    /* SVG edge layer — inside canvas-layer, overflow:visible so lines reach anywhere */
+    /* SVG edge layer — inside canvas-layer, overflow:visible so lines reach anywhere.
+       Must NOT be 0×0: per the SVG spec a zero width/height disables rendering of
+       the whole <svg>, so lines existed in the DOM but were never painted (P125). */
     #edges-svg {
       position: absolute;
       top: 0;
       left: 0;
-      width: 0;
-      height: 0;
+      width: 1px;
+      height: 1px;
       overflow: visible;
       pointer-events: none;
     }
@@ -1267,7 +1269,7 @@
     // Dependency Graph's manual links, P75).
 
     const EDGE_TYPES = [
-      { id: 'relates', label: '···· Relates', dash: '5 4', color: 'var(--accent-glow)', directed: false },
+      { id: 'relates', label: '···· Relates', dash: '6 4', color: 'var(--accent)', directed: false },
       { id: 'blocks', label: '⛔ Blocks', dash: null, color: 'var(--accent-nope)', directed: true },
       { id: 'depends-on', label: '⏳ Depends on', dash: null, color: 'var(--accent2)', directed: true },
     ];
@@ -1346,7 +1348,7 @@
         hit.setAttribute('stroke-width', '14');
         hit.style.pointerEvents = 'stroke';
         hit.style.cursor = 'pointer';
-        hit.addEventListener('mouseenter', () => line.style.stroke = resolveCssVar('var(--accent)'));
+        hit.addEventListener('mouseenter', () => line.style.stroke = resolveCssVar('var(--text)'));
         hit.addEventListener('mouseleave', () => line.style.stroke = color);
         hit.addEventListener('click', e => {
           e.stopPropagation();
@@ -2108,7 +2110,7 @@
         useCORS: true
       }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `canvas-${new Date().toISOString().split('T')[0]}.png`;
+        link.download = `canvas-${HubUtils.todayLocal()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       }).finally(() => {

@@ -2289,6 +2289,26 @@ User: "First connect is not working. Your almost 10 times attempt didn't fix any
 
 ---
 
+### ~~Priority 125 — Canvas Hub: connections were created but never drawn + local-date export filenames~~ ✓ Done `[group: bugfix]`
+The real Connect bug. P113–P124 fixed how a connection gets *created*. Creating always worked. The user's 2026-09-29 backup proved it: it held a real `from/to` edge made in the app.
+
+The line was never *painted*. `#edges-svg` was sized `width:0; height:0` with `overflow:visible`. Per the SVG spec, a zero width or height disables rendering of the whole `<svg>`. `overflow:visible` does not override that. So every edge sat in the DOM, invisible.
+
+- `#edges-svg` is now `1px × 1px`. Lines paint.
+- "Relates" lines moved from `--accent-glow` (faint) to `--accent`. Hover is now `--text`.
+- Export filenames (Full Backup, AI Context, Current Tool, Canvas PNG) use `HubUtils.todayLocal()`, not `toISOString()`. UTC gave yesterday's date before 09:00 JST.
+- `sw.js` cache `v4` → `v5`.
+- New smoke check: edge layer has non-zero size. It fails on the old code.
+
+**Key decisions:**
+- **Decision:** Test against the user's real backup data, not seeded fixtures. **Why:** six rounds of click-logic fixes all passed tests. None checked whether a line appeared on screen. The backup split "create" from "display" in one look. **Confidence:** high.
+- **Decision:** Fix only the export filenames for the date bug. **Why:** that is what was reported. About a dozen other `toISOString().slice(0,10)` "today" uses in `index.html` have the same UTC skew. They compare against stored dates, so changing them needs its own careful pass. **Revisit when:** a "today" view looks off before 09:00. **Confidence:** med.
+- The backup also holds two old edges using `source/target` keys that point at nodes that no longer exist. They are inert and were left alone.
+
+**Files:** `canvas-hub.html`, `index.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 

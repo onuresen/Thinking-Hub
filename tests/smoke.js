@@ -201,6 +201,28 @@ function appFiles(ext) {
     await page.close();
   }
 
+  // Canvas connections must actually paint. A 0×0 <svg> disables rendering
+  // per the SVG spec, so edges existed in the DOM but were invisible (P125).
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/tags-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => localStorage.setItem('canvas-v1', JSON.stringify({
+      activeBoardId: 'b1',
+      boards: [{ id: 'b1', name: 'T', panX: 0, panY: 0, zoom: 1, edges: [{ id: 'e1', from: 'a', to: 'b', relType: 'relates' }],
+        nodes: [{ id: 'a', x: 100, y: 100, text: 'A', color: '' }, { id: 'b', x: 500, y: 400, text: 'B', color: '' }] }],
+    })));
+    await page.goto(`${BASE}/canvas-hub.html`, { waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    const edge = await page.evaluate(() => {
+      const svg = document.getElementById('edges-svg');
+      const cs = getComputedStyle(svg);
+      return { w: parseFloat(cs.width), h: parseFloat(cs.height), lines: svg.querySelectorAll('line').length };
+    });
+    check('canvas edge layer is renderable (non-zero SVG size) and draws the edge',
+      edge.w > 0 && edge.h > 0 && edge.lines >= 1, JSON.stringify(edge));
+    await page.close();
+  }
+
   const filePage = await ctx.newPage();
   const fileErrors = [];
   filePage.on('pageerror', (e) => fileErrors.push(e.message));
