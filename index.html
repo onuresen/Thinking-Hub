@@ -3176,10 +3176,10 @@
 
       if (scope === 'full') {
         storageKeys = SCOPE_KEYS.full;
-        filename = `thinking-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        filename = `thinking-hub-backup-${HubUtils.todayLocal()}.json`;
       } else if (scope === 'curated') {
         storageKeys = SCOPE_KEYS.curated;
-        filename = `thinking-hub-ai-context-${new Date().toISOString().slice(0, 10)}.json`;
+        filename = `thinking-hub-ai-context-${HubUtils.todayLocal()}.json`;
       } else {
         // current tool
         const app = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
@@ -3189,7 +3189,7 @@
           return;
         }
         storageKeys = keys;
-        filename = `${activeAppId}-export-${new Date().toISOString().slice(0, 10)}.json`;
+        filename = `${activeAppId}-export-${HubUtils.todayLocal()}.json`;
       }
 
       const payload = buildExportPayload(scope, storageKeys);
