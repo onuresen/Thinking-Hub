@@ -369,7 +369,7 @@ const HubAI = (() => {
     // Schedule (next 14 days)
     try {
       const raw = JSON.parse(localStorage.getItem('schedule-v1') || '{}');
-      const horizon = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+      const horizon = HubUtils.localYmd(new Date(Date.now() + 14 * 86400000));
       const upcoming = (raw.items || [])
         .filter(it => it.start && it.start >= today && it.start <= horizon)
         .sort((a, b) => a.start.localeCompare(b.start)).slice(0, 8);

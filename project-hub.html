@@ -496,7 +496,7 @@
 
     // ── Project One-Pager (P99): aggregate a printable/exportable brief ──
     let _opMarkdown = '';
-    function _opToday() { return new Date().toISOString().slice(0, 10); }
+    function _opToday() { return HubUtils.todayLocal(); }
     function _opMeetingNext(m, today) {
       if (m.recurring && Array.isArray(m.occurrenceDates)) {
         return m.occurrenceDates.map(o => o.date).filter(d => d && d >= today).sort()[0] || null;

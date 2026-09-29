@@ -223,6 +223,25 @@ function appFiles(ext) {
     await page.close();
   }
 
+  // "Today" must be the local calendar day. toISOString() is UTC, so in Tokyo
+  // before 09:00 it gave yesterday's date (P126). Pin the clock to 07:30 JST.
+  {
+    const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
+    const page = await tzCtx.newPage();
+    await page.clock.setFixedTime(new Date('2026-09-29T22:30:00Z')); // 07:30 JST on 09-30
+    await page.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });
+    const tz = await page.evaluate(() => ({
+      today: HubUtils.todayLocal(),
+      stamp: HubUtils.isoToLocalDay('2026-09-29T22:37:32.189Z'),
+      plain: HubUtils.isoToLocalDay('2026-09-29'),
+      daily: lhTodayStr(),
+    }));
+    check('local-day helpers use the local calendar day (07:30 JST)',
+      tz.today === '2026-09-30' && tz.stamp === '2026-09-30' && tz.plain === '2026-09-29' && tz.daily === '2026-09-30',
+      JSON.stringify(tz));
+    await tzCtx.close();
+  }
+
   const filePage = await ctx.newPage();
   const fileErrors = [];
   filePage.on('pageerror', (e) => fileErrors.push(e.message));

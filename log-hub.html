@@ -336,7 +336,7 @@
   let saveTimer = null;
 
   function todayStr() {
-    return new Date().toISOString().slice(0, 10);
+    return HubUtils.todayLocal();
   }
 
   function load() {
@@ -372,11 +372,11 @@
     for (let i = 0; i < WEEKS * 7; i++) {
       const d = new Date(startDay);
       d.setDate(d.getDate() + i);
-      days.push(d.toISOString().slice(0, 10));
+      days.push(HubUtils.localYmd(d));
     }
 
     // Build week columns: days[0..6], days[7..13], ...
-    const todayISO = today.toISOString().slice(0, 10);
+    const todayISO = HubUtils.localYmd(today);
 
     // Rows: Mon..Sun (0=Mon)
     const DAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
@@ -620,7 +620,7 @@
     const today = new Date();
     let check = new Date(today);
     while (true) {
-      const ds = check.toISOString().slice(0, 10);
+      const ds = HubUtils.localYmd(check);
       if (data.entries[ds] && (data.entries[ds].text || data.entries[ds].mood)) {
         streak++;
         check.setDate(check.getDate() - 1);
@@ -628,7 +628,7 @@
         // Allow gap for today (might not have written yet)
         if (streak === 0) {
           check.setDate(check.getDate() - 1);
-          const ds2 = check.toISOString().slice(0, 10);
+          const ds2 = HubUtils.localYmd(check);
           if (data.entries[ds2] && (data.entries[ds2].text || data.entries[ds2].mood)) {
             streak++;
             check.setDate(check.getDate() - 1);

@@ -48,11 +48,28 @@ const HubUtils = (() => {
   // silently reports yesterday's date for ~9 hours a day for a JST user —
   // use this wherever "today" means "the calendar day where I am right now".
   function todayLocal() {
-    const d = new Date();
+    return localYmd(new Date());
+  }
+
+  // Local calendar day of a Date as YYYY-MM-DD. Use instead of
+  // d.toISOString().slice(0, 10), which gives the UTC day.
+  function localYmd(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  }
+
+  // Local calendar day of a stored value. A full ISO timestamp
+  // ("2026-09-29T22:37:32Z") is converted to the local day; a plain date
+  // ("2026-09-30") is already a local day and is returned as-is.
+  // Use instead of someTimestamp.slice(0, 10).
+  function isoToLocalDay(v) {
+    if (!v) return '';
+    const s = String(v);
+    if (s.length <= 10 || s.indexOf('T') < 0) return s.slice(0, 10);
+    const d = new Date(s);
+    return isNaN(d) ? s.slice(0, 10) : localYmd(d);
   }
 
   // Call on a brand-new record before pushing it into storage.
@@ -133,6 +150,6 @@ const HubUtils = (() => {
 
   applyAiVisibility();
 
-  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince, todayLocal,
+  return { esc, trapFocus, stampCreate, stampUpdate, stampArchive, relativeAge, daysSince, todayLocal, localYmd, isoToLocalDay,
            aiVisible, setAiVisible, applyAiVisibility };
 })();

@@ -632,8 +632,8 @@
       const list = document.getElementById('tj-today-list');
       const sumEl = document.getElementById('tj-today-summary');
       if (!list) return;
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const todays = data.sessions.filter(s => (s.startedAt || '').slice(0, 10) === todayStr);
+      const todayStr = HubUtils.todayLocal();
+      const todays = data.sessions.filter(s => HubUtils.isoToLocalDay(s.startedAt || '') === todayStr);
       const totalMin = todays.reduce((sum, x) => sum + (x.durationMin || Math.round((x.elapsedSec || 0) / 60)), 0);
       if (sumEl) sumEl.textContent = todays.length ? `${Math.floor(totalMin / 60)}h ${totalMin % 60}m · ${todays.length} block${todays.length !== 1 ? 's' : ''}` : '';
       if (!todays.length) { list.innerHTML = '<div class="tj-today-empty">No blocks logged today yet. Add one above ↑</div>'; return; }
@@ -719,7 +719,7 @@
       }
       const maxMin = 120;
       const minByDay = days.map(d => {
-        const iso = d.toISOString().split('T')[0];
+        const iso = HubUtils.localYmd(d);
         return data.sessions
           .filter(s => s.completed && s.startedAt && s.startedAt.startsWith(iso))
           .reduce((sum, s) => sum + (s.durationMin || 0), 0);
@@ -783,12 +783,12 @@
       const sessionsByDay = {};
       data.sessions.forEach(s => {
         if (!s.startedAt || !s.completed) return;
-        const day = s.startedAt.slice(0, 10);
+        const day = HubUtils.isoToLocalDay(s.startedAt);
         (sessionsByDay[day] = sessionsByDay[day] || []).push(s);
       });
 
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      const cutoffStr = HubUtils.localYmd(cutoff);
 
       const lines = Object.keys(sessionsByDay).filter(d => d >= cutoffStr).sort().map(day => {
         const entry = entries[day];

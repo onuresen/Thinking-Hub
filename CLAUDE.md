@@ -15,7 +15,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `index.html` | Shell: sidebar, home dashboard, iframe router, cloud panel |
 | `theme.css` | **Only** global CSS — all tools must use its variables |
 | `hub-storage.js` | Storage adapter: `get/set/subscribe` + quota guard. Must load first. Local-only (no cloud). |
-| `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90). Load second. |
+| `hub-utils.js` | Shared utilities: `HubUtils.esc` (HTML escaping), `trapFocus`, and the **timestamp convention** helpers `stampCreate`/`stampUpdate`/`stampArchive` + `relativeAge`/`daysSince` (P90), and the **local-day** helpers `todayLocal`/`localYmd`/`isoToLocalDay` (P126). Load second. |
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-vault-bridge.js` | **Vault Bridge (P104)** — reads the Obsidian vault as a *source*: `HubVaultBridge.init/connect/reconnect/scanDays/scanDecisions/accept/ignore`. Persists the directory handle in IndexedDB (`thinking-hub-vault`) so access survives reloads, reports days the vault recorded and the hub did not, and parses canonical-schema decision blocks into a propose/accept queue. Loaded in `index.html` only. |
@@ -2302,10 +2302,33 @@ The line was never *painted*. `#edges-svg` was sized `width:0; height:0` with `o
 
 **Key decisions:**
 - **Decision:** Test against the user's real backup data, not seeded fixtures. **Why:** six rounds of click-logic fixes all passed tests. None checked whether a line appeared on screen. The backup split "create" from "display" in one look. **Confidence:** high.
-- **Decision:** Fix only the export filenames for the date bug. **Why:** that is what was reported. About a dozen other `toISOString().slice(0,10)` "today" uses in `index.html` have the same UTC skew. They compare against stored dates, so changing them needs its own careful pass. **Revisit when:** a "today" view looks off before 09:00. **Confidence:** med.
+- ~~**Decision:** Fix only the export filenames for the date bug.~~ Superseded by P126, which fixed the rest.
 - The backup also holds two old edges using `source/target` keys that point at nodes that no longer exist. They are inert and were left alone.
 
 **Files:** `canvas-hub.html`, `index.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 126 — Local day everywhere, not UTC day~~ ✓ Done `[group: bugfix]`
+Follow-up to P125. The app used `toISOString().slice(0,10)` as "today" in about 70 places. That is the UTC day. In Tokyo it is yesterday until 09:00.
+
+The fix had two sides. Fixing only "today" would make things worse. Code compares "today" with slices of saved UTC timestamps (`startedAt.slice(0,10)`). Both sides must move to local time together.
+
+- New helpers in `hub-utils.js`: `localYmd(date)` and `isoToLocalDay(value)`. `todayLocal()` now uses `localYmd`.
+- `isoToLocalDay` turns a full UTC timestamp into its local day. A plain `YYYY-MM-DD` is already local and passes through unchanged.
+- Replaced across 14 pages and 3 modules: "today", dates built from local `Date` objects, and slices of stored timestamps (`createdAt`, `updatedAt`, `startedAt`, `completedAt`, activity `ts`).
+- Vault Bridge now credits Hub activity to the local day. Daily-note filenames are local dates, so early-morning work used to count for the wrong day.
+- Goals Hub quarter dates: `new Date(y, m, 1).toISOString()` gave the previous day in JST (Q start 06-30, not 07-01). Now correct.
+- Weekly Review ranges: Monday 00:00 local was read as Sunday in UTC. Weeks are now Mon–Sun, not Sun–Sat.
+- `sw.js` cache `v5` → `v6`.
+- New smoke check pins the browser to 07:30 JST and checks all helpers.
+
+**Key decisions:**
+- **Decision:** Leave Meeting Hub's `ymdFromDate`/`dateFromYMD` in UTC. **Why:** they pair `Date.UTC` with `toISOString` for ICS date math. They are internally consistent, not a bug. **Confidence:** high.
+- **Decision:** Don't migrate existing saved data. **Why:** Daily Log entries saved before 09:00 may sit under the previous day's key. We can't tell which ones. Moving them would be guessing. New entries are correct. **Confidence:** high.
+- **Decision:** Week keys (`YYYY-Wnn`) unchanged. **Why:** they already use local week numbers, so stored weekly reviews stay findable. **Confidence:** high.
+
+**Files:** `hub-utils.js`, `hub-ai.js`, `hub-snapshots.js`, `hub-vault-bridge.js`, `achievements-hub.html`, `decision-hub.html`, `focus-hub.html`, `goals-hub.html`, `graph-hub.html`, `idea-swiper.html`, `index.html`, `journal-hub.html`, `log-hub.html`, `meetings-hub.html`, `project-hub.html`, `review-hub.html`, `schedule.html`, `town-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
 
 ---
 

@@ -1024,9 +1024,9 @@
 
       // ── Focus today (focus-hub-v1) ─────────────────────────────────────────
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = HubUtils.todayLocal();
         const fh = JSON.parse(localStorage.getItem('focus-hub-v1') || '{}');
-        const todaySessions = (fh.sessions || []).filter(s => (s.endedAt || s.startedAt || '').slice(0, 10) === today);
+        const todaySessions = (fh.sessions || []).filter(s => HubUtils.isoToLocalDay(s.endedAt || s.startedAt || '') === today);
         if (todaySessions.length) {
           const totalMin = todaySessions.reduce((sum, s) => sum + Math.round((s.elapsedSec || 0) / 60), 0);
           const completed = todaySessions.filter(s => s.completed).length;
@@ -1174,7 +1174,7 @@
     }
 
     function buildResurfaceItems() {
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = HubUtils.todayLocal();
       const out = [];
 
       // 1 — Decisions whose revisit date has arrived and aren't scored yet
@@ -1658,7 +1658,7 @@
       card.style.borderColor = 'color-mix(in srgb, var(--accent2) 35%, var(--border))';
       let rec = null;
       try { rec = HubStorage.get(BRIEFING_KEY); } catch { }
-      const today = new Date().toISOString().slice(0, 10);
+      const today = HubUtils.todayLocal();
       const fresh = rec && rec.date === today && rec.text;
       const aiProviderLabel = typeof HubAI !== 'undefined' ? HubAI.getProviderLabel() : 'AI';
       const body = fresh
@@ -1689,7 +1689,7 @@
         const { lines } = HubAI.getRichContext();
         const system = 'From this workspace snapshot, write a concise morning briefing: the top 3 priorities for today (each with a one-line why), then any overdue items, today\'s meetings, and decisions due for revisit. Use at most 10 short lines. No preamble, no sign-off.';
         const text = await HubAI.chat(lines, system);
-        HubStorage.set(BRIEFING_KEY, { date: new Date().toISOString().slice(0, 10), text: (text || '').trim() });
+        HubStorage.set(BRIEFING_KEY, { date: HubUtils.todayLocal(), text: (text || '').trim() });
         buildTodayView();
       } catch (e) {
         showToast(HubAI.isHandoffError(e) ? e.message : 'Briefing failed: ' + (e.message || e), HubAI.isHandoffError(e) ? '' : 'error');
@@ -1700,7 +1700,7 @@
     function buildTodayView() {
       const container = document.getElementById('today-view');
       if (!container) return;
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = HubUtils.todayLocal();
       const sections = [];
 
       try {
@@ -1882,7 +1882,7 @@
     function buildExecView() {
       const container = document.getElementById('exec-view');
       if (!container) return;
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = HubUtils.todayLocal();
 
       let ph = {}, goals = {}, riskData = {}, mtgData = {}, decisions = [];
       try { ph        = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
@@ -2072,9 +2072,9 @@
       const container = document.getElementById('analytics-view');
       if (!container) return;
 
-      const todayStr  = new Date().toISOString().slice(0, 10);
-      const weekAgo   = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-      const monthAgo  = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+      const todayStr  = HubUtils.todayLocal();
+      const weekAgo   = HubUtils.localYmd(new Date(Date.now() - 7 * 86400000));
+      const monthAgo  = HubUtils.localYmd(new Date(Date.now() - 30 * 86400000));
 
       let ph = {}, focusData = {}, decArr = [], captureData = {};
       try { ph          = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
@@ -2099,7 +2099,7 @@
       // ── Focus heatmap ─────────────────────────────────────────────────
       const focusMap = {};
       sessions.forEach(s => {
-        const day = (s.startedAt || '').slice(0, 10);
+        const day = HubUtils.isoToLocalDay(s.startedAt || '');
         if (day) focusMap[day] = (focusMap[day] || 0) + (s.durationMin || 0);
       });
 
@@ -2114,7 +2114,7 @@
       const cur = new Date(heatStart);
       const todayTs = new Date(todayStr).getTime();
       while (cur.getTime() <= todayTs + 86400000 * 6) {
-        const ds   = cur.toISOString().slice(0, 10);
+        const ds   = HubUtils.localYmd(cur);
         const mins = focusMap[ds] || 0;
         const future = cur.getTime() > todayTs;
         let bg;
@@ -2134,10 +2134,10 @@
       for (let i = 7; i >= 0; i--) {
         const wStart = new Date(Date.now() - (i + 1) * 7 * 86400000);
         const wEnd   = new Date(Date.now() - i * 7 * 86400000);
-        const wStartStr = wStart.toISOString().slice(0, 10);
-        const wEndStr   = wEnd.toISOString().slice(0, 10);
+        const wStartStr = HubUtils.localYmd(wStart);
+        const wEndStr   = HubUtils.localYmd(wEnd);
         const count = allTasks.filter(t => {
-          const d = (t.createdAt || '').slice(0, 10);
+          const d = HubUtils.isoToLocalDay(t.createdAt || '');
           return d >= wStartStr && d < wEndStr;
         }).length;
         const label = wStart.toLocaleDateString('en', { month: 'short', day: 'numeric' });
@@ -2174,7 +2174,7 @@
       const esc = (HubUtils && HubUtils.esc) ? HubUtils.esc : (s => s);
       const nowTs = Date.now();
       const _days = iso => iso ? Math.floor((nowTs - new Date(iso).getTime()) / 86400000) : null;
-      const completedWeek = allTasks.filter(t => (t.done || t.status === 'done') && t.completedAt && t.completedAt.slice(0, 10) >= weekAgo).length;
+      const completedWeek = allTasks.filter(t => (t.done || t.status === 'done') && t.completedAt && HubUtils.isoToLocalDay(t.completedAt) >= weekAgo).length;
       const openWithProj = [];
       (ph.projects || []).forEach(p => (p.tasks || []).forEach(t => { if (!t.done && t.status !== 'done' && !t.archived) openWithProj.push({ t, p }); }));
       const staleTasks = openWithProj.map(x => ({ ...x, age: _days(x.t.updatedAt) })).filter(x => x.age !== null && x.age >= 30).sort((a, b) => b.age - a.age);
@@ -2808,7 +2808,7 @@
       if (line) {
         if (rec && rec.at) {
           const days = Math.floor((Date.now() - new Date(rec.at).getTime()) / 86400000);
-          line.textContent = `Last full backup: ${days === 0 ? 'today' : days + 'd ago'} (${rec.at.slice(0, 10)})`;
+          line.textContent = `Last full backup: ${days === 0 ? 'today' : days + 'd ago'} (${HubUtils.isoToLocalDay(rec.at)})`;
         } else {
           line.textContent = 'Last full backup: never — export one below';
         }
@@ -2818,7 +2818,7 @@
         if (rec && rec.restoredAt) {
           const days = Math.floor((Date.now() - new Date(rec.restoredAt).getTime()) / 86400000);
           const scope = rec.restoredScope ? ` — ${rec.restoredScope}` : '';
-          restoreLine.textContent = `Last restored: ${days === 0 ? 'today' : days + 'd ago'} (${rec.restoredAt.slice(0, 10)})${scope}`;
+          restoreLine.textContent = `Last restored: ${days === 0 ? 'today' : days + 'd ago'} (${HubUtils.isoToLocalDay(rec.restoredAt)})${scope}`;
         } else {
           restoreLine.textContent = 'Last restored: never';
         }
@@ -3323,7 +3323,7 @@
 
         const lines = [];
         const kb = (file.size / 1024).toFixed(0);
-        lines.push(`📄 <b>${HubUtils.esc(file.name)}</b> · ${kb} KB` + (parsed.exportedAt ? ` · exported ${HubUtils.esc(String(parsed.exportedAt).slice(0, 10))}` : ''));
+        lines.push(`📄 <b>${HubUtils.esc(file.name)}</b> · ${kb} KB` + (parsed.exportedAt ? ` · exported ${HubUtils.esc(HubUtils.isoToLocalDay(parsed.exportedAt))}` : ''));
 
         // Detect format
         const isV2Full = parsed.version === 2 && parsed.storageKeys && parsed.data && (parsed.scope === 'full' || !parsed.scope);

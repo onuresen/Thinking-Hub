@@ -422,7 +422,7 @@
       const rawDecs = HubStorage.get('decision-hub-v1');
       const decs = Array.isArray(rawDecs) ? rawDecs : [];
       if (decs.length) {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = HubUtils.todayLocal();
         const scored = decs.filter((d) => d && d.outcome && d.outcome.result && d.outcome.result !== 'tooearly');
         const dueUnscored = decs.filter((d) => d && d.revisitDate && d.revisitDate <= todayStr && !d.outcome);
         const ratio = scored.length / decs.length;
@@ -674,7 +674,7 @@
       exportBtn.textContent = '⬇ Export PNG';
       exportBtn.addEventListener('click', () => {
         if (!town) return;
-        town.downloadPNG(`machi-town-` + new Date().toISOString().slice(0, 10) + '.png');
+        town.downloadPNG(`machi-town-` + HubUtils.todayLocal() + '.png');
       });
       timeRow.appendChild(exportBtn);
 

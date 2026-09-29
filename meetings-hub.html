@@ -342,7 +342,7 @@
     }
     let entry = m.log.find(l => l.date === activeOccDate);
     if (!entry) {
-      entry = { date: activeOccDate || new Date().toISOString().slice(0, 10), notes: '', actionItems: [], decisions: [] };
+      entry = { date: activeOccDate || HubUtils.todayLocal(), notes: '', actionItems: [], decisions: [] };
       m.log.push(entry);
     }
     return entry;
@@ -355,12 +355,12 @@
   }
 
   function pickDefaultOccDate(m) {
-    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], new Date().toISOString().slice(0, 10));
+    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], HubUtils.todayLocal());
     return anchor ? anchor.date : null;
   }
 
   function syncSeriesAnchor(m) {
-    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], new Date().toISOString().slice(0, 10));
+    const anchor = seriesAnchorOccurrence(m.occurrenceDates || [], HubUtils.todayLocal());
     if (anchor) { m.date = anchor.date; m.time = anchor.time; m.durationMins = anchor.durationMins; }
   }
 
@@ -446,8 +446,8 @@
 
   function getUpcomingSchedule() {
     const sd = HubStorage.get('schedule-v1');
-    const today = new Date().toISOString().slice(0, 10);
-    const cutoff = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    const today = HubUtils.todayLocal();
+    const cutoff = HubUtils.localYmd(new Date(Date.now() + 14 * 86400000));
     return (sd?.items || [])
       .filter(e => e.type === 'event' && e.start >= today && e.start <= cutoff && !e.done)
       .sort((a, b) => a.start.localeCompare(b.start))
@@ -619,7 +619,7 @@
     const today = new Date();
     if (tpl.recurrence === 'daily') {
       const d = new Date(today); d.setDate(d.getDate() + 1);
-      return d.toISOString().slice(0, 10);
+      return HubUtils.localYmd(d);
     }
     if (tpl.recurrence === 'weekly' || tpl.recurrence === 'biweekly') {
       const dow = tpl.dayOfWeek ?? 1;
@@ -627,9 +627,9 @@
       let diff = (dow - d.getDay() + 7) % 7;
       if (diff === 0) diff = tpl.recurrence === 'biweekly' ? 14 : 7;
       d.setDate(d.getDate() + diff);
-      return d.toISOString().slice(0, 10);
+      return HubUtils.localYmd(d);
     }
-    return new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().slice(0, 10);
+    return HubUtils.localYmd(new Date(today.getFullYear(), today.getMonth() + 1, 1));
   }
 
   function createFromTemplate(id) {
@@ -940,8 +940,8 @@
     const evObj = {
       id: eventId, type: 'event', source: 'meeting',
       title: m.title || 'Meeting',
-      start: m.date || new Date().toISOString().slice(0, 10),
-      end: m.date || new Date().toISOString().slice(0, 10),
+      start: m.date || HubUtils.todayLocal(),
+      end: m.date || HubUtils.todayLocal(),
       startTime: m.time || null,
       endTime,
       notes: m.desiredOutcome || '',
@@ -1297,7 +1297,7 @@
     const events = parseICS(text);
     if (!events.length) return { added: 0, skipped: 0 };
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = HubUtils.todayLocal();
     const windowStart = dateFromYMD(todayStr); windowStart.setUTCDate(windowStart.getUTCDate() - 30);
     const windowEnd = dateFromYMD(todayStr); windowEnd.setUTCDate(windowEnd.getUTCDate() + 90);
 
@@ -1434,7 +1434,7 @@
         <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
       </div>`).join('');
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = HubUtils.todayLocal();
     const metaDateHtml = m.recurring
       ? `<span class="meta-label">🔁 Weekly series</span>
          <span class="series-count">${m.occurrenceDates.length} occurrence${m.occurrenceDates.length === 1 ? '' : 's'}</span>`
@@ -1721,7 +1721,7 @@
   function newMeeting() {
     flushCurrentDetail();
     const m = normalizeMeeting({
-      id: uid(), title: '', date: new Date().toISOString().slice(0, 10),
+      id: uid(), title: '', date: HubUtils.todayLocal(),
       type: 'custom', desiredOutcome: '', attendees: '', attendeesList: [],
       projectId: null, projectName: null, agenda: '', notes: '',
       actionItems: [], decisions: [], scheduleEventId: null,
@@ -1747,7 +1747,7 @@
 
   function openRepeatModal() {
     const m = activeMeeting(); if (!m) return;
-    const baseDate = m.date || new Date().toISOString().slice(0, 10);
+    const baseDate = m.date || HubUtils.todayLocal();
     const defaultOffset = m.type === 'standup' ? 1 : 7;
     document.getElementById('repeat-date').value = addDaysToDate(baseDate, defaultOffset);
     document.getElementById('repeat-modal-overlay').classList.add('open');
@@ -1759,12 +1759,12 @@
 
   function setRepeatDate(days) {
     const m = activeMeeting(); if (!m) return;
-    document.getElementById('repeat-date').value = addDaysToDate(m.date || new Date().toISOString().slice(0, 10), days);
+    document.getElementById('repeat-date').value = addDaysToDate(m.date || HubUtils.todayLocal(), days);
   }
 
   function setRepeatDateMonth() {
     const m = activeMeeting(); if (!m) return;
-    document.getElementById('repeat-date').value = addMonthToDate(m.date || new Date().toISOString().slice(0, 10));
+    document.getElementById('repeat-date').value = addMonthToDate(m.date || HubUtils.todayLocal());
   }
 
   function confirmRepeatMeeting() {
@@ -1807,7 +1807,7 @@
   function openWeeklyModal() {
     const m = activeMeeting(); if (!m) return;
     weeklyModalMode = m.recurring ? 'extend' : 'create';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = HubUtils.todayLocal();
     document.getElementById('weekly-modal-title').textContent = weeklyModalMode === 'extend' ? 'Extend Weekly Series' : 'Make Weekly Meeting';
     document.getElementById('mw-start-row').style.display = weeklyModalMode === 'extend' ? 'none' : '';
     document.getElementById('weekly-modal-hint').textContent = weeklyModalMode === 'extend'
@@ -1861,7 +1861,7 @@
       syncSeriesAnchor(m);
       showToast(`Extended through ${fmtShortDate(endDate)}`);
     } else {
-      const startDate = document.getElementById('mw-start').value || m.date || new Date().toISOString().slice(0, 10);
+      const startDate = document.getElementById('mw-start').value || m.date || HubUtils.todayLocal();
       const dates = weeklyDatesInRange(startDate, endDate);
       if (!dates.length) { showToast('End date must be on or after the start date', 'warn'); return; }
       flushCurrentDetail();

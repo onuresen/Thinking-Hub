@@ -431,14 +431,14 @@
   }
 
   function distinctDates(log) {
-    return [...new Set(log.map(e => e.ts.slice(0, 10)))].sort();
+    return [...new Set(log.map(e => HubUtils.isoToLocalDay(e.ts)))].sort();
   }
 
   function computeActivityStreak(log) {
     const dates = distinctDates(log);
     if (!dates.length) return 0;
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = HubUtils.todayLocal();
+    const yesterday = HubUtils.localYmd(new Date(Date.now() - 86400000));
     const last = dates[dates.length - 1];
     if (last !== today && last !== yesterday) return 0;
     let streak = 1;
@@ -453,8 +453,8 @@
   function computeLogStreak(entries) {
     const keys = Object.keys(entries).sort();
     if (!keys.length) return 0;
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const today = HubUtils.todayLocal();
+    const yesterday = HubUtils.localYmd(new Date(Date.now() - 86400000));
     const last = keys[keys.length - 1];
     if (last !== today && last !== yesterday) return 0;
     let streak = 1;
@@ -513,7 +513,7 @@
 
     const dayToolMap = {};
     log.forEach(e => {
-      const d = e.ts.slice(0, 10);
+      const d = HubUtils.isoToLocalDay(e.ts);
       if (!dayToolMap[d]) dayToolMap[d] = new Set();
       dayToolMap[d].add(e.appId);
     });
@@ -808,7 +808,7 @@
 
     const counts = {};
     log.forEach(e => {
-      const d = e.ts.slice(0, 10);
+      const d = HubUtils.isoToLocalDay(e.ts);
       counts[d] = (counts[d] || 0) + 1;
     });
 
@@ -819,7 +819,7 @@
     while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
 
     for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-      const key   = d.toISOString().slice(0, 10);
+      const key   = HubUtils.localYmd(d);
       const count = counts[key] || 0;
       const cell  = document.createElement('div');
       cell.className = 'ach-cell ' + (count === 0 ? 'heat-0' : count <= 2 ? 'heat-1' : count <= 5 ? 'heat-2' : 'heat-3');
