@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -104,7 +104,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 |-----|---------|---------|
 | DM Sans, Fraunces, JetBrains Mono, Syne | All HTML files via `styles/fonts.css` | Self-hosted WOFF2 subsets; source record + OFL in `vendor/fonts/` (P93) |
 | vis-network | graph-hub.html | **9.1.9** — self-hosted at `vendor/vis-network.min.js` (P80) |
-| html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80) |
+| html2canvas | canvas-hub.html | **1.4.1** — self-hosted at `vendor/html2canvas.min.js` (P80). Fallback only since P133 |
 | Anthropic Messages API | Manual AI features only | Direct local fetch client in `hub-ai.js`; no SDK dependency (P93) |
 | Microsoft 365 Copilot handoff | Manual AI features only | Browser navigation + reviewed clipboard copy; no API, credential, SDK, or automatic submission (P96) |
 
@@ -2508,6 +2508,36 @@ Step 3 of the big-board navigation plan (P131 was steps 1–2).
 - **Decision:** Present uses frames first, views as fallback. **Why:** frames are already the named sections of a board. No separate slide list to maintain. **Revisit when:** someone wants a custom order across frames and views. **Confidence:** med.
 
 **Verified** with realistic input on the user's real boards: 22 checks (save/jump, empty slot, typing guard, resolution independence, Jump list contents, frame fit, layer centre, named save, delete, present open/next/stop/back, Delete blocked, Esc returns, views fallback, reload, per board, export/import cleaning, duplicate). The same 22 pass with animation on. P131's 43 checks still pass. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 133 — Canvas Hub: whole-board, high-quality PNG export~~ ✓ Done `[group: canvas-structure]`
+User: the exported PNG looked different from the canvas. Zooming out to fit the whole board made it blurry.
+
+Two causes:
+- html2canvas captured only the visible screen, at screen resolution. Zoomed out = few pixels per card.
+- html2canvas redraws the page with its own copy of CSS, so fonts and details drift.
+
+New export (`buildBoardPng()`):
+- Always the whole board. Bounds come from all nodes, plus a 60px margin.
+- 2× resolution, independent of zoom. Scale drops only to stay under browser canvas limits (16000px side, 120M px area).
+- The board layer is cloned at 100% into an SVG `<foreignObject>`. The browser's own CSS engine draws it, so it matches the canvas.
+- Page CSS is inlined. Fonts are fetched and embedded as data URLs, built once per session. Theme tokens are resolved, so dark / light / ink all match.
+- Layers are drawn across the whole image. Their names get their own margin (top for columns, left for rows), so they never cover a card.
+- Selection, focus fade and flash states are removed. "Fade parked" stays, as it's a board setting.
+- Favicons are copied in when the browser allows; otherwise the node's emoji shows.
+- Filename: `canvas-<board>-<date>.png`. A toast gives the pixel size.
+- If the browser blocks this (e.g. Safari), it falls back to the old visible-area html2canvas capture, with a toast saying so.
+- `sw.js` cache `v12` → `v13`. New smoke check.
+
+**Key decisions:**
+- **Decision:** SVG foreignObject with the browser's own renderer, not html2canvas at a higher scale. **Why:** html2canvas re-implements CSS, which is why the style looked different. Scaling it up would still look different. **Alternative:** draw the board by hand on a 2D canvas. Rejected: it would duplicate every style and note formatting. **Confidence:** high.
+- **Decision:** Keep html2canvas as a fallback, not remove it. **Why:** Safari taints foreignObject images, so export would fail there. A visible-area PNG beats no PNG. **Revisit when:** no user needs Safari; then drop the vendor file. **Confidence:** med.
+- **Decision:** Whole board always, no "visible area" option. **Why:** that is what was asked, and a crop is easy afterwards. **Confidence:** med.
+
+**Verified** in a real browser on the user's boards, exported while zoomed to 30%: R&D map 4960×8248 px in ~3 s, Dependency Map 4040×3128, Enterprise Map 4840×4560 (ink theme). Visual check: fonts, colors, frames, layers, line labels and the dot grid match the canvas. A 100% crop is sharp. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 

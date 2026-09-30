@@ -326,6 +326,17 @@ function appFiles(ext) {
     });
     check('canvas saved views and present mode step through frames',
       g5.back && /^1 \/ 2 · F1/.test(g5.first) && /^2 \/ 2 · F2/.test(g5.second) && g5.off && g5.slot === 4, JSON.stringify(g5));
+
+    // Whole-board PNG export at 2x, independent of zoom (P133)
+    const g6 = await page.evaluate(async () => {
+      db.zoom = 0.3; updateTransform();
+      const b = exportBounds();
+      const r = await buildBoardPng();
+      return { w: r.width, h: r.height, type: r.blob.type, size: r.blob.size,
+        minW: Math.round((b.R - b.L) * 2) };
+    });
+    check('canvas PNG export renders the whole board at 2x',
+      g6.type === 'image/png' && g6.size > 1000 && g6.w >= g6.minW, JSON.stringify(g6));
     await page.close();
   }
 

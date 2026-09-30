@@ -1079,7 +1079,7 @@
       title="Align and arrange nodes">Layout ▾</button>
     <button class="btn" id="jump-btn" onclick="toggleJumpMenu()"
       title="Jump to a frame, layer or saved view · Present">Jump ▾</button>
-    <button class="btn" onclick="exportPNG()" title="Export canvas as PNG">Export PNG</button>
+    <button class="btn" onclick="exportPNG()" title="Export the whole board as a high-quality PNG">Export PNG</button>
   </div>
 
   <!-- Jump menu (P132): saved views, frames, layers, present mode -->
@@ -1249,6 +1249,7 @@
       img.width = sz; img.height = sz;
       img.alt = '';
       img.style.cssText = 'object-fit:contain;border-radius:2px;display:block';
+      img.dataset.fallback = fallbackIcon || '';
       return { el: img, text: fallbackIcon };
     }
 
@@ -4056,25 +4057,191 @@
 
     // ── PNG Export ───────────────────────────────────────────
 
-    function exportPNG() {
+    // ── Export PNG (P133) ─────────────────────────────────────
+    // Exports the WHOLE board, not the visible screen, at 2× by default.
+    // The board is cloned into an SVG <foreignObject>, so the browser's own
+    // CSS engine draws it: same fonts, colors, frames, layers and lines as
+    // the canvas. html2canvas (its own re-implementation of CSS) is kept only
+    // as a fallback for browsers that block foreignObject export.
+    const EXPORT_PAD = 60;
+    const EXPORT_MAX_SIDE = 16000;       // browser canvas limit per side
+    const EXPORT_MAX_AREA = 120e6;       // stay well under canvas area limits
+    let exportFontCss = null;            // embedded @font-face, built once
+
+    const blobToDataUrl = blob => new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob);
+    });
+
+    // All page CSS as text. Fonts are fetched and inlined, because an SVG
+    // image may not load anything from outside itself.
+    async function exportCssText() {
+      const parts = [], fonts = [];
+      for (const sheet of document.styleSheets) {
+        let rules; try { rules = sheet.cssRules; } catch { continue; }
+        for (const rule of rules) {
+          if (rule instanceof CSSFontFaceRule) fonts.push({ rule, base: sheet.href || location.href });
+          else parts.push(rule.cssText);
+        }
+      }
+      if (exportFontCss === null) {
+        const faces = await Promise.all(fonts.map(async ({ rule, base }) => {
+          const src = rule.style.getPropertyValue('src');
+          const m = /url\(["']?([^"')]+)["']?\)/.exec(src);
+          if (!m) return '';
+          try {
+            const res = await fetch(new URL(m[1], base).href);
+            if (!res.ok) return '';
+            const data = await blobToDataUrl(await res.blob());
+            return rule.cssText.replace(m[0], `url("${data}")`);
+          } catch { return ''; }
+        }));
+        exportFontCss = faces.join('\n');
+      }
+      return exportFontCss + '\n' + parts.join('\n');
+    }
+
+    // Theme tokens resolved to plain values, so the export matches the
+    // current theme (dark / light / ink) exactly.
+    function exportTokenStyle(cssText) {
+      const names = new Set(cssText.match(/--[A-Za-z0-9_-]+(?=\s*:)/g) || []);
+      const cs = getComputedStyle(document.documentElement);
+      return [...names].map(n => `${n}:${cs.getPropertyValue(n).trim()}`).filter(d => !/:$/.test(d)).join(';');
+    }
+
+    // Favicons come from another site. Try to copy them in; if the browser
+    // won't allow it, show the node's own emoji icon instead.
+    async function exportInlineImages(root) {
+      const imgs = [...root.querySelectorAll('img')];
+      await Promise.all(imgs.map(async img => {
+        const src = img.getAttribute('src') || '';
+        if (src.startsWith('data:')) return;
+        let data = null;
+        try {
+          const probe = new Image();
+          probe.crossOrigin = 'anonymous';
+          probe.src = src;
+          await probe.decode();
+          const c = document.createElement('canvas');
+          c.width = probe.naturalWidth || 32; c.height = probe.naturalHeight || 32;
+          c.getContext('2d').drawImage(probe, 0, 0);
+          data = c.toDataURL('image/png');
+        } catch { data = null; }
+        if (data) { img.setAttribute('src', data); return; }
+        const fb = document.createElement('span');
+        fb.textContent = img.dataset.fallback || '';
+        img.replaceWith(fb);
+      }));
+    }
+
+    function exportBounds() {
+      const boxes = db.nodes.map(nodeBox);
+      if (!boxes.length) return null;
+      return {
+        L: Math.min(...boxes.map(b => b.n.x)), T: Math.min(...boxes.map(b => b.n.y)),
+        R: Math.max(...boxes.map(b => b.n.x + b.w)), B: Math.max(...boxes.map(b => b.n.y + b.h))
+      };
+    }
+
+    async function buildBoardPng() {
+      const b = exportBounds();
+      if (!b) throw new Error('empty');
+      const ls = db.lanes || [];
+      const hasCols = ls.some(l => l.axis === 'col'), hasRows = ls.some(l => l.axis === 'row');
+      // Layer names get their own margin, so they never cover a node.
+      const padL = EXPORT_PAD + (hasRows ? 200 : 0), padT = EXPORT_PAD + (hasCols ? 44 : 0);
+      const W = Math.ceil(b.R - b.L + padL + EXPORT_PAD), H = Math.ceil(b.B - b.T + padT + EXPORT_PAD);
+      const ox = padL - b.L, oy = padT - b.T;   // canvas point (x,y) → image (x+ox, y+oy)
+      let scale = 2;
+      scale = Math.min(scale, EXPORT_MAX_SIDE / W, EXPORT_MAX_SIDE / H, Math.sqrt(EXPORT_MAX_AREA / (W * H)));
+      scale = Math.max(0.25, scale);
+
+      const cssText = await exportCssText();
+      const wrap = document.createElement('div');
+      wrap.setAttribute('style', `${exportTokenStyle(cssText)};position:relative;width:${W}px;height:${H}px;overflow:hidden;` +
+        `background-color:var(--bg);background-image:radial-gradient(var(--border2) 1px, transparent 1px);` +
+        `background-size:20px 20px;background-position:${ox}px ${oy}px;font-family:var(--font-body);color:var(--text);`);
+      const style = document.createElement('style');
+      style.textContent = cssText;
+      wrap.appendChild(style);
+
+      // Layers: bands across the whole image, names in the margins.
+      ls.forEach(l => {
+        const color = KNOWN_LANE_COLORS.has(l.color) ? l.color : 'c-gray';
+        const band = document.createElement('div');
+        band.className = `lane-band ${l.axis} ${color}`;
+        band.innerHTML = '<div class="lane-fill"></div>';
+        const head = document.createElement('div');
+        head.className = `lane-head ${l.axis} ${color}`;
+        head.textContent = l.label;
+        if (l.axis === 'col') {
+          Object.assign(band.style, { left: (l.start + ox) + 'px', width: l.size + 'px', top: '0', height: H + 'px' });
+          Object.assign(head.style, { left: (l.start + ox + 4) + 'px', top: '12px', maxWidth: Math.max(40, l.size - 8) + 'px' });
+        } else {
+          Object.assign(band.style, { top: (l.start + oy) + 'px', height: l.size + 'px', left: '0', width: W + 'px' });
+          Object.assign(head.style, { left: '12px', top: (l.start + oy + 6) + 'px', maxWidth: '180px' });
+        }
+        wrap.appendChild(band);
+        wrap.appendChild(head);
+      });
+
+      // The board itself, at 100% zoom, without selection or focus state.
+      const clone = layer.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.style.cssText = `position:absolute;left:0;top:0;width:0;height:0;transform:translate(${ox}px,${oy}px)`;
+      clone.querySelectorAll('.selected,.in-selection,.connect-source,.dimmed').forEach(el =>
+        el.classList.remove('selected', 'in-selection', 'connect-source', 'dimmed'));
+      clone.querySelectorAll('.node').forEach(el => { el.style.boxShadow = ''; el.style.transition = ''; });
+      clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+      wrap.appendChild(clone);
+      await exportInlineImages(wrap);
+
+      const xhtml = new XMLSerializer().serializeToString(wrap);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W} ${H}">` +
+        `<foreignObject x="0" y="0" width="${W}" height="${H}">${xhtml}</foreignObject></svg>`;
+      const img = new Image();
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      await img.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(W * scale); canvas.height = Math.round(H * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((res, rej) => canvas.toBlob(bl => bl ? res(bl) : rej(new Error('toBlob')), 'image/png'));
+      return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function exportPNG() {
       const btn = document.querySelector('[onclick="exportPNG()"]');
+      if (!db.nodes.length) { if (window.showToast) showToast('Nothing to export on this board'); return; }
       btn.textContent = 'Exporting…';
       btn.disabled = true;
-
-      html2canvas(viewport, {
-        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#111',
-        scale: window.devicePixelRatio || 1,
-        logging: false,
-        useCORS: true
-      }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `canvas-${HubUtils.todayLocal()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      }).finally(() => {
+      const filename = `canvas-${fileSlug(db.name)}-${HubUtils.todayLocal()}.png`;
+      try {
+        const r = await buildBoardPng();
+        downloadBlob(r.blob, filename);
+        if (window.showToast) showToast(`Exported whole board · ${r.width}×${r.height}px`);
+      } catch (err) {
+        // Fallback: the old visible-area capture.
+        try {
+          const canvas = await html2canvas(viewport, {
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#111',
+            scale: window.devicePixelRatio || 1, logging: false, useCORS: true
+          });
+          const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+          downloadBlob(blob, filename);
+          if (window.showToast) showToast('This browser blocked the full export — saved the visible area instead');
+        } catch { if (window.showToast) showToast('Export failed'); }
+      } finally {
         btn.textContent = 'Export PNG';
         btn.disabled = false;
-      });
+      }
     }
 
     // ── Hub Search resolver ──────────────────────────────────
