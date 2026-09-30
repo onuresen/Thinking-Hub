@@ -243,6 +243,21 @@ function appFiles(ext) {
     });
     check('canvas layout: align, tidy grid, undo, and own saves keep nodes',
       lay.kept && lay.aligned && lay.overlaps === 0 && lay.restored, JSON.stringify(lay));
+
+    // Node menu, focus, find (P128)
+    const g1 = await page.evaluate(() => {
+      openNodeMenu('a', 200, 200);
+      const menu = [...document.querySelectorAll('#node-menu .qm-item')].map(b => b.textContent);
+      closeNodeMenu();
+      setFocus('a');
+      const dimmed = [...document.querySelectorAll('.node.dimmed')].map(e => e.dataset.id);
+      clearFocus();
+      const n0 = db.nodes.length; duplicateNodes(['a']); const dup = db.nodes.length === n0 + 1; undo();
+      openFind(); renderFind('B'); const found = findResults.map(r => r.node.id); closeFind();
+      return { menu: menu.length, dimmed, dup, found };
+    });
+    check('canvas node menu, focus mode and find work',
+      g1.menu >= 4 && g1.dimmed.join() === 'c' && g1.dup && g1.found.join() === 'b', JSON.stringify(g1));
     await page.close();
   }
 
