@@ -273,6 +273,24 @@ function appFiles(ext) {
     });
     check('canvas frames hold their contents, lines show labels, typing guard works',
       g2.inside === 'a,b,c' && g2.passThrough === 'none' && g2.drawn && g2.typing, JSON.stringify(g2));
+
+    // Copy/paste, duplicate board, board file import with cleaning (P130)
+    const g3 = await page.evaluate(() => {
+      const before = fullState.boards.length;
+      selectedIds = new Set(['a', 'b']); selectedNodeId = 'b';
+      copySelection(false);
+      const copied = canvasClipboard.nodes.length + '/' + canvasClipboard.edges.length;
+      duplicateBoard();
+      const dupOk = fullState.boards.length === before + 1 && db.nodes.every(n => !['a', 'b', 'c'].includes(n.id));
+      const n0 = db.nodes.length; pasteClipboard({ x: 0, y: 0 }); const pasted = db.nodes.length - n0;
+      const r = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', board: { name: 'X',
+        nodes: [{ id: 'z', x: 0, y: 0, text: '<img src=x onerror="window.__bad=1">ok<b onclick="x">b</b>' }], edges: [] } }));
+      const clean = db.nodes[0].text;
+      return { copied, dupOk, pasted, imported: r.nodes, clean, bad: !!window.__bad };
+    });
+    check('canvas copy/paste, duplicate board and safe board import work',
+      g3.copied === '2/1' && g3.dupOk && g3.pasted === 2 && g3.imported === 1 && g3.clean === 'ok<b>b</b>' && !g3.bad,
+      JSON.stringify(g3));
     await page.close();
   }
 
