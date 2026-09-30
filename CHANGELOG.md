@@ -38,6 +38,11 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Spatial Canvas: Export PNG now saves the whole board, not just the visible
+  screen, at 2× resolution whatever the zoom. It uses the browser's own
+  renderer, so fonts, colors, frames, layers and line labels match the canvas.
+  Layer names get their own margin. Browsers that block this fall back to the
+  old visible-area capture.
 - Spatial Canvas: drag on empty canvas now draws a selection box. Pan with
   right-drag, middle-drag or Space+drag. A right-click without moving still
   opens the menu.
