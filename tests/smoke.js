@@ -308,6 +308,24 @@ function appFiles(ext) {
     });
     check('canvas layers pin their headers, let clicks through, undo and import',
       g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
+
+    // Saved views, jump to frame, present mode (P132)
+    const g5 = await page.evaluate(() => {
+      createFrame(0, 0, 400, 300, 'F1'); createFrame(0, 600, 400, 300, 'F2');
+      db.zoom = 1; db.panX = 0; db.panY = 0; updateTransform();
+      saveView(4, 'Home');
+      db.panX = -2000; updateTransform();
+      goView(4);
+      const back = Math.abs(db.panX) < 1 || !!viewAnim; // animation may still be running
+      enterPresent();
+      const first = document.getElementById('pb-text').textContent;
+      presentStep(1);
+      const second = document.getElementById('pb-text').textContent;
+      exitPresent();
+      return { back, first, second, off: !document.body.classList.contains('presenting'), slot: views()[0].slot };
+    });
+    check('canvas saved views and present mode step through frames',
+      g5.back && /^1 \/ 2 · F1/.test(g5.first) && /^2 \/ 2 · F2/.test(g5.second) && g5.off && g5.slot === 4, JSON.stringify(g5));
     await page.close();
   }
 

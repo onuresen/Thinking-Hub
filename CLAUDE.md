@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2481,6 +2481,33 @@ User: plain left-drag panned; they wanted a mouse box-select instead. Also wante
 - **Decision:** Edge grips only while a layer is active. **Why:** full-length grips always on would catch box-selects that start near a band edge. **Confidence:** high.
 
 **Verified** with realistic mouse timing on the user's real R&D board (2026-09-30 export): 16 mouse-model checks (box select, click clears, Shift adds, right/middle/Space pan, no menu after a pan in both event orders, right-click menus, Connect mode, double-click note, node drag) and 27 layer checks (create, centre, pinned headers, full-height band, move/resize/undo, select nodes, color, fit around selection, box select through a band, delete/undo, rename, reload, per board, duplicate, export/import with hostile values, Markdown). Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 132 — Canvas Hub: jump list, saved views, present mode~~ ✓ Done `[group: canvas-structure]`
+Step 3 of the big-board navigation plan (P131 was steps 1–2).
+
+- **Jump ▾** (bottom bar): Present, Save this view…, Saved views, Frames, Columns, Rows.
+  - Frame: fits it to the screen. Layer: centres it and keeps the other axis.
+- **Saved views:** `board.views = [{slot 1–9, name, cx, cy, zoom}]`.
+  - Shift+1–9 saves, 1–9 jumps. ✕ in the Jump menu deletes.
+  - Keys are ignored while typing.
+- **Present:** frames in reading order; with no frames, saved views.
+  - →/Space/Enter next, ←/Backspace back, Home/End, Esc exits and returns to where you were.
+  - Toolbars, board bar, minimap and help hide. Delete/Backspace never delete while presenting.
+- Camera moves animate (380 ms, ease-out). They are instant under reduced motion. A timer lands the move even if the browser pauses animation frames.
+- Duplicate board and board file export/import carry views (cleaned on import).
+- `sw.js` cache `v11` → `v12`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Store a view as its centre point + zoom, not pan. **Why:** the same view then looks right on any window size. **Confidence:** high.
+- **Decision:** Views are camera state, not in undo. **Why:** undo is for content (P124). Undoing a camera jump would surprise. **Confidence:** high.
+- **Decision:** Digits 1–9 without Ctrl. **Why:** Ctrl+1–9 switches browser tabs and can't be caught reliably. **Confidence:** high.
+- **Decision:** Present uses frames first, views as fallback. **Why:** frames are already the named sections of a board. No separate slide list to maintain. **Revisit when:** someone wants a custom order across frames and views. **Confidence:** med.
+
+**Verified** with realistic input on the user's real boards: 22 checks (save/jump, empty slot, typing guard, resolution independence, Jump list contents, frame fit, layer centre, named save, delete, present open/next/stop/back, Delete blocked, Esc returns, views fallback, reload, per board, export/import cleaning, duplicate). The same 22 pass with animation on. P131's 43 checks still pass. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
