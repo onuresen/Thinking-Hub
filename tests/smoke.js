@@ -365,6 +365,65 @@ function appFiles(ext) {
       return { riskName, kind: note.kind, dec: dec.title, sum: dec.summary, sent, rel: link.relType, file: json.name,
         types: json.data.nodes.map(n => n.type).join(), back: db.nodes.map(n => n.kind).sort().join(), backRel: db.edges.map(e => e.relType).join() };
     });
+    // Templates, system map, graph pull (P136)
+    const g9 = await page.evaluate(() => {
+      const n0 = fullState.boards.length;
+      window.prompt = () => 'T';
+      newBoardFrom({ builtin: BUILTIN_TEMPLATES.find(t => t.id === 'dependency') });
+      const cols = db.lanes.filter(l => l.axis === 'col').length, readMe = db.nodes.some(n => n.kind === 'frame' && n.text === 'Read me');
+      createNode(0, 0); db.nodes[db.nodes.length - 1].text = 'note';
+      saveBoardAsTemplate();
+      const tpl = fullState.templates.find(t => t.name === 'T');
+      return { boards: fullState.boards.length - n0, cols, readMe, view: views()[0] && views()[0].name, tpl: tpl && tpl.nodes.length };
+    });
+    check('canvas creates boards from templates and saves your own',
+      g9.boards === 1 && g9.cols === 5 && g9.readMe && g9.view === 'Whole map' && g9.tpl === 3, JSON.stringify(g9));
+
+    // Speaker notes, slides zip, interactive HTML (P137)
+    const g10 = await page.evaluate(async () => {
+      db.nodes = []; db.edges = []; renderAll();
+      createNode(0, 0); createNode(260, 0);
+      const [a, b] = db.nodes;
+      a.text = 'Alpha'; b.text = 'Beta';
+      createEdge(a.id, b.id);
+      wrapInFrame([a.id, b.id]);
+      const f = db.nodes.find(n => n.kind === 'frame');
+      openNotesModal(f.id); document.getElementById('nm-text').value = 'Say <b>this</b>'; saveNotesModal();
+      enterPresent();
+      const shown = document.getElementById('present-notes').textContent;
+      exitPresent();
+      const zip = makeZip([{ name: 'a.txt', data: new TextEncoder().encode('hi') }]);
+      const sig = new Uint8Array(await zip.slice(0, 4).arrayBuffer()).join();
+      let html = '';
+      const orig = downloadBlob; downloadBlob = async bl => { html = await bl.text(); };
+      window.confirm = () => true;
+      await exportInteractiveHtml();
+      downloadBlob = orig;
+      await new Promise(r => setTimeout(r, 50));
+      const back = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', version: 1, board: { name: 'n', nodes: db.nodes, edges: db.edges } }), 'n.json');
+      return { notes: f.notes, shown, sig, csp: /default-src 'none'/.test(html), viewer: html.includes('thxViewer') || html.includes('thx-stage'),
+        hasNotes: html.includes('Say <b>') === false && html.includes('Say \\u003cb>this'), kept: back.board.nodes.some(n => n.notes === 'Say <b>this</b>') };
+    });
+    check('canvas keeps speaker notes, zips slides and exports an interactive HTML file',
+      g10.notes === 'Say <b>this</b>' && g10.shown === 'Say <b>this</b>' && g10.sig === '80,75,3,4' && g10.csp && g10.viewer && g10.hasNotes && g10.kept,
+      JSON.stringify(g10));
+
+    // Flow layout + outline/Mermaid paste (P135)
+    const g8 = await page.evaluate(() => {
+      db.nodes = []; db.edges = []; renderAll();
+      openOutlineModal('flowchart LR\n A[One] --> B[Two] -->|needs| C[Three]\n subgraph S [Box]\n  D[Four]\n end');
+      createFromOutline();
+      const t = s => db.nodes.find(n => n.kind !== 'frame' && n.text === s);
+      const A = t('One'), B = t('Two'), C = t('Three');
+      const before = A.x;
+      A.x = 900; renderAll(); selectedIds = new Set();
+      arrangeFlow('lr');
+      return { n: db.nodes.length, frames: db.nodes.filter(n => n.kind === 'frame').length,
+        rel: db.edges.find(e => e.from === B.id).relType, order: A.x < B.x && C.x < B.x, reset: A.x === before };
+    });
+    check('canvas pastes Mermaid into cards and arranges them along their lines',
+      g8.n === 5 && g8.frames === 1 && g8.rel === 'depends-on' && g8.order, JSON.stringify(g8));
+
     check('canvas links more hubs, turns notes into items, sends lines, round-trips .canvas',
       g7.riskName === 'Vendor exits' && g7.kind === 'decision' && g7.dec === 'Pick one vendor' && g7.sum === 'Cheaper to support' &&
       g7.sent === 'added' && g7.rel === 'blocks' && /\.canvas$/.test(g7.file) && g7.types === 'text,text' &&

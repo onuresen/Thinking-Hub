@@ -7,6 +7,20 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Canvas Hub speaker notes: right-click a frame → Add speaker notes. They show under the frame in Present mode. N hides them. Not included in PNG exports.
+- Canvas Hub "Export frames as slides": one 2× PNG per frame, in Present order, in one .zip with a `slides.md` of titles and notes.
+- Canvas Hub "Export interactive HTML": one self-contained file with zoom, pan, clickable cards with connections, and frame stepping. It makes no network requests. Speaker notes are included only if you say yes.
+- Spatial Canvas: board templates. "+" offers five built-in layouts
+  (Wardley, Capability, Dependency, Enterprise, R&D Transformation) and
+  your own templates saved from any board. A System map board is built
+  from the hub (goals → projects → tools, one row per project group) and
+  can be rebuilt. Dependency Graph links can be pulled onto a board.
+
+- Spatial Canvas: Expand a project card into its open tasks, goals,
+  decisions, open risks, meetings and stakeholders, each joined by a line.
+  Paste a Markdown outline or a Mermaid flowchart to create cards and lines.
+  Layout → Flow arranges cards along their lines (left to right or top down).
+
 - Spatial Canvas: live cards for tasks, decisions, risks, meetings and
   stakeholders, next to projects, goals and tools. Right-click a note to make
   it a real task, decision or risk. Project Hub and Tool Portfolio show which
