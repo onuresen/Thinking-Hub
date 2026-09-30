@@ -7,6 +7,12 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Spatial Canvas: board templates. "+" offers five built-in layouts
+  (Wardley, Capability, Dependency, Enterprise, R&D Transformation) and
+  your own templates saved from any board. A System map board is built
+  from the hub (goals → projects → tools, one row per project group) and
+  can be rebuilt. Dependency Graph links can be pulled onto a board.
+
 - Spatial Canvas: Expand a project card into its open tasks, goals,
   decisions, open risks, meetings and stakeholders, each joined by a line.
   Paste a Markdown outline or a Mermaid flowchart to create cards and lines.

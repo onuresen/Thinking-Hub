@@ -365,6 +365,20 @@ function appFiles(ext) {
       return { riskName, kind: note.kind, dec: dec.title, sum: dec.summary, sent, rel: link.relType, file: json.name,
         types: json.data.nodes.map(n => n.type).join(), back: db.nodes.map(n => n.kind).sort().join(), backRel: db.edges.map(e => e.relType).join() };
     });
+    // Templates, system map, graph pull (P136)
+    const g9 = await page.evaluate(() => {
+      const n0 = fullState.boards.length;
+      window.prompt = () => 'T';
+      newBoardFrom({ builtin: BUILTIN_TEMPLATES.find(t => t.id === 'dependency') });
+      const cols = db.lanes.filter(l => l.axis === 'col').length, readMe = db.nodes.some(n => n.kind === 'frame' && n.text === 'Read me');
+      createNode(0, 0); db.nodes[db.nodes.length - 1].text = 'note';
+      saveBoardAsTemplate();
+      const tpl = fullState.templates.find(t => t.name === 'T');
+      return { boards: fullState.boards.length - n0, cols, readMe, view: views()[0] && views()[0].name, tpl: tpl && tpl.nodes.length };
+    });
+    check('canvas creates boards from templates and saves your own',
+      g9.boards === 1 && g9.cols === 5 && g9.readMe && g9.view === 'Whole map' && g9.tpl === 3, JSON.stringify(g9));
+
     // Flow layout + outline/Mermaid paste (P135)
     const g8 = await page.evaluate(() => {
       db.nodes = []; db.edges = []; renderAll();

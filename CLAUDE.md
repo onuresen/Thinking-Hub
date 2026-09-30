@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133). Live cards also for tasks, decisions, risks, meetings, stakeholders; note → real task/decision/risk; lines → Dependency Graph links; Obsidian `.canvas` export/import (P134). Expand a project card into its world, paste Markdown/Mermaid → cards, Layout → Flow along lines (P135) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133). Live cards also for tasks, decisions, risks, meetings, stakeholders; note → real task/decision/risk; lines → Dependency Graph links; Obsidian `.canvas` export/import (P134). Expand a project card into its world, paste Markdown/Mermaid → cards, Layout → Flow along lines (P135). "+" menu: blank, 5 built-in templates, your saved templates (`canvas-v1.templates`); System map board (`board.systemMap`) built from the hub; pull Dependency Graph links onto a board (P136) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2607,6 +2607,36 @@ Group A of the second upgrade shortlist ("build boards faster"). The user skippe
 - **Decision:** Mermaid arrows without `blocks`/`needs` become `relates` lines. **Why:** same rule as the Obsidian import (P134); a plain arrow is not a dependency. **Confidence:** high.
 
 **Verified** with realistic mouse timing on the user's 2026-09-30 data: 36 checks (flow order, `depends-on` direction, loose cards, cycles, no overlaps, undo; expand contents and exclusions, lines, no duplicates, re-expand, undo, the real CDI project with 37 cards and no overlaps; dialog focus and count, keys stay in the text box, outline structure, bold, HTML shown as text, Mermaid shapes/quotes/`&`/labels/subgraph frame, paste event, Esc, paste inside a note ignored). Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 136 — Canvas Hub: templates, System map, pull graph links~~ ✓ Done `[group: canvas-structure]`
+Group C of the second upgrade shortlist.
+
+- **New board menu ("+"):** Blank board · System map · 5 built-in templates · your templates (✕ deletes).
+  - Built-ins follow the user's framework boards: Wardley, Capability, Dependency, Enterprise, R&D Transformation.
+  - Each has layers for its axes (R&D uses frames for pathways), a "Read me" frame with a guide note, and view 1 = Whole map.
+  - The Read me sits in the top-left corner (x < 0, y < 0), so pinned column and row names never cover it.
+- **Save board as template…** (board menu): keeps frames, notes, lines between them, layers and saved views. Live cards are left out. Stored in `canvas-v1.templates`, so Full Backup carries them. Same name asks to replace.
+- **System map** (from "+"): one board with `board.systemMap = true`.
+  - Columns: Goals · Projects · Tools. One row layer per project group, in Project Hub's group order; "No group" last.
+  - Projects: not done/archived. Goals: objectives linked to them. Tools: not retired, enabled on them (a tool sits in the row of its first project).
+  - Lines: goal → project, project → tool.
+  - Opens on the first rows at a readable size; view 1 = whole map.
+  - Building again reuses the board: live cards and layers are rebuilt; notes and frames you added stay. One undo step. Board menu shows "Rebuild system map" on that board.
+- **Pull lines from Dependency Graph** (board menu): every `hub-links-v1` link between two live cards on the board becomes a line (type and note kept). Existing lines are not doubled. The reverse of Send (P134).
+- The old name-prompt `createBoard()` now calls `newBoardFrom(null)`.
+- `sw.js` cache `v15` → `v16`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Templates leave live cards out. **Why:** live cards belong to one map; a template is structure (axes, frames, guide notes). **Confidence:** high.
+- **Decision:** Rebuild replaces all live cards on the System map, keeps notes and frames. **Why:** the map must match current data; hand notes are the user's own thinking. Expanded tasks are rebuilt away; Expand again. **Alternative:** merge and keep positions — rejected as fragile. **Confidence:** med.
+- **Decision:** System map shows goals, projects and tools only, no tasks. **Why:** tasks would add hundreds of cards; Expand (P135) shows a project's tasks on demand. **Confidence:** high.
+- **Decision:** One System map per hub. **Why:** a second build should refresh, not multiply boards. **Confidence:** high.
+
+**Verified** on the user's 2026-09-30 data (after layers): 27 checks (menu contents, template board name/layers/Read me/view/fit, unique names, cancel, save template from the real Dependency Map (12 kept, 16 live left out), board from own template with fresh ids, reload, delete; System map 39 projects / 8 goals / 26 tools in 8 group rows, every card in its column and row, no overlaps, rebuild reuses the board and keeps a hand note, undo, Rebuild item only on that board; pull adds typed lines with notes, second pull adds none). Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 

@@ -1175,11 +1175,13 @@
 
   <div class="board-bar">
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
-    <button class="bb-btn" onclick="createBoard()" title="New board">+</button>
+    <button class="bb-btn" id="new-board-btn" onclick="toggleNewBoardMenu()" title="New board, from a template or your hub">+</button>
     <button class="bb-btn" onclick="renameActiveBoard()" title="Rename board">✎</button>
     <button class="bb-btn" id="board-menu-btn" onclick="toggleBoardMenu()" title="Duplicate, export, import">⋯</button>
     <button class="bb-btn" onclick="deleteActiveBoard()" title="Delete board">✕</button>
   </div>
+  <!-- P136: new board — blank, template, or system map -->
+  <div class="quick-menu jump-menu" id="new-board-menu"></div>
   <!-- Board menu (P130): duplicate / export / import one board -->
   <div class="quick-menu" id="board-menu">
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); duplicateBoard()"><span>⧉</span><span>Duplicate board</span></button>
@@ -1188,6 +1190,10 @@
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportObsidianCanvas()"><span>⇩</span><span>Export Obsidian Canvas (.canvas)</span></button>
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); pullGraphLinks()"><span>⛓</span><span>Pull lines from Dependency Graph</span></button>
+    <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); saveBoardAsTemplate()"><span>▦</span><span>Save board as template…</span></button>
+    <button class="qm-item" id="bm-rebuild" onmousedown="event.stopPropagation(); closeBoardMenu(); buildSystemMap()"><span>↻</span><span>Rebuild system map</span></button>
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); openOutlineModal('')"><span>📋</span><span>Paste outline / Mermaid…</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); document.getElementById('board-import-input').click()"><span>⇧</span><span>Import board or Obsidian .canvas…</span></button>
@@ -1672,19 +1678,7 @@
       updateUndoRedoButtons();
     }
 
-    function createBoard() {
-      const name = prompt('New board name:', 'New Board');
-      if (name === null) return;
-      const board = newBoard(name.trim() || 'Untitled board');
-      fullState.boards.push(board);
-      fullState.activeBoardId = board.id;
-      db = board;
-      selectedNodeId = null; selectedIds = new Set();
-      pulseSave();
-      renderAll(); updateTransform(); renderBoardBar();
-      updateUndoRedoButtons();
-      if (window.showToast) showToast('Board created');
-    }
+    function createBoard() { newBoardFrom(null); }
 
     function renameActiveBoard() {
       const name = prompt('Rename board:', db.name);
@@ -1929,6 +1923,7 @@
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('find-box').style.display === 'flex') { closeFind(); return; }
         if (document.getElementById('board-menu').style.display === 'flex') { closeBoardMenu(); return; }
+        if (document.getElementById('new-board-menu').style.display === 'flex') { closeNewBoardMenu(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         if (focusId) { clearFocus(); return; }
         if (activeLaneId) { setActiveLane(null); return; }
@@ -2304,6 +2299,7 @@
       if (!e.target.closest('#node-menu')) closeNodeMenu();
       if (!e.target.closest('#find-box')) closeFind();
       if (!e.target.closest('#board-menu') && !e.target.closest('#board-menu-btn')) closeBoardMenu();
+      if (!e.target.closest('#new-board-menu') && !e.target.closest('#new-board-btn')) closeNewBoardMenu();
       if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
       if (!e.target.closest('#jump-menu') && !e.target.closest('#jump-btn')) closeJumpMenu();
     }, true);
@@ -2823,6 +2819,7 @@
     function toggleBoardMenu() {
       const menu = document.getElementById('board-menu');
       if (menu.style.display === 'flex') { closeBoardMenu(); return; }
+      document.getElementById('bm-rebuild').style.display = db.systemMap ? '' : 'none';
       const r = document.getElementById('board-menu-btn').getBoundingClientRect();
       menu.style.left = r.left + 'px';
       menu.style.top = (r.bottom + 6) + 'px';
@@ -4873,6 +4870,300 @@
       e.preventDefault();
       openOutlineModal(text, lastPointerCanvas());
     });
+
+    // ── Templates, system map, graph pull (P136) ─────────────
+    // Built-in layouts follow the framework boards: layers for the axes,
+    // a "Read me" frame, and view 1 = whole map. Your own templates live in
+    // canvas-v1.templates, so Full Backup carries them.
+    const TPL_COL_W = 280, TPL_COL_STEP = 300, TPL_ROW_H = 240, TPL_ROW_STEP = 260;
+    const BUILTIN_TEMPLATES = [
+      { id: 'wardley', name: 'Wardley Map',
+        read: ['Wardley Map — value chain', 'Up = visible to the user. Down = hidden plumbing.', 'Left to right = how mature a part is.', 'Place each part. Then draw what needs what.'],
+        cols: ['Genesis — new, uncertain', 'Custom-built — we build it', 'Product — bought or rented', 'Commodity — standard, cheap'],
+        rows: ['↑ Visible to the user', 'Hidden ↓'] },
+      { id: 'capability', name: 'Capability Map',
+        read: ['Capability Map — what we must be able to do', 'Columns = capability areas. Rename them.', 'Top row: the capability. Bottom row: projects that serve it.', 'A gap = a capability no project serves.'],
+        cols: ['Area A', 'Area B', 'Area C', 'Area D'],
+        rows: ['Capabilities', 'Served by projects'] },
+      { id: 'dependency', name: 'Dependency Map',
+        read: ['Dependency Map — what needs what', 'Arrow points to what a part needs.', 'Left = outside our control. Right = what we deliver.', 'Use "blocks" and "needs" lines. Send them to the Dependency Graph.'],
+        cols: ['Blockers', 'Inputs & sources', 'Building blocks', 'Products', 'Direction'] },
+      { id: 'enterprise', name: 'Enterprise Map',
+        read: ['Enterprise Map — layers from data to value', 'Bottom = foundation. Top = value.', 'Each layer needs the one below it.'],
+        rows: ['Who', 'L3 Value', 'L2 Learning', 'L1 Information', 'L0 Digital foundation'], cols: [] },
+      { id: 'rd', name: 'R&D Transformation Map',
+        read: ['R&D Transformation Map', 'Read left to right: why → what changes → how → proof → result.', 'One frame per pathway. Add more by duplicating a frame.'],
+        cols: ['Pressures', 'Frictions', 'Capabilities', 'Experiments', 'Tools in the route', 'Evidence & gaps', 'Other ways', 'Outcomes', 'Impact'],
+        frames: ['① Pathway', '② Pathway'] },
+    ];
+
+    function templates() { return Array.isArray(fullState.templates) ? fullState.templates : (fullState.templates = []); }
+
+    // Instant camera fit to a rectangle (no animation), for new boards.
+    function setViewToRect(x, y, w, h, pad) {
+      const vw = viewport.clientWidth || window.innerWidth, vh = viewport.clientHeight || window.innerHeight;
+      db.zoom = Math.min(1, Math.max(0.15, Math.min((vw - pad * 2) / Math.max(w, 1), (vh - pad * 2) / Math.max(h, 1))));
+      db.panX = vw / 2 - (x + w / 2) * db.zoom;
+      db.panY = vh / 2 - (y + h / 2) * db.zoom;
+      updateTransform();
+    }
+
+    // Everything on the board, layers included, as one rectangle.
+    function boardBounds() {
+      const xs = [], ys = [];
+      db.nodes.forEach(n => { const b = nodeBox(n); xs.push(n.x, n.x + b.w); ys.push(n.y, n.y + b.h); });
+      (db.lanes || []).forEach(l => { if (l.axis === 'col') xs.push(l.start, l.start + l.size); else ys.push(l.start, l.start + l.size); });
+      if (!xs.length) xs.push(0, 800);
+      if (!ys.length) ys.push(0, 600);
+      const L = Math.min(...xs), T = Math.min(...ys);
+      return { x: L, y: T, w: Math.max(...xs) - L, h: Math.max(...ys) - T };
+    }
+
+    // Fit the whole board and store it as view 1 "Whole map".
+    function fitAndSaveWholeView() {
+      const r = boardBounds();
+      setViewToRect(r.x, r.y, r.w, r.h, 60);
+      const list = views();
+      const v = Object.assign({ slot: 1, name: 'Whole map' }, currentView());
+      const i = list.findIndex(x => x.slot === 1);
+      if (i >= 0) list[i] = v; else list.unshift(v);
+      list.sort((a, b) => a.slot - b.slot);
+      pulseSave();
+    }
+
+    function buildBuiltinTemplate(t) {
+      const lanes = [], nodes = [];
+      const cols = t.cols || [], rows = t.rows || [], frames = t.frames || [];
+      cols.forEach((label, i) => lanes.push({ axis: 'col', label, start: i * TPL_COL_STEP, size: TPL_COL_W, color: 'c-gray' }));
+      rows.forEach((label, i) => lanes.push({ axis: 'row', label, start: i * TPL_ROW_STEP, size: TPL_ROW_H, color: 'c-gray' }));
+      const width = Math.max(cols.length, 3) * TPL_COL_STEP - (TPL_COL_STEP - TPL_COL_W);
+      frames.forEach((title, i) => nodes.push({ id: newNodeId(), x: -20, y: i * 340, w: width + 40, h: 300, text: title, color: 'c-gray', kind: 'frame' }));
+      // Read me frame in the top-left corner, clear of the pinned column
+      // names (x ≥ 0) and row names (y ≥ 0).
+      const rmX = -700, rmY = -320;
+      nodes.push({ id: newNodeId(), x: rmX, y: rmY, w: 640, h: 240, text: 'Read me', color: 'c-gray', kind: 'frame' });
+      const txt = t.read.map((l, i) => i ? HubUtils.esc(l) : '<b>' + HubUtils.esc(l) + '</b>').join('<br>');
+      nodes.push({ id: newNodeId(), x: rmX + 30, y: rmY + 60, w: 580, text: txt, color: 'c-yellow' });
+      return { nodes, edges: [], lanes };
+    }
+
+    function toggleNewBoardMenu() {
+      const menu = document.getElementById('new-board-menu');
+      if (menu.style.display === 'flex') { closeNewBoardMenu(); return; }
+      closeBoardMenu();
+      menu.innerHTML = '';
+      const add = (icon, label, action, extra) => {
+        const row = document.createElement('div');
+        row.className = 'jm-row';
+        const btn = document.createElement('button');
+        btn.className = 'qm-item';
+        btn.innerHTML = `<span>${icon}</span><span></span>`;
+        btn.lastChild.textContent = label;
+        btn.onmousedown = e => { e.stopPropagation(); closeNewBoardMenu(); action(); };
+        row.appendChild(btn);
+        if (extra) row.appendChild(extra);
+        menu.appendChild(row);
+      };
+      const head = text => { const h = document.createElement('div'); h.className = 'jm-head'; h.textContent = text; menu.appendChild(h); };
+      add('＋', 'Blank board', () => newBoardFrom(null));
+      add('◈', 'System map (from your hub)', () => buildSystemMap());
+      head('Templates');
+      BUILTIN_TEMPLATES.forEach(t => add('▦', t.name, () => newBoardFrom({ builtin: t })));
+      const mine = templates();
+      if (mine.length) {
+        head('Your templates');
+        mine.forEach(t => {
+          const del = document.createElement('button');
+          del.className = 'jm-del';
+          del.textContent = '✕';
+          del.title = 'Delete this template';
+          del.onmousedown = e => {
+            e.stopPropagation();
+            if (!confirm(`Delete the template "${t.name}"? Boards made from it stay.`)) return;
+            fullState.templates = templates().filter(x => x.id !== t.id);
+            pulseSave();
+            closeNewBoardMenu(); toggleNewBoardMenu();
+          };
+          add('▦', t.name, () => newBoardFrom({ user: t }), del);
+        });
+      }
+      const r = document.getElementById('new-board-btn').getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = (r.bottom + 6) + 'px';
+      menu.style.display = 'flex';
+    }
+    function closeNewBoardMenu() {
+      const menu = document.getElementById('new-board-menu');
+      if (menu) menu.style.display = 'none';
+    }
+
+    function newBoardFrom(src) {
+      const suggested = src ? (src.builtin || src.user).name : 'New Board';
+      const name = prompt('New board name:', suggested);
+      if (name === null) return;
+      let nodes = [], edges = [], lanes = [], vws = [];
+      if (src && src.builtin) ({ nodes, edges, lanes } = buildBuiltinTemplate(src.builtin));
+      if (src && src.user) {
+        ({ nodes, edges } = cloneWithNewIds(src.user.nodes || [], src.user.edges || []));
+        vws = cleanViews(src.user.views);
+      }
+      addBoard(name.trim() || suggested, nodes, edges, { lanes: cleanLanes(lanes.length ? lanes : (src && src.user ? src.user.lanes : [])), views: vws });
+      if (src && src.user && vws.length) goView(vws[0].slot);
+      else if (src) fitAndSaveWholeView();
+      if (window.showToast) showToast(src ? `Board created from "${suggested}"` : 'Board created');
+    }
+
+    // Keeps the structure: frames, notes, layers, saved views and lines
+    // between them. Live cards are left out — they belong to one map.
+    function saveBoardAsTemplate() {
+      const name = prompt('Template name:', db.name);
+      if (name === null) return;
+      const clean = (name.trim() || db.name).slice(0, 80);
+      const nodes = JSON.parse(JSON.stringify(db.nodes.filter(n => !isLinkedKind(n.kind))));
+      const keep = new Set(nodes.map(n => n.id));
+      const edges = JSON.parse(JSON.stringify((db.edges || []).filter(e => keep.has(e.from) && keep.has(e.to))));
+      const list = templates();
+      const same = list.findIndex(t => t.name === clean);
+      if (same >= 0 && !confirm(`Replace your template "${clean}"?`)) return;
+      const tpl = { id: same >= 0 ? list[same].id : 'tpl-' + Date.now().toString(36), name: clean, createdAt: new Date().toISOString(),
+        nodes, edges, lanes: JSON.parse(JSON.stringify(db.lanes || [])), views: JSON.parse(JSON.stringify(db.views || [])) };
+      if (same >= 0) list[same] = tpl; else list.push(tpl);
+      pulseSave();
+      const left = db.nodes.length - nodes.length;
+      if (window.showToast) showToast(`Saved template "${clean}"` + (left ? ` · ${plural(left, 'live card')} left out` : ''));
+    }
+
+    // System map: goals → projects → tools, one row per project group.
+    // Rebuilding replaces the live cards and layers; notes and frames you
+    // added stay where they are.
+    const SYS_PARKED = new Set(['done', 'archived']);
+
+    function systemMapData() {
+      let projects = [];
+      try { projects = ((window.HubData ? HubData.getProjects() : []) || []).filter(p => !SYS_PARKED.has(p.status) && !p.archived); } catch {}
+      const pids = new Set(projects.map(p => p.id));
+      const goals = [];
+      try {
+        const g = HubStorage.get('goals-hub-v1') || {};
+        (g.quarters || []).filter(q => !q.archived).forEach(q => (q.objectives || [])
+          .filter(o => pids.has(o.projectId)).forEach(o => goals.push({ id: o.id, label: o.title || '(untitled objective)', projectId: o.projectId })));
+      } catch {}
+      let tools = [];
+      try {
+        const raw = HubStorage.get('tool-portfolio-v1');
+        tools = (Array.isArray(raw) ? raw : []).filter(t => t.status !== 'retired' && (t.projectIds || []).some(id => pids.has(id)))
+          .map(t => ({ id: t.id, label: t.name || '(untitled tool)', projectIds: (t.projectIds || []).filter(id => pids.has(id)) }));
+      } catch {}
+      let order = [];
+      try { order = (HubStorage.get('project-hub-v1') || {}).groupOrder || []; } catch {}
+      const names = [...new Set(projects.map(p => p.group || ''))];
+      names.sort((a, b) => {
+        if (!a) return 1; if (!b) return -1;
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+        return a.localeCompare(b);
+      });
+      return { projects, goals, tools, groups: names };
+    }
+
+    function buildSystemMap() {
+      const d = systemMapData();
+      if (!d.projects.length) { if (window.showToast) showToast('No active projects to map yet'); return; }
+      let board = fullState.boards.find(b => b.systemMap);
+      if (board) {
+        if (board !== db) switchBoard(board.id);
+        if (!confirm('Rebuild the System map with current data?\n\nLive cards and layers are rebuilt. Notes and frames you added stay.')) return;
+        pushHistory();
+        const gone = new Set(db.nodes.filter(n => isLinkedKind(n.kind)).map(n => n.id));
+        db.nodes = db.nodes.filter(n => !gone.has(n.id));
+        db.edges = (db.edges || []).filter(e => !gone.has(e.from) && !gone.has(e.to));
+      } else {
+        board = addBoard('System map', [], [], {});
+        board.systemMap = true;
+      }
+      // Create the cards first so their real heights can be measured.
+      const nodeOf = {};
+      const mk = (kind, tool, item) => {
+        const id = newNodeId();
+        db.nodes.push({ id, x: 0, y: 0, text: '', color: 'c-gray', kind, link: { tool, id: item.id, label: item.label } });
+        return (nodeOf[kind + ':' + item.id] = id);
+      };
+      d.projects.forEach(p => mk('project', 'project-hub', { id: p.id, label: p.name || '(untitled project)' }));
+      d.goals.forEach(g => mk('goal', 'goals-hub', g));
+      d.tools.forEach(t => mk('tool', 'tool-portfolio', t));
+      d.goals.forEach(g => db.edges.push({ id: newEdgeId(), from: nodeOf['goal:' + g.id], to: nodeOf['project:' + g.projectId], relType: 'relates' }));
+      d.tools.forEach(t => t.projectIds.forEach(pid => db.edges.push({ id: newEdgeId(), from: nodeOf['project:' + pid], to: nodeOf['tool:' + t.id], relType: 'relates' })));
+      renderAll();
+      // Rows: one per group. A tool sits in the row of its first project.
+      const cols = { goal: 0, project: TPL_COL_STEP, tool: TPL_COL_STEP * 2 };
+      const toolRow = {};
+      d.tools.forEach(t => {
+        const first = d.groups.find(g => d.projects.some(p => (p.group || '') === g && t.projectIds.includes(p.id)));
+        toolRow[t.id] = first === undefined ? '' : first;
+      });
+      const lanes = [
+        { axis: 'col', label: 'Goals', start: -20, size: TPL_COL_W, color: 'c-yellow' },
+        { axis: 'col', label: 'Projects', start: TPL_COL_STEP - 20, size: TPL_COL_W, color: 'c-blue' },
+        { axis: 'col', label: 'Tools', start: TPL_COL_STEP * 2 - 20, size: TPL_COL_W, color: 'c-green' },
+      ];
+      const box = (kind, id) => nodeBox(db.nodes.find(n => n.id === nodeOf[kind + ':' + id]));
+      let y = 0;
+      d.groups.forEach(g => {
+        const ps = d.projects.filter(p => (p.group || '') === g).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const stack = (items, kind) => {
+          let yy = y + 40;
+          items.forEach(it => { const b = box(kind, it.id); b.n.x = cols[kind]; b.n.y = yy; yy += b.h + 16; });
+          return yy;
+        };
+        const gs = ps.flatMap(p => d.goals.filter(x => x.projectId === p.id));
+        const ts = d.tools.filter(t => toolRow[t.id] === g).sort((a, b) => a.label.localeCompare(b.label));
+        const end = Math.max(stack(gs, 'goal'), stack(ps, 'project'), stack(ts, 'tool'));
+        lanes.push({ axis: 'row', label: g || 'No group', start: y, size: end - y + 24, color: 'c-gray' });
+        y = end + 64;
+      });
+      db.lanes = cleanLanes(lanes);
+      renderAll();
+      fitAndSaveWholeView();
+      // The whole map is tall; open on the first rows at a readable size.
+      const vw = viewport.clientWidth || window.innerWidth, vh = viewport.clientHeight || window.innerHeight;
+      const w = TPL_COL_STEP * 3 + 40;
+      setViewToRect(-40, -60, w, Math.max(400, w * vh / vw), 40);
+      renderBoardBar();
+      pulseSave();
+      if (window.showToast) showToast(`System map: ${plural(d.goals.length, 'goal')}, ${plural(d.projects.length, 'project')}, ${plural(d.tools.length, 'tool')} · right-click a project to Expand it`);
+    }
+
+    // Pull: draw Dependency Graph links that exist between cards on this
+    // board (the reverse of Send, P134). Existing canvas lines are kept.
+    function pullGraphLinks() {
+      const byItem = new Map();
+      db.nodes.forEach(n => {
+        if (!n.link || !isLinkedKind(n.kind)) return;
+        const k = n.link.tool + ':' + n.link.id;
+        if (!byItem.has(k)) byItem.set(k, []);
+        byItem.get(k).push(n.id);
+      });
+      const pair = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+      const have = new Set((db.edges || []).map(e => pair(e.from, e.to)));
+      const add = [];
+      HubLinks.getAll().forEach(l => {
+        const A = byItem.get(l.a.tool + ':' + l.a.itemId), B = byItem.get(l.b.tool + ':' + l.b.itemId);
+        if (!A || !B) return;
+        A.forEach(a => B.forEach(b => {
+          if (a === b || have.has(pair(a, b))) return;
+          have.add(pair(a, b));
+          const e = { id: newEdgeId(), from: a, to: b, relType: KNOWN_REL.has(l.relType) ? l.relType : 'relates' };
+          if (l.note) e.label = String(l.note).slice(0, 60);
+          add.push(e);
+        }));
+      });
+      if (!add.length) { if (window.showToast) showToast('No new Dependency Graph links between cards on this board'); return; }
+      pushHistory();
+      db.edges = (db.edges || []).concat(add);
+      renderEdges(); renderMinimap();
+      pulseSave();
+      if (window.showToast) showToast(`Drew ${plural(add.length, 'line')} from the Dependency Graph`);
+    }
 
     // Zoom and pan so every node on the board is in view.
     function fitToScreen() {
