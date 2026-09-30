@@ -258,6 +258,39 @@ function appFiles(ext) {
     });
     check('canvas node menu, focus mode and find work',
       g1.menu >= 4 && g1.dimmed.join() === 'c' && g1.dup && g1.found.join() === 'b', JSON.stringify(g1));
+
+    // Frames, line labels, fade parked (P129)
+    const g2 = await page.evaluate(() => {
+      const fid = createFrame(50, 50, 700, 600, 'Zone');
+      const inside = frameContents(db.nodes.find(n => n.id === fid)).map(n => n.id).sort().join();
+      const passThrough = getComputedStyle(document.querySelector('.node.frame')).pointerEvents;
+      const e = db.edges[0]; e.label = 'needs'; renderEdges();
+      const drawn = [...document.querySelectorAll('#edges-svg text')].some(t => t.textContent === 'needs');
+      openFind();
+      const typing = isTyping(); closeFind();
+      undo();
+      return { inside, passThrough, drawn, typing };
+    });
+    check('canvas frames hold their contents, lines show labels, typing guard works',
+      g2.inside === 'a,b,c' && g2.passThrough === 'none' && g2.drawn && g2.typing, JSON.stringify(g2));
+
+    // Copy/paste, duplicate board, board file import with cleaning (P130)
+    const g3 = await page.evaluate(() => {
+      const before = fullState.boards.length;
+      selectedIds = new Set(['a', 'b']); selectedNodeId = 'b';
+      copySelection(false);
+      const copied = canvasClipboard.nodes.length + '/' + canvasClipboard.edges.length;
+      duplicateBoard();
+      const dupOk = fullState.boards.length === before + 1 && db.nodes.every(n => !['a', 'b', 'c'].includes(n.id));
+      const n0 = db.nodes.length; pasteClipboard({ x: 0, y: 0 }); const pasted = db.nodes.length - n0;
+      const r = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', board: { name: 'X',
+        nodes: [{ id: 'z', x: 0, y: 0, text: '<img src=x onerror="window.__bad=1">ok<b onclick="x">b</b>' }], edges: [] } }));
+      const clean = db.nodes[0].text;
+      return { copied, dupOk, pasted, imported: r.nodes, clean, bad: !!window.__bad };
+    });
+    check('canvas copy/paste, duplicate board and safe board import work',
+      g3.copied === '2/1' && g3.dupOk && g3.pasted === 2 && g3.imported === 1 && g3.clean === 'ok<b>b</b>' && !g3.bad,
+      JSON.stringify(g3));
     await page.close();
   }
 

@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2386,7 +2386,67 @@ User asked for canvas improvements now that boards are in real use. Group 1 of a
 
 **Verified** on the user's real R&D boards with realistic mouse timing: 26 checks (menu items per kind, open/double-click navigation, focus counts and exits, F key, duplicate + undo, selection duplicate with lines, color, delete, find ranking, cross-board jump, Connect from the menu). Full smoke + flows + vault-bridge green.
 
-**Next candidates (not started):** frames/zones, labels on lines, dim by status, duplicate board, copy/paste between boards, single-board export/import.
+**Next candidates:** all done — ~~frames, labels on lines, dim by status~~ (P129), ~~duplicate board, copy/paste, single-board export/import~~ (P130).
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 129 — Canvas Hub: frames, labels on lines, fade parked~~ ✓ Done `[group: canvas-structure]`
+Group 2 of the canvas shortlist. Made for the framework boards.
+
+- **Frames:** a node with `kind: 'frame'`. A labelled area drawn behind everything.
+  - Right-click empty canvas → **Frame**. Or right-click a selection → **Wrap in frame**.
+  - Drag the title to move the frame and everything inside it.
+  - Double-click the title to rename. Right-click it: Rename, Select contents, Color, Delete frame (keeps contents).
+  - The frame body lets clicks through. Double-click, pan and Shift+drag still work inside a frame.
+  - "Inside" means a node's centre is in the frame, or a smaller frame fits fully inside.
+  - Layout tools and Focus mode ignore frames. Marquee picks a frame only when fully inside the box.
+  - Drawn under the lines, largest at the back. Minimap shows frames as outlines.
+- **Labels on connections:** `edge.label`. Click a line: a label box sits at the top of the popover, already focused.
+  - Saved when the popover closes, however it closes. Esc reverts.
+  - Drawn at the line's midpoint. Click the label to edit.
+- **Fade parked items:** Layout menu checkbox. Fades on-hold/done/archived projects and retired tools.
+  - Status is read live. Saved as `canvas-v1.dimParked`.
+- **Bug fixed (from P128):** Space and Backspace/Delete fired canvas shortcuts while typing in the Find box. Backspace could delete the selected node. New `isTyping()` guard covers inputs, selects and editable text.
+- Find and label boxes now focus at once, not after a delay. Fast typing could land before focus.
+- `sw.js` cache `v8` → `v9`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Frames are nodes (`kind: 'frame'`), not a separate array. **Why:** undo, save, backup, Find, delete and selection work with no new plumbing. **Alternative:** `db.frames`. Rejected; every one of those paths would need a second branch. **Confidence:** high.
+- **Decision:** Only the title and resize handle take the mouse. **Why:** a frame covers a large area. If its body caught clicks, you could no longer add notes, pan or box-select inside it. **Confidence:** high.
+- **Decision:** Contents are worked out when the drag starts, from position. No stored membership. **Why:** move a node out of a frame and it simply stops belonging. Nothing to keep in sync. **Confidence:** high.
+- **Decision:** "Parked" = project on hold, done or archived; tool retired. Maintenance is not parked. **Why:** maintenance projects are still running, just lightly. **Confidence:** med.
+
+**Verified** on the user's real Dependency Map board with realistic mouse timing: 26 checks (frame create, click-through, rename, wrap, drag with contents, undo, select contents, delete keeps contents, tidy ignores frames, label add/draw/click/undo, typing guards, fade parked matches live status and persists, Connect still works). Group 1's 26 checks still pass. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 130 — Canvas Hub: copy/paste, duplicate board, board export/import~~ ✓ Done `[group: canvas-structure]`
+Group 3 of the canvas shortlist. Removes the need to edit a Full Backup to hand over a board.
+
+- **Copy / cut / paste:** Ctrl+C, Ctrl+X, Ctrl+V. Right-click a node → Copy. Right-click empty canvas → "Paste N here".
+  - The clipboard lives in memory, so it survives a board switch.
+  - Paste lands under the pointer; otherwise offset 30px per paste. Lines between copied nodes come along.
+  - Copying a frame copies what is inside it.
+  - Pasted items get new ids. Linked cards keep their live link.
+- **Board menu (⋯ next to the board picker):**
+  - Duplicate board → "<name> (copy)", new ids throughout, same view.
+  - Export board file → `canvas-<name>-<date>.json`, format `thinking-hub-canvas-board` v1.
+  - Export as Markdown → one section per frame (node goes under the smallest frame holding it), "Not in a frame", then Connections with blocks/needs and labels.
+  - Import board file → always a new board with a unique name and fresh ids. Toast says how many linked items don't exist here.
+- **Import is treated as untrusted:** note HTML keeps only simple formatting tags, every attribute is removed, scripts/styles/iframes are dropped. Unknown kinds, colors and line types fall back to defaults. Board names and labels are rendered as text.
+- `sw.js` cache `v9` → `v10`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Imports always create a new board, never merge into the open one. **Why:** a merge can't be undone cleanly and could mix two maps. Deleting an unwanted board is one click. **Confidence:** high.
+- **Decision:** Clean note HTML on import with an allowlist. **Why:** board files are meant to be shared, and notes render as HTML. A shared file must not be able to run code. Full Backup import is trusted-self and unchanged. **Confidence:** high.
+- **Decision:** In-memory clipboard, not the system clipboard. **Why:** the system clipboard needs permissions and would mix canvas data with text. Copying between boards in one session is the real use. **Revisit when:** the user wants to paste between two browser tabs. **Confidence:** med.
+- **Decision:** Markdown, not Mermaid. **Why:** Markdown reads well in the vault as-is. Mermaid of a 60-node board is unreadable. **Confidence:** med.
+
+**Verified** on the user's real boards with realistic mouse timing: 23 checks (duplicate with fresh ids and original untouched, copy/paste across boards under the pointer, live links kept, undo, Paste here, frame copy includes contents, cut, Ctrl+C in Find box stays text, export/import round-trip with unique name and fresh ids, hostile file: no script runs and HTML is cleaned, fallbacks, missing-link count, non-board file refused, Markdown grouping and connections). Groups 1–2 (52 checks) still pass. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
 

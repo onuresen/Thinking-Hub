@@ -122,6 +122,91 @@
       cursor: default;
     }
 
+    /* ── Frames, line labels, fade parked (P129) ────────────────── */
+    /* A frame is a labelled area. Its body lets clicks through to the
+       canvas; only the title and resize handle take the mouse. */
+    .node.frame,
+    .node.frame.selected,
+    .node.frame.in-selection {
+      background: none;
+      border: 1.5px solid var(--border-gray);
+      box-shadow: none;
+      pointer-events: none;
+      z-index: 0;
+      min-height: 0;
+      outline: none;
+    }
+
+    .node.frame.selected,
+    .node.frame.in-selection {
+      border-color: var(--accent);
+    }
+
+    .frame-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 7px;
+      background: var(--node-gray);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .frame-title {
+      position: absolute;
+      left: 0;
+      bottom: 100%;
+      margin-bottom: 4px;
+      max-width: 100%;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: auto;
+      cursor: grab;
+      outline: none;
+    }
+
+    .frame-title:hover,
+    .node.frame.selected .frame-title {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    .frame-title[contenteditable="true"] {
+      cursor: text;
+      background: var(--surface3);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .node.frame .node-resize-handle {
+      pointer-events: auto;
+      opacity: 0.6;
+    }
+
+    .node.frame.c-yellow { border-color: var(--border-yellow); }
+    .node.frame.c-green { border-color: var(--border-green); }
+    .node.frame.c-blue { border-color: var(--border-blue); }
+    .node.frame.c-red { border-color: var(--border-red); }
+    .node.frame.c-purple { border-color: var(--border-purple); }
+    .node.frame.c-yellow .frame-fill { background: var(--node-yellow); }
+    .node.frame.c-green .frame-fill { background: var(--node-green); }
+    .node.frame.c-blue .frame-fill { background: var(--node-blue); }
+    .node.frame.c-red .frame-fill { background: var(--node-red); }
+    .node.frame.c-purple .frame-fill { background: var(--node-purple); }
+
+    .node.parked {
+      opacity: 0.4;
+    }
+
+    .ep-label {
+      margin-bottom: 6px;
+    }
+
     /* ── Focus mode + find (P128) ──────────────────────────────── */
     .node.dimmed {
       opacity: 0.15;
@@ -844,14 +929,24 @@
 
 <body>
 
-  <div class="help-text" id="help-text">Double-click: note · Right-click: menu · Shift: select · Ctrl+F: find · Space+Drag: pan · Scroll: zoom</div>
+  <div class="help-text" id="help-text">Double-click: note · Right-click: menu · Shift: select · Ctrl+C/V: copy/paste · Ctrl+F: find · Space+Drag: pan · Scroll: zoom</div>
 
   <div class="board-bar">
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
     <button class="bb-btn" onclick="createBoard()" title="New board">+</button>
     <button class="bb-btn" onclick="renameActiveBoard()" title="Rename board">✎</button>
+    <button class="bb-btn" id="board-menu-btn" onclick="toggleBoardMenu()" title="Duplicate, export, import">⋯</button>
     <button class="bb-btn" onclick="deleteActiveBoard()" title="Delete board">✕</button>
   </div>
+  <!-- Board menu (P130): duplicate / export / import one board -->
+  <div class="quick-menu" id="board-menu">
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); duplicateBoard()"><span>⧉</span><span>Duplicate board</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardFile()"><span>⇩</span><span>Export board file (.json)</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardMarkdown()"><span>⇩</span><span>Export as Markdown</span></button>
+    <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); document.getElementById('board-import-input').click()"><span>⇧</span><span>Import board file…</span></button>
+  </div>
+  <input type="file" id="board-import-input" accept=".json,application/json" style="display:none">
 
   <div class="viewport" id="viewport">
     <div id="canvas-layer">
@@ -861,6 +956,7 @@
 
   <!-- Edge type popover: click a connection line to set its relationship type or delete it -->
   <div class="edge-popover" id="edge-popover">
+    <input type="text" class="qm-search ep-label" id="ep-label" maxlength="60" placeholder="Label (optional)" autocomplete="off">
     <div class="ep-types"></div>
     <div class="ep-sep"></div>
     <button class="ep-del" onclick="deleteEdgeFromPopover()">✕ Delete link</button>
@@ -918,6 +1014,7 @@
       <button data-need="0" onclick="fitToScreen()">Fit to screen</button>
     </div>
     <label class="lm-toggle"><input type="checkbox" id="lm-snap" onchange="setSnap(this.checked)"> Snap to grid</label>
+    <label class="lm-toggle" title="On-hold and done projects, retired tools"><input type="checkbox" id="lm-parked" onchange="setDimParked(this.checked)"> Fade parked items</label>
   </div>
   <div class="marquee" id="marquee"></div>
 
@@ -937,7 +1034,7 @@
     const NODE_H = 80; // approximate height for edge anchoring
 
     let focusId = null; // Focus mode (P128)
-    const DEFAULT_HELP = 'Double-click: note · Right-click: menu · Shift: select · Ctrl+F: find · Space+Drag: pan · Scroll: zoom';
+    const DEFAULT_HELP = 'Double-click: note · Right-click: menu · Shift: select · Ctrl+C/V: copy/paste · Ctrl+F: find · Space+Drag: pan · Scroll: zoom';
 
     const COLORS = [
       { id: 'c-gray', dot: '#666' },
@@ -960,7 +1057,7 @@
       { id: 'tool', icon: '🛠', title: 'Tool' },
       { id: 'rd', icon: '🧪', title: 'R&D bet' },
     ];
-    const KIND_ICON = { goal: '🎯', project: '📌', tool: '🛠', rd: '🧪' };
+    const KIND_ICON = { goal: '🎯', project: '📌', tool: '🛠', rd: '🧪', frame: '▭' };
 
     function statusLabelLocal(s) {
       return { active: 'Active', planning: 'Planning', maintenance: 'Maintenance', onhold: 'On Hold', done: 'Done' }[s] || s || '';
@@ -1292,6 +1389,10 @@
       viewport.classList.add('panning');
     });
 
+    let lastMouse = null; // last pointer position over the canvas, for paste
+    viewport.addEventListener('mousemove', e => { lastMouse = { x: e.clientX, y: e.clientY }; });
+    viewport.addEventListener('mouseleave', () => { lastMouse = null; });
+
     window.addEventListener('mousemove', e => {
       if (isPanning) {
         db.panX = e.clientX - startPanX;
@@ -1372,6 +1473,14 @@
 
     // ── Keyboard ─────────────────────────────────────────────
 
+    // True while the user types in any input, textarea, select or editable
+    // text — canvas shortcuts (Space, Delete, F) must not fire then.
+    function isTyping() {
+      const ae = document.activeElement;
+      return !!ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' ||
+        ae.tagName === 'SELECT' || ae.isContentEditable);
+    }
+
     document.addEventListener('keydown', e => {
       const mod = e.ctrlKey || e.metaKey;
       if (mod && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
@@ -1383,7 +1492,8 @@
         // through to canvas-level undo instead of silently doing nothing.
         const ae = document.activeElement;
         const isTextEditing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' ||
-          ae.tagName === 'SELECT' || (ae.classList.contains('node-body') && textEditDirty));
+          ae.tagName === 'SELECT' || (ae.classList.contains('node-body') && textEditDirty) ||
+          ae.classList.contains('frame-title'));
         if (!isTextEditing) {
           e.preventDefault();
           const isRedo = (e.key === 'y' || e.key === 'Y') || ((e.key === 'z' || e.key === 'Z') && e.shiftKey);
@@ -1391,7 +1501,7 @@
           return;
         }
       }
-      if (e.code === 'Space' && document.activeElement.tagName !== 'DIV') {
+      if (e.code === 'Space' && !isTyping()) {
         e.preventDefault();
         spacePressed = true;
         if (!connectMode) viewport.style.cursor = 'grab';
@@ -1403,20 +1513,31 @@
         if (document.getElementById('layout-menu').style.display === 'flex') { closeLayoutMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('find-box').style.display === 'flex') { closeFind(); return; }
+        if (document.getElementById('board-menu').style.display === 'flex') { closeBoardMenu(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         if (focusId) { clearFocus(); return; }
         selectNode(null);
       }
-      if ((e.key === 'Backspace' || e.key === 'Delete') &&
-        selectedIds.size && document.activeElement.tagName !== 'DIV') {
+      if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIds.size && !isTyping()) {
         deleteNodes([...selectedIds]);
+      }
+      if (mod && !isTyping() && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X') && selectedIds.size) {
+        e.preventDefault();
+        copySelection(e.key === 'x' || e.key === 'X');
+        return;
+      }
+      if (mod && !isTyping() && (e.key === 'v' || e.key === 'V') && canvasClipboard) {
+        e.preventDefault();
+        pasteClipboard();
+        return;
       }
       if (mod && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault();
         openFind();
         return;
       }
-      if (!mod && !e.altKey && (e.key === 'f' || e.key === 'F') && selectedNodeId) {
+      if (!mod && !e.altKey && (e.key === 'f' || e.key === 'F') && selectedNodeId &&
+        !isFrame(db.nodes.find(n => n.id === selectedNodeId))) {
         const ae = document.activeElement;
         const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);
         if (!typing) { focusId === selectedNodeId ? clearFocus() : setFocus(selectedNodeId); return; }
@@ -1594,6 +1715,29 @@
         });
         g.appendChild(hit);
 
+        if (edge.label) {
+          const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          tx.setAttribute('x', (x1 + x2) / 2);
+          tx.setAttribute('y', (y1 + y2) / 2);
+          tx.setAttribute('text-anchor', 'middle');
+          tx.setAttribute('dominant-baseline', 'middle');
+          tx.setAttribute('class', 'edge-label');
+          tx.style.fill = 'var(--text)';
+          tx.style.stroke = 'var(--bg)';
+          tx.style.strokeWidth = '4px';
+          tx.style.paintOrder = 'stroke';
+          tx.style.fontFamily = 'var(--font-body)';
+          tx.style.fontSize = '12px';
+          tx.style.cursor = 'pointer';
+          tx.style.pointerEvents = 'all';
+          tx.textContent = edge.label;
+          tx.addEventListener('click', e => {
+            e.stopPropagation();
+            openEdgePopover(edge.id, e.clientX, e.clientY);
+          });
+          g.appendChild(tx);
+        }
+
         svg.appendChild(g);
       });
 
@@ -1627,12 +1771,31 @@
         };
         typesWrap.appendChild(btn);
       });
-      pop.style.left = Math.min(clientX, window.innerWidth - 170) + 'px';
-      pop.style.top = Math.min(clientY, window.innerHeight - 140) + 'px';
+      const label = document.getElementById('ep-label');
+      label.value = edge.label || '';
+      pop.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+      pop.style.top = Math.min(clientY, window.innerHeight - 190) + 'px';
       pop.style.display = 'flex';
+      label.focus();
+    }
+
+    // Saves the label typed in the popover. Runs whenever the popover
+    // closes, however it closes, so nothing typed is lost.
+    function commitEdgeLabel() {
+      const input = document.getElementById('ep-label');
+      if (!_edgePopoverEdgeId || !input) return;
+      const edge = db.edges.find(e => e.id === _edgePopoverEdgeId);
+      if (!edge) return;
+      const v = input.value.trim();
+      if (v === (edge.label || '')) return;
+      pushHistory();
+      if (v) edge.label = v; else delete edge.label;
+      pulseSave();
+      renderEdges();
     }
 
     function closeEdgePopover() {
+      commitEdgeLabel();
       _edgePopoverEdgeId = null;
       const pop = document.getElementById('edge-popover');
       if (pop) pop.style.display = 'none';
@@ -1667,6 +1830,7 @@
       if (!e.target.closest('#add-picker')) closeAddPicker();
       if (!e.target.closest('#node-menu')) closeNodeMenu();
       if (!e.target.closest('#find-box')) closeFind();
+      if (!e.target.closest('#board-menu') && !e.target.closest('#board-menu-btn')) closeBoardMenu();
       if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
     }, true);
 
@@ -1781,6 +1945,7 @@
       { id: 'note', icon: '📝', label: 'Empty note' },
       { id: 'project', icon: '📌', label: 'Project…', picker: true },
       { id: 'goal', icon: '🎯', label: 'Goal…', picker: true },
+      { id: 'frame', icon: '▭', label: 'Frame' },
       { id: 'tool', icon: '🛠', label: 'Tool…', picker: true },
       { id: 'rd', icon: '🧪', label: 'R&D bet' },
     ];
@@ -1789,6 +1954,14 @@
       closeAddPicker();
       const menu = document.getElementById('add-menu');
       menu.innerHTML = '';
+      if (canvasClipboard) {
+        const pb = document.createElement('button');
+        pb.className = 'qm-item';
+        pb.innerHTML = `<span>📋</span><span>Paste ${canvasClipboard.nodes.length} here</span>`;
+        pb.onmousedown = e => { e.stopPropagation(); closeAddMenu(); pasteClipboard({ x: _pendingAddX, y: _pendingAddY }); };
+        menu.appendChild(pb);
+        const sp = document.createElement('div'); sp.className = 'qm-sep'; menu.appendChild(sp);
+      }
       ADD_MENU_ITEMS.forEach(it => {
         const btn = document.createElement('button');
         btn.className = 'qm-item';
@@ -1798,7 +1971,8 @@
           if (it.picker) {
             openAddPicker(it.id, clientX, clientY);
           } else {
-            createNode(_pendingAddX, _pendingAddY, it.id === 'note' ? undefined : it.id);
+            if (it.id === 'frame') createFrame(_pendingAddX, _pendingAddY, 640, 400);
+            else createNode(_pendingAddX, _pendingAddY, it.id === 'note' ? undefined : it.id);
             closeAddMenu();
           }
         };
@@ -1913,6 +2087,41 @@
         menu.appendChild(btn);
       };
       const sep = () => { const d = document.createElement('div'); d.className = 'qm-sep'; menu.appendChild(d); };
+      const colorRow = (ids, current) => {
+        const row = document.createElement('div');
+        row.className = 'qm-colors';
+        COLORS.forEach(c => {
+          const dot = document.createElement('button');
+          dot.style.background = c.dot;
+          dot.title = c.id.replace('c-', '');
+          if (current === c.id) dot.classList.add('active');
+          dot.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); setColorMany(ids, c.id); };
+          row.appendChild(dot);
+        });
+        menu.appendChild(row);
+      };
+      const place = () => {
+        menu.style.display = 'flex';
+        const h = menu.offsetHeight || 220;
+        menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+        menu.style.top = Math.max(8, Math.min(clientY, window.innerHeight - h - 8)) + 'px';
+      };
+
+      if (isFrame(node)) {
+        add('✎', 'Rename frame', () => editFrameTitle(nodeId));
+        add('⬚', 'Select contents', () => {
+          const ids = frameContents(node).map(n => n.id);
+          if (!ids.length) return;
+          selectedIds = new Set(ids);
+          selectedNodeId = ids[ids.length - 1];
+          applySelectionClasses();
+        });
+        colorRow([nodeId], node.color || 'c-gray');
+        sep();
+        add('✕', 'Delete frame (keeps contents)', () => deleteNodes([nodeId]), 'qm-danger');
+        place();
+        return;
+      }
 
       if (node.link && targets.length === 1) {
         add('↗', 'Open in ' + (KIND_TOOL_LABEL[node.kind] || 'source tool'), () => HubLinks.navigateTo(node.link.tool, node.link.id));
@@ -1920,32 +2129,18 @@
       add('◎', focusId === nodeId ? 'Exit focus' : 'Focus on connections', () => focusId === nodeId ? clearFocus() : setFocus(nodeId));
       add('🔗', 'Connect from here', () => armConnectFrom(nodeId));
       add('⧉', 'Duplicate' + many, () => duplicateNodes(targets));
+      add('⎘', 'Copy' + many + ' (Ctrl+C)', () => copyNodes(targets, false));
+      add('▭', 'Wrap in frame' + many, () => wrapInFrame(targets));
 
       // Color: only for kinds whose color is free (Goal/Project/Tool are fixed by kind)
       const colorable = targets.filter(id => {
         const k = db.nodes.find(n => n.id === id)?.kind;
         return k !== 'goal' && k !== 'project' && k !== 'tool';
       });
-      if (colorable.length) {
-        const row = document.createElement('div');
-        row.className = 'qm-colors';
-        COLORS.forEach(c => {
-          const dot = document.createElement('button');
-          dot.style.background = c.dot;
-          dot.title = c.id.replace('c-', '');
-          if (colorable.length === 1 && (node.color || 'c-gray') === c.id) dot.classList.add('active');
-          dot.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); setColorMany(colorable, c.id); };
-          row.appendChild(dot);
-        });
-        menu.appendChild(row);
-      }
+      if (colorable.length) colorRow(colorable, colorable.length === 1 ? (node.color || 'c-gray') : null);
       sep();
       add('✕', 'Delete' + many, () => deleteNodes(targets), 'qm-danger');
-
-      menu.style.display = 'flex';
-      const h = menu.offsetHeight || 220;
-      menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
-      menu.style.top = Math.max(8, Math.min(clientY, window.innerHeight - h - 8)) + 'px';
+      place();
     }
 
     function duplicateNodes(ids) {
@@ -1978,6 +2173,417 @@
       pulseSave();
     }
 
+    // ── Copy / paste, duplicate / export / import boards (P130) ──
+    let canvasClipboard = null; // { nodes, edges } — survives board switches
+    let _pasteCount = 0;
+
+    function newNodeId() { return 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function newEdgeId() { return 'e-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    // Fresh ids for a set of nodes and the lines between them.
+    // Lines to nodes outside the set are dropped.
+    function cloneWithNewIds(nodes, edges) {
+      const map = {};
+      const outNodes = nodes.map(n => {
+        const c = JSON.parse(JSON.stringify(n));
+        c.id = newNodeId(); map[n.id] = c.id;
+        return c;
+      });
+      const outEdges = (edges || []).filter(e => map[e.from] && map[e.to])
+        .map(e => ({ ...JSON.parse(JSON.stringify(e)), id: newEdgeId(), from: map[e.from], to: map[e.to] }));
+      return { nodes: outNodes, edges: outEdges };
+    }
+
+    // Copying a frame also copies what sits inside it.
+    function copyNodes(ids, cut) {
+      const set = new Set(ids);
+      db.nodes.filter(n => set.has(n.id) && isFrame(n)).forEach(f => frameContents(f).forEach(n => set.add(n.id)));
+      const nodes = db.nodes.filter(n => set.has(n.id));
+      if (!nodes.length) return;
+      canvasClipboard = {
+        nodes: JSON.parse(JSON.stringify(nodes)),
+        edges: JSON.parse(JSON.stringify((db.edges || []).filter(e => set.has(e.from) && set.has(e.to))))
+      };
+      _pasteCount = 0;
+      if (cut) deleteNodes([...set]);
+      if (window.showToast) showToast(`${cut ? 'Cut' : 'Copied'} ${nodes.length} node${nodes.length > 1 ? 's' : ''}`);
+    }
+    function copySelection(cut) { copyNodes([...selectedIds], cut); }
+
+    // Paste at a canvas point, or under the pointer, or offset from the original.
+    function pasteClipboard(at) {
+      if (!canvasClipboard || !canvasClipboard.nodes.length) return;
+      const { nodes, edges } = cloneWithNewIds(canvasClipboard.nodes, canvasClipboard.edges);
+      const minX = Math.min(...nodes.map(n => n.x)), minY = Math.min(...nodes.map(n => n.y));
+      let dx, dy;
+      if (!at && lastMouse) {
+        const r = viewport.getBoundingClientRect();
+        at = { x: (lastMouse.x - r.left - db.panX) / db.zoom, y: (lastMouse.y - r.top - db.panY) / db.zoom };
+      }
+      if (at) { dx = at.x - minX; dy = at.y - minY; }
+      else { _pasteCount++; dx = dy = 30 * _pasteCount; }
+      nodes.forEach(n => {
+        n.x = fullState.snapToGrid ? snap(n.x + dx) : n.x + dx;
+        n.y = fullState.snapToGrid ? snap(n.y + dy) : n.y + dy;
+      });
+      pushHistory();
+      db.nodes.push(...nodes);
+      db.edges = (db.edges || []).concat(edges);
+      selectedIds = new Set(nodes.map(n => n.id));
+      selectedNodeId = nodes[nodes.length - 1].id;
+      renderAll(); applySelectionClasses(); renderBoardBar();
+      pulseSave();
+    }
+
+    function toggleBoardMenu() {
+      const menu = document.getElementById('board-menu');
+      if (menu.style.display === 'flex') { closeBoardMenu(); return; }
+      const r = document.getElementById('board-menu-btn').getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = (r.bottom + 6) + 'px';
+      menu.style.display = 'flex';
+    }
+    function closeBoardMenu() {
+      const menu = document.getElementById('board-menu');
+      if (menu) menu.style.display = 'none';
+    }
+
+    function uniqueBoardName(name) {
+      const names = new Set(fullState.boards.map(b => b.name));
+      if (!names.has(name)) return name;
+      let i = 2;
+      while (names.has(`${name} (${i})`)) i++;
+      return `${name} (${i})`;
+    }
+
+    function addBoard(name, nodes, edges, view) {
+      const board = newBoard(uniqueBoardName(name));
+      board.nodes = nodes; board.edges = edges;
+      if (view) Object.assign(board, view);
+      fullState.boards.push(board);
+      fullState.activeBoardId = board.id;
+      db = board;
+      selectedNodeId = null; selectedIds = new Set(); focusId = null;
+      pulseSave();
+      renderAll(); updateTransform(); renderBoardBar();
+      updateUndoRedoButtons();
+      return board;
+    }
+
+    function duplicateBoard() {
+      const { nodes, edges } = cloneWithNewIds(db.nodes, db.edges);
+      addBoard(db.name + ' (copy)', nodes, edges, { panX: db.panX, panY: db.panY, zoom: db.zoom });
+      if (window.showToast) showToast('Board duplicated');
+    }
+
+    function fileSlug(name) {
+      return (name || 'board').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-').slice(0, 60) || 'board';
+    }
+    function downloadText(filename, text, type) {
+      const url = URL.createObjectURL(new Blob([text], { type }));
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    const BOARD_FILE_FORMAT = 'thinking-hub-canvas-board';
+
+    function exportBoardFile() {
+      const payload = {
+        format: BOARD_FILE_FORMAT, version: 1,
+        exportedAt: new Date().toISOString(),
+        board: { name: db.name, nodes: db.nodes, edges: db.edges || [], panX: db.panX, panY: db.panY, zoom: db.zoom }
+      };
+      downloadText(`canvas-${fileSlug(db.name)}-${HubUtils.todayLocal()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    }
+
+    // Plain-text line for a node, as it would read in a note.
+    function mdNodeLine(n) {
+      const kind = { project: 'Project', goal: 'Goal', tool: 'Tool', rd: 'R&D bet' }[n.kind];
+      const label = nodeLabel(n).replace(/\s+/g, ' ').trim();
+      return kind ? `**${kind}:** ${label}` : label;
+    }
+
+    function exportBoardMarkdown() {
+      const frames = db.nodes.filter(isFrame);
+      const area = f => (f.w || 0) * (f.h || 0);
+      // Each node goes under the smallest frame that holds it.
+      const home = new Map();
+      frames.slice().sort((a, b) => area(b) - area(a)).forEach(f =>
+        frameContents(f).filter(n => !isFrame(n)).forEach(n => home.set(n.id, f.id)));
+      const byPos = (a, b) => (a.y - b.y) || (a.x - b.x);
+      const lines = [`# ${db.name}`, '', `Exported from Thinking Hub Canvas · ${HubUtils.todayLocal()}`, ''];
+      frames.slice().sort(byPos).forEach(f => {
+        const items = db.nodes.filter(n => home.get(n.id) === f.id).sort(byPos);
+        lines.push(`## ${nodeLabel(f)}`, '');
+        items.forEach(n => lines.push(`- ${mdNodeLine(n)}`));
+        if (!items.length) lines.push('- (empty)');
+        lines.push('');
+      });
+      const loose = db.nodes.filter(n => !isFrame(n) && !home.has(n.id)).sort(byPos);
+      if (loose.length) {
+        lines.push(frames.length ? '## Not in a frame' : '## Nodes', '');
+        loose.forEach(n => lines.push(`- ${mdNodeLine(n)}`));
+        lines.push('');
+      }
+      const byId = new Map(db.nodes.map(n => [n.id, n]));
+      const edges = (db.edges || []).filter(e => byId.has(e.from) && byId.has(e.to));
+      if (edges.length) {
+        lines.push('## Connections', '');
+        edges.forEach(e => {
+          const a = nodeLabel(byId.get(e.from)).split(' · ')[0], b = nodeLabel(byId.get(e.to)).split(' · ')[0];
+          const rel = e.relType === 'blocks' ? '→ blocks →' : e.relType === 'depends-on' ? '→ needs →' : '—';
+          lines.push(`- ${a} ${rel} ${b}` + (e.label ? ` (${e.label})` : ''));
+        });
+        lines.push('');
+      }
+      downloadText(`${fileSlug(db.name)}-${HubUtils.todayLocal()}.md`, lines.join('\n'), 'text/markdown');
+    }
+
+    // Board files can come from anyone. Keep only simple text formatting;
+    // drop every attribute, script, style and unknown tag.
+    const SAFE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'DIV', 'P', 'SPAN', 'UL', 'OL', 'LI']);
+    function sanitizeNodeHtml(html) {
+      const doc = new DOMParser().parseFromString(`<div>${String(html || '')}</div>`, 'text/html');
+      const clean = el => {
+        [...el.childNodes].forEach(ch => {
+          if (ch.nodeType === 3) return;
+          if (ch.nodeType !== 1 || !SAFE_TAGS.has(ch.tagName)) {
+            if (ch.nodeType === 1 && !['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'SVG', 'MATH'].includes(ch.tagName)) {
+              const txt = document.createTextNode(ch.textContent);
+              ch.replaceWith(txt);
+            } else ch.remove();
+            return;
+          }
+          [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
+          clean(ch);
+        });
+      };
+      const root = doc.body.firstChild;
+      clean(root);
+      return root.innerHTML;
+    }
+
+    const KNOWN_KINDS = new Set(['note', 'goal', 'project', 'tool', 'rd', 'frame']);
+    const KNOWN_COLORS = new Set(COLORS.map(c => c.id));
+    const KNOWN_REL = new Set(EDGE_TYPES.map(t => t.id));
+
+    function importBoardText(text) {
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('Not a JSON file.'); }
+      const b = data && data.format === BOARD_FILE_FORMAT ? data.board
+        : (data && Array.isArray(data.nodes) ? data : null);
+      if (!b || !Array.isArray(b.nodes)) throw new Error('This file is not a Canvas board export.');
+      const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+      const nodes = b.nodes.filter(n => n && n.id).map(n => {
+        const kind = KNOWN_KINDS.has(n.kind) && n.kind !== 'note' ? n.kind : undefined;
+        const out = {
+          id: String(n.id), x: num(n.x), y: num(n.y),
+          text: kind === 'frame' ? String(n.text || 'Frame').slice(0, 200) : sanitizeNodeHtml(n.text),
+          color: KNOWN_COLORS.has(n.color) ? n.color : 'c-gray'
+        };
+        if (kind) out.kind = kind;
+        if (n.w) out.w = Math.max(40, num(n.w));
+        if (n.h) out.h = Math.max(30, num(n.h));
+        if (n.link && typeof n.link === 'object' && ['project-hub', 'goals-hub', 'tool-portfolio'].includes(n.link.tool)) {
+          out.link = { tool: n.link.tool, id: String(n.link.id || ''), label: String(n.link.label || '') };
+        }
+        return out;
+      });
+      const edges = (Array.isArray(b.edges) ? b.edges : []).filter(e => e && e.from && e.to).map(e => {
+        const out = { id: String(e.id || newEdgeId()), from: String(e.from), to: String(e.to), relType: KNOWN_REL.has(e.relType) ? e.relType : 'relates' };
+        if (e.label) out.label = String(e.label).slice(0, 60);
+        return out;
+      });
+      const fresh = cloneWithNewIds(nodes, edges);
+      const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)) };
+      const board = addBoard(String(b.name || 'Imported board').slice(0, 80), fresh.nodes, fresh.edges, view);
+      // Linked cards whose project/goal/tool doesn't exist here show "(item removed)".
+      const known = { project: new Set(liveItemsFor('project').map(i => i.id)), goal: new Set(liveItemsFor('goal').map(i => i.id)), tool: new Set(liveItemsFor('tool').map(i => i.id)) };
+      const missing = fresh.nodes.filter(n => n.link && known[n.kind] && !known[n.kind].has(n.link.id)).length;
+      return { board, nodes: fresh.nodes.length, edges: fresh.edges.length, missing };
+    }
+
+    document.getElementById('board-import-input').addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const r = importBoardText(String(reader.result));
+          if (window.showToast) showToast(`Imported "${r.board.name}": ${r.nodes} nodes, ${r.edges} lines` + (r.missing ? ` · ${r.missing} linked items not found here` : ''));
+        } catch (err) {
+          alert(err.message || 'Could not import this file.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // ── Frames (P129) ─────────────────────────────────────────
+    // A frame is a node with kind 'frame': a labelled area drawn behind
+    // everything else. Dragging its title moves whatever sits inside it.
+    function isFrame(n) { return !!n && n.kind === 'frame'; }
+
+    function createFrame(x, y, w, h, title) {
+      pushHistory();
+      const id = 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      db.nodes.push({ id, x, y, w, h, text: title || 'Frame', color: 'c-gray', kind: 'frame' });
+      selectedIds = new Set([id]); selectedNodeId = id;
+      renderAll();
+      pulseSave();
+      return id;
+    }
+
+    function wrapInFrame(ids) {
+      const boxes = ids.map(id => db.nodes.find(n => n.id === id)).filter(Boolean).map(nodeBox);
+      if (!boxes.length) return;
+      const pad = 40;
+      const L = Math.min(...boxes.map(b => b.n.x)) - pad, T = Math.min(...boxes.map(b => b.n.y)) - pad;
+      const R = Math.max(...boxes.map(b => b.n.x + b.w)) + pad, B = Math.max(...boxes.map(b => b.n.y + b.h)) + pad;
+      const id = createFrame(L, T, R - L, B - T, 'Frame');
+      setTimeout(() => editFrameTitle(id), 30);
+    }
+
+    // What sits inside a frame: nodes whose centre is inside it, and
+    // smaller frames that fit inside it completely.
+    function frameContents(frame) {
+      const fx = frame.x, fy = frame.y, fw = frame.w || 0, fh = frame.h || 0;
+      return db.nodes.filter(n => n !== frame).filter(n => {
+        const b = nodeBox(n);
+        if (isFrame(n)) return n.x >= fx && n.y >= fy && n.x + b.w <= fx + fw && n.y + b.h <= fy + fh;
+        const cx = n.x + b.w / 2, cy = n.y + b.h / 2;
+        return cx >= fx && cx <= fx + fw && cy >= fy && cy <= fy + fh;
+      });
+    }
+
+    function editFrameTitle(id) {
+      const title = layer.querySelector(`.node[data-id="${id}"] .frame-title`);
+      if (!title) return;
+      title.contentEditable = 'true';
+      title.focus();
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    }
+
+    function buildFrameEl(node) {
+      const el = document.createElement('div');
+      el.className = `node frame ${node.color || 'c-gray'}`;
+      if (selectedIds.has(node.id)) el.classList.add(selectedIds.size > 1 ? 'in-selection' : 'selected');
+      el.dataset.id = node.id;
+      el.style.left = Math.round(node.x) + 'px';
+      el.style.top = Math.round(node.y) + 'px';
+      el.style.width = (node.w || 640) + 'px';
+      el.style.height = (node.h || 400) + 'px';
+
+      const fill = document.createElement('div');
+      fill.className = 'frame-fill';
+      el.appendChild(fill);
+
+      const title = document.createElement('div');
+      title.className = 'frame-title';
+      title.textContent = node.text || 'Frame';
+      title.title = 'Drag to move with its contents · double-click to rename';
+      el.appendChild(title);
+
+      title.addEventListener('mousedown', e => {
+        if (e.button !== 0 || spacePressed) return;
+        e.stopPropagation();
+        if (title.isContentEditable) return;
+        e.preventDefault();
+        closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
+        if (connectMode) return;
+        if (e.shiftKey) { toggleSelect(node.id); return; }
+        if (!selectedIds.has(node.id)) selectNode(node.id);
+        else selectedNodeId = node.id;
+        // Move the selection plus everything inside any selected frame.
+        const ids = new Set(selectedIds);
+        db.nodes.filter(n => ids.has(n.id) && isFrame(n))
+          .forEach(f => frameContents(f).forEach(n => ids.add(n.id)));
+        const group = [...ids].map(id => {
+          const n = db.nodes.find(x => x.id === id);
+          const nEl = layer.querySelector(`.node[data-id="${id}"]`);
+          return n && nEl ? { node: n, el: nEl, startX: n.x, startY: n.y } : null;
+        }).filter(Boolean);
+        isDraggingNode = true;
+        dragState = {
+          node, el, group,
+          startX: node.x, startY: node.y,
+          startMouseX: e.clientX, startMouseY: e.clientY,
+          preSnapshot: snapshotBoard()
+        };
+      });
+      title.addEventListener('click', e => e.stopPropagation());
+      title.addEventListener('dblclick', e => { e.stopPropagation(); editFrameTitle(node.id); });
+      title.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); title.blur(); }
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); title.textContent = node.text || 'Frame'; title.blur(); }
+      });
+      title.addEventListener('blur', () => {
+        if (!title.isContentEditable) return;
+        title.contentEditable = 'false';
+        const v = title.textContent.trim() || 'Frame';
+        title.textContent = v;
+        if (v !== (node.text || 'Frame')) { pushHistory(); node.text = v; pulseSave(); }
+      });
+      title.addEventListener('contextmenu', e => {
+        e.preventDefault(); e.stopPropagation();
+        openNodeMenu(node.id, e.clientX, e.clientY);
+      });
+
+      const handle = document.createElement('div');
+      handle.className = 'node-resize-handle';
+      handle.title = 'Drag to resize';
+      handle.addEventListener('mousedown', e => {
+        e.stopPropagation(); e.preventDefault();
+        selectNode(node.id);
+        isResizingNode = true;
+        resizeState = {
+          node, el,
+          startW: node.w || el.offsetWidth, startH: node.h || el.offsetHeight,
+          startMouseX: e.clientX, startMouseY: e.clientY,
+          preSnapshot: snapshotBoard()
+        };
+      });
+      el.appendChild(handle);
+      return el;
+    }
+
+    // ── Fade parked items (P129): on-hold/done projects, retired tools ──
+    const PARKED_PROJECT = new Set(['onhold', 'done', 'archived']);
+
+    function isParked(n) {
+      if (!n.link) return false;
+      try {
+        if (n.kind === 'project') {
+          const p = ((window.HubData ? HubData.getProjects() : []) || []).find(x => x.id === n.link.id);
+          return !!p && PARKED_PROJECT.has(p.status);
+        }
+        if (n.kind === 'tool') {
+          const raw = HubStorage.get('tool-portfolio-v1');
+          const t = (Array.isArray(raw) ? raw : []).find(x => x.id === n.link.id);
+          return !!t && t.status === 'retired';
+        }
+      } catch {}
+      return false;
+    }
+
+    function applyParked() {
+      const on = !!fullState.dimParked;
+      layer.querySelectorAll('.node:not(.frame)').forEach(el => {
+        const n = on ? db.nodes.find(x => x.id === el.dataset.id) : null;
+        el.classList.toggle('parked', !!n && isParked(n));
+      });
+    }
+
+    function setDimParked(on) {
+      fullState.dimParked = !!on;
+      applyParked();
+      pulseSave();
+    }
+
     // ── Focus mode (P128): one node + its direct connections stay bright ──
 
     function nodeLabel(n) {
@@ -2000,7 +2606,7 @@
     function applyFocus() {
       if (focusId && !db.nodes.some(n => n.id === focusId)) focusId = null;
       const set = focusSet();
-      layer.querySelectorAll('.node').forEach(el => {
+      layer.querySelectorAll('.node:not(.frame)').forEach(el => {
         el.classList.toggle('dimmed', !!set && !set.has(el.dataset.id));
         el.classList.toggle('focus-center', el.dataset.id === focusId);
       });
@@ -2026,7 +2632,7 @@
       box.style.display = 'flex';
       input.value = '';
       renderFind('');
-      setTimeout(() => input.focus(), 20);
+      input.focus();
     }
 
     function closeFind() {
@@ -2097,6 +2703,16 @@
       }
     }
 
+    document.getElementById('ep-label').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); closeEdgePopover(); }
+      else if (e.key === 'Escape') {
+        e.preventDefault(); e.stopPropagation();
+        const edge = db.edges.find(x => x.id === _edgePopoverEdgeId);
+        e.target.value = (edge && edge.label) || '';
+        closeEdgePopover();
+      }
+    });
+
     document.getElementById('find-input').addEventListener('input', e => renderFind(e.target.value));
     document.getElementById('find-input').addEventListener('keydown', e => {
       if (e.key === 'ArrowDown') { e.preventDefault(); moveFindActive(1); }
@@ -2115,7 +2731,11 @@
     function renderAll() {
       // Remove nodes but keep the SVG edge layer
       layer.querySelectorAll('.node').forEach(el => el.remove());
-      db.nodes.forEach(n => layer.appendChild(buildNodeEl(n)));
+      const svgEl = document.getElementById('edges-svg');
+      const area = n => (n.w || 0) * (n.h || 0);
+      db.nodes.filter(isFrame).sort((a, b) => area(b) - area(a))
+        .forEach(n => layer.insertBefore(buildFrameEl(n), svgEl));
+      db.nodes.filter(n => !isFrame(n)).forEach(n => layer.appendChild(buildNodeEl(n)));
       renderEdges();
       renderMinimap();
       // A rebuild (e.g. a debounced pulseSave landing while the user is
@@ -2128,6 +2748,7 @@
         if (srcEl) srcEl.classList.add('connect-source');
       }
       applyFocus();
+      applyParked();
     }
 
     function rebuildActionBar(actions, node) {
@@ -2506,12 +3127,12 @@
     }
 
     function selectedBoxes() {
-      return db.nodes.filter(n => selectedIds.has(n.id)).map(nodeBox);
+      return db.nodes.filter(n => selectedIds.has(n.id) && !isFrame(n)).map(nodeBox);
     }
 
     function layoutTargets() {
       const sel = selectedBoxes();
-      return sel.length >= 2 ? sel : db.nodes.map(nodeBox);
+      return sel.length >= 2 ? sel : db.nodes.filter(n => !isFrame(n)).map(nodeBox);
     }
 
     function commitLayout(boxes, placeAll) {
@@ -2624,6 +3245,7 @@
         b.disabled = n < Number(b.dataset.need);
       });
       document.getElementById('lm-snap').checked = !!fullState.snapToGrid;
+      document.getElementById('lm-parked').checked = !!fullState.dimParked;
       document.getElementById('lm-hint').textContent = n >= 2
         ? `${n} nodes selected.`
         : 'Shift+click or Shift+drag to select nodes. Arrange works on all nodes.';
@@ -2671,7 +3293,10 @@
       if (R - L < 4 && B - T < 4) return;
       layer.querySelectorAll('.node').forEach(el => {
         const r = el.getBoundingClientRect();
-        if (r.right > L && r.left < R && r.bottom > T && r.top < B) selectedIds.add(el.dataset.id);
+        const hit = el.classList.contains('frame')
+          ? (r.left >= L && r.right <= R && r.top >= T && r.bottom <= B)
+          : (r.right > L && r.left < R && r.bottom > T && r.top < B);
+        if (hit) selectedIds.add(el.dataset.id);
       });
       selectedNodeId = [...selectedIds].pop() || null;
       applySelectionClasses();
@@ -2726,7 +3351,13 @@
       // Nodes — fills read the theme-aware --node-* tokens (correct in dark/light/ink)
       const nodeFill = (cls) => _css.getPropertyValue('--node-' + (cls || 'c-gray').slice(2)).trim()
         || _css.getPropertyValue('--node-gray').trim() || '#2a2a30';
-      db.nodes.forEach(n => {
+      db.nodes.filter(isFrame).forEach(n => {
+        const [mx, my] = toMM(n.x, n.y);
+        ctx.strokeStyle = selectedIds.has(n.id) ? _accent : _text2;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(mx, my, (n.w || NODE_W) * scale, (n.h || NODE_H) * scale);
+      });
+      db.nodes.filter(n => !isFrame(n)).forEach(n => {
         const [mx, my] = toMM(n.x, n.y);
         const nw = Math.max((n.w || NODE_W) * scale, 3);
         const nh = Math.max((n.h || NODE_H) * scale, 3);
