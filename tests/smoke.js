@@ -337,6 +337,38 @@ function appFiles(ext) {
     });
     check('canvas PNG export renders the whole board at 2x',
       g6.type === 'image/png' && g6.size > 1000 && g6.w >= g6.minW, JSON.stringify(g6));
+
+    // Linked cards for more hubs, note → decision, lines → Dependency Graph,
+    // Obsidian .canvas round trip (P134)
+    const g7 = await page.evaluate(() => {
+      HubStorage.set('decision-hub-v1', []);
+      HubStorage.set('risk-hub-v1', { risks: [{ id: 'rk1', title: 'Vendor exits', status: 'open', probability: 2, impact: 3 }] });
+      db.nodes = []; db.edges = []; db.lanes = []; renderAll();
+      createLinkedNode(0, 0, 'risk', 'risk-hub', 'rk1', 'old name');
+      const riskId = db.nodes[0].id;
+      createNode(300, 0);
+      const note = db.nodes[1];
+      note.text = 'Pick one vendor<br>Cheaper to support';
+      convertNote(note.id, 'decision');
+      const dec = (HubStorage.get('decision-hub-v1') || [])[0] || {};
+      createEdge(riskId, note.id);
+      db.edges[0].relType = 'blocks';
+      const sent = sendEdgeToGraph(db.edges[0]);
+      const link = HubLinks.getAll().find(l => l.a.itemId === 'rk1' && l.b.itemId === dec.id) || {};
+      const riskName = document.querySelector('.node.k-risk .nk-name').textContent;
+      let json = null;
+      const orig = window.downloadText;
+      window.downloadText = (name, text) => { json = { name, data: JSON.parse(text) }; };
+      exportObsidianCanvas();
+      window.downloadText = orig;
+      importBoardText(JSON.stringify(json.data), 'round.canvas');
+      return { riskName, kind: note.kind, dec: dec.title, sum: dec.summary, sent, rel: link.relType, file: json.name,
+        types: json.data.nodes.map(n => n.type).join(), back: db.nodes.map(n => n.kind).sort().join(), backRel: db.edges.map(e => e.relType).join() };
+    });
+    check('canvas links more hubs, turns notes into items, sends lines, round-trips .canvas',
+      g7.riskName === 'Vendor exits' && g7.kind === 'decision' && g7.dec === 'Pick one vendor' && g7.sum === 'Cheaper to support' &&
+      g7.sent === 'added' && g7.rel === 'blocks' && /\.canvas$/.test(g7.file) && g7.types === 'text,text' &&
+      g7.back === 'decision,risk' && g7.backRel === 'blocks', JSON.stringify(g7));
     await page.close();
   }
 

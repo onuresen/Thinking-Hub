@@ -1276,11 +1276,18 @@
         <div id="tp-proj-links">${_renderProjectLinksHTML(t)}</div>
       </div>
 
+      <div id="tp-canvas-boards"></div>
+
       <div class="actions">
         ${openBtn}
         <button class="btn danger" onclick="deleteTool()">Delete</button>
       </div>
     `;
+            // P134: which Canvas boards show this tool
+            if (typeof HubLinks !== 'undefined' && HubLinks.canvasPlacementsEl) {
+                const boardsEl = HubLinks.canvasPlacementsEl('tool-portfolio', t.id);
+                if (boardsEl) document.getElementById('tp-canvas-boards').appendChild(boardsEl);
+            }
         }
 
         // ── Enabled-projects helpers ──────────────────────────────────────────
