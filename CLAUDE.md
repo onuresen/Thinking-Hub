@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2357,6 +2357,36 @@ User asked for layout options: align, place nodes regularly.
 - **Decision:** Skip reloads from own writes rather than patch drag references after each reload. **Why:** the reload was the root cause. A re-link patch would still leave the drag moving orphaned node objects. **Confidence:** high.
 
 **Verified** on the user's real 24-node board from the 2026-09-29 backup, with real mouse timing. 22 checks: selection, align, spread, group drag, undo, tidy grid with no overlaps, fit to screen, box select, snap + persistence, by type, Ctrl+A/Delete/undo, Shift+click on a note body, Connect. Separate race test: a save landing mid-drag keeps data and drawing in sync. New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 128 — Canvas Hub: node menu, Focus mode, Find~~ ✓ Done `[group: canvas-structure]`
+User asked for canvas improvements now that boards are in real use. Group 1 of a ranked shortlist.
+
+- **Right-click a node:** Open in Project Hub / Goals Hub / Tool Portfolio (linked cards), Focus on connections, Connect from here, Duplicate, Color, Delete.
+  - With a multi-selection, Duplicate / Color / Delete act on the whole selection.
+  - Duplicate also copies lines between the duplicated nodes.
+  - No color row for Goal/Project/Tool cards; their color is fixed by kind (P110).
+- **Double-click a linked card** opens the real item.
+- **Focus mode:** the node and its direct connections stay bright; everything else fades, lines too.
+  - Start from the menu or press F with a node selected.
+  - Esc, clicking empty space, or switching boards exits.
+- **Find (Ctrl+F):** search box top-right. This board first, then other boards.
+  - Ranking: named cards, then note titles, then note details.
+  - Enter or click pans to the node, selects it and flashes it; switches board if needed.
+- `panToNode()` now shared by Find and the existing `hub-highlight` handler.
+- `sw.js` cache `v7` → `v8`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Focus shows one hop only. **Why:** one hop answers "what does this touch?" without new controls. **Alternative:** a hop slider. Rejected for now. **Confidence:** med.
+- **Decision:** Find searches every board, current board first. **Why:** the same project sits on several framework boards; you often want "where else is IS05?". **Confidence:** high.
+- **Decision:** Rank linked cards above notes that only mention the name. **Why:** a test on the real board showed a blocker note beating the IS05 card for "IS05". **Confidence:** high.
+
+**Verified** on the user's real R&D boards with realistic mouse timing: 26 checks (menu items per kind, open/double-click navigation, focus counts and exits, F key, duplicate + undo, selection duplicate with lines, color, delete, find ranking, cross-board jump, Connect from the menu). Full smoke + flows + vault-bridge green.
+
+**Next candidates (not started):** frames/zones, labels on lines, dim by status, duplicate board, copy/paste between boards, single-board export/import.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
 
