@@ -882,6 +882,84 @@ window.HubLinks = (() => {
     });
   }
 
+  // ── Suggested links (P138) ─────────────────────────────────────────────────
+  // An item that names a project, but isn't linked to it and doesn't belong
+  // to it, is suggested as a "relates" link. Nothing is linked until accepted.
+  // Single-word names match case-sensitively ("ONES", "CDI") so ordinary words
+  // don't fire; multi-word names ignore case. "CDI (Construction Decision
+  // Intelligence)" matches either part.
+
+  const SUGGEST_IGNORE_KEY = 'linkSuggestIgnored';   // inside hub-settings-v1
+
+  function _nameMatchers(name) {
+    const full = String(name || '').trim();
+    const before = full.replace(/\s*\(.*\)\s*/, '').trim();
+    const inside = (full.match(/\(([^)]+)\)/) || [])[1];
+    const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return [...new Set([full, before, inside].filter(Boolean).map(t => t.trim()))]
+      .filter(t => /[^\x00-\x7f]/.test(t) ? t.length >= 2 : t.length >= 3)
+      .map(t => ({ t, re: new RegExp('(^|[^A-Za-z0-9])' + esc(t) + '($|[^A-Za-z0-9])', /\s/.test(t) ? 'i' : '') }));
+  }
+
+  function _suggestIgnored() {
+    const st = HubStorage.get('hub-settings-v1') || {};
+    return (st[SUGGEST_IGNORE_KEY] && typeof st[SUGGEST_IGNORE_KEY] === 'object') ? st[SUGGEST_IGNORE_KEY] : {};
+  }
+
+  function suggestLinks() {
+    const ph = HubStorage.get('project-hub-v1') || {};
+    const projects = (Array.isArray(ph.projects) ? ph.projects : []).filter(p => p && p.id && !p.archived);
+    const matchers = projects.map(p => ({ p, ms: _nameMatchers(p.name) })).filter(x => x.ms.length);
+    const linked = new Set();
+    getAll().forEach(l => {
+      linked.add(l.a.tool + ':' + l.a.itemId + '>' + l.b.itemId);
+      linked.add(l.b.tool + ':' + l.b.itemId + '>' + l.a.itemId);
+    });
+    const ignored = _suggestIgnored();
+    const arr = v => (Array.isArray(v) ? v : []);
+    const items = [];
+    arr(HubStorage.get('decision-hub-v1')).filter(d => d && !d.archived).forEach(d =>
+      items.push({ tool: 'decision-hub', id: d.id, label: d.title || '(untitled decision)', text: [d.title, d.summary].join(' '), own: d.projectId }));
+    const mh = HubStorage.get('meetings-hub-v1') || {};
+    arr(mh.meetings).filter(m => m && !m.archived).forEach(m =>
+      items.push({ tool: 'meetings-hub', id: m.id, label: m.title || '(untitled meeting)', text: [m.title, m.agenda, m.desiredOutcome].join(' '), own: m.projectId }));
+    arr((HubStorage.get('risk-hub-v1') || {}).risks).filter(r => r && !r.archived).forEach(r =>
+      items.push({ tool: 'risk-hub', id: r.id, label: r.title || '(untitled risk)', text: r.title, own: r.projectId }));
+    arr((HubStorage.get('learning-hub-v1') || {}).items).filter(r => r && !r.archived).forEach(r =>
+      items.push({ tool: 'learning-hub', id: r.id, label: r.title || '(untitled)', text: r.title }));
+    projects.forEach(p => arr(p.tasks).filter(t => t && !t.archived).forEach(t =>
+      items.push({ tool: 'project-hub', id: t.id, label: t.title || '(untitled task)', text: t.title, own: p.id })));
+
+    const out = [];
+    items.forEach(it => {
+      if (!it.id) return;
+      matchers.forEach(({ p, ms }) => {
+        if (p.id === it.own || p.id === it.id) return;
+        if (linked.has(it.tool + ':' + it.id + '>' + p.id)) return;
+        const key = it.tool + ':' + it.id + '>' + p.id;
+        if (ignored[key]) return;
+        const hit = ms.find(m => m.re.test(it.text || ''));
+        if (!hit) return;
+        out.push({
+          key, match: hit.t,
+          from: { tool: it.tool, itemId: it.id, label: it.label },
+          to: { tool: 'project-hub', itemId: p.id, label: p.name },
+        });
+      });
+    });
+    return out.slice(0, 300);
+  }
+
+  function acceptSuggestion(s) {
+    return addLink(s.from, s.to, { relType: 'relates' });
+  }
+
+  function ignoreSuggestion(s) {
+    const st = HubStorage.get('hub-settings-v1') || {};
+    const ig = { ..._suggestIgnored(), [s.key]: new Date().toISOString() };
+    HubStorage.set('hub-settings-v1', { ...st, [SUGGEST_IGNORE_KEY]: ig });
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -894,6 +972,9 @@ window.HubLinks = (() => {
     navigateTo,
     canvasPlacements,
     canvasPlacementsEl,
+    suggestLinks,
+    acceptSuggestion,
+    ignoreSuggestion,
     openModal,
     showLinksPopover
   };

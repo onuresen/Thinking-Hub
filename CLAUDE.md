@@ -19,6 +19,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `hub-starter-data.js` | First-run sample data seeder (`HubStarter.seed()` / `HubStarter.hasAnyData()`). Loaded in `index.html` only. |
 | `hub-obsidian.js` | Obsidian vault reader: `HubObsidian.pickVault/indexVault/search/attachAutocomplete` |
 | `hub-vault-bridge.js` | **Vault Bridge (P104)** — reads the Obsidian vault as a *source*: `HubVaultBridge.init/connect/reconnect/scanDays/scanDecisions/accept/ignore`. Persists the directory handle in IndexedDB (`thinking-hub-vault`) so access survives reloads, reports days the vault recorded and the hub did not, and parses canonical-schema decision blocks into a propose/accept queue. Loaded in `index.html` only. |
+| `hub-vault-notes.js` | **Linked-note review dialog (P138)** — `HubVaultNotes.open/pending/primeNoteLists`. Shared by Project Hub (note checkboxes → tasks) and Meeting Hub (note decisions/asks → Decision Hub + actions). Reads through `HubVaultBridge` (`readNote/listNotes/parseChecklist/parseMeetingNote`); accepted/ignored items go in the bridge's `seen` map. |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-tags.js` | Centralized tag/topic registry: `HubTags.getRegistry/ensure/findCanonical/removeFromRegistry/scanUsage/rename/attachAutocomplete` — `scanUsage`/`rename` operate across all `TAG_SOURCES` (every tool with a `tags` field) |
 | `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges). `canvasPlacements` / `canvasPlacementsEl` list the Canvas boards an item sits on (P134) |
@@ -77,7 +78,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `tests/` | Dev-only test suite (Node + Playwright; the app itself stays no-build). `smoke.js` auto-discovers every root HTML page, fails on real JS errors, checks `sw.js` PRECACHE completeness + shell basics (Cmd+K, storage, SW). `flows.js` runs 3 end-to-end interaction flows (task lifecycle, export/import round-trip, link→graph→shortest-path). `vault-bridge.js` covers P104 against a stubbed directory handle backed by fixture notes. All three run by CI on every PR (`.github/workflows/smoke.yml`) |
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-vault-bridge.js` (index.html only) → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-vault-bridge.js` (index.html, project-hub, meetings-hub) → `hub-vault-notes.js` (project-hub, meetings-hub) → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -2672,6 +2673,37 @@ Group B of the second upgrade shortlist ("show your work to others").
 **Verified** on the user's R&D Transformation Map (2026-09-30 data) with realistic mouse timing: 36 checks (notes menu, dialog focus, save, undo/redo, Esc, Present panel and fit, N key, Markdown, board file, hostile notes as text, Obsidian round trip, duplicate; zip CRC, 8 slides in Present order, 2× size, slides.md; HTML with and without notes, CSP, no handlers, no network requests when opened offline, fit, card click with connections, connection jump, Esc, pan, zoom, frame stepping). Visual check of a slide and the viewer. P134–P136 scripts still pass. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 138 — Vault notes → tasks, meeting decisions/actions + suggested links~~ ✓ Done `[group: vault-bridge]`
+Group A of the overall-hub idea list. Reshaped after checking real data (2026-09-30 backup + esen-vault):
+- Meeting Hub "notes" were nearly all calendar invite text. Real meeting notes are vault files.
+- Daily notes held only 3 checkboxes. The ~170 open tasks live in vault project notes.
+- Matching hub projects to notes by name is unreliable (IS04/IS05/IS06 all match "Autodesk").
+
+So each record links its note once, and the hub reads that note.
+
+- **Project Hub ⟡:** `proj.obsidianNote` (Settings → Vault note, or the dialog). Open checkboxes not already tasks → "Add task". Boxes ticked in the note whose task is open here → "Mark done". Header badge shows the waiting count.
+  - Note suggestions rank rarer name words higher, so "Autodesk IS04" prefers IS04 notes.
+  - Task "Obsidian note" field now gets vault note suggestions (it called `HubObsidian` without loading it before).
+- **Meeting Hub ⟡:** `obsidianNote` on the meeting, or on the week's log entry for a series. Suggested by the meeting date in the note name.
+  - Decisions: canonical `**Decision:**` blocks, plus top-level bullets under a "…decisions" heading → `HubVaultBridge.accept()` (Decision Hub, meeting's project) and a register row marked `inHub` (shows ✓ Hub; "→ Hub" also sets it now).
+  - Actions: open checkboxes, bullets under Asks/Follow-ups/Next steps/宿題 headings (bold lead or first sentence), and table rows there. Rows whose State says Done/Closed are skipped. Owner column is appended.
+- **Dependency Graph 💡 Suggested:** `HubLinks.suggestLinks()` — decisions, meetings, risks, learning items and tasks whose text names a project they don't belong to and aren't linked to. Link adds a `relates` link; Ignore is stored in `hub-settings-v1.linkSuggestIgnored`.
+- `HubVaultBridge`: `init({scan:false})` / `reconnect({scan:false})` for iframes; new `readNote/listNotes/normNotePath/parseChecklist/parseMeetingNote/itemKey/markSeen/isSeen/normTitle`.
+- New `hub-vault-notes.js` (shared dialog). `sw.js` cache `v17` → `v18`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Link a note explicitly per project/meeting; never guess by name. **Why:** name matching gave wrong hits on real data. One link, set once, is reliable. **Alternative:** auto-match by name — rejected. **Confidence:** high.
+- **Decision:** Propose, never auto-import; ignored items stay hidden via the bridge's `seen` map. **Why:** same rule as P104 — a parser reading prose must not write unattended. Reusing `seen` means backups keep the dedupe. **Confidence:** high.
+- **Decision:** Hub → vault writes are not built (the hub never ticks a box in the note). **Why:** the File System Access handle is read-only by design here, and the vault is the source. **Revisit when:** the user wants two-way ticking. **Confidence:** med.
+- **Decision:** Suggested links need a case-exact match for one-word names ("ONES", "CDI"), and ignore case for multi-word names. **Why:** keeps common words from firing; on real data this gave 20 suggestions, nearly all right. **Confidence:** med.
+- **Decision:** A shared dialog module, not two copies. **Why:** Project Hub and Meeting Hub need the same connect/link/review flow. **Confidence:** high.
+
+**Verified** with the user's real vault notes and 2026-09-30 backup, realistic mouse timing: 33 checks. Kit-of-Parts suggested first, 16 tasks offered, add/ignore/badge/Esc, ticked box → Mark done. The CDI AU Script Review meeting found by date: 4 decisions and 6 actions, owners kept, ✓ Hub. Graph: 20 suggestions, link/ignore, ignore kept after reload. Full smoke + flows + vault-bridge green.
+
+**Files:** `hub-vault-bridge.js`, `hub-vault-notes.js` (new), `hub-links.js`, `project-hub.html`, `meetings-hub.html`, `graph-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 
