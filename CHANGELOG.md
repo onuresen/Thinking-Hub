@@ -7,6 +7,11 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Spatial Canvas: Expand a project card into its open tasks, goals,
+  decisions, open risks, meetings and stakeholders, each joined by a line.
+  Paste a Markdown outline or a Mermaid flowchart to create cards and lines.
+  Layout → Flow arranges cards along their lines (left to right or top down).
+
 - Spatial Canvas: live cards for tasks, decisions, risks, meetings and
   stakeholders, next to projects, goals and tools. Right-click a note to make
   it a real task, decision or risk. Project Hub and Tool Portfolio show which

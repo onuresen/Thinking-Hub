@@ -365,6 +365,22 @@ function appFiles(ext) {
       return { riskName, kind: note.kind, dec: dec.title, sum: dec.summary, sent, rel: link.relType, file: json.name,
         types: json.data.nodes.map(n => n.type).join(), back: db.nodes.map(n => n.kind).sort().join(), backRel: db.edges.map(e => e.relType).join() };
     });
+    // Flow layout + outline/Mermaid paste (P135)
+    const g8 = await page.evaluate(() => {
+      db.nodes = []; db.edges = []; renderAll();
+      openOutlineModal('flowchart LR\n A[One] --> B[Two] -->|needs| C[Three]\n subgraph S [Box]\n  D[Four]\n end');
+      createFromOutline();
+      const t = s => db.nodes.find(n => n.kind !== 'frame' && n.text === s);
+      const A = t('One'), B = t('Two'), C = t('Three');
+      const before = A.x;
+      A.x = 900; renderAll(); selectedIds = new Set();
+      arrangeFlow('lr');
+      return { n: db.nodes.length, frames: db.nodes.filter(n => n.kind === 'frame').length,
+        rel: db.edges.find(e => e.from === B.id).relType, order: A.x < B.x && C.x < B.x, reset: A.x === before };
+    });
+    check('canvas pastes Mermaid into cards and arranges them along their lines',
+      g8.n === 5 && g8.frames === 1 && g8.rel === 'depends-on' && g8.order, JSON.stringify(g8));
+
     check('canvas links more hubs, turns notes into items, sends lines, round-trips .canvas',
       g7.riskName === 'Vendor exits' && g7.kind === 'decision' && g7.dec === 'Pick one vendor' && g7.sum === 'Cheaper to support' &&
       g7.sent === 'added' && g7.rel === 'blocks' && /\.canvas$/.test(g7.file) && g7.types === 'text,text' &&

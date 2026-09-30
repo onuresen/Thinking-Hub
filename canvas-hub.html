@@ -499,6 +499,99 @@
       background: rgba(232, 69, 90, 0.12);
     }
 
+    /* P135: paste outline / Mermaid dialog */
+    .outline-modal {
+      max-width: 620px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .om-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .om-hint {
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+    .om-hint code {
+      font-family: var(--font-mono);
+      color: var(--text2);
+    }
+
+    .om-text {
+      width: 100%;
+      min-height: 240px;
+      resize: vertical;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .om-text:focus {
+      border-color: var(--accent);
+    }
+
+    .om-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .om-dir select {
+      margin-left: 6px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      padding: 3px 6px;
+      font-family: var(--font-body);
+      font-size: 12px;
+    }
+
+    .om-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .om-btn {
+      background: var(--surface3);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: var(--r-sm);
+      padding: 7px 14px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .om-btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    .om-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
     .ep-graph {
       border: none;
       background: transparent;
@@ -1096,6 +1189,7 @@
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
     <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); openOutlineModal('')"><span>📋</span><span>Paste outline / Mermaid…</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); document.getElementById('board-import-input').click()"><span>⇧</span><span>Import board or Obsidian .canvas…</span></button>
   </div>
   <input type="file" id="board-import-input" accept=".json,.canvas,application/json" style="display:none">
@@ -1178,6 +1272,11 @@
       <button data-need="0" onclick="tidyGrid()">Tidy grid</button>
       <button data-need="0" onclick="arrangeByType()">By type</button>
     </div>
+    <div class="lm-head">Flow (follows lines)</div>
+    <div class="lm-grid lm-2">
+      <button data-need="0" onclick="arrangeFlow('lr')" title="Left to right, along the lines">Flow →</button>
+      <button data-need="0" onclick="arrangeFlow('td')" title="Top to bottom, along the lines">Flow ↓</button>
+    </div>
     <div class="lm-grid lm-1">
       <button data-need="0" onclick="fitToScreen()">Fit to screen</button>
     </div>
@@ -1185,6 +1284,25 @@
     <label class="lm-toggle" title="On-hold and done projects, retired tools, done tasks, closed risks, archived items"><input type="checkbox" id="lm-parked" onchange="setDimParked(this.checked)"> Fade parked items</label>
   </div>
   <div class="marquee" id="marquee"></div>
+
+  <!-- P135: paste a Markdown outline or a Mermaid flowchart to make cards -->
+  <div class="ui-modal-overlay" id="outline-modal" onclick="closeOutlineModal()">
+    <div class="ui-modal outline-modal" role="dialog" aria-modal="true" aria-labelledby="om-title" onclick="event.stopPropagation()">
+      <div class="om-title" id="om-title">Paste outline or Mermaid</div>
+      <div class="om-hint">A Markdown list or headings, or a Mermaid <code>flowchart</code>. Each item becomes a card.</div>
+      <textarea id="om-text" class="om-text" spellcheck="false" placeholder="- Goal&#10;  - Step one&#10;  - Step two&#10;&#10;or&#10;&#10;flowchart LR&#10;  A[Idea] --> B[Test] --> C[Ship]"></textarea>
+      <div class="om-row">
+        <span class="om-status" id="om-status"></span>
+        <label class="om-dir">Layout
+          <select id="om-dir"><option value="lr">Left → right</option><option value="td">Top ↓ down</option></select>
+        </label>
+      </div>
+      <div class="om-actions">
+        <button class="om-btn" onclick="closeOutlineModal()">Cancel</button>
+        <button class="om-btn primary" id="om-create" onclick="createFromOutline()">Create cards</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Right-click on a node: quick actions, incl. arming Connect from here -->
   <div class="quick-menu" id="node-menu"></div>
@@ -1672,6 +1790,12 @@
     let lastMouse = null; // last pointer position over the canvas, for paste
     viewport.addEventListener('mousemove', e => { lastMouse = { x: e.clientX, y: e.clientY }; });
     viewport.addEventListener('mouseleave', () => { lastMouse = null; });
+    // Canvas coordinates under the pointer, or null when it is off the canvas.
+    function lastPointerCanvas() {
+      if (!lastMouse) return null;
+      const r = viewport.getBoundingClientRect();
+      return { x: (lastMouse.x - r.left - db.panX) / db.zoom, y: (lastMouse.y - r.top - db.panY) / db.zoom };
+    }
 
     window.addEventListener('mousemove', e => {
       if (rightPan && !rightPan.moved &&
@@ -1796,6 +1920,7 @@
         if (!connectMode) viewport.style.cursor = 'grab';
       }
       if (e.key === 'Escape') {
+        if (document.getElementById('outline-modal').classList.contains('is-open')) { closeOutlineModal(); return; }
         if (document.getElementById('add-picker').style.display === 'flex') { closeAddPicker(); return; }
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
@@ -2307,6 +2432,7 @@
       { id: 'lane-row', icon: '☰', label: 'Row layer' },
       { id: 'tool', icon: '🛠', label: 'Tool…', picker: true },
       { id: 'more', icon: '⚖', label: 'Task, decision, risk…', picker: true },
+      { id: 'outline', icon: '📋', label: 'Paste outline / Mermaid…' },
       { id: 'rd', icon: '🧪', label: 'R&D bet' },
     ];
 
@@ -2332,6 +2458,7 @@
             openAddPicker(it.id, clientX, clientY);
           } else {
             if (it.id === 'frame') createFrame(_pendingAddX, _pendingAddY, 640, 400);
+            else if (it.id === 'outline') { closeAddMenu(); openOutlineModal('', { x: _pendingAddX, y: _pendingAddY }); return; }
             else if (it.id === 'lane-col' || it.id === 'lane-row') {
               closeAddMenu();
               promptNewLane(it.id === 'lane-col' ? 'col' : 'row', _pendingAddX, _pendingAddY);
@@ -2512,6 +2639,11 @@
 
       if (node.link && targets.length === 1) {
         add('↗', 'Open in ' + (KIND_TOOL_LABEL[node.kind] || 'source tool'), () => HubLinks.navigateTo(node.link.tool, node.link.id));
+      }
+      // P135: grow a project card into its tasks, decisions, risks…
+      if (targets.length === 1 && node.kind === 'project' && node.link) {
+        add('✳', 'Expand: tasks, decisions, risks…', () => expandProject(nodeId));
+        sep();
       }
       // P134: turn a plain note into a real item in another hub.
       if (targets.length === 1 && !isLinkedKind(node.kind)) {
@@ -4321,6 +4453,426 @@
         if (group.length) y += placeGrid(group, x0, y, 6) + LAYOUT_GAP;
       }));
     }
+
+    // ── Flow layout (P135) ────────────────────────────────────
+    // Lays cards out along their lines: sources first, then what follows.
+    // Layered layout: break cycles, rank by longest path, order each layer
+    // by its neighbours (barycentre), then stack. Cards with no lines go in
+    // a grid after the flow. `boxes` = [{n:{id,x,y}, w, h}]; `edges` are
+    // already in reading direction ({from, to}).
+    const FLOW_MAIN_GAP = 100, FLOW_CROSS_GAP = 30;
+
+    // "A depends on B" reads B first.
+    function flowEdge(e) { return e.relType === 'depends-on' ? { from: e.to, to: e.from } : { from: e.from, to: e.to }; }
+
+    function flowLayout(boxes, edges, dir, x0, y0) {
+      const LR = dir !== 'td';
+      const by = new Map(boxes.map(b => [b.n.id, b]));
+      const out = new Map(boxes.map(b => [b.n.id, []]));
+      const seen = new Set();
+      edges.forEach(e => {
+        if (!by.has(e.from) || !by.has(e.to) || e.from === e.to) return;
+        const k = e.from + '>' + e.to;
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.get(e.from).push(e.to);
+      });
+      const pos = b => LR ? [b.n.x, b.n.y] : [b.n.y, b.n.x];
+      const start = boxes.slice().sort((a, b) => { const p = pos(a), q = pos(b); return (p[0] - q[0]) || (p[1] - q[1]); }).map(b => b.n.id);
+      // Drop back edges (cycles) with a DFS in current reading order.
+      const state = new Map(), dag = new Map(boxes.map(b => [b.n.id, []]));
+      const visit = id => {
+        state.set(id, 1);
+        out.get(id).forEach(t => {
+          const st = state.get(t);
+          if (st === 1) return;
+          dag.get(id).push(t);
+          if (!st) visit(t);
+        });
+        state.set(id, 2);
+      };
+      start.forEach(id => { if (!state.get(id)) visit(id); });
+      const dIn = new Map(boxes.map(b => [b.n.id, []]));
+      const linked = new Set();
+      dag.forEach((ts, f) => ts.forEach(t => { dIn.get(t).push(f); linked.add(f); linked.add(t); }));
+      // Rank = longest path from a source.
+      const rank = new Map();
+      const rk = id => {
+        if (rank.has(id)) return rank.get(id);
+        let r = 0;
+        dIn.get(id).forEach(p => { r = Math.max(r, rk(p) + 1); });
+        rank.set(id, r);
+        return r;
+      };
+      const flowIds = start.filter(id => linked.has(id));
+      flowIds.forEach(rk);
+      const layers = [];
+      flowIds.forEach(id => { const r = rank.get(id); (layers[r] = layers[r] || []).push(id); });
+      for (let i = 0; i < layers.length; i++) layers[i] = layers[i] || [];
+      layers.forEach(L => L.sort((a, b) => pos(by.get(a))[1] - pos(by.get(b))[1]));
+      const idx = new Map();
+      layers.forEach(L => L.forEach((id, i) => idx.set(id, i)));
+      const bary = (id, nbrs) => nbrs.length ? nbrs.reduce((sum, n) => sum + idx.get(n), 0) / nbrs.length : idx.get(id);
+      const reorder = (L, nb) => { L.sort((a, b) => bary(a, nb(a)) - bary(b, nb(b))); L.forEach((id, i) => idx.set(id, i)); };
+      for (let it = 0; it < 4; it++) {
+        for (let r = 1; r < layers.length; r++) reorder(layers[r], id => dIn.get(id));
+        for (let r = layers.length - 2; r >= 0; r--) reorder(layers[r], id => dag.get(id));
+      }
+      const main = b => LR ? b.w : b.h, cross = b => LR ? b.h : b.w;
+      const sizes = layers.map(L => L.reduce((sum, id) => sum + cross(by.get(id)), 0) + FLOW_CROSS_GAP * Math.max(0, L.length - 1));
+      const maxCross = Math.max(0, ...sizes);
+      let m = 0;
+      layers.forEach((L, r) => {
+        if (!L.length) return;
+        const thick = Math.max(...L.map(id => main(by.get(id))));
+        let c = (maxCross - sizes[r]) / 2;
+        L.forEach(id => {
+          const b = by.get(id), mm = m + (thick - main(b)) / 2;
+          if (LR) { b.n.x = x0 + mm; b.n.y = y0 + c; } else { b.n.x = x0 + c; b.n.y = y0 + mm; }
+          c += cross(b) + FLOW_CROSS_GAP;
+        });
+        m += thick + FLOW_MAIN_GAP;
+      });
+      const loose = start.filter(id => !linked.has(id)).map(id => by.get(id));
+      if (loose.length) {
+        const off = flowIds.length ? maxCross + LAYOUT_GAP * 2 : 0;
+        const cols = Math.max(1, Math.ceil(Math.sqrt(loose.length * 1.5)));
+        if (LR) placeGrid(loose, x0, y0 + off, cols); else placeGrid(loose, x0 + off, y0, cols);
+      }
+      return { layers: layers.filter(L => L.length).length, loose: loose.length, main: Math.max(0, m - FLOW_MAIN_GAP), cross: maxCross };
+    }
+
+    function arrangeFlow(dir) {
+      const boxes = layoutTargets();
+      if (boxes.length < 2) return;
+      const x0 = snap(Math.min(...boxes.map(b => b.n.x)));
+      const y0 = snap(Math.min(...boxes.map(b => b.n.y)));
+      const edges = (db.edges || []).map(flowEdge);
+      let info = null;
+      commitLayout(boxes, bs => { info = flowLayout(bs, edges, dir, x0, y0); });
+      if (info && !info.layers && window.showToast) showToast('No lines between these cards, so they went into a grid');
+    }
+
+    // ── Expand a project card (P135) ──────────────────────────
+    // Adds the project's open tasks, goals, decisions, open risks, meetings
+    // and stakeholders as live cards in columns to its right, each joined to
+    // the project by a line. Items already on the board are not duplicated;
+    // they only get a line if they have none to the project yet.
+    function projectWorld(pid) {
+      const items = [];
+      const push = (kind, id, label) => items.push({ kind, id, label });
+      try {
+        const p = ((window.HubData ? HubData.getProjects() : []) || []).find(x => x.id === pid);
+        (p && p.tasks || []).filter(t => !t.done && !t.archived).forEach(t => push('task', t.id, t.title || '(untitled task)'));
+      } catch {}
+      try {
+        const g = HubStorage.get('goals-hub-v1') || {};
+        (g.quarters || []).filter(q => !q.archived).forEach(q => (q.objectives || [])
+          .filter(o => o.projectId === pid).forEach(o => push('goal', o.id, o.title || '(untitled objective)')));
+      } catch {}
+      try {
+        const d = HubStorage.get('decision-hub-v1');
+        (Array.isArray(d) ? d : []).filter(x => x.projectId === pid && !x.archived).forEach(x => push('decision', x.id, x.title || '(untitled decision)'));
+      } catch {}
+      try {
+        const r = HubStorage.get('risk-hub-v1');
+        (r && Array.isArray(r.risks) ? r.risks : []).filter(x => x.projectId === pid && x.status !== 'closed' && !x.archived).forEach(x => push('risk', x.id, x.title || '(untitled risk)'));
+      } catch {}
+      try {
+        const m = HubStorage.get('meetings-hub-v1');
+        (m && Array.isArray(m.meetings) ? m.meetings : []).filter(x => x.projectId === pid && !x.archived).forEach(x => push('meeting', x.id, x.title || '(untitled meeting)'));
+      } catch {}
+      try {
+        const sh = HubStorage.get('stakeholder-hub-v1');
+        (sh && Array.isArray(sh.stakeholders) ? sh.stakeholders : []).filter(x => (x.projectIds || []).includes(pid)).forEach(x => push('stakeholder', x.id, x.name || '(unnamed)'));
+      } catch {}
+      return items;
+    }
+
+    const EXPAND_ORDER = ['goal', 'task', 'decision', 'risk', 'meeting', 'stakeholder'];
+    const EXPAND_ROWS = 8;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+    function expandProject(nodeId) {
+      const card = db.nodes.find(n => n.id === nodeId);
+      if (!card || card.kind !== 'project' || !card.link) return;
+      const world = projectWorld(card.link.id);
+      const onBoard = new Map();
+      db.nodes.forEach(n => { if (n.link && isLinkedKind(n.kind)) onBoard.set(n.kind + ':' + n.link.id, n.id); });
+      const joined = new Set((db.edges || []).flatMap(e => e.from === nodeId ? [e.to] : e.to === nodeId ? [e.from] : []));
+      const fresh = world.filter(it => !onBoard.has(it.kind + ':' + it.id));
+      const relink = world.map(it => onBoard.get(it.kind + ':' + it.id)).filter(id => id && id !== nodeId && !joined.has(id));
+      if (!fresh.length && !relink.length) {
+        if (window.showToast) showToast(world.length ? 'Everything for this project is already on the board' : 'This project has no open tasks, decisions, risks or people yet');
+        return;
+      }
+      if (fresh.length > 40 && !confirm(`This adds ${fresh.length} cards to the board. Continue?`)) return;
+      pushHistory();
+      const newIds = [];
+      fresh.forEach(it => {
+        const id = newNodeId();
+        db.nodes.push({ id, x: card.x, y: card.y, text: '', color: 'c-gray', kind: it.kind, link: { tool: toolLinkFor(it.kind), id: it.id, label: it.label } });
+        newIds.push(id);
+        db.edges.push({ id: newEdgeId(), from: nodeId, to: id, relType: 'relates' });
+      });
+      relink.forEach(id => db.edges.push({ id: newEdgeId(), from: nodeId, to: id, relType: 'relates' }));
+      renderAll();
+      // Columns by kind, to the right of the card, with real heights.
+      const cardBox = nodeBox(card);
+      let x = card.x + cardBox.w + 120;
+      EXPAND_ORDER.forEach(kind => {
+        const col = newIds.map(id => db.nodes.find(n => n.id === id)).filter(n => n.kind === kind)
+          .sort((a, b) => a.link.label.localeCompare(b.link.label)).map(nodeBox);
+        // Wrap long kinds into several columns so the map stays compact.
+        for (let i = 0; i < col.length; i += EXPAND_ROWS) {
+          const part = col.slice(i, i + EXPAND_ROWS);
+          let y = card.y;
+          part.forEach(b => { b.n.x = x; b.n.y = y; y += b.h + 20; });
+          x += Math.max(...part.map(b => b.w)) + (i + EXPAND_ROWS < col.length ? 24 : 60);
+        }
+      });
+      if (fullState.snapToGrid) newIds.forEach(id => { const n = db.nodes.find(x => x.id === id); n.x = snap(n.x); n.y = snap(n.y); });
+      selectedIds = new Set(newIds.length ? newIds : [nodeId]);
+      selectedNodeId = newIds[newIds.length - 1] || nodeId;
+      renderAll();
+      applySelectionClasses();
+      pulseSave();
+      const counts = EXPAND_ORDER.map(k => [k, fresh.filter(f => f.kind === k).length]).filter(([, c]) => c)
+        .map(([k, c]) => plural(c, kindTitle(k).toLowerCase()));
+      if (window.showToast) showToast(fresh.length ? 'Added ' + counts.join(', ') + (relink.length ? ` · linked ${relink.length} already here` : '')
+        : `Linked ${plural(relink.length, 'card')} already on the board`);
+    }
+
+    // ── Paste outline / Mermaid → cards (P135) ────────────────
+    const OUTLINE_MAX = 300;
+
+    function mermaidText(raw) {
+      let t = String(raw || '').trim();
+      t = t.replace(/^\(\((.*)\)\)$/, '$1').replace(/^\(\[(.*)\]\)$/, '$1').replace(/^\[\[(.*)\]\]$/, '$1')
+        .replace(/^\[\((.*)\)\]$/, '$1').replace(/^\{\{(.*)\}\}$/, '$1').replace(/^\[\/(.*)\/\]$/, '$1')
+        .replace(/^[\[\(\{>](.*)[\]\)\}]$/, '$1').trim();
+      if (/^".*"$/.test(t)) t = t.slice(1, -1);
+      return t.replace(/<br\s*\/?>/gi, '\n').replace(/#quot;/g, '"').trim();
+    }
+
+    function relFromLabel(label) {
+      const l = (label || '').trim().toLowerCase();
+      if (l === 'blocks') return { relType: 'blocks', label: '' };
+      if (l === 'needs' || l === 'depends on' || l === 'depends-on') return { relType: 'depends-on', label: '' };
+      return { relType: 'relates', label: (label || '').trim().slice(0, 60) };
+    }
+
+    function parseMermaid(lines) {
+      const nodes = new Map(), edges = [], groups = [];
+      let dir = 'td', groupStack = [];
+      const NODE = /^([A-Za-z0-9_\u00C0-\uFFFF][\w\-\u00C0-\uFFFF]*)\s*(\(\(.*?\)\)|\(\[.*?\]\)|\[\[.*?\]\]|\[\(.*?\)\]|\{\{.*?\}\}|\[\/.*?\/\]|\[.*?\]|\(.*?\)|\{.*?\}|>.*?\])?/;
+      const EDGE = /^\s*(?:--\s*([^\-|>][^>]*?)\s*-->|==\s*([^=>][^>]*?)\s*==>|-\.\s*([^.>][^>]*?)\s*\.->|(<-->|-->|---|==>|===|-\.->|-\.-|--o|--x|~~~))\s*(?:\|([^|]*)\|)?\s*/;
+      const touch = (key, shape) => {
+        let n = nodes.get(key);
+        if (!n) { n = { key, text: key, group: groupStack[groupStack.length - 1] || null }; nodes.set(key, n); }
+        if (shape) n.text = mermaidText(shape) || key;
+        return key;
+      };
+      const readGroup = str => {
+        const keys = [];
+        for (;;) {
+          const m = NODE.exec(str);
+          if (!m) break;
+          keys.push(touch(m[1], m[2]));
+          str = str.slice(m[0].length).replace(/^:::[\w-]+/, '');
+          const amp = /^\s*&\s*/.exec(str);
+          if (!amp) break;
+          str = str.slice(amp[0].length);
+        }
+        return { keys, rest: str };
+      };
+      lines.forEach((raw, i) => {
+        const line = raw.replace(/%%.*$/, '').replace(/;\s*$/, '').trim();
+        if (!line) return;
+        const head = /^(flowchart|graph)\b\s*(TB|TD|BT|RL|LR)?/i.exec(line);
+        if (head && i === lines.findIndex(l => l.trim())) { dir = /LR|RL/i.test(head[2] || '') ? 'lr' : 'td'; return; }
+        const sg = /^subgraph\s+(.+)$/i.exec(line);
+        if (sg) {
+          const m = /^(\S+)\s*\[(.*)\]\s*$/.exec(sg[1].trim());
+          const g = { key: 'g' + groups.length, title: mermaidText(m ? m[2] : sg[1]) || 'Group' };
+          groups.push(g); groupStack.push(g.key);
+          return;
+        }
+        if (/^end$/i.test(line)) { groupStack.pop(); return; }
+        if (/^(classDef|class|style|linkStyle|click|direction)\b/i.test(line)) return;
+        let { keys: prev, rest } = readGroup(line);
+        while (prev.length) {
+          const em = EDGE.exec(rest);
+          if (!em) break;
+          rest = rest.slice(em[0].length);
+          const next = readGroup(rest);
+          if (!next.keys.length) break;
+          const label = em[1] || em[2] || em[3] || em[5] || '';
+          const rel = relFromLabel(label);
+          prev.forEach(a => next.keys.forEach(b => edges.push({ from: a, to: b, ...rel })));
+          prev = next.keys; rest = next.rest;
+        }
+      });
+      return { kind: 'Mermaid flowchart', dir, nodes: [...nodes.values()], edges, groups };
+    }
+
+    function parseOutlineMd(lines) {
+      const nodes = [], edges = [], stack = [];
+      let headBase = null, headDepth = -1, bulletIndents = [];
+      lines.forEach(raw => {
+        if (!raw.trim()) return;
+        const line = raw.replace(/\t/g, '    ');
+        let depth, text, bold = false;
+        const h = /^\s*(#{1,6})\s+(.*)$/.exec(line);
+        if (h) {
+          if (headBase === null || h[1].length < headBase) headBase = h[1].length;
+          depth = h[1].length - headBase;
+          headDepth = depth;
+          bulletIndents = [];
+          text = h[2]; bold = true;
+        } else {
+          const b = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
+          const indent = b ? b[1].length : /^\s*/.exec(line)[0].length;
+          text = b ? b[2] : line.trim();
+          while (bulletIndents.length && bulletIndents[bulletIndents.length - 1] > indent) bulletIndents.pop();
+          if (!bulletIndents.length || bulletIndents[bulletIndents.length - 1] < indent) bulletIndents.push(indent);
+          depth = headDepth + bulletIndents.length;
+        }
+        text = text.replace(/^\[[ xX]\]\s+/, '').trim();
+        if (!text) return;
+        const key = 'o' + nodes.length;
+        nodes.push({ key, text, bold, group: null });
+        while (stack.length && stack[stack.length - 1].depth >= depth) stack.pop();
+        if (stack.length) edges.push({ from: stack[stack.length - 1].key, to: key, relType: 'relates', label: '' });
+        stack.push({ key, depth });
+      });
+      return { kind: 'Outline', dir: 'lr', nodes, edges, groups: [] };
+    }
+
+    function parseOutlineText(text) {
+      const lines = String(text || '').replace(/\r/g, '').replace(/^```(?:mermaid)?\s*$/gim, '').split('\n');
+      const first = (lines.find(l => l.trim()) || '').trim();
+      return /^(flowchart|graph)\b/i.test(first) ? parseMermaid(lines) : parseOutlineMd(lines);
+    }
+
+    let _outlineAt = null, _outlineUntrap = null, _outlineDirTouched = false;
+
+    function openOutlineModal(text, at) {
+      _outlineAt = at || null;
+      _outlineDirTouched = false;
+      const ov = document.getElementById('outline-modal');
+      const ta = document.getElementById('om-text');
+      ta.value = text || '';
+      ov.classList.add('is-open');
+      refreshOutlineStatus();
+      if (HubUtils.trapFocus) _outlineUntrap = HubUtils.trapFocus(ov.querySelector('.ui-modal'));
+      ta.focus();
+      // Opened from a menu mousedown: focus moves back to that button after
+      // this handler, so focus again on the next tick.
+      setTimeout(() => ta.focus(), 0);
+    }
+
+    function closeOutlineModal() {
+      document.getElementById('outline-modal').classList.remove('is-open');
+      if (_outlineUntrap) { _outlineUntrap(); _outlineUntrap = null; }
+      if (document.activeElement) document.activeElement.blur();
+    }
+
+    function refreshOutlineStatus() {
+      const r = parseOutlineText(document.getElementById('om-text').value);
+      if (!_outlineDirTouched) document.getElementById('om-dir').value = r.dir;
+      const n = r.nodes.length;
+      document.getElementById('om-status').textContent = n
+        ? `${r.kind}: ${plural(Math.min(n, OUTLINE_MAX), 'card')}, ${plural(r.edges.length, 'line')}` + (r.groups.length ? `, ${plural(r.groups.length, 'frame')}` : '') + (n > OUTLINE_MAX ? ` (first ${OUTLINE_MAX} only)` : '')
+        : 'Nothing to add yet';
+      document.getElementById('om-create').disabled = !n;
+    }
+    document.getElementById('om-text').addEventListener('input', refreshOutlineStatus);
+    document.getElementById('om-dir').addEventListener('change', () => { _outlineDirTouched = true; });
+    document.getElementById('om-text').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); createFromOutline(); }
+    });
+
+    function createFromOutline() {
+      const r = parseOutlineText(document.getElementById('om-text').value);
+      const dir = document.getElementById('om-dir').value;
+      const items = r.nodes.slice(0, OUTLINE_MAX);
+      if (!items.length) return;
+      closeOutlineModal();
+      pushHistory();
+      const idOf = new Map();
+      items.forEach(it => {
+        const id = newNodeId();
+        idOf.set(it.key, id);
+        let html = markdownToHtml(it.text);
+        if (it.bold) html = '<b>' + html + '</b>';
+        db.nodes.push({ id, x: 0, y: 0, text: html, color: 'c-gray' });
+      });
+      const edges = [];
+      r.edges.forEach(e => {
+        const a = idOf.get(e.from), b = idOf.get(e.to);
+        if (!a || !b || a === b) return;
+        const edge = { id: newEdgeId(), from: a, to: b, relType: e.relType };
+        if (e.label) edge.label = e.label;
+        db.edges.push(edge);
+        edges.push(flowEdge(edge));
+      });
+      renderAll();
+      // Where: the right-click point, else the middle of the screen.
+      const at = _outlineAt || (() => { const v = currentView(); return { x: v.cx - 200, y: v.cy - 150 }; })();
+      const x0 = snap(at.x), y0 = snap(at.y);
+      const boxOf = key => nodeBox(db.nodes.find(n => n.id === idOf.get(key)));
+      const newIds = items.map(it => idOf.get(it.key));
+      const frames = [];
+      if (!r.groups.length) {
+        flowLayout(items.map(it => boxOf(it.key)), edges, dir, x0, y0);
+      } else {
+        // Lay out each subgraph on its own, then flow the blocks.
+        const PAD = 40, TOP = 56;
+        const blocks = [];
+        r.groups.forEach(g => {
+          const members = items.filter(it => it.group === g.key).map(it => boxOf(it.key));
+          if (!members.length) return;
+          const info = flowLayout(members, edges, dir, 0, 0);
+          const R = Math.max(...members.map(b => b.n.x + b.w)), B = Math.max(...members.map(b => b.n.y + b.h));
+          blocks.push({ n: { id: 'blk-' + g.key, x: 0, y: 0 }, w: R + PAD * 2, h: B + PAD + TOP, members, title: g.title, info });
+        });
+        items.filter(it => !it.group || !blocks.some(bl => bl.n.id === 'blk-' + it.group)).forEach(it => {
+          const b = boxOf(it.key);
+          blocks.push({ n: { id: 'blk-' + it.key, x: 0, y: 0 }, w: b.w, h: b.h, members: [b], single: true });
+        });
+        const blockOf = new Map();
+        blocks.forEach(bl => bl.members.forEach(m => blockOf.set(m.n.id, bl.n.id)));
+        const blockEdges = edges.map(e => ({ from: blockOf.get(e.from), to: blockOf.get(e.to) })).filter(e => e.from && e.to && e.from !== e.to);
+        const gap = 40;
+        blocks.forEach(bl => { bl.w += gap; bl.h += gap; });
+        flowLayout(blocks, blockEdges, dir, x0, y0);
+        blocks.forEach(bl => {
+          if (bl.single) { bl.members[0].n.x = bl.n.x; bl.members[0].n.y = bl.n.y; return; }
+          bl.members.forEach(m => { m.n.x += bl.n.x + PAD; m.n.y += bl.n.y + TOP; });
+          frames.push({ id: newNodeId(), x: bl.n.x, y: bl.n.y, w: bl.w - gap, h: bl.h - gap, text: bl.title.slice(0, 200), color: 'c-gray', kind: 'frame' });
+        });
+        db.nodes.push(...frames);
+      }
+      if (fullState.snapToGrid) newIds.forEach(id => { const n = db.nodes.find(x => x.id === id); n.x = snap(n.x); n.y = snap(n.y); });
+      selectedIds = new Set(newIds);
+      selectedNodeId = newIds[newIds.length - 1];
+      renderAll();
+      applySelectionClasses();
+      pulseSave();
+      if (window.showToast) showToast(`Added ${plural(newIds.length, 'card')}, ${plural(edges.length, 'line')}` + (frames.length ? `, ${plural(frames.length, 'frame')}` : ''));
+    }
+
+    // Paste text straight onto the canvas (Ctrl+V with nothing copied on
+    // the canvas): multi-line text opens the outline dialog, filled in.
+    document.addEventListener('paste', e => {
+      if (isTyping() || document.getElementById('outline-modal').classList.contains('is-open')) return;
+      if (document.body.classList.contains('presenting')) return;
+      const text = e.clipboardData && e.clipboardData.getData('text/plain');
+      if (!text || !text.trim()) return;
+      e.preventDefault();
+      openOutlineModal(text, lastPointerCanvas());
+    });
 
     // Zoom and pan so every node on the board is in view.
     function fitToScreen() {
