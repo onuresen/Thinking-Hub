@@ -37,7 +37,7 @@
       background-image: radial-gradient(var(--border2) 1px, transparent 1px);
       background-size: 20px 20px;
       background-position: 0 0;
-      cursor: grab;
+      cursor: default;
     }
 
     .viewport.panning {
@@ -188,6 +188,60 @@
       opacity: 0.6;
     }
 
+    /* ── Layers (P131) ─────────────────────────────────────────
+       Column / row bands behind everything. A visual guide only:
+       they never own or move nodes. Drawn in screen space, so a band
+       runs across the whole canvas at any pan or zoom. */
+    #lane-bands, #lane-heads {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    #lane-heads { z-index: 5; }
+    .lane-band { position: absolute; }
+    .lane-band .lane-fill {
+      position: absolute; inset: 0;
+      background: var(--node-gray);
+      opacity: .35;
+    }
+    .lane-band.col { border-left: 1px dashed var(--border2); border-right: 1px dashed var(--border2); }
+    .lane-band.row { border-top: 1px dashed var(--border2); border-bottom: 1px dashed var(--border2); }
+    .lane-band.c-yellow .lane-fill { background: var(--node-yellow); }
+    .lane-band.c-green .lane-fill { background: var(--node-green); }
+    .lane-band.c-blue .lane-fill { background: var(--node-blue); }
+    .lane-band.c-red .lane-fill { background: var(--node-red); }
+    .lane-band.c-purple .lane-fill { background: var(--node-purple); }
+    .lane-band.c-yellow { border-color: var(--border-yellow); }
+    .lane-band.c-green { border-color: var(--border-green); }
+    .lane-band.c-blue { border-color: var(--border-blue); }
+    .lane-band.c-red { border-color: var(--border-red); }
+    .lane-band.c-purple { border-color: var(--border-purple); }
+    .lane-band.active { border-style: solid; border-color: var(--accent); }
+    .lane-head {
+      position: absolute;
+      pointer-events: auto;
+      max-width: 220px;
+      padding: 3px 9px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-left-width: 3px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-body); font-size: 11.5px; font-weight: 600;
+      color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      cursor: grab;
+      box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    }
+    .lane-head.c-yellow { border-color: var(--border-yellow); }
+    .lane-head.c-green { border-color: var(--border-green); }
+    .lane-head.c-blue { border-color: var(--border-blue); }
+    .lane-head.c-red { border-color: var(--border-red); }
+    .lane-head.c-purple { border-color: var(--border-purple); }
+    .lane-head.active { border-color: var(--accent); }
+    .lane-grip { position: absolute; pointer-events: auto; background: var(--accent); opacity: .55; }
+    .lane-grip:hover { opacity: 1; }
+    .lane-grip.col { width: 6px; cursor: col-resize; }
+    .lane-grip.row { height: 6px; cursor: row-resize; }
     .node.frame.c-yellow { border-color: var(--border-yellow); }
     .node.frame.c-green { border-color: var(--border-green); }
     .node.frame.c-blue { border-color: var(--border-blue); }
@@ -811,6 +865,49 @@
       pointer-events: none;
     }
 
+    /* ── Jump menu + present mode (P132) ─────────────────────── */
+    .jump-menu { min-width: 250px; max-height: 60vh; overflow-y: auto; }
+    .jump-menu .jm-head {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text3); padding: 8px 8px 2px;
+    }
+    .jump-menu .jm-empty { font-size: 11px; color: var(--text3); padding: 2px 8px 6px; }
+    .jump-menu .jm-row { display: flex; align-items: center; }
+    .jump-menu .jm-row .qm-item { flex: 1; min-width: 0; }
+    .jump-menu .jm-row .qm-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .jump-menu .jm-key {
+      font-family: var(--font-mono); font-size: 10px; color: var(--text2);
+      border: 1px solid var(--border2); border-radius: 4px; padding: 0 5px; flex: none;
+    }
+    .jump-menu .jm-del {
+      border: none; background: transparent; color: var(--text3); cursor: pointer;
+      padding: 4px 8px; border-radius: 6px; font-size: 11px;
+    }
+    .jump-menu .jm-del:hover { color: var(--accent-nope); background: var(--surface3); }
+    .present-bar {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+      z-index: 300; display: none; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    body.presenting .present-bar { display: flex; }
+    body.presenting .controls,
+    body.presenting .board-bar,
+    body.presenting #minimap,
+    body.presenting .help-text,
+    body.presenting .find-box { display: none !important; }
+    .pb-text {
+      font-family: var(--font-body); font-size: 12.5px; color: var(--text);
+      padding: 0 8px; max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pb-btn {
+      border: none; background: var(--surface3); color: var(--text);
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 12px;
+    }
+    .pb-btn:hover { background: var(--accent-dim); }
+    .pb-exit { background: transparent; color: var(--text2); }
+
     /* ── Quick-add menu (right-click) ──────────────────────────── */
     .quick-menu {
       position: fixed;
@@ -929,7 +1026,7 @@
 
 <body>
 
-  <div class="help-text" id="help-text">Double-click: note · Right-click: menu · Shift: select · Ctrl+C/V: copy/paste · Ctrl+F: find · Space+Drag: pan · Scroll: zoom</div>
+  <div class="help-text" id="help-text">Drag: select · Right-drag: pan · Right-click: menu · Double-click: note · 1–9: views · Ctrl+F: find · Scroll: zoom</div>
 
   <div class="board-bar">
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
@@ -949,9 +1046,11 @@
   <input type="file" id="board-import-input" accept=".json,application/json" style="display:none">
 
   <div class="viewport" id="viewport">
+    <div id="lane-bands"></div>
     <div id="canvas-layer">
       <svg id="edges-svg"></svg>
     </div>
+    <div id="lane-heads"></div>
   </div>
 
   <!-- Edge type popover: click a connection line to set its relationship type or delete it -->
@@ -978,7 +1077,20 @@
       title="Draw connections between nodes">Connect</button>
     <button class="btn" id="layout-btn" onclick="toggleLayoutMenu()"
       title="Align and arrange nodes">Layout ▾</button>
+    <button class="btn" id="jump-btn" onclick="toggleJumpMenu()"
+      title="Jump to a frame, layer or saved view · Present">Jump ▾</button>
     <button class="btn" onclick="exportPNG()" title="Export canvas as PNG">Export PNG</button>
+  </div>
+
+  <!-- Jump menu (P132): saved views, frames, layers, present mode -->
+  <div class="quick-menu jump-menu" id="jump-menu"></div>
+
+  <!-- Present mode bar (P132) -->
+  <div class="present-bar" id="present-bar">
+    <button class="pb-btn" onclick="presentStep(-1)" title="Previous (←)">◀</button>
+    <span class="pb-text" id="pb-text"></span>
+    <button class="pb-btn" onclick="presentStep(1)" title="Next (→ or Space)">▶</button>
+    <button class="pb-btn pb-exit" onclick="exitPresent()" title="Exit (Esc)">✕</button>
   </div>
 
   <!-- Right-click quick-add menu: Note / Project… / Goal… / Tool… / R&D bet -->
@@ -1034,7 +1146,7 @@
     const NODE_H = 80; // approximate height for edge anchoring
 
     let focusId = null; // Focus mode (P128)
-    const DEFAULT_HELP = 'Double-click: note · Right-click: menu · Shift: select · Ctrl+C/V: copy/paste · Ctrl+F: find · Space+Drag: pan · Scroll: zoom';
+    const DEFAULT_HELP = 'Drag: select · Right-drag: pan · Right-click: menu · Double-click: note · 1–9: views · Ctrl+F: find · Scroll: zoom';
 
     const COLORS = [
       { id: 'c-gray', dot: '#666' },
@@ -1230,7 +1342,11 @@
     }
 
     function snapshotBoard() {
-      return { nodes: JSON.parse(JSON.stringify(db.nodes)), edges: JSON.parse(JSON.stringify(db.edges || [])) };
+      return {
+        nodes: JSON.parse(JSON.stringify(db.nodes)),
+        edges: JSON.parse(JSON.stringify(db.edges || [])),
+        lanes: JSON.parse(JSON.stringify(db.lanes || []))
+      };
     }
 
     // Call BEFORE a mutation, so the undo stack holds the state right
@@ -1247,6 +1363,8 @@
     function restoreSnapshot(snap) {
       db.nodes = snap.nodes;
       db.edges = snap.edges;
+      db.lanes = snap.lanes || [];
+      activeLaneId = null;
       selectedNodeId = null; selectedIds = new Set();
       connectMode = false; connectSource = null;
       document.getElementById('connect-btn')?.classList.remove('active');
@@ -1290,12 +1408,13 @@
 
     function switchBoard(id) {
       closeEdgePopover();
+      if (presenting) { presenting = null; document.body.classList.remove('presenting'); }
       const b = fullState.boards.find(x => x.id === id);
       if (!b || b === db) return;
       db = b;
       if (!db.edges) db.edges = [];
       selectedNodeId = null; selectedIds = new Set();
-      connectMode = false; connectSource = null; focusId = null;
+      connectMode = false; connectSource = null; focusId = null; activeLaneId = null;
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       fullState.activeBoardId = id;
@@ -1352,6 +1471,7 @@
       layer.style.transform = `translate(${db.panX}px, ${db.panY}px) scale(${db.zoom})`;
       viewport.style.backgroundPosition = `${db.panX}px ${db.panY}px`;
       viewport.style.backgroundSize = `${20 * db.zoom}px ${20 * db.zoom}px`;
+      positionLanes();
       renderMinimap();
     }
 
@@ -1375,31 +1495,63 @@
     let isPanning = false, startPanX = 0, startPanY = 0;
     let spacePressed = false;
 
-    viewport.addEventListener('mousedown', e => {
-      if (e.target !== viewport && !spacePressed) return;
-      if (e.button !== 0 && e.button !== 1) return;
-      closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
-      if (e.shiftKey && e.button === 0 && !spacePressed && !connectMode) {
-        startMarquee(e);
-        return;
-      }
+    // Mouse model (P131): left-drag on empty canvas = rectangle select.
+    // Pan = right-drag or middle-drag anywhere, or Space+drag.
+    // Left-drag pans only in Connect mode, where selecting makes no sense.
+    // A right press that doesn't move still opens the menu (see gateMenu).
+    const PAN_THRESHOLD = 4;
+    let rightPan = null;       // { x0, y0, moved, pendingMenu } while right button is down
+    let rightPanEnd = { at: 0, moved: false };
+
+    function startPan(e) {
       isPanning = true;
       startPanX = e.clientX - db.panX;
       startPanY = e.clientY - db.panY;
       viewport.classList.add('panning');
+    }
+
+    // Right/middle press: pan from anywhere, over nodes too. Capture phase
+    // so it runs before node handlers (which ignore non-primary buttons).
+    viewport.addEventListener('mousedown', e => {
+      if (e.button !== 1 && e.button !== 2) return;
+            if (e.button === 1) e.preventDefault(); // no autoscroll icon
+      closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
+      if (e.button === 2) rightPan = { x0: e.clientX, y0: e.clientY, moved: false, pendingMenu: null };
+      startPan(e);
+    }, true);
+
+    viewport.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      if (e.target !== viewport && !spacePressed) return;
+      closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
+      if (spacePressed || connectMode) { startPan(e); return; }
+      if (activeLaneId) setActiveLane(null); // grips only while you work on a layer
+      startMarquee(e);
     });
+
+    // Every contextmenu opener goes through here, so a right-drag pan
+    // never ends with a menu. Some systems fire contextmenu on press
+    // (macOS/Linux), others on release (Windows) — both are handled.
+    function gateMenu(open) {
+      if (rightPan) { rightPan.pendingMenu = open; return; }
+      if (rightPanEnd.moved && Date.now() - rightPanEnd.at < 400) return;
+      open();
+    }
 
     let lastMouse = null; // last pointer position over the canvas, for paste
     viewport.addEventListener('mousemove', e => { lastMouse = { x: e.clientX, y: e.clientY }; });
     viewport.addEventListener('mouseleave', () => { lastMouse = null; });
 
     window.addEventListener('mousemove', e => {
+      if (rightPan && !rightPan.moved &&
+        Math.hypot(e.clientX - rightPan.x0, e.clientY - rightPan.y0) > PAN_THRESHOLD) rightPan.moved = true;
       if (isPanning) {
         db.panX = e.clientX - startPanX;
         db.panY = e.clientY - startPanY;
         updateTransform();
       }
       if (marquee) moveMarquee(e);
+      if (laneDrag) moveLaneDrag(e);
       if (isDraggingNode && dragState) {
         const dx = (e.clientX - dragState.startMouseX) / db.zoom;
         const dy = (e.clientY - dragState.startMouseY) / db.zoom;
@@ -1448,9 +1600,15 @@
       updateUndoRedoButtons();
     }
 
-    window.addEventListener('mouseup', () => {
-      if (marquee) endMarquee();
+    window.addEventListener('mouseup', e => {
+      if (marquee) endMarquee(e);
+      if (laneDrag) endLaneDrag();
       if (isPanning) { isPanning = false; viewport.classList.remove('panning'); pulseSave(); }
+      if (rightPan && e.button === 2) {
+        const rp = rightPan; rightPan = null;
+        rightPanEnd = { at: Date.now(), moved: rp.moved };
+        if (!rp.moved && rp.pendingMenu) rp.pendingMenu();
+      }
       if (isDraggingNode) {
         isDraggingNode = false;
         if (dragState && dragState.moved) commitGestureHistory(dragState.preSnapshot);
@@ -1511,15 +1669,19 @@
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
         if (document.getElementById('layout-menu').style.display === 'flex') { closeLayoutMenu(); return; }
+        if (document.getElementById('jump-menu').style.display === 'flex') { closeJumpMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('find-box').style.display === 'flex') { closeFind(); return; }
         if (document.getElementById('board-menu').style.display === 'flex') { closeBoardMenu(); return; }
         if (connectMode) { toggleConnectMode(); return; }
         if (focusId) { clearFocus(); return; }
+        if (activeLaneId) { setActiveLane(null); return; }
         selectNode(null);
       }
       if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIds.size && !isTyping()) {
         deleteNodes([...selectedIds]);
+      } else if ((e.key === 'Backspace' || e.key === 'Delete') && activeLaneId && !isTyping()) {
+        deleteLane(activeLaneId);
       }
       if (mod && !isTyping() && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X') && selectedIds.size) {
         e.preventDefault();
@@ -1832,6 +1994,7 @@
       if (!e.target.closest('#find-box')) closeFind();
       if (!e.target.closest('#board-menu') && !e.target.closest('#board-menu-btn')) closeBoardMenu();
       if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
+      if (!e.target.closest('#jump-menu') && !e.target.closest('#jump-btn')) closeJumpMenu();
     }, true);
 
     // ── Node CRUD ────────────────────────────────────────────
@@ -1845,18 +2008,24 @@
     });
 
     viewport.addEventListener('contextmenu', e => {
-      if (e.target !== viewport) return;
+      // No browser menu anywhere on the canvas: a right-drag pan can end
+      // over a line or label, and that must not pop the native menu.
       e.preventDefault();
-      closeEdgePopover();
-      const rect = viewport.getBoundingClientRect();
-      _pendingAddX = (e.clientX - rect.left - db.panX) / db.zoom;
-      _pendingAddY = (e.clientY - rect.top - db.panY) / db.zoom;
-      openAddMenu(e.clientX, e.clientY);
+      if (e.target !== viewport) return;
+      const cx = e.clientX, cy = e.clientY;
+      gateMenu(() => {
+        closeEdgePopover();
+        const rect = viewport.getBoundingClientRect();
+        _pendingAddX = (cx - rect.left - db.panX) / db.zoom;
+        _pendingAddY = (cy - rect.top - db.panY) / db.zoom;
+        openAddMenu(cx, cy);
+      });
     });
 
     viewport.addEventListener('click', e => {
       if (suppressNextClick) { suppressNextClick = false; return; }
       if (e.target === viewport) {
+        if (activeLaneId) setActiveLane(null);
         if (connectMode) {
           // Cancel connect
           connectSource = null;
@@ -1946,6 +2115,8 @@
       { id: 'project', icon: '📌', label: 'Project…', picker: true },
       { id: 'goal', icon: '🎯', label: 'Goal…', picker: true },
       { id: 'frame', icon: '▭', label: 'Frame' },
+      { id: 'lane-col', icon: '⫼', label: 'Column layer' },
+      { id: 'lane-row', icon: '☰', label: 'Row layer' },
       { id: 'tool', icon: '🛠', label: 'Tool…', picker: true },
       { id: 'rd', icon: '🧪', label: 'R&D bet' },
     ];
@@ -1972,6 +2143,11 @@
             openAddPicker(it.id, clientX, clientY);
           } else {
             if (it.id === 'frame') createFrame(_pendingAddX, _pendingAddY, 640, 400);
+            else if (it.id === 'lane-col' || it.id === 'lane-row') {
+              closeAddMenu();
+              promptNewLane(it.id === 'lane-col' ? 'col' : 'row', _pendingAddX, _pendingAddY);
+              return;
+            }
             else createNode(_pendingAddX, _pendingAddY, it.id === 'note' ? undefined : it.id);
             closeAddMenu();
           }
@@ -2131,6 +2307,8 @@
       add('⧉', 'Duplicate' + many, () => duplicateNodes(targets));
       add('⎘', 'Copy' + many + ' (Ctrl+C)', () => copyNodes(targets, false));
       add('▭', 'Wrap in frame' + many, () => wrapInFrame(targets));
+      add('⫼', 'Column layer around' + many, () => laneAround('col', targets));
+      add('☰', 'Row layer around' + many, () => laneAround('row', targets));
 
       // Color: only for kinds whose color is free (Goal/Project/Tool are fixed by kind)
       const colorable = targets.filter(id => {
@@ -2272,7 +2450,7 @@
 
     function duplicateBoard() {
       const { nodes, edges } = cloneWithNewIds(db.nodes, db.edges);
-      addBoard(db.name + ' (copy)', nodes, edges, { panX: db.panX, panY: db.panY, zoom: db.zoom });
+      addBoard(db.name + ' (copy)', nodes, edges, { panX: db.panX, panY: db.panY, zoom: db.zoom, lanes: cleanLanes(db.lanes), views: cleanViews(db.views) });
       if (window.showToast) showToast('Board duplicated');
     }
 
@@ -2293,7 +2471,7 @@
       const payload = {
         format: BOARD_FILE_FORMAT, version: 1,
         exportedAt: new Date().toISOString(),
-        board: { name: db.name, nodes: db.nodes, edges: db.edges || [], panX: db.panX, panY: db.panY, zoom: db.zoom }
+        board: { name: db.name, nodes: db.nodes, edges: db.edges || [], lanes: db.lanes || [], views: db.views || [], panX: db.panX, panY: db.panY, zoom: db.zoom }
       };
       downloadText(`canvas-${fileSlug(db.name)}-${HubUtils.todayLocal()}.json`, JSON.stringify(payload, null, 2), 'application/json');
     }
@@ -2314,6 +2492,14 @@
         frameContents(f).filter(n => !isFrame(n)).forEach(n => home.set(n.id, f.id)));
       const byPos = (a, b) => (a.y - b.y) || (a.x - b.x);
       const lines = [`# ${db.name}`, '', `Exported from Thinking Hub Canvas · ${HubUtils.todayLocal()}`, ''];
+      const cols = (db.lanes || []).filter(l => l.axis === 'col').sort((a, b) => a.start - b.start);
+      const rows = (db.lanes || []).filter(l => l.axis === 'row').sort((a, b) => a.start - b.start);
+      if (cols.length || rows.length) {
+        lines.push('## Layers', '');
+        if (cols.length) lines.push('- **Columns:** ' + cols.map(l => l.label).join(' · '));
+        if (rows.length) lines.push('- **Rows:** ' + rows.map(l => l.label).join(' · '));
+        lines.push('');
+      }
       frames.slice().sort(byPos).forEach(f => {
         const items = db.nodes.filter(n => home.get(n.id) === f.id).sort(byPos);
         lines.push(`## ${nodeLabel(f)}`, '');
@@ -2367,6 +2553,7 @@
 
     const KNOWN_KINDS = new Set(['note', 'goal', 'project', 'tool', 'rd', 'frame']);
     const KNOWN_COLORS = new Set(COLORS.map(c => c.id));
+    const KNOWN_LANE_COLORS = KNOWN_COLORS;
     const KNOWN_REL = new Set(EDGE_TYPES.map(t => t.id));
 
     function importBoardText(text) {
@@ -2397,7 +2584,7 @@
         return out;
       });
       const fresh = cloneWithNewIds(nodes, edges);
-      const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)) };
+      const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)), lanes: cleanLanes(b.lanes), views: cleanViews(b.views) };
       const board = addBoard(String(b.name || 'Imported board').slice(0, 80), fresh.nodes, fresh.edges, view);
       // Linked cards whose project/goal/tool doesn't exist here show "(item removed)".
       const known = { project: new Set(liveItemsFor('project').map(i => i.id)), goal: new Set(liveItemsFor('goal').map(i => i.id)), tool: new Set(liveItemsFor('tool').map(i => i.id)) };
@@ -2420,6 +2607,480 @@
       };
       reader.readAsText(file);
     });
+
+    // ── Jump list, saved views, present mode (P132) ───────────
+    // Saved views are per board: { slot 1–9, name, cx, cy, zoom }.
+    // cx/cy is the canvas point at the screen centre, so a view looks the
+    // same on any screen size. Views are camera state: not in undo.
+    function views() { if (!db.views) db.views = []; return db.views; }
+
+    function currentView() {
+      const vw = viewport.clientWidth, vh = viewport.clientHeight;
+      return { cx: (vw / 2 - db.panX) / db.zoom, cy: (vh / 2 - db.panY) / db.zoom, zoom: db.zoom };
+    }
+
+    const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let viewAnim = null, viewAnimTimer = null;
+    // Move the camera so canvas point (cx, cy) sits at the screen centre.
+    function animateTo(cx, cy, zoom) {
+      const vw = viewport.clientWidth, vh = viewport.clientHeight;
+      zoom = Math.min(4, Math.max(0.15, zoom));
+      const to = { panX: vw / 2 - cx * zoom, panY: vh / 2 - cy * zoom, zoom };
+      if (viewAnim) cancelAnimationFrame(viewAnim);
+      clearTimeout(viewAnimTimer);
+      const from = { panX: db.panX, panY: db.panY, zoom: db.zoom };
+      const done = () => {
+        if (viewAnim) cancelAnimationFrame(viewAnim);
+        clearTimeout(viewAnimTimer);
+        Object.assign(db, to); viewAnim = null; updateTransform(); pulseSave();
+      };
+      if (reduceMotion()) { done(); return; }
+      const t0 = performance.now(), ms = 380;
+      // Browsers pause animation frames in hidden tabs; always land anyway.
+      viewAnimTimer = setTimeout(done, ms + 150);
+      const ease = t => 1 - Math.pow(1 - t, 3);
+      const step = now => {
+        const t = Math.min(1, (now - t0) / ms), k = ease(t);
+        db.panX = from.panX + (to.panX - from.panX) * k;
+        db.panY = from.panY + (to.panY - from.panY) * k;
+        db.zoom = from.zoom + (to.zoom - from.zoom) * k;
+        updateTransform();
+        if (t < 1) viewAnim = requestAnimationFrame(step); else done();
+      };
+      viewAnim = requestAnimationFrame(step);
+    }
+
+    function fitRect(x, y, w, h, pad, maxZoom) {
+      const vw = viewport.clientWidth, vh = viewport.clientHeight;
+      const zoom = Math.min(maxZoom || 1.5, (vw - pad * 2) / w, (vh - pad * 2) / h);
+      animateTo(x + w / 2, y + h / 2, zoom);
+    }
+
+    function saveView(slot, name) {
+      const list = views();
+      if (!slot) {
+        for (let i = 1; i <= 9; i++) if (!list.some(v => v.slot === i)) { slot = i; break; }
+        if (!slot) { if (window.showToast) showToast('All 9 view slots are used — delete one first'); return null; }
+      }
+      const v = Object.assign({ slot, name: (name || 'View ' + slot).slice(0, 60) }, currentView());
+      const i = list.findIndex(x => x.slot === slot);
+      if (i >= 0) { v.name = name || list[i].name; list[i] = v; } else list.push(v);
+      list.sort((a, b) => a.slot - b.slot);
+      pulseSave();
+      if (window.showToast) showToast(`Saved view ${slot}: ${v.name}`);
+      return v;
+    }
+
+    function goView(slot) {
+      const v = views().find(x => x.slot === slot);
+      if (!v) { if (window.showToast) showToast(`No view on ${slot} yet — Shift+${slot} saves one`); return; }
+      animateTo(v.cx, v.cy, v.zoom);
+    }
+
+    function deleteView(slot) {
+      const i = views().findIndex(v => v.slot === slot);
+      if (i < 0) return;
+      views().splice(i, 1);
+      pulseSave();
+    }
+
+    function goFrame(f) { fitRect(f.x, f.y, f.w || NODE_W, f.h || NODE_H, 50, 1.5); }
+
+    // A layer has no length, so keep the other axis where it is.
+    function goLane(lane) {
+      const cur = currentView();
+      const vw = viewport.clientWidth, vh = viewport.clientHeight;
+      const room = lane.axis === 'col' ? vw : vh;
+      const zoom = Math.min(cur.zoom, Math.max(0.15, (room * 0.8) / lane.size));
+      const mid = lane.start + lane.size / 2;
+      animateTo(lane.axis === 'col' ? mid : cur.cx, lane.axis === 'col' ? cur.cy : mid, zoom);
+      setActiveLane(lane.id);
+    }
+
+    const frameOrder = (a, b) => (Math.abs(a.y - b.y) > 40 ? a.y - b.y : a.x - b.x);
+
+    function closeJumpMenu() {
+      const m = document.getElementById('jump-menu');
+      if (m) m.style.display = 'none';
+      document.getElementById('jump-btn')?.classList.remove('active');
+    }
+
+    function toggleJumpMenu() {
+      const menu = document.getElementById('jump-menu');
+      if (menu.style.display === 'flex') { closeJumpMenu(); return; }
+      menu.innerHTML = '';
+      const head = t => { const d = document.createElement('div'); d.className = 'jm-head'; d.textContent = t; menu.appendChild(d); };
+      const item = (icon, label, action, key, del) => {
+        const row = document.createElement('div'); row.className = 'jm-row';
+        const b = document.createElement('button'); b.className = 'qm-item';
+        b.innerHTML = `<span>${icon}</span><span></span>`;
+        b.lastChild.textContent = label;
+        if (key) { const k = document.createElement('span'); k.className = 'jm-key'; k.textContent = key; b.insertBefore(k, b.lastChild); }
+        b.onmousedown = e => { e.stopPropagation(); closeJumpMenu(); action(); };
+        row.appendChild(b);
+        if (del) {
+          const x = document.createElement('button'); x.className = 'jm-del'; x.textContent = '✕'; x.title = 'Delete view';
+          x.onmousedown = e => { e.stopPropagation(); del(); closeJumpMenu(); toggleJumpMenu(); };
+          row.appendChild(x);
+        }
+        menu.appendChild(row);
+      };
+      const frames = db.nodes.filter(isFrame).sort(frameOrder);
+      if (presentSlides().length) item('▶', `Present (${presentSlides().length} ${frames.length ? 'frames' : 'views'})`, enterPresent);
+      item('＋', 'Save this view…', () => {
+        const name = prompt('Name this view:', 'View');
+        if (name !== null) saveView(null, name.trim() || undefined);
+      });
+      head('Saved views · keys 1–9');
+      if (views().length) views().forEach(v => item('◉', v.name, () => goView(v.slot), String(v.slot), () => deleteView(v.slot)));
+      else { const d = document.createElement('div'); d.className = 'jm-empty'; d.textContent = 'Shift+1…9 saves the current view.'; menu.appendChild(d); }
+      if (frames.length) { head('Frames'); frames.forEach(f => item('▭', nodeLabel(f), () => goFrame(f))); }
+      const cols = lanes().filter(l => l.axis === 'col').sort((a, b) => a.start - b.start);
+      const rows = lanes().filter(l => l.axis === 'row').sort((a, b) => a.start - b.start);
+      if (cols.length) { head('Columns'); cols.forEach(l => item('⫼', l.label, () => goLane(l))); }
+      if (rows.length) { head('Rows'); rows.forEach(l => item('☰', l.label, () => goLane(l))); }
+      menu.style.display = 'flex';
+      const r = document.getElementById('jump-btn').getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      document.getElementById('jump-btn').classList.add('active');
+    }
+
+    // Present: frames in reading order; without frames, saved views.
+    let presenting = null;   // { slides, i, before }
+    function presentSlides() {
+      const frames = db.nodes.filter(isFrame).sort(frameOrder);
+      if (frames.length) return frames.map(f => ({ title: nodeLabel(f), go: () => goFrame(f) }));
+      return views().map(v => ({ title: v.name, go: () => goView(v.slot) }));
+    }
+    function enterPresent() {
+      const slides = presentSlides();
+      if (!slides.length) { if (window.showToast) showToast('Add a frame or save a view to present'); return; }
+      closeJumpMenu(); closeFind(); selectNode(null); clearFocus();
+      presenting = { slides, i: 0, before: currentView() };
+      document.body.classList.add('presenting');
+      showSlide();
+    }
+    function showSlide() {
+      const p = presenting;
+      p.slides[p.i].go();
+      document.getElementById('pb-text').textContent = `${p.i + 1} / ${p.slides.length} · ${p.slides[p.i].title}`;
+    }
+    function presentStep(d) {
+      if (!presenting) return;
+      const n = presenting.slides.length;
+      presenting.i = Math.max(0, Math.min(n - 1, presenting.i + d));
+      showSlide();
+    }
+    function exitPresent() {
+      if (!presenting) return;
+      const b = presenting.before;
+      presenting = null;
+      document.body.classList.remove('presenting');
+      animateTo(b.cx, b.cy, b.zoom);
+    }
+
+    // Capture phase: while presenting, arrows/Space/Backspace drive the
+    // slides and never reach the canvas shortcuts (pan, delete…).
+    document.addEventListener('keydown', e => {
+      if (presenting) {
+        const k = e.key;
+        const next = k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Enter';
+        const prev = k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace';
+        if (next || prev || k === 'Escape' || k === 'Home' || k === 'End' || k === 'Delete') {
+          e.preventDefault(); e.stopImmediatePropagation();
+          if (next) presentStep(1);
+          else if (prev) presentStep(-1);
+          else if (k === 'Home') presentStep(-999);
+          else if (k === 'End') presentStep(999);
+          else if (k === 'Escape') exitPresent();
+        }
+        return;
+      }
+      // 1–9 go to a saved view; Shift+1–9 saves one.
+      const m = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
+      if (m && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping()) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        const slot = +m[1];
+        if (e.shiftKey) saveView(slot); else goView(slot);
+      }
+    }, true);
+
+    // ── Layers (P131) ─────────────────────────────────────────
+    // A layer is a named column or row band that runs across the whole
+    // board: { id, axis: 'col'|'row', label, start, size, color }.
+    // start/size are canvas units along the axis. Layers are a visual
+    // guide: they never own or move nodes (frames do that).
+    const LANE_SIZE = { col: 260, row: 240 };
+    const LANE_MIN = 40;
+    let activeLaneId = null;
+    let laneDrag = null;   // { lane, mode: 'move'|'lo'|'hi', startMouse, startStart, startSize, pre, moved }
+
+    function lanes() { if (!db.lanes) db.lanes = []; return db.lanes; }
+    function newLaneId() { return 'l-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    function createLane(axis, start, size, label) {
+      pushHistory();
+      const snapOn = fullState.snapToGrid;
+      const lane = {
+        id: newLaneId(), axis,
+        label: (label || (axis === 'col' ? 'Column' : 'Row')).slice(0, 80),
+        start: snapOn ? snap(start) : Math.round(start),
+        size: Math.max(LANE_MIN, snapOn ? snap(size) : Math.round(size)),
+        color: 'c-gray'
+      };
+      lanes().push(lane);
+      activeLaneId = lane.id;
+      pulseSave(); renderLanes(); renderMinimap();
+      return lane;
+    }
+
+    function promptNewLane(axis, x, y) {
+      const label = prompt(axis === 'col' ? 'Column layer name:' : 'Row layer name:', axis === 'col' ? 'Column' : 'Row');
+      if (label === null) return;
+      const size = LANE_SIZE[axis];
+      createLane(axis, (axis === 'col' ? x : y) - size / 2, size, label.trim() || undefined);
+    }
+
+    // Fit a layer to the nodes' bounds, with a small margin.
+    function laneAround(axis, ids) {
+      const boxes = db.nodes.filter(n => ids.includes(n.id)).map(nodeBox);
+      if (!boxes.length) return;
+      const lo = Math.min(...boxes.map(b => axis === 'col' ? b.n.x : b.n.y));
+      const hi = Math.max(...boxes.map(b => axis === 'col' ? b.n.x + b.w : b.n.y + b.h));
+      const label = prompt(axis === 'col' ? 'Column layer name:' : 'Row layer name:', axis === 'col' ? 'Column' : 'Row');
+      if (label === null) return;
+      createLane(axis, lo - 30, hi - lo + 60, label.trim() || undefined);
+    }
+
+    function renameLane(id) {
+      const lane = lanes().find(l => l.id === id);
+      if (!lane) return;
+      const v = prompt('Rename layer:', lane.label);
+      if (v === null || !v.trim() || v.trim() === lane.label) return;
+      pushHistory(); lane.label = v.trim().slice(0, 80);
+      pulseSave(); renderLanes();
+    }
+
+    function setLaneColor(id, color) {
+      const lane = lanes().find(l => l.id === id);
+      if (!lane || lane.color === color) return;
+      pushHistory(); lane.color = color;
+      pulseSave(); renderLanes(); renderMinimap();
+    }
+
+    function deleteLane(id) {
+      const i = lanes().findIndex(l => l.id === id);
+      if (i < 0) return;
+      pushHistory(); lanes().splice(i, 1);
+      if (activeLaneId === id) activeLaneId = null;
+      pulseSave(); renderLanes(); renderMinimap();
+    }
+
+    // Nodes whose centre sits inside the band.
+    function laneContents(lane) {
+      return db.nodes.filter(n => !isFrame(n)).map(nodeBox).filter(b => {
+        const c = lane.axis === 'col' ? b.n.x + b.w / 2 : b.n.y + b.h / 2;
+        return c >= lane.start && c <= lane.start + lane.size;
+      }).map(b => b.n);
+    }
+
+    function setActiveLane(id) {
+      if (activeLaneId === id) return;
+      activeLaneId = id;
+      renderLanes();
+    }
+
+    // Build band + header elements; positions come from positionLanes().
+    function renderLanes() {
+      const bands = document.getElementById('lane-bands');
+      const heads = document.getElementById('lane-heads');
+      if (!bands || !heads) return;
+      bands.innerHTML = ''; heads.innerHTML = '';
+      lanes().forEach(lane => {
+        const color = KNOWN_LANE_COLORS.has(lane.color) ? lane.color : 'c-gray';
+        const act = lane.id === activeLaneId ? ' active' : '';
+        const band = document.createElement('div');
+        band.className = `lane-band ${lane.axis} ${color}${act}`;
+        band.dataset.id = lane.id;
+        band.innerHTML = '<div class="lane-fill"></div>';
+        bands.appendChild(band);
+
+        const head = document.createElement('div');
+        head.className = `lane-head ${lane.axis} ${color}${act}`;
+        head.dataset.id = lane.id;
+        head.textContent = lane.label;
+        head.title = lane.label + ' — drag to move · double-click to rename · right-click for more';
+        head.addEventListener('mousedown', e => {
+          if (e.button !== 0) return;
+          e.stopPropagation(); e.preventDefault();
+          closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu();
+          startLaneDrag(e, lane, 'move');
+        });
+        head.addEventListener('dblclick', e => { e.stopPropagation(); renameLane(lane.id); });
+        head.addEventListener('contextmenu', e => {
+          e.preventDefault(); e.stopPropagation();
+          const cx = e.clientX, cy = e.clientY;
+          gateMenu(() => openLaneMenu(lane.id, cx, cy));
+        });
+        heads.appendChild(head);
+
+        if (act) {
+          ['lo', 'hi'].forEach(side => {
+            const g = document.createElement('div');
+            g.className = `lane-grip ${lane.axis}`;
+            g.dataset.id = lane.id; g.dataset.side = side;
+            g.title = 'Drag to resize';
+            g.addEventListener('mousedown', e => {
+              if (e.button !== 0) return;
+              e.stopPropagation(); e.preventDefault();
+              startLaneDrag(e, lane, side);
+            });
+            heads.appendChild(g);
+          });
+        }
+      });
+      positionLanes();
+    }
+
+    // Place bands and pin headers to the screen edge (like frozen
+    // spreadsheet headers). Runs on every pan/zoom.
+    const LANE_HEAD_TOP = 52;   // below the board bar
+    const LANE_HEAD_LEFT = 8;
+    function positionLanes() {
+      const heads = document.getElementById('lane-heads');
+      if (!heads || !db.lanes || !db.lanes.length) return;
+      const vw = viewport.clientWidth, vh = viewport.clientHeight;
+      db.lanes.forEach(lane => {
+        const a = lane.start * db.zoom + (lane.axis === 'col' ? db.panX : db.panY);
+        const len = lane.size * db.zoom;
+        const band = document.querySelector(`.lane-band[data-id="${lane.id}"]`);
+        const head = heads.querySelector(`.lane-head[data-id="${lane.id}"]`);
+        if (band) {
+          if (lane.axis === 'col') Object.assign(band.style, { left: a + 'px', width: len + 'px', top: '0', height: '100%' });
+          else Object.assign(band.style, { top: a + 'px', height: len + 'px', left: '0', width: '100%' });
+        }
+        const visible = a + len > 0 && a < (lane.axis === 'col' ? vw : vh);
+        if (head) {
+          if (!visible || len < 24) { head.style.display = 'none'; }
+          else {
+            head.style.display = '';
+            if (lane.axis === 'col') {
+              head.style.maxWidth = Math.max(24, Math.min(220, len - 8)) + 'px';
+              const w = head.offsetWidth;
+              const x = Math.min(Math.max(a + 4, 4), a + len - w - 4);
+              head.style.left = x + 'px'; head.style.top = LANE_HEAD_TOP + 'px';
+            } else {
+              head.style.maxWidth = '180px';
+              const h = head.offsetHeight;
+              const minTop = LANE_HEAD_TOP + 32, maxTop = vh - 80;
+              const y = Math.min(Math.max(a + 4, minTop), a + len - h - 4, maxTop);
+              head.style.top = y + 'px'; head.style.left = LANE_HEAD_LEFT + 'px';
+              head.style.display = y + h < a || y > a + len ? 'none' : '';
+            }
+          }
+        }
+        heads.querySelectorAll(`.lane-grip[data-id="${lane.id}"]`).forEach(g => {
+          const at = g.dataset.side === 'lo' ? a : a + len;
+          if (lane.axis === 'col') Object.assign(g.style, { left: (at - 3) + 'px', top: '0', height: '100%' });
+          else Object.assign(g.style, { top: (at - 3) + 'px', left: '0', width: '100%' });
+        });
+      });
+    }
+
+    function startLaneDrag(e, lane, mode) {
+      if (activeLaneId !== lane.id) { activeLaneId = lane.id; renderLanes(); }
+      laneDrag = {
+        lane, mode,
+        startMouse: lane.axis === 'col' ? e.clientX : e.clientY,
+        startStart: lane.start, startSize: lane.size,
+        pre: snapshotBoard(), moved: false
+      };
+      document.body.style.cursor = mode === 'move' ? 'grabbing' : (lane.axis === 'col' ? 'col-resize' : 'row-resize');
+    }
+
+    function moveLaneDrag(e) {
+      const d = laneDrag, lane = d.lane;
+      const delta = ((lane.axis === 'col' ? e.clientX : e.clientY) - d.startMouse) / db.zoom;
+      if (!d.moved && Math.abs(delta * db.zoom) < PAN_THRESHOLD) return;
+      d.moved = true;
+      const sn = v => fullState.snapToGrid ? snap(v) : Math.round(v);
+      if (d.mode === 'move') lane.start = sn(d.startStart + delta);
+      else if (d.mode === 'lo') {
+        const end = d.startStart + d.startSize;
+        lane.start = Math.min(sn(d.startStart + delta), end - LANE_MIN);
+        lane.size = end - lane.start;
+      } else lane.size = Math.max(LANE_MIN, sn(d.startStart + d.startSize + delta) - d.startStart);
+      positionLanes();
+    }
+
+    function endLaneDrag() {
+      const d = laneDrag; laneDrag = null;
+      document.body.style.cursor = '';
+      if (d.moved) { commitGestureHistory(d.pre); pulseSave(); renderMinimap(); }
+    }
+
+    function openLaneMenu(id, clientX, clientY) {
+      closeEdgePopover(); closeAddMenu(); closeAddPicker();
+      const lane = lanes().find(l => l.id === id);
+      if (!lane) return;
+      setActiveLane(id);
+      const menu = document.getElementById('node-menu');
+      menu.innerHTML = '';
+      const add = (icon, label, action, cls) => {
+        const btn = document.createElement('button');
+        btn.className = 'qm-item' + (cls ? ' ' + cls : '');
+        btn.innerHTML = `<span>${icon}</span><span>${HubUtils.esc(label)}</span>`;
+        btn.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); action(); };
+        menu.appendChild(btn);
+      };
+      add('✎', 'Rename layer', () => renameLane(id));
+      add('⬚', 'Select nodes in layer', () => {
+        const ids = laneContents(lane).map(n => n.id);
+        if (!ids.length) return;
+        selectedIds = new Set(ids);
+        selectedNodeId = ids[ids.length - 1];
+        applySelectionClasses();
+      });
+      const row = document.createElement('div');
+      row.className = 'qm-colors';
+      COLORS.forEach(c => {
+        const dot = document.createElement('button');
+        dot.style.background = c.dot;
+        dot.title = c.id.replace('c-', '');
+        if (lane.color === c.id) dot.classList.add('active');
+        dot.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); setLaneColor(id, c.id); };
+        row.appendChild(dot);
+      });
+      menu.appendChild(row);
+      const sep = document.createElement('div'); sep.className = 'qm-sep'; menu.appendChild(sep);
+      add('✕', 'Delete layer (keeps nodes)', () => deleteLane(id), 'qm-danger');
+      menu.style.display = 'flex';
+      const h = menu.offsetHeight || 180;
+      menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+      menu.style.top = Math.max(8, Math.min(clientY, window.innerHeight - h - 8)) + 'px';
+    }
+
+    function cleanViews(list) {
+      const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+      const seen = new Set();
+      return (Array.isArray(list) ? list : []).filter(v => v && Number.isInteger(v.slot) && v.slot >= 1 && v.slot <= 9 && !seen.has(v.slot) && seen.add(v.slot))
+        .map(v => ({ slot: v.slot, name: String(v.name || 'View ' + v.slot).slice(0, 60), cx: num(v.cx), cy: num(v.cy), zoom: Math.min(4, Math.max(0.15, num(v.zoom) || 1)) }))
+        .sort((a, b) => a.slot - b.slot);
+    }
+
+    // Board files and duplicates: clean and re-id layers.
+    function cleanLanes(list) {
+      const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+      return (Array.isArray(list) ? list : []).filter(l => l && (l.axis === 'col' || l.axis === 'row')).map(l => ({
+        id: newLaneId() + Math.random().toString(36).slice(2, 4),
+        axis: l.axis,
+        label: String(l.label || (l.axis === 'col' ? 'Column' : 'Row')).slice(0, 80),
+        start: num(l.start),
+        size: num(l.size) > 0 ? Math.max(LANE_MIN, num(l.size)) : LANE_SIZE[l.axis],
+        color: KNOWN_LANE_COLORS.has(l.color) ? l.color : 'c-gray'
+      }));
+    }
 
     // ── Frames (P129) ─────────────────────────────────────────
     // A frame is a node with kind 'frame': a labelled area drawn behind
@@ -2530,7 +3191,8 @@
       });
       title.addEventListener('contextmenu', e => {
         e.preventDefault(); e.stopPropagation();
-        openNodeMenu(node.id, e.clientX, e.clientY);
+        const cx = e.clientX, cy = e.clientY;
+        gateMenu(() => openNodeMenu(node.id, cx, cy));
       });
 
       const handle = document.createElement('div');
@@ -2736,6 +3398,7 @@
       db.nodes.filter(isFrame).sort((a, b) => area(b) - area(a))
         .forEach(n => layer.insertBefore(buildFrameEl(n), svgEl));
       db.nodes.filter(n => !isFrame(n)).forEach(n => layer.appendChild(buildNodeEl(n)));
+      renderLanes();
       renderEdges();
       renderMinimap();
       // A rebuild (e.g. a debounced pulseSave landing while the user is
@@ -3064,7 +3727,8 @@
       el.addEventListener('contextmenu', e => {
         e.preventDefault();
         e.stopPropagation();
-        openNodeMenu(node.id, e.clientX, e.clientY);
+        const cx = e.clientX, cy = e.clientY;
+        gateMenu(() => openNodeMenu(node.id, cx, cy));
       });
 
       // Double-click a Project / Goal / Tool card to open the real item
@@ -3267,13 +3931,13 @@
       document.getElementById('layout-btn')?.classList.remove('active');
     }
 
-    // Marquee: Shift+drag on empty canvas adds the boxed nodes to the selection.
+    // Marquee: drag on empty canvas selects the boxed nodes; Shift adds to the selection.
     function startMarquee(e) {
-      marquee = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
-      drawMarquee();
+      marquee = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, add: e.shiftKey };
     }
     function moveMarquee(e) {
       marquee.x1 = e.clientX; marquee.y1 = e.clientY;
+      if (Math.abs(marquee.x1 - marquee.x0) < PAN_THRESHOLD && Math.abs(marquee.y1 - marquee.y0) < PAN_THRESHOLD) return;
       drawMarquee();
     }
     function drawMarquee() {
@@ -3287,10 +3951,14 @@
     function endMarquee() {
       const L = Math.min(marquee.x0, marquee.x1), R = Math.max(marquee.x0, marquee.x1);
       const T = Math.min(marquee.y0, marquee.y1), B = Math.max(marquee.y0, marquee.y1);
+      const add = marquee.add;
       document.getElementById('marquee').style.display = 'none';
       marquee = null;
+      // A press without a drag is a plain click: let the click handler
+      // deselect / cancel as before.
+      if (R - L < PAN_THRESHOLD && B - T < PAN_THRESHOLD) return;
       suppressNextClick = true;
-      if (R - L < 4 && B - T < 4) return;
+      if (!add) { selectedIds = new Set(); selectedNodeId = null; }
       layer.querySelectorAll('.node').forEach(el => {
         const r = el.getBoundingClientRect();
         const hit = el.classList.contains('frame')
@@ -3329,8 +3997,16 @@
       const scale = Math.min(W / (maxX - minX), H / (maxY - minY));
       const toMM = (cx, cy) => [(cx - minX) * scale, (cy - minY) * scale];
 
-      // Edges
       const _css = getComputedStyle(document.documentElement);
+      (db.lanes || []).forEach(l => {
+        ctx.fillStyle = _css.getPropertyValue('--node-' + (l.color || 'c-gray').slice(2)).trim() || _css.getPropertyValue('--surface2').trim();
+        ctx.globalAlpha = 0.5;
+        if (l.axis === 'col') ctx.fillRect((l.start - minX) * scale, 0, l.size * scale, H);
+        else ctx.fillRect(0, (l.start - minY) * scale, W, l.size * scale);
+        ctx.globalAlpha = 1;
+      });
+
+      // Edges
       const _accent = _css.getPropertyValue('--accent').trim() || '#b8f033';
       const _accentGlow = _css.getPropertyValue('--accent-glow').trim() || 'rgba(184,240,51,0.25)';
       const _border2 = _css.getPropertyValue('--border2').trim() || 'rgba(255,255,255,0.15)';
@@ -3423,6 +4099,7 @@
     })(HubLinks.resolveItems);
 
     // ── Init ─────────────────────────────────────────────────
+    window.addEventListener('resize', positionLanes);
 
     updateTransform();
     renderAll();

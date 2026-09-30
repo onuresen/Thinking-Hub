@@ -291,6 +291,41 @@ function appFiles(ext) {
     check('canvas copy/paste, duplicate board and safe board import work',
       g3.copied === '2/1' && g3.dupOk && g3.pasted === 2 && g3.imported === 1 && g3.clean === 'ok<b>b</b>' && !g3.bad,
       JSON.stringify(g3));
+
+    // Layers: bands behind the board, headers pinned, undo, board file (P131)
+    const g4 = await page.evaluate(() => {
+      const lane = createLane('col', -30, 260, 'Col A');
+      const head = document.querySelector(`.lane-head[data-id="${lane.id}"]`);
+      const top0 = head.getBoundingClientRect().top;
+      db.panY -= 500; updateTransform();
+      const pinned = Math.abs(head.getBoundingClientRect().top - top0) < 1;
+      const passThrough = getComputedStyle(document.getElementById('lane-bands')).pointerEvents;
+      undo();
+      const undone = (db.lanes || []).length === 0;
+      const r = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', board: { name: 'L', nodes: [],
+        lanes: [{ axis: 'row', label: 'R', start: 10, size: 100, color: 'c-blue' }, { axis: 'bad' }] } }));
+      return { pinned, passThrough, undone, imported: db.lanes.length, bands: document.querySelectorAll('.lane-band').length };
+    });
+    check('canvas layers pin their headers, let clicks through, undo and import',
+      g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
+
+    // Saved views, jump to frame, present mode (P132)
+    const g5 = await page.evaluate(() => {
+      createFrame(0, 0, 400, 300, 'F1'); createFrame(0, 600, 400, 300, 'F2');
+      db.zoom = 1; db.panX = 0; db.panY = 0; updateTransform();
+      saveView(4, 'Home');
+      db.panX = -2000; updateTransform();
+      goView(4);
+      const back = Math.abs(db.panX) < 1 || !!viewAnim; // animation may still be running
+      enterPresent();
+      const first = document.getElementById('pb-text').textContent;
+      presentStep(1);
+      const second = document.getElementById('pb-text').textContent;
+      exitPresent();
+      return { back, first, second, off: !document.body.classList.contains('presenting'), slot: views()[0].slot };
+    });
+    check('canvas saved views and present mode step through frames',
+      g5.back && /^1 \/ 2 · F1/.test(g5.first) && /^2 \/ 2 · F2/.test(g5.second) && g5.off && g5.slot === 4, JSON.stringify(g5));
     await page.close();
   }
 

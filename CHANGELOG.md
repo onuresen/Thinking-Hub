@@ -7,6 +7,16 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Spatial Canvas: column and row layers. A layer is a named band that runs
+  across the whole board. Its name stays pinned to the screen edge while you
+  scroll, like frozen spreadsheet headers. Layers are a visual guide only;
+  they never move nodes.
+
+- Spatial Canvas: Jump menu, saved views and present mode. Jump goes to any
+  frame, layer or saved view. Shift+1–9 saves the current view; 1–9 jumps
+  back. Present steps through frames in reading order (or saved views when a
+  board has no frames), with the toolbars hidden. Esc returns to where you were.
+
 - Spatial Canvas: Undo/Redo for node and connection edits (Ctrl+Z / Ctrl+Y,
   plus toolbar icon buttons), scoped per board and coalesced to one entry
   per drag/resize/text-edit gesture rather than every intermediate change.
@@ -27,6 +37,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
   accepted or ignored.
 
 ### Changed
+
+- Spatial Canvas: drag on empty canvas now draws a selection box. Pan with
+  right-drag, middle-drag or Space+drag. A right-click without moving still
+  opens the menu.
 
 - Tool Portfolio and Stakeholder Map fetch favicons again for records with a
   URL set (falling back to the local emoji/initials icon on failure),
