@@ -258,6 +258,21 @@ function appFiles(ext) {
     });
     check('canvas node menu, focus mode and find work',
       g1.menu >= 4 && g1.dimmed.join() === 'c' && g1.dup && g1.found.join() === 'b', JSON.stringify(g1));
+
+    // Frames, line labels, fade parked (P129)
+    const g2 = await page.evaluate(() => {
+      const fid = createFrame(50, 50, 700, 600, 'Zone');
+      const inside = frameContents(db.nodes.find(n => n.id === fid)).map(n => n.id).sort().join();
+      const passThrough = getComputedStyle(document.querySelector('.node.frame')).pointerEvents;
+      const e = db.edges[0]; e.label = 'needs'; renderEdges();
+      const drawn = [...document.querySelectorAll('#edges-svg text')].some(t => t.textContent === 'needs');
+      openFind();
+      const typing = isTyping(); closeFind();
+      undo();
+      return { inside, passThrough, drawn, typing };
+    });
+    check('canvas frames hold their contents, lines show labels, typing guard works',
+      g2.inside === 'a,b,c' && g2.passThrough === 'none' && g2.drawn && g2.typing, JSON.stringify(g2));
     await page.close();
   }
 
