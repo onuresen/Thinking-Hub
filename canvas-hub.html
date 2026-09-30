@@ -499,6 +499,28 @@
       background: rgba(232, 69, 90, 0.12);
     }
 
+    .ep-graph {
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: left;
+      margin-top: 4px;
+    }
+
+    .ep-graph:hover:not(:disabled) {
+      background: var(--surface3);
+      color: var(--text);
+    }
+
+    .ep-graph:disabled {
+      cursor: default;
+      color: var(--accent-like);
+    }
+
     /* ── Nodes ──────────────────────────────────────────────── */
     .node {
       position: absolute;
@@ -643,6 +665,33 @@
     .node.k-tool {
       background: var(--node-yellow);
       border-color: var(--border-yellow);
+    }
+
+    /* P134 — more linked card types. Existing tokens only. */
+    .node.k-task {
+      background: var(--node-green);
+      border-color: var(--border-green);
+    }
+
+    .node.k-decision {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+
+    .node.k-risk {
+      background: var(--node-red);
+      border-color: var(--border-red);
+    }
+
+    .node.k-meeting {
+      background: var(--node-gray);
+      border-color: var(--border-blue);
+      border-style: dashed;
+    }
+
+    .node.k-stakeholder {
+      background: var(--node-gray);
+      border-color: var(--border-gray);
     }
 
     .node-kind-badge {
@@ -1014,6 +1063,9 @@
       font-size: 10px;
       color: var(--text3);
       white-space: nowrap;
+      max-width: 48%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .qm-empty {
@@ -1040,10 +1092,13 @@
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); duplicateBoard()"><span>⧉</span><span>Duplicate board</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardFile()"><span>⇩</span><span>Export board file (.json)</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardMarkdown()"><span>⇩</span><span>Export as Markdown</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportObsidianCanvas()"><span>⇩</span><span>Export Obsidian Canvas (.canvas)</span></button>
     <div class="qm-sep"></div>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); document.getElementById('board-import-input').click()"><span>⇧</span><span>Import board file…</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
+    <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); document.getElementById('board-import-input').click()"><span>⇧</span><span>Import board or Obsidian .canvas…</span></button>
   </div>
-  <input type="file" id="board-import-input" accept=".json,application/json" style="display:none">
+  <input type="file" id="board-import-input" accept=".json,.canvas,application/json" style="display:none">
 
   <div class="viewport" id="viewport">
     <div id="lane-bands"></div>
@@ -1057,6 +1112,7 @@
   <div class="edge-popover" id="edge-popover">
     <input type="text" class="qm-search ep-label" id="ep-label" maxlength="60" placeholder="Label (optional)" autocomplete="off">
     <div class="ep-types"></div>
+    <button class="ep-graph" id="ep-graph" onmousedown="event.stopPropagation(); sendPopoverEdgeToGraph()"></button>
     <div class="ep-sep"></div>
     <button class="ep-del" onclick="deleteEdgeFromPopover()">✕ Delete link</button>
   </div>
@@ -1126,7 +1182,7 @@
       <button data-need="0" onclick="fitToScreen()">Fit to screen</button>
     </div>
     <label class="lm-toggle"><input type="checkbox" id="lm-snap" onchange="setSnap(this.checked)"> Snap to grid</label>
-    <label class="lm-toggle" title="On-hold and done projects, retired tools"><input type="checkbox" id="lm-parked" onchange="setDimParked(this.checked)"> Fade parked items</label>
+    <label class="lm-toggle" title="On-hold and done projects, retired tools, done tasks, closed risks, archived items"><input type="checkbox" id="lm-parked" onchange="setDimParked(this.checked)"> Fade parked items</label>
   </div>
   <div class="marquee" id="marquee"></div>
 
@@ -1169,7 +1225,7 @@
       { id: 'tool', icon: '🛠', title: 'Tool' },
       { id: 'rd', icon: '🧪', title: 'R&D bet' },
     ];
-    const KIND_ICON = { goal: '🎯', project: '📌', tool: '🛠', rd: '🧪', frame: '▭' };
+    const KIND_ICON = { goal: '🎯', project: '📌', tool: '🛠', task: '☑', decision: '⚖', risk: '⚠', meeting: '▣', stakeholder: '👤', rd: '🧪', frame: '▭' };
 
     function statusLabelLocal(s) {
       return { active: 'Active', planning: 'Planning', maintenance: 'Maintenance', onhold: 'On Hold', done: 'Done' }[s] || s || '';
@@ -1225,16 +1281,90 @@
       } catch { return []; }
     }
 
+    // P134 — more live-linked card types. Each reads its source tool's
+    // storage fresh, like Project/Goal/Tool. `archived` items stay resolvable
+    // (so an existing card still shows its name) but are left out of pickers.
+    function liveTaskItems() {
+      try {
+        const items = [];
+        for (const p of ((window.HubData ? HubData.getProjects() : []) || [])) {
+          for (const t of (p.tasks || [])) {
+            const st = t.done ? 'Done' : ({ todo: 'To do', inprogress: 'In progress', blocked: 'Blocked', onhold: 'On hold' }[t.status] || 'Open');
+            items.push({ kind: 'task', id: t.id, label: t.title || '(untitled task)', status: `${p.name || 'Project'} · ${st}` + (t.due && !t.done ? ` · due ${t.due}` : ''), archived: !!t.archived, done: !!t.done, note: t.obsidianNote || '' });
+          }
+        }
+        return items;
+      } catch { return []; }
+    }
+
+    function liveDecisionItems() {
+      try {
+        const raw = HubStorage.get('decision-hub-v1');
+        return (Array.isArray(raw) ? raw : []).map(d => {
+          const res = d.outcome && d.outcome.result ? { held: 'held', partly: 'partly held', didnt: "didn't hold", tooearly: 'too early' }[d.outcome.result] || d.outcome.result : '';
+          const head = d.type === 'question' ? 'Question' : d.type === 'open' ? 'Open' : 'Decision';
+          return { kind: 'decision', id: d.id, label: d.title || '(untitled decision)', status: [head, d.confidence ? d.confidence + ' confidence' : '', res].filter(Boolean).join(' · '), archived: !!d.archived, note: d.obsidianNote || '' };
+        });
+      } catch { return []; }
+    }
+
+    function liveRiskItems() {
+      try {
+        const raw = HubStorage.get('risk-hub-v1');
+        const risks = raw && Array.isArray(raw.risks) ? raw.risks : [];
+        return risks.map(r => ({ kind: 'risk', id: r.id, label: r.title || '(untitled risk)', status: `Score ${(r.probability || 0) * (r.impact || 0)} · ${r.status || 'open'}`, archived: !!r.archived, closed: r.status === 'closed' }));
+      } catch { return []; }
+    }
+
+    function liveMeetingItems() {
+      try {
+        const raw = HubStorage.get('meetings-hub-v1');
+        const ms = raw && Array.isArray(raw.meetings) ? raw.meetings : [];
+        const today = HubUtils.todayLocal();
+        return ms.map(m => {
+          let when = m.date || '';
+          if (m.recurring && Array.isArray(m.occurrenceDates) && m.occurrenceDates.length) {
+            const ds = m.occurrenceDates.map(o => o.date).filter(Boolean).sort();
+            when = ds.find(d => d >= today) || ds[ds.length - 1] || when;
+          }
+          return { kind: 'meeting', id: m.id, label: m.title || '(untitled meeting)', status: (m.recurring ? 'Weekly · next ' : '') + (when || 'no date'), archived: !!m.archived };
+        });
+      } catch { return []; }
+    }
+
+    function liveStakeholderItems() {
+      try {
+        const raw = HubStorage.get('stakeholder-hub-v1');
+        const list = raw && Array.isArray(raw.stakeholders) ? raw.stakeholders : [];
+        return list.map(sh => ({ kind: 'stakeholder', id: sh.id, label: sh.name || '(unnamed)', status: [sh.org || sh.role, sh.engagement || sh.stance].filter(Boolean).join(' · ') }));
+      } catch { return []; }
+    }
+
+    // One table for every linked card type: where it lives and how to read it.
+    const LINKED = {
+      project: { tool: 'project-hub', hub: 'Project Hub', title: 'Project', noun: 'projects', read: liveProjectItems },
+      goal: { tool: 'goals-hub', hub: 'Goals Hub', title: 'Goal', noun: 'goals', read: liveGoalItems },
+      tool: { tool: 'tool-portfolio', hub: 'Tool Portfolio', title: 'Tool', noun: 'tools', read: liveToolItems },
+      task: { tool: 'project-hub', hub: 'Project Hub', title: 'Task', noun: 'tasks', read: liveTaskItems },
+      decision: { tool: 'decision-hub', hub: 'Decision Hub', title: 'Decision', noun: 'decisions', read: liveDecisionItems },
+      risk: { tool: 'risk-hub', hub: 'Risk Register', title: 'Risk', noun: 'risks', read: liveRiskItems },
+      meeting: { tool: 'meetings-hub', hub: 'Meeting Hub', title: 'Meeting', noun: 'meetings', read: liveMeetingItems },
+      stakeholder: { tool: 'stakeholder-hub', hub: 'Stakeholder Map', title: 'Stakeholder', noun: 'stakeholders', read: liveStakeholderItems },
+    };
+    // The newer types, offered together under one "Other item…" picker.
+    const MORE_KINDS = ['task', 'decision', 'risk', 'meeting', 'stakeholder'];
+    // Order used by Layout → By type and anywhere kinds are listed.
+    const KIND_ORDER = ['note', 'goal', 'project', 'task', 'tool', 'decision', 'risk', 'meeting', 'stakeholder', 'rd'];
+    function isLinkedKind(k) { return !!LINKED[k]; }
+    function kindTitle(k) { return (LINKED[k] && LINKED[k].title) || (KINDS.find(x => x.id === k) || {}).title || 'Note'; }
+
     function liveItemsFor(kind) {
-      let items = [];
-      if (kind === 'project') items = liveProjectItems();
-      else if (kind === 'goal') items = liveGoalItems();
-      else if (kind === 'tool') items = liveToolItems();
+      const items = LINKED[kind] ? LINKED[kind].read() : [];
       return items.sort((a, b) => a.label.localeCompare(b.label));
     }
 
     function toolLinkFor(kind) {
-      return kind === 'project' ? 'project-hub' : kind === 'tool' ? 'tool-portfolio' : 'goals-hub';
+      return LINKED[kind] ? LINKED[kind].tool : 'goals-hub';
     }
 
     // Resolves a linked item's URL hostname to a favicon <img>, falling back
@@ -1934,12 +2064,67 @@
         };
         typesWrap.appendChild(btn);
       });
+      refreshEdgeGraphBtn(edge);
       const label = document.getElementById('ep-label');
       label.value = edge.label || '';
       pop.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
-      pop.style.top = Math.min(clientY, window.innerHeight - 190) + 'px';
+      pop.style.top = Math.min(clientY, window.innerHeight - 230) + 'px';
       pop.style.display = 'flex';
       label.focus();
+    }
+
+    // ── Send lines to the Dependency Graph (P134) ─────────────
+    // A line between two linked cards can become a real cross-tool link, so
+    // Critical Path and Impact Analysis can use it. Plain notes are skipped.
+    function graphEnds(edge) {
+      const a = db.nodes.find(n => n.id === edge.from), b = db.nodes.find(n => n.id === edge.to);
+      if (!a || !b || !a.link || !b.link || !isLinkedKind(a.kind) || !isLinkedKind(b.kind)) return null;
+      if (a.link.tool === b.link.tool && a.link.id === b.link.id) return null;
+      return { a: { tool: a.link.tool, itemId: a.link.id }, b: { tool: b.link.tool, itemId: b.link.id } };
+    }
+
+    function graphLinkBetween(ends) {
+      const same = (x, y) => x.tool === y.tool && x.itemId === y.itemId;
+      return HubLinks.getAll().find(l => (same(l.a, ends.a) && same(l.b, ends.b)) || (same(l.a, ends.b) && same(l.b, ends.a))) || null;
+    }
+
+    // 'added' | 'exists' | 'skip'
+    function sendEdgeToGraph(edge) {
+      const ends = graphEnds(edge);
+      if (!ends) return 'skip';
+      if (graphLinkBetween(ends)) return 'exists';
+      const opts = { relType: edge.relType || 'relates' };
+      if (edge.label) opts.note = edge.label;
+      return HubLinks.addLink(ends.a, ends.b, opts) ? 'added' : 'exists';
+    }
+
+    function refreshEdgeGraphBtn(edge) {
+      const btn = document.getElementById('ep-graph');
+      const ends = graphEnds(edge);
+      if (!ends) { btn.style.display = 'none'; return; }
+      btn.style.display = '';
+      const existing = graphLinkBetween(ends);
+      btn.disabled = !!existing;
+      btn.textContent = existing ? '✓ In Dependency Graph' : '⛓ Send to Dependency Graph';
+      btn.title = existing ? 'These two items are already linked' : 'Add this line as a link between the two real items';
+    }
+
+    function sendPopoverEdgeToGraph() {
+      const edge = db.edges.find(e => e.id === _edgePopoverEdgeId);
+      if (!edge) return;
+      const r = sendEdgeToGraph(edge);
+      if (window.showToast) showToast(r === 'added' ? 'Link added to the Dependency Graph' : 'Already linked');
+      refreshEdgeGraphBtn(edge);
+    }
+
+    function sendBoardToGraph() {
+      const n = { added: 0, exists: 0, skip: 0 };
+      (db.edges || []).forEach(e => { n[sendEdgeToGraph(e)]++; });
+      const parts = [];
+      if (n.added) parts.push(`${n.added} added`);
+      if (n.exists) parts.push(`${n.exists} already there`);
+      if (n.skip) parts.push(`${n.skip} skipped (not between two linked cards)`);
+      if (window.showToast) showToast(parts.length ? 'Dependency Graph: ' + parts.join(' · ') : 'No lines on this board');
     }
 
     // Saves the label typed in the popover. Runs whenever the popover
@@ -2084,8 +2269,10 @@
       const node = db.nodes.find(n => n.id === id);
       if (!node) return;
       pushHistory();
+      const prevKind = node.kind || 'note';
       node.kind = kindId === 'note' ? undefined : kindId;
-      if (kindId !== 'goal' && kindId !== 'project' && kindId !== 'tool') node.link = null;
+      // A link only makes sense for the kind it was made for.
+      if (prevKind !== kindId) node.link = null;
       pulseSave();
       // Kind switches change node composition (kind badge/strip), so a full
       // rebuild is simplest and safe — this is an infrequent action, not a
@@ -2119,6 +2306,7 @@
       { id: 'lane-col', icon: '⫼', label: 'Column layer' },
       { id: 'lane-row', icon: '☰', label: 'Row layer' },
       { id: 'tool', icon: '🛠', label: 'Tool…', picker: true },
+      { id: 'more', icon: '⚖', label: 'Task, decision, risk…', picker: true },
       { id: 'rd', icon: '🧪', label: 'R&D bet' },
     ];
 
@@ -2166,16 +2354,30 @@
     }
 
     function openAddPicker(kind, clientX, clientY) {
+      const kinds = kind === 'more' ? MORE_KINDS : [kind];
+      openItemPicker(kinds, clientX, clientY, it => createLinkedNode(_pendingAddX, _pendingAddY, it.kind, toolLinkFor(it.kind), it.id, it.label));
+    }
+
+    // Searchable list of real items from one or more kinds. Archived items
+    // are left out. `onPick(item)` runs when a row is chosen.
+    function openItemPicker(kinds, clientX, clientY, onPick, placeholder) {
       closeAddMenu();
       const pop = document.getElementById('add-picker');
       const search = document.getElementById('add-picker-search');
       const list = document.getElementById('add-picker-list');
-      const items = liveItemsFor(kind);
-      const kindNoun = kind === 'project' ? 'projects' : kind === 'goal' ? 'goals' : 'tools';
+      const multi = kinds.length > 1;
+      const items = [];
+      kinds.forEach(k => liveItemsFor(k).filter(it => !it.archived).forEach(it => items.push(it)));
+      if (multi) items.sort((a, b) => a.label.localeCompare(b.label));
+      const kindNoun = multi ? 'items' : (LINKED[kinds[0]] ? LINKED[kinds[0]].noun : 'items');
+      search.placeholder = placeholder || (multi ? 'Search tasks, decisions, risks, meetings, people…' : `Search ${kindNoun}…`);
+      // The mixed list needs room for a type and status next to each name.
+      pop.style.maxWidth = multi ? '440px' : '260px';
+      pop.style.width = multi ? '440px' : '';
 
       function renderList(filter) {
         const f = (filter || '').toLowerCase();
-        const filtered = f ? items.filter(it => it.label.toLowerCase().includes(f)) : items;
+        const filtered = f ? items.filter(it => it.label.toLowerCase().includes(f) || (it.status || '').toLowerCase().includes(f)) : items;
         list.innerHTML = '';
         if (!filtered.length) {
           const empty = document.createElement('div');
@@ -2184,30 +2386,32 @@
           list.appendChild(empty);
           return;
         }
-        filtered.forEach(it => {
+        filtered.slice(0, 200).forEach(it => {
           const row = document.createElement('div');
           row.className = 'qm-row';
           const iconWrap = document.createElement('div');
           iconWrap.className = 'qm-icon';
-          const fallback = kind === 'tool' ? (it.icon || '🛠') : KIND_ICON[kind];
-          const fav = kind === 'tool' ? faviconOrIcon(it.url, fallback, 16) : { el: null, text: fallback };
+          const k = it.kind;
+          const fallback = k === 'tool' ? (it.icon || '🛠') : KIND_ICON[k];
+          const fav = k === 'tool' ? faviconOrIcon(it.url, fallback, 16) : { el: null, text: fallback };
           if (fav.el) {
             fav.el.onerror = () => { iconWrap.textContent = fallback; };
             iconWrap.appendChild(fav.el);
           } else {
             iconWrap.textContent = fallback;
           }
+          iconWrap.title = kindTitle(k);
           const label = document.createElement('span');
           label.className = 'qm-label';
           label.textContent = it.label;
           const status = document.createElement('span');
           status.className = 'qm-status';
-          status.textContent = it.status || '';
+          status.textContent = (multi ? kindTitle(k) + ' · ' : '') + (it.status || '');
           row.appendChild(iconWrap); row.appendChild(label); row.appendChild(status);
           row.onmousedown = e => {
             e.stopPropagation();
-            createLinkedNode(_pendingAddX, _pendingAddY, kind, toolLinkFor(kind), it.id, it.label);
             closeAddPicker();
+            onPick(it);
           };
           list.appendChild(row);
         });
@@ -2217,15 +2421,21 @@
       renderList('');
       search.oninput = () => renderList(search.value);
 
-      pop.style.left = Math.min(clientX, window.innerWidth - 280) + 'px';
+      pop.style.left = Math.max(8, Math.min(clientX, window.innerWidth - (multi ? 460 : 280))) + 'px';
       pop.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
       pop.style.display = 'flex';
-      setTimeout(() => search.focus(), 30);
+      // Opened from a menu mousedown: the browser moves focus to that menu
+      // button after this handler, so focus again on the next tick.
+      search.focus();
+      setTimeout(() => search.focus(), 0);
     }
 
     function closeAddPicker() {
       const pop = document.getElementById('add-picker');
       if (pop) pop.style.display = 'none';
+      // Hand the keyboard back to the canvas (Ctrl+Z, Delete…).
+      const search = document.getElementById('add-picker-search');
+      if (search && document.activeElement === search) search.blur();
     }
 
     // ── Right-click on a node ──────────────────────────────────
@@ -2303,6 +2513,13 @@
       if (node.link && targets.length === 1) {
         add('↗', 'Open in ' + (KIND_TOOL_LABEL[node.kind] || 'source tool'), () => HubLinks.navigateTo(node.link.tool, node.link.id));
       }
+      // P134: turn a plain note into a real item in another hub.
+      if (targets.length === 1 && !isLinkedKind(node.kind)) {
+        add('☑', 'Make it a task…', () => openItemPicker(['project'], clientX, clientY, proj => convertNote(nodeId, 'task', proj), 'Which project? Search…'));
+        add('⚖', 'Make it a decision', () => convertNote(nodeId, 'decision'));
+        add('⚠', 'Make it a risk', () => convertNote(nodeId, 'risk'));
+        sep();
+      }
       add('◎', focusId === nodeId ? 'Exit focus' : 'Focus on connections', () => focusId === nodeId ? clearFocus() : setFocus(nodeId));
       add('🔗', 'Connect from here', () => armConnectFrom(nodeId));
       add('⧉', 'Duplicate' + many, () => duplicateNodes(targets));
@@ -2314,12 +2531,69 @@
       // Color: only for kinds whose color is free (Goal/Project/Tool are fixed by kind)
       const colorable = targets.filter(id => {
         const k = db.nodes.find(n => n.id === id)?.kind;
-        return k !== 'goal' && k !== 'project' && k !== 'tool';
+        return !isLinkedKind(k);
       });
       if (colorable.length) colorRow(colorable, colorable.length === 1 ? (node.color || 'c-gray') : null);
       sep();
       add('✕', 'Delete' + many, () => deleteNodes(targets), 'qm-danger');
       place();
+    }
+
+    // Plain-text lines of a note, keeping its line breaks.
+    function noteLines(n) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = (n.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n');
+      return (tmp.textContent || '').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    }
+
+    // P134: create a real task / decision / risk from a note, then turn the
+    // note into a live card linked to it. The first line becomes the title.
+    // Undo reverts the card only; the new item stays in its hub.
+    function convertNote(nodeId, kind, proj) {
+      const node = db.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const lines = noteLines(node);
+      if (!lines.length) { if (window.showToast) showToast('Write something in the note first'); return; }
+      const title = lines[0].slice(0, 140);
+      const rest = lines.slice(1).join('\n');
+      if (rest && kind !== 'decision' &&
+        !confirm(`Only the first line becomes the ${kind} title:\n\n"${title}"\n\nThe other ${lines.length - 1} line(s) stay in the card but won't be copied. Continue?`)) return;
+      const now = new Date().toISOString();
+      let id = null;
+      try {
+        if (kind === 'task') {
+          const data = HubStorage.get('project-hub-v1');
+          const p = data && (data.projects || []).find(x => x.id === proj.id);
+          if (!p) throw new Error('Project not found');
+          id = Math.random().toString(36).slice(2, 9);
+          p.tasks = p.tasks || [];
+          p.tasks.push({ id, title, milestoneId: '', assigneeId: '', priority: 'medium', due: '', done: false, status: 'todo', completedAt: '', blockedReason: '', taskCode: '', taskType: '', obsidianNote: '', createdAt: now, updatedAt: now, archivedAt: '' });
+          p.updatedAt = now;
+          HubStorage.set('project-hub-v1', data);
+        } else if (kind === 'decision') {
+          const raw = HubStorage.get('decision-hub-v1');
+          const list = Array.isArray(raw) ? raw : [];
+          id = 'dh-' + Date.now().toString(36);
+          list.push({ id, projectId: '', title, type: 'decision', confidence: 'medium', summary: rest, reason: '', alternative: '', revisitWhen: '', revisitDate: '', outcome: null, tags: '', links: '', obsidianNote: '', createdAt: now });
+          HubStorage.set('decision-hub-v1', list);
+        } else if (kind === 'risk') {
+          const data = HubStorage.get('risk-hub-v1') || { risks: [] };
+          if (!Array.isArray(data.risks)) data.risks = [];
+          id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          data.risks.push({ id, title, category: 'technical', status: 'open', probability: 3, impact: 3, mitigation: '', treatment: '', owner: '', reviewDate: '', projectId: null, projectName: null, createdAt: now });
+          HubStorage.set('risk-hub-v1', data);
+        } else return;
+      } catch (err) {
+        alert('Could not create the ' + kind + ': ' + (err.message || err));
+        return;
+      }
+      pushHistory();
+      node.kind = kind;
+      node.link = { tool: toolLinkFor(kind), id, label: title };
+      pulseSave();
+      renderAll();
+      selectNode(nodeId);
+      if (window.showToast) showToast(`${kindTitle(kind)} added to ${LINKED[kind].hub}` + (kind === 'task' ? ` · ${proj.label}` : ''));
     }
 
     function duplicateNodes(ids) {
@@ -2479,7 +2753,7 @@
 
     // Plain-text line for a node, as it would read in a note.
     function mdNodeLine(n) {
-      const kind = { project: 'Project', goal: 'Goal', tool: 'Tool', rd: 'R&D bet' }[n.kind];
+      const kind = n.kind && n.kind !== 'frame' ? kindTitle(n.kind) : '';
       const label = nodeLabel(n).replace(/\s+/g, ' ').trim();
       return kind ? `**${kind}:** ${label}` : label;
     }
@@ -2528,6 +2802,161 @@
       downloadText(`${fileSlug(db.name)}-${HubUtils.todayLocal()}.md`, lines.join('\n'), 'text/markdown');
     }
 
+    // ── Obsidian Canvas (.canvas, JSON Canvas 1.0) — P134 ─────
+    // Notes become text nodes, frames and layers become groups, lines keep
+    // their arrows and labels. Linked cards become text nodes with the live
+    // name and status. A `thinkingHub` field on each node/edge lets a
+    // re-import restore kinds, links and line types; Obsidian may drop it.
+    const OBS_COLOR = { 'c-red': '1', 'c-yellow': '3', 'c-green': '4', 'c-blue': '5', 'c-purple': '6' };
+    const OBS_KIND_COLOR = { project: '5', goal: '2', tool: '3', task: '4', decision: '4', risk: '1', meeting: '5', rd: '6' };
+    const OBS_COLOR_BACK = { '1': 'c-red', '2': 'c-yellow', '3': 'c-yellow', '4': 'c-green', '5': 'c-blue', '6': 'c-purple' };
+    const OBS_REL_WORD = { blocks: 'blocks', 'depends-on': 'needs' };
+
+    function htmlToMarkdown(html) {
+      const doc = new DOMParser().parseFromString(`<div>${String(html || '')}</div>`, 'text/html');
+      const walk = el => [...el.childNodes].map(ch => {
+        if (ch.nodeType === 3) return ch.textContent;
+        if (ch.nodeType !== 1) return '';
+        const inner = walk(ch);
+        switch (ch.tagName) {
+          case 'B': case 'STRONG': return inner.trim() ? `**${inner}**` : inner;
+          case 'I': case 'EM': return inner.trim() ? `*${inner}*` : inner;
+          case 'BR': return '\n';
+          case 'LI': return `\n- ${inner.trim()}`;
+          case 'DIV': case 'P': return `\n${inner}`;
+          default: return inner;
+        }
+      }).join('');
+      return walk(doc.body.firstChild).replace(/\u00a0/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    function markdownToHtml(md) {
+      const esc = HubUtils.esc(String(md || ''));
+      const html = esc.split('\n').map(line => line
+        .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+        .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')).join('<br>');
+      return sanitizeNodeHtml(html);
+    }
+
+    function exportObsidianCanvas() {
+      const itemCache = {};
+      const itemFor = n => {
+        if (!itemCache[n.kind]) itemCache[n.kind] = LINKED[n.kind].read();
+        return itemCache[n.kind].find(i => i.id === n.link.id);
+      };
+      const content = db.nodes.filter(n => !isFrame(n));
+      const groups = [], texts = [];
+      // Layers span the board, like on the canvas.
+      if ((db.lanes || []).length) {
+        const boxes = content.map(nodeBox);
+        const minX = boxes.length ? Math.min(...boxes.map(b => b.n.x)) - 80 : 0;
+        const minY = boxes.length ? Math.min(...boxes.map(b => b.n.y)) - 80 : 0;
+        const maxX = boxes.length ? Math.max(...boxes.map(b => b.n.x + b.w)) + 80 : 800;
+        const maxY = boxes.length ? Math.max(...boxes.map(b => b.n.y + b.h)) + 80 : 600;
+        db.lanes.forEach(l => {
+          const g = l.axis === 'col'
+            ? { x: Math.round(l.start), y: Math.round(minY), width: Math.round(l.size), height: Math.round(maxY - minY) }
+            : { x: Math.round(minX), y: Math.round(l.start), width: Math.round(maxX - minX), height: Math.round(l.size) };
+          const out = { id: l.id, type: 'group', ...g, label: l.label || '', thinkingHub: { lane: l.axis } };
+          if (OBS_COLOR[l.color]) out.color = OBS_COLOR[l.color];
+          groups.push(out);
+        });
+      }
+      db.nodes.filter(isFrame).forEach(f => {
+        const out = { id: f.id, type: 'group', x: Math.round(f.x), y: Math.round(f.y), width: Math.round(f.w || 640), height: Math.round(f.h || 400), label: nodeLabel(f) };
+        if (OBS_COLOR[f.color]) out.color = OBS_COLOR[f.color];
+        groups.push(out);
+      });
+      content.forEach(n => {
+        const box = nodeBox(n), w = Math.round(box.w), h = Math.round(box.h);
+        let text;
+        const meta = {};
+        if (isLinkedKind(n.kind)) {
+          const it = n.link ? itemFor(n) : null;
+          const name = it ? it.label : (n.link ? n.link.label : '(unlinked)');
+          text = `${KIND_ICON[n.kind]} **${name}**\n${kindTitle(n.kind)}` + (it && it.status ? ` · ${it.status}` : (n.link && !it ? ' · (item removed)' : ''));
+          if (it && it.note) text += `\n[[${it.note.replace(/\.md$/i, '')}]]`;
+          meta.kind = n.kind;
+          if (n.link) meta.link = n.link;
+        } else {
+          text = htmlToMarkdown(n.text);
+          if (n.kind === 'rd') { text = '🧪 ' + text; meta.kind = 'rd'; }
+        }
+        const out = { id: n.id, type: 'text', x: Math.round(n.x), y: Math.round(n.y), width: w, height: h, text };
+        const col = isLinkedKind(n.kind) || n.kind === 'rd' ? OBS_KIND_COLOR[n.kind] : OBS_COLOR[n.color];
+        if (col) out.color = col;
+        if (Object.keys(meta).length) out.thinkingHub = meta;
+        texts.push(out);
+      });
+      const ids = new Set(db.nodes.map(n => n.id));
+      const edges = (db.edges || []).filter(e => ids.has(e.from) && ids.has(e.to)).map(e => {
+        const rel = e.relType || 'relates';
+        const out = { id: e.id, fromNode: e.from, toNode: e.to, fromEnd: 'none', toEnd: rel === 'relates' ? 'none' : 'arrow' };
+        const label = e.label || OBS_REL_WORD[rel];
+        if (label) out.label = label;
+        if (rel === 'blocks') out.color = '1';
+        if (rel === 'depends-on') out.color = '2';
+        out.thinkingHub = { relType: rel };
+        return out;
+      });
+      // Groups first so Obsidian draws them behind the cards.
+      const payload = { nodes: [...groups, ...texts], edges };
+      downloadText(`${fileSlug(db.name)}.canvas`, JSON.stringify(payload, null, '\t'), 'application/json');
+      if (window.showToast) showToast(`Exported ${texts.length} cards, ${groups.length} groups, ${edges.length} lines`);
+    }
+
+    function isJsonCanvas(data) {
+      return !!data && !data.format && Array.isArray(data.nodes) &&
+        data.nodes.some(n => n && typeof n.type === 'string' && typeof n.width === 'number');
+    }
+
+    // JSON Canvas → a Thinking Hub board object (same shape importBoardText
+    // then cleans). Nothing here trusts the file.
+    function fromJsonCanvas(data, name) {
+      const str = v => (typeof v === 'string' ? v : '');
+      const color = c => OBS_COLOR_BACK[str(c)] || 'c-gray';
+      const nodes = [], lanes = [];
+      data.nodes.forEach(n => {
+        if (!n || !n.id) return;
+        const th = n.thinkingHub && typeof n.thinkingHub === 'object' ? n.thinkingHub : {};
+        const x = n.x, y = n.y, w = n.width, h = n.height;
+        if (n.type === 'group') {
+          if (th.lane === 'col' || th.lane === 'row') {
+            lanes.push({ id: String(n.id), axis: th.lane, label: str(n.label) || 'Layer', start: th.lane === 'col' ? x : y, size: th.lane === 'col' ? w : h, color: color(n.color) });
+          } else {
+            nodes.push({ id: String(n.id), x, y, w, h, kind: 'frame', text: str(n.label) || 'Group', color: color(n.color) });
+          }
+          return;
+        }
+        let text = '';
+        if (n.type === 'text') text = str(n.text);
+        else if (n.type === 'file') text = '📄 [[' + str(n.file).replace(/\.md$/i, '') + ']]' + (n.subpath ? str(n.subpath) : '');
+        else if (n.type === 'link') text = '🔗 ' + str(n.url);
+        else return;
+        const out = { id: String(n.id), x, y, w, color: color(n.color) };
+        if (th.kind && isLinkedKind(th.kind) && th.link && typeof th.link === 'object') {
+          out.kind = th.kind;
+          out.link = th.link;
+          out.text = '';
+        } else {
+          if (th.kind === 'rd') { out.kind = 'rd'; text = text.replace(/^🧪\s*/, ''); }
+          out.text = markdownToHtml(text);
+        }
+        nodes.push(out);
+      });
+      const edges = (Array.isArray(data.edges) ? data.edges : []).filter(e => e && e.fromNode && e.toNode).map(e => {
+        const th = e.thinkingHub && typeof e.thinkingHub === 'object' ? e.thinkingHub : {};
+        let rel = KNOWN_REL.has(th.relType) ? th.relType : null;
+        let label = str(e.label);
+        if (!rel) rel = label === 'blocks' ? 'blocks' : label === 'needs' ? 'depends-on' : 'relates';
+        if (label && label === OBS_REL_WORD[rel]) label = '';
+        const out = { id: String(e.id || newEdgeId()), from: String(e.fromNode), to: String(e.toNode), relType: rel };
+        if (label) out.label = label;
+        return out;
+      });
+      return { name: name || 'Obsidian canvas', nodes, edges, lanes };
+    }
+
     // Board files can come from anyone. Keep only simple text formatting;
     // drop every attribute, script, style and unknown tag.
     const SAFE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'DIV', 'P', 'SPAN', 'UL', 'OL', 'LI']);
@@ -2552,14 +2981,15 @@
       return root.innerHTML;
     }
 
-    const KNOWN_KINDS = new Set(['note', 'goal', 'project', 'tool', 'rd', 'frame']);
+    const KNOWN_KINDS = new Set(['note', 'rd', 'frame', ...Object.keys(LINKED)]);
     const KNOWN_COLORS = new Set(COLORS.map(c => c.id));
     const KNOWN_LANE_COLORS = KNOWN_COLORS;
     const KNOWN_REL = new Set(EDGE_TYPES.map(t => t.id));
 
-    function importBoardText(text) {
+    function importBoardText(text, fileName) {
       let data;
       try { data = JSON.parse(text); } catch { throw new Error('Not a JSON file.'); }
+      if (isJsonCanvas(data)) data = fromJsonCanvas(data, String(fileName || '').replace(/\.(canvas|json)$/i, ''));
       const b = data && data.format === BOARD_FILE_FORMAT ? data.board
         : (data && Array.isArray(data.nodes) ? data : null);
       if (!b || !Array.isArray(b.nodes)) throw new Error('This file is not a Canvas board export.');
@@ -2574,7 +3004,7 @@
         if (kind) out.kind = kind;
         if (n.w) out.w = Math.max(40, num(n.w));
         if (n.h) out.h = Math.max(30, num(n.h));
-        if (n.link && typeof n.link === 'object' && ['project-hub', 'goals-hub', 'tool-portfolio'].includes(n.link.tool)) {
+        if (n.link && typeof n.link === 'object' && kind && isLinkedKind(kind) && n.link.tool === toolLinkFor(kind)) {
           out.link = { tool: n.link.tool, id: String(n.link.id || ''), label: String(n.link.label || '') };
         }
         return out;
@@ -2587,8 +3017,11 @@
       const fresh = cloneWithNewIds(nodes, edges);
       const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)), lanes: cleanLanes(b.lanes), views: cleanViews(b.views) };
       const board = addBoard(String(b.name || 'Imported board').slice(0, 80), fresh.nodes, fresh.edges, view);
+      // Obsidian canvases carry no view, so show the whole thing.
+      if (typeof b.zoom !== 'number' && fresh.nodes.length) setTimeout(() => fitToScreen(), 50);
       // Linked cards whose project/goal/tool doesn't exist here show "(item removed)".
-      const known = { project: new Set(liveItemsFor('project').map(i => i.id)), goal: new Set(liveItemsFor('goal').map(i => i.id)), tool: new Set(liveItemsFor('tool').map(i => i.id)) };
+      const known = {};
+      Object.keys(LINKED).forEach(k => { known[k] = new Set(liveItemsFor(k).map(i => i.id)); });
       const missing = fresh.nodes.filter(n => n.link && known[n.kind] && !known[n.kind].has(n.link.id)).length;
       return { board, nodes: fresh.nodes.length, edges: fresh.edges.length, missing };
     }
@@ -2600,7 +3033,7 @@
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const r = importBoardText(String(reader.result));
+          const r = importBoardText(String(reader.result), file.name);
           if (window.showToast) showToast(`Imported "${r.board.name}": ${r.nodes} nodes, ${r.edges} lines` + (r.missing ? ` · ${r.missing} linked items not found here` : ''));
         } catch (err) {
           alert(err.message || 'Could not import this file.');
@@ -3214,7 +3647,8 @@
       return el;
     }
 
-    // ── Fade parked items (P129): on-hold/done projects, retired tools ──
+    // ── Fade parked items (P129): on-hold/done projects, retired tools,
+    //    done tasks, closed risks, archived items (P134) ──
     const PARKED_PROJECT = new Set(['onhold', 'done', 'archived']);
 
     function isParked(n) {
@@ -3228,6 +3662,11 @@
           const raw = HubStorage.get('tool-portfolio-v1');
           const t = (Array.isArray(raw) ? raw : []).find(x => x.id === n.link.id);
           return !!t && t.status === 'retired';
+        }
+        // Done tasks, closed risks and archived items count as parked too.
+        if (MORE_KINDS.includes(n.kind)) {
+          const it = LINKED[n.kind].read().find(x => x.id === n.link.id);
+          return !!it && !!(it.archived || it.done || it.closed);
         }
       } catch {}
       return false;
@@ -3488,8 +3927,8 @@
       actions.appendChild(delBtn);
     }
 
-    const KIND_TOOL_LABEL = { project: 'Project Hub', goal: 'Goals Hub', tool: 'Tool Portfolio' };
-    const KIND_PICK_LABEL = { project: '— pick a project —', goal: '— pick a goal —', tool: '— pick a tool —' };
+    const KIND_TOOL_LABEL = {}, KIND_PICK_LABEL = {};
+    Object.keys(LINKED).forEach(k => { KIND_TOOL_LABEL[k] = LINKED[k].hub; KIND_PICK_LABEL[k] = `— pick a ${LINKED[k].title.toLowerCase()} —`; });
 
     function buildKindStrip(node) {
       const items = liveItemsFor(node.kind);
@@ -3610,8 +4049,8 @@
       // Goal/Project/Tool show their icon inside the strip instead, larger
       // and next to the item's live name, so a second small copy here would
       // just be a duplicate).
-      const isLinkedKind = node.kind === 'goal' || node.kind === 'project' || node.kind === 'tool';
-      if (node.kind && KIND_ICON[node.kind] && !isLinkedKind) {
+      const linkedKind = isLinkedKind(node.kind);
+      if (node.kind && KIND_ICON[node.kind] && !linkedKind) {
         const badge = document.createElement('div');
         badge.className = 'node-kind-badge';
         badge.title = KINDS.find(k => k.id === node.kind)?.title || node.kind;
@@ -3624,7 +4063,7 @@
       // editable body at all: they're a display card for a real item, not
       // a free-text note.
       let body = null;
-      if (isLinkedKind) {
+      if (linkedKind) {
         el.appendChild(buildKindStrip(node));
       } else {
         body = document.createElement('div');
@@ -3735,7 +4174,7 @@
       // Double-click a Project / Goal / Tool card to open the real item
       el.addEventListener('dblclick', e => {
         e.stopPropagation();
-        if (!isLinkedKind || !node.link || connectMode) return;
+        if (!linkedKind || !node.link || connectMode) return;
         if (e.target.closest('select')) return;
         HubLinks.navigateTo(node.link.tool, node.link.id);
       });
@@ -3876,8 +4315,8 @@
       const x0 = snap(Math.min(...boxes.map(b => b.n.x)));
       let y = snap(Math.min(...boxes.map(b => b.n.y)));
       const name = b => ((b.n.link && b.n.link.label) || b.n.text || '').toLowerCase();
-      commitLayout(boxes, bs => KINDS.forEach(k => {
-        const group = bs.filter(b => (b.n.kind || 'note') === k.id)
+      commitLayout(boxes, bs => KIND_ORDER.forEach(k => {
+        const group = bs.filter(b => (b.n.kind || 'note') === k)
           .sort((a, b) => name(a).localeCompare(name(b)));
         if (group.length) y += placeGrid(group, x0, y, 6) + LAYOUT_GAP;
       }));
@@ -4256,7 +4695,7 @@
             items.push({
               id: n.id,
               label: (n.link && n.link.label) || (n.text || '').replace(/<[^>]*>/gm, '').slice(0, 50) || '(empty node)',
-              subtitle: (multi ? b.name + ' · ' : '') + (n.kind === 'goal' ? '🎯 Goal' : n.kind === 'project' ? '📌 Project' : n.kind === 'tool' ? '🛠 Tool' : n.kind === 'rd' ? '🧪 R&D bet' : 'canvas note')
+              subtitle: (multi ? b.name + ' · ' : '') + (n.kind && n.kind !== 'frame' ? KIND_ICON[n.kind] + ' ' + kindTitle(n.kind) : n.kind === 'frame' ? '▭ Frame' : 'canvas note')
             });
           }));
           return items;

@@ -286,6 +286,52 @@ window.HubLinks = (() => {
     return [];
   }
 
+  // ── Canvas placements (P134) ───────────────────────────────────────────────
+  // Which Canvas boards hold a card linked to this item? Returns
+  // [{boardId, boardName, nodeId}], one entry per card.
+
+  function canvasPlacements(toolId, itemId) {
+    const out = [];
+    try {
+      const raw = HubStorage.get('canvas-v1');
+      if (!raw) return out;
+      const boards = Array.isArray(raw.boards) ? raw.boards
+        : [{ id: 'legacy', name: 'Canvas', nodes: raw.nodes || [] }];
+      boards.forEach(b => (b.nodes || []).forEach(n => {
+        if (n && n.link && n.link.tool === toolId && n.link.id === itemId) {
+          out.push({ boardId: b.id, boardName: b.name || 'Canvas', nodeId: n.id });
+        }
+      }));
+    } catch { }
+    return out;
+  }
+
+  // Small "On boards: A · B" row. Click a board to open that card on the
+  // Canvas. Returns null when the item is on no board.
+  function canvasPlacementsEl(toolId, itemId) {
+    const list = canvasPlacements(toolId, itemId);
+    if (!list.length) return null;
+    const wrap = document.createElement('div');
+    wrap.className = 'hl-boards';
+    const lbl = document.createElement('span');
+    lbl.className = 'hl-boards-label';
+    lbl.textContent = 'On boards:';
+    wrap.appendChild(lbl);
+    const seen = new Set();
+    list.forEach(p => {
+      if (seen.has(p.boardId)) return;
+      seen.add(p.boardId);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hl-board-chip';
+      btn.textContent = '▦ ' + p.boardName;
+      btn.title = 'Open this card on the Canvas';
+      btn.onclick = e => { e.stopPropagation(); navigateTo('canvas-hub', p.nodeId); };
+      wrap.appendChild(btn);
+    });
+    return wrap;
+  }
+
   // ── Navigation (postMessage to hub parent) ─────────────────────────────────
 
   function navigateTo(toolId, itemId) {
@@ -306,6 +352,26 @@ window.HubLinks = (() => {
     const style = document.createElement('style');
     style.id = 'hl-styles';
     style.textContent = `
+      .hl-boards {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+        font-size: 11px;
+      }
+      .hl-boards-label { color: var(--text3); }
+      .hl-board-chip {
+        background: var(--surface2);
+        border: 1px solid var(--border2);
+        color: var(--text2);
+        border-radius: var(--r-sm);
+        padding: 1px 7px;
+        font-size: 11px;
+        font-family: var(--font-body);
+        cursor: pointer;
+      }
+      .hl-board-chip:hover { border-color: var(--accent); color: var(--text); }
       .hl-btn {
         display: inline-flex;
         align-items: center;
@@ -826,6 +892,8 @@ window.HubLinks = (() => {
     removeLink,
     resolveItems,
     navigateTo,
+    canvasPlacements,
+    canvasPlacementsEl,
     openModal,
     showLinksPopover
   };

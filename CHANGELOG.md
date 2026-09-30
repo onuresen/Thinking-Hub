@@ -7,6 +7,15 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Spatial Canvas: live cards for tasks, decisions, risks, meetings and
+  stakeholders, next to projects, goals and tools. Right-click a note to make
+  it a real task, decision or risk. Project Hub and Tool Portfolio show which
+  boards an item sits on. A line between two live cards can be sent to the
+  Dependency Graph as a real link.
+
+- Spatial Canvas: export and import Obsidian Canvas (`.canvas`, JSON Canvas
+  1.0) files. Frames and layers become groups; lines keep arrows and labels.
+
 - Spatial Canvas: column and row layers. A layer is a named band that runs
   across the whole board. Its name stays pinned to the screen edge while you
   scroll, like frozen spreadsheet headers. Layers are a visual guide only;

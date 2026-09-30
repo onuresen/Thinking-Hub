@@ -1756,6 +1756,11 @@
       document.getElementById('panel-project-links').innerHTML = linkCount > 0
         ? `<button class="hl-badge" style="margin-top:5px" onclick="event.stopPropagation();HubLinks.showLinksPopover('project-hub','${proj.id}',this)">🔗 ${linkCount}</button>`
         : '';
+      // P134: which Canvas boards show this project
+      if (typeof HubLinks !== 'undefined' && HubLinks.canvasPlacementsEl) {
+        const boardsEl = HubLinks.canvasPlacementsEl('project-hub', proj.id);
+        if (boardsEl) document.getElementById('panel-project-links').appendChild(boardsEl);
+      }
 
       const body = document.getElementById('panel-body');
       body.innerHTML = '';

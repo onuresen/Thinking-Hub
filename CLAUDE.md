@@ -21,7 +21,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `hub-vault-bridge.js` | **Vault Bridge (P104)** — reads the Obsidian vault as a *source*: `HubVaultBridge.init/connect/reconnect/scanDays/scanDecisions/accept/ignore`. Persists the directory handle in IndexedDB (`thinking-hub-vault`) so access survives reloads, reports days the vault recorded and the hub did not, and parses canonical-schema decision blocks into a propose/accept queue. Loaded in `index.html` only. |
 | `hub-data.js` | Read API for project/task/member data (`project-hub-v1`) |
 | `hub-tags.js` | Centralized tag/topic registry: `HubTags.getRegistry/ensure/findCanonical/removeFromRegistry/scanUsage/rename/attachAutocomplete` — `scanUsage`/`rename` operate across all `TAG_SOURCES` (every tool with a `tags` field) |
-| `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges) |
+| `hub-links.js` | Cross-tool linking via postMessage + UI (picker modal, badges). `canvasPlacements` / `canvasPlacementsEl` list the Canvas boards an item sits on (P134) |
 | `hub-search.js` | Global Cmd+K search, injected into index.html only |
 | `hub-tutorial.js` | Onboarding tour, injected into index.html only |
 | `hub-toast.js` | Toast notifications — tiny, self-contained |
@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133). Live cards also for tasks, decisions, risks, meetings, stakeholders; note → real task/decision/risk; lines → Dependency Graph links; Obsidian `.canvas` export/import (P134) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2540,6 +2540,45 @@ New export (`buildBoardPng()`):
 **Verified** in a real browser on the user's boards, exported while zoomed to 30%: R&D map 4960×8248 px in ~3 s, Dependency Map 4040×3128, Enterprise Map 4840×4560 (ink theme). Visual check: fonts, colors, frames, layers, line labels and the dot grid match the canvas. A 100% crop is sharp. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 134 — Canvas Hub: live cards for more hubs + Obsidian Canvas~~ ✓ Done `[group: canvas-structure]`
+User picked Group 1 (interoperability) and the Obsidian item of Group 4 from the upgrade shortlist.
+
+- **More live card types:** Task ☑, Decision ⚖, Risk ⚠, Meeting ▣, Stakeholder 👤.
+  - One table, `LINKED`, lists every linked kind: its tool id, hub name and reader.
+  - Readers are fresh at render time, like Project/Goal/Tool (P110).
+  - Right-click empty canvas → **Task, decision, risk…** opens one mixed, searchable list.
+  - Archived items are left out of pickers but still resolve on existing cards.
+  - Colors use existing tokens only. By type layout uses `KIND_ORDER`.
+  - Fade parked also fades done tasks, closed risks and archived items.
+- **Make it a real item:** right-click a note → Make it a task… (pick a project) / decision / risk.
+  - First line → title. For a decision, the other lines → summary.
+  - For a task or risk with more lines, a confirm says only the first line is copied.
+  - Record shapes match each hub's own create function.
+  - The note keeps its text and becomes a live card.
+- **On boards:** Project Hub's project panel and Tool Portfolio's detail show "On boards: …". A chip opens that card on the Canvas.
+- **Send to Dependency Graph:** click a line between two live cards → Send. Or board menu → Send lines to Dependency Graph. Type, direction and label carry over (`HubLinks.addLink`).
+- **Obsidian Canvas (.canvas, JSON Canvas 1.0):** board menu export; import through the same file picker.
+  - Notes → text nodes (HTML → Markdown). Frames and layers → groups, drawn first.
+  - Live cards → text with icon, name, status, and `[[note]]` when the item has one.
+  - Lines: arrows for blocks/depends-on, labels kept; depends-on labelled "needs".
+  - A `thinkingHub` field restores kinds, links, line types and layers on re-import. Obsidian may drop it; import still works.
+  - Import: group → frame, file → `[[path]]` note, link → plain text. Everything passes the P130 cleaner.
+- **Bugs found on the way:** picker lost typing when opened from a menu (focus moved back to the menu button); picker kept focus after closing, so Ctrl+Z and Delete were ignored.
+- `sw.js` cache `v13` → `v14`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Leave Assumptions out. **Why:** no sidebar tool to open them (retired into Decision Hub), and the user's store is empty. **Alternative:** add them anyway, with a dead "Open" link. **Revisit when:** assumptions are used again. **Confidence:** high.
+- **Decision:** Undo reverts the card only, not the new hub item. **Why:** deleting a record in another hub from a canvas keystroke is a hidden destructive action. **Confidence:** high.
+- **Decision:** Canvas lines go to the graph only on request, never synced. **Why:** a line on a thinking board isn't always a real dependency. An explicit send keeps Critical Path honest. **Alternative:** live two-way sync, rejected as surprising. **Confidence:** high.
+- **Decision:** Layers export as Obsidian groups spanning the board. **Why:** it keeps the look. Obsidian has no layer concept. **Confidence:** med.
+- **Decision:** Imported Obsidian lines become "relates" unless the label is blocks/needs or the `thinkingHub` field says otherwise. **Why:** Obsidian's default arrow doesn't mean "blocks". **Confidence:** high.
+
+**Verified** with realistic mouse timing on the user's real data (2026-09-30 export): 48 checks (picker contents and archive filter, card rendering, double-click open, parked, all three conversions with exact record shapes, cancel, undo, placements in both hubs, graph send single and board-wide, graph reads it, By type order, Obsidian export structure, full round trip, hostile .canvas, file-picker import). Earlier canvas scripts: same results as before this change. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `hub-links.js`, `project-hub.html`, `tool-portfolio.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 
