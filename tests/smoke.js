@@ -291,6 +291,23 @@ function appFiles(ext) {
     check('canvas copy/paste, duplicate board and safe board import work',
       g3.copied === '2/1' && g3.dupOk && g3.pasted === 2 && g3.imported === 1 && g3.clean === 'ok<b>b</b>' && !g3.bad,
       JSON.stringify(g3));
+
+    // Layers: bands behind the board, headers pinned, undo, board file (P131)
+    const g4 = await page.evaluate(() => {
+      const lane = createLane('col', -30, 260, 'Col A');
+      const head = document.querySelector(`.lane-head[data-id="${lane.id}"]`);
+      const top0 = head.getBoundingClientRect().top;
+      db.panY -= 500; updateTransform();
+      const pinned = Math.abs(head.getBoundingClientRect().top - top0) < 1;
+      const passThrough = getComputedStyle(document.getElementById('lane-bands')).pointerEvents;
+      undo();
+      const undone = (db.lanes || []).length === 0;
+      const r = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', board: { name: 'L', nodes: [],
+        lanes: [{ axis: 'row', label: 'R', start: 10, size: 100, color: 'c-blue' }, { axis: 'bad' }] } }));
+      return { pinned, passThrough, undone, imported: db.lanes.length, bands: document.querySelectorAll('.lane-band').length };
+    });
+    check('canvas layers pin their headers, let clicks through, undo and import',
+      g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
     await page.close();
   }
 

@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2449,6 +2449,40 @@ Group 3 of the canvas shortlist. Removes the need to edit a Full Backup to hand 
 **Verified** on the user's real boards with realistic mouse timing: 23 checks (duplicate with fresh ids and original untouched, copy/paste across boards under the pointer, live links kept, undo, Paste here, frame copy includes contents, cut, Ctrl+C in Find box stays text, export/import round-trip with unique name and fresh ids, hostile file: no script runs and HTML is cleaned, fallbacks, missing-link count, non-board file refused, Markdown grouping and connections). Groups 1–2 (52 checks) still pass. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CLAUDE.md`
+
+---
+
+### ~~Priority 131 — Canvas Hub: box-select mouse model + column/row layers~~ ✓ Done `[group: canvas-structure]`
+User: plain left-drag panned; they wanted a mouse box-select instead. Also wanted long column/row guides for big boards. Their idea: frames for the column headers, or a "layer" feature. Layers were chosen as a visual guide, not a container.
+
+**Mouse model:**
+- Drag on empty canvas draws a selection box. It replaces the selection. Shift adds.
+- Pan: right-drag or middle-drag anywhere (also over nodes), or Space+drag.
+- In Connect mode, left-drag still pans.
+- A right press that doesn't move opens the menu as before.
+- All context menus go through `gateMenu()`. It handles both event orders: `contextmenu` on press (macOS/Linux) and on release (Windows).
+- A plain click on empty canvas still clears the selection. A tiny box no longer swallows that click.
+- Canvas cursor is now the arrow, not the hand.
+
+**Layers:**
+- `board.lanes = [{id, axis:'col'|'row', label, start, size, color}]`, stored in `canvas-v1` with the board.
+- Add: right-click empty → Column layer / Row layer. Or right-click a selection → Column/Row layer around (fits the nodes).
+- Bands are drawn in screen space (`#lane-bands`, behind the canvas). They run the whole length at any zoom.
+- Headers (`#lane-heads`) stay pinned: columns at the top, rows at the left. They follow the band sideways.
+- Header: drag to move, double-click to rename, right-click for Rename / Select nodes in layer / Color / Delete.
+- Click a header to show edge grips for resizing. Pressing empty canvas hides them. Delete key removes the active layer.
+- Undo covers layers. Duplicate board, board file export/import (cleaned) and Markdown export include them. Minimap shows them.
+- `sw.js` cache `v10` → `v11`. New smoke check.
+
+**Key decisions:**
+- **Decision:** Layers are a visual guide. They never own or move nodes. **Why:** columns and rows cross, so every node would sit in two containers; dragging one would tear nodes out of the other. The user agreed: "it didn't need to be parent like a group or frame." **Alternative:** frames for the columns, rejected for the same reason. Frames stay the tool for rows or groups that should move together. **Confidence:** high.
+- **Decision:** Draw bands and headers in screen space, not inside the zoomed canvas layer. **Why:** a band must look endless, and headers must pin to the screen edge. Screen space does both without giant elements. **Confidence:** high.
+- **Decision:** Right-drag pans, and a right-click without movement still opens the menu. **Why:** it's the Miro convention and keeps one hand on the mouse. A 4px threshold separates the two. **Alternative:** a hand/select tool toggle, rejected as an extra mode to remember. **Confidence:** med. **Revisit when:** right-drag feels awkward on a trackpad.
+- **Decision:** Edge grips only while a layer is active. **Why:** full-length grips always on would catch box-selects that start near a band edge. **Confidence:** high.
+
+**Verified** with realistic mouse timing on the user's real R&D board (2026-09-30 export): 16 mouse-model checks (box select, click clears, Shift adds, right/middle/Space pan, no menu after a pan in both event orders, right-click menus, Connect mode, double-click note, node drag) and 27 layer checks (create, centre, pinned headers, full-height band, move/resize/undo, select nodes, color, fit around selection, box select through a band, delete/undo, rename, reload, per board, duplicate, export/import with hostile values, Markdown). Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
 ---
 
