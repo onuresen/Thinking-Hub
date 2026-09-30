@@ -128,6 +128,17 @@ function appFiles(ext) {
     shellHtml.includes('<img class="sidebar-logo-mark" src="favicon.svg" alt="">') &&
     (shellHtml.match(/<img src="favicon\.svg" alt=""/g) || []).length >= 1 &&
     !/>TH<\//.test(shellHtml));
+  {
+    // Machi Hub mirrors the sidebar. A deleted tool must not linger as a building.
+    const appsBlock = shellHtml.slice(shellHtml.indexOf('const APPS'), shellHtml.indexOf('];', shellHtml.indexOf('const APPS')));
+    const appIds = [...appsBlock.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]).sort();
+    const townHtml = fs.readFileSync(path.join(ROOT, 'town-hub.html'), 'utf8');
+    const pagesBlock = townHtml.slice(townHtml.indexOf('const HUB_PAGES'), townHtml.indexOf('};', townHtml.indexOf('const HUB_PAGES')));
+    const pageIds = [...pagesBlock.matchAll(/'([a-z-]+)': \[/g)].map((m) => m[1]).sort();
+    check('Machi Hub pages match the sidebar tools',
+      appIds.length > 10 && JSON.stringify(appIds) === JSON.stringify(pageIds),
+      'sidebar ' + appIds.length + ' / machi ' + pageIds.length);
+  }
   check('PWA icon dimensions match the manifest',
     JSON.stringify(pngDimensions('icon-192.png')) === '[192,192]' &&
     JSON.stringify(pngDimensions('icon-512.png')) === '[512,512]' &&

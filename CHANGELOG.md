@@ -82,6 +82,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Fixed
 
+- Machi Hub: the Portfolio legend said adopt/trial/assess/hold, but buildings are colored by status. It now reads using/piloting/exploring/retired.
+- Machi Hub: retired Portfolio tools no longer catch fire for going unused.
+- Machi Hub: the Civic landmarks now update live when decisions or Vault Bridge change.
+
 - Tool Portfolio, Decision Hub, and Idea Swiper no longer render blank when
   their stored data has an unexpected shape (bad import or hand-edited
   storage). Each now normalizes the value to an array on read and shows its

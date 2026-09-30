@@ -129,16 +129,13 @@
 
   <div class="content">
     <p class="intro">
-      One connected city, six lenses. <strong>Buildings</strong> are tools — the Hub Pages district holds
-      Thinking Hub's own tools (lit by real opens), the Portfolio district holds your
-      <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>. <strong>Cars</strong> are your
-      active projects (busier = faster). <strong>Pedestrians</strong> are your people. The <strong>blimp</strong>
-      carries your badge count — the more you earn, the more the city celebrates with fireworks. Trouble shows up
-      as real incidents: a dead tool catches <strong>fire</strong>, a blocked project <strong>crashes</strong>, an
-      overdue one sits with <strong>hazards on</strong>, heavy active work gets a <strong>crane</strong>, and a
-      risk you're actively mitigating sends a <strong>response vehicle</strong>. Enough trouble at once and the
-      sky turns to storm. Two <strong>civic landmarks</strong> show what's true elsewhere but not here yet — a
-      signpost for unrecorded vault days, a courthouse that rises as Decision Hub outcomes get scored. Click anything.
+      Your whole Hub as one city. Click anything.<br>
+      <strong>Buildings</strong> are tools: Hub pages (lit by real opens) and your
+      <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>.
+      <strong>Cars</strong> are projects. <strong>People</strong> walk the streets.
+      The <strong>blimp</strong> carries your badges.<br>
+      Trouble shows as incidents: 🔥 a tool gone cold, 💥 a blocked project, ⚠️ an overdue one.
+      🚑 marks a risk being mitigated. Too much trouble and a storm rolls in.
     </p>
 
     <div class="lens-bar" id="lens-bar"></div>
@@ -148,10 +145,11 @@
       <div class="town-wrap">
         <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
         <div class="legend" id="legend">
-          <span style="color:#5bd67a">adopt</span>
-          <span style="color:#5b8cff">trial</span>
-          <span style="color:#ff9f5b">assess</span>
-          <span style="color:#8a8f9c">hold</span>
+          <span>Portfolio:</span>
+          <span style="color:#5bd67a">using</span>
+          <span style="color:#5b8cff">piloting</span>
+          <span style="color:#ff9f5b">exploring</span>
+          <span style="color:#8a8f9c">retired</span>
         </div>
         <div class="legend" id="legend-events">
           <span>🔥 dead tool</span>
@@ -159,6 +157,7 @@
           <span>⚠️ overdue project</span>
           <span>💥 blocked project</span>
           <span>🚑 risk response</span>
+          <span>🏛 civic landmark</span>
         </div>
       </div>
     </div>
@@ -228,7 +227,8 @@
           activity,
           staleness,
           shipped: t.status === 'using',
-          incident: buildingIncident(staleness, activity, t.useCount, Boolean(t.lastUsedAt)),
+          // A retired tool going unused is the point, not neglect — no fire.
+          incident: t.status === 'retired' ? null : buildingIncident(staleness, activity, t.useCount, Boolean(t.lastUsedAt)),
           meta: {
             lens: 'portfolio', toolId: t.id,
             icon: t.icon, status: t.status, note: t.note,
@@ -244,27 +244,23 @@
       'project-hub': ['Project Hub', '◈', 'Daily Work'], 'schedule': ['Schedule', '▦', 'Daily Work'],
       'meetings-hub': ['Meeting Hub', '▣', 'Daily Work'], 'capture-hub': ['Capture Hub', '⊞', 'Daily Work'],
       'journal-hub': ['Journal Hub', '◷', 'Daily Work'],
-      'graph-hub': ['Dependency Graph', '🕸', 'People & Network'], 'people-hub': ['People Hub', '◉', 'People & Network'],
+      'graph-hub': ['Dependency Graph', '🕸️', 'People & Network'], 'people-hub': ['People Hub', '◉', 'People & Network'],
       'stakeholder-hub': ['Stakeholder Map', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
       'town-hub': ['Machi Hub', '🏙', 'People & Network'],
       'learning-hub': ['Learning Hub', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
-      'canvas-hub': ['Spatial Canvas', '✏', 'Learning & Ideas'],
+      'canvas-hub': ['Spatial Canvas', '✏️', 'Learning & Ideas'],
       'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
       'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'],
       'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
       'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
     };
-    // Retired tools (kmqt-board, scrum-hub, log-hub, review-hub, retro-hub,
-    // assumptions-hub, matrix-hub, blocked-depth, war-room, argument-hub,
-    // reflection-hub, frameworks-hub, focus-hub — now a Journal Hub tab, P123)
-    // are deliberately absent above. Old
-    // hub-activity-v1 log entries for them are left untouched (data safety),
-    // but hubPageEntities() below only renders a building for ids present in
-    // HUB_PAGES — no ghost buildings for tools that no longer exist or
-    // aren't reachable from the sidebar.
+    // Must match index.html's APPS exactly (smoke test enforces it).
+    // Retired tools are left out on purpose. Their old hub-activity-v1 entries
+    // stay (data safety), but hubPageEntities() skips any id not listed here,
+    // so a deleted tool never becomes a ghost building.
     const GROUP_COLORS = {
       'Daily Work': '#5b8cff', 'People & Network': '#ff9f5b', 'Learning & Ideas': '#5bd67a',
-      'Strategy & Decisions': '#b28ae8', 'Reflection & Methods': '#8a8f9c', 'Tools & Focus': '#ffd24d',
+      'Strategy & Decisions': '#b28ae8', 'Tools & Focus': '#ffd24d',
     };
 
     function hubUsage() {
@@ -947,7 +943,8 @@
     // Live re-render when other tabs/tools change the underlying data.
     // fromDataChange=true here (unlike lens toggles/resize) so milestone
     // celebrations only fire when something real actually changed.
-    for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1']) {
+    for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1',
+                       'decision-hub-v1', 'hub-vault-bridge-v1']) {
       HubStorage.subscribe(key, () => rebuild(true));
     }
 

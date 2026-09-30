@@ -2675,6 +2675,27 @@ Group B of the second upgrade shortlist ("show your work to others").
 
 ---
 
+### ~~Priority 138 — Machi Hub: cleanup after the tool deletions~~ ✓ Done `[group: machi-hub]`
+Asked after P120/P123 removed tools. `HUB_PAGES` was already correct. The leftovers were elsewhere.
+
+- **Legend was wrong:** it said adopt/trial/assess/hold (Radar rings). Buildings are colored by Portfolio *status*. Now: using / piloting / exploring / retired.
+- **Retired tools no longer catch fire.** Not using a retired tool is the goal, not neglect.
+- **Civic lens updates live:** added `decision-hub-v1` and `hub-vault-bridge-v1` to the subscribe list.
+- Removed the dead `Reflection & Methods` group color. Icons synced with `APPS` (🕸️, ✏️).
+- Intro rewritten short. It said "six lenses"; there are seven. Legend gains 🏛 civic.
+- **New smoke check:** `HUB_PAGES` ids must equal `index.html` `APPS` ids. A deleted tool can't linger as a building again.
+- `sw.js` cache `v17` → `v18`.
+
+**Key decisions:**
+- **Decision:** Guard with a smoke test, not by reading `APPS` from the parent at runtime. **Why:** Machi also opens standalone, where there is no parent shell. **Alternative:** postMessage the list from the shell. **Confidence:** high.
+- **Decision:** Retired tools stay visible, just never burn. **Why:** they are real history in the Portfolio; hiding them would misreport it. **Confidence:** med.
+
+**Verified:** real browser — a `reflection-hub` activity entry makes no building; a 100-day-old retired tool has no fire while a using one does; scoring a decision adds the courthouse without reload. Full smoke + flows + vault-bridge green.
+
+**Files:** `town-hub.html`, `tests/smoke.js`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
