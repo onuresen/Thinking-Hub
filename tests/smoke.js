@@ -379,6 +379,35 @@ function appFiles(ext) {
     check('canvas creates boards from templates and saves your own',
       g9.boards === 1 && g9.cols === 5 && g9.readMe && g9.view === 'Whole map' && g9.tpl === 3, JSON.stringify(g9));
 
+    // Speaker notes, slides zip, interactive HTML (P137)
+    const g10 = await page.evaluate(async () => {
+      db.nodes = []; db.edges = []; renderAll();
+      createNode(0, 0); createNode(260, 0);
+      const [a, b] = db.nodes;
+      a.text = 'Alpha'; b.text = 'Beta';
+      createEdge(a.id, b.id);
+      wrapInFrame([a.id, b.id]);
+      const f = db.nodes.find(n => n.kind === 'frame');
+      openNotesModal(f.id); document.getElementById('nm-text').value = 'Say <b>this</b>'; saveNotesModal();
+      enterPresent();
+      const shown = document.getElementById('present-notes').textContent;
+      exitPresent();
+      const zip = makeZip([{ name: 'a.txt', data: new TextEncoder().encode('hi') }]);
+      const sig = new Uint8Array(await zip.slice(0, 4).arrayBuffer()).join();
+      let html = '';
+      const orig = downloadBlob; downloadBlob = async bl => { html = await bl.text(); };
+      window.confirm = () => true;
+      await exportInteractiveHtml();
+      downloadBlob = orig;
+      await new Promise(r => setTimeout(r, 50));
+      const back = importBoardText(JSON.stringify({ format: 'thinking-hub-canvas-board', version: 1, board: { name: 'n', nodes: db.nodes, edges: db.edges } }), 'n.json');
+      return { notes: f.notes, shown, sig, csp: /default-src 'none'/.test(html), viewer: html.includes('thxViewer') || html.includes('thx-stage'),
+        hasNotes: html.includes('Say <b>') === false && html.includes('Say \\u003cb>this'), kept: back.board.nodes.some(n => n.notes === 'Say <b>this</b>') };
+    });
+    check('canvas keeps speaker notes, zips slides and exports an interactive HTML file',
+      g10.notes === 'Say <b>this</b>' && g10.shown === 'Say <b>this</b>' && g10.sig === '80,75,3,4' && g10.csp && g10.viewer && g10.hasNotes && g10.kept,
+      JSON.stringify(g10));
+
     // Flow layout + outline/Mermaid paste (P135)
     const g8 = await page.evaluate(() => {
       db.nodes = []; db.edges = []; renderAll();

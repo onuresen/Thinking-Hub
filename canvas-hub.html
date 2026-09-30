@@ -1039,6 +1039,17 @@
     body.presenting #minimap,
     body.presenting .help-text,
     body.presenting .find-box { display: none !important; }
+    /* P137: speaker notes under the frame while presenting */
+    .present-notes {
+      position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%);
+      z-index: 300; display: none; width: min(760px, calc(100vw - 32px));
+      max-height: 30vh; overflow-y: auto;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r);
+      padding: 10px 14px; font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+      color: var(--text); white-space: pre-wrap; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    body.presenting .present-notes.show { display: block; }
+    .node.frame.has-notes .frame-title::after { content: ' 🗒'; opacity: 0.7; }
     .pb-text {
       font-family: var(--font-body); font-size: 12.5px; color: var(--text);
       padding: 0 8px; max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -1188,6 +1199,8 @@
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardFile()"><span>⇩</span><span>Export board file (.json)</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardMarkdown()"><span>⇩</span><span>Export as Markdown</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportObsidianCanvas()"><span>⇩</span><span>Export Obsidian Canvas (.canvas)</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportSlides()"><span>🖼</span><span>Export frames as slides (.zip)</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportInteractiveHtml()"><span>🌐</span><span>Export interactive HTML</span></button>
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); pullGraphLinks()"><span>⛓</span><span>Pull lines from Dependency Graph</span></button>
@@ -1246,8 +1259,10 @@
     <button class="pb-btn" onclick="presentStep(-1)" title="Previous (←)">◀</button>
     <span class="pb-text" id="pb-text"></span>
     <button class="pb-btn" onclick="presentStep(1)" title="Next (→ or Space)">▶</button>
+    <button class="pb-btn" id="pb-notes" onclick="togglePresentNotes()" title="Show or hide speaker notes (N)">🗒</button>
     <button class="pb-btn pb-exit" onclick="exitPresent()" title="Exit (Esc)">✕</button>
   </div>
+  <div class="present-notes" id="present-notes"></div>
 
   <!-- Right-click quick-add menu: Note / Project… / Goal… / Tool… / R&D bet -->
   <div class="quick-menu" id="add-menu"></div>
@@ -1306,6 +1321,19 @@
       <div class="om-actions">
         <button class="om-btn" onclick="closeOutlineModal()">Cancel</button>
         <button class="om-btn primary" id="om-create" onclick="createFromOutline()">Create cards</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- P137: speaker notes for a frame -->
+  <div class="ui-modal-overlay" id="notes-modal" onclick="closeNotesModal()">
+    <div class="ui-modal outline-modal" role="dialog" aria-modal="true" aria-labelledby="nm-title" onclick="event.stopPropagation()">
+      <div class="om-title" id="nm-title">Speaker notes</div>
+      <div class="om-hint">Shown under this frame in Present mode. Not in PNG exports.</div>
+      <textarea id="nm-text" class="om-text" placeholder="What to say on this slide…"></textarea>
+      <div class="om-actions">
+        <button class="om-btn" onclick="closeNotesModal()">Cancel</button>
+        <button class="om-btn primary" onclick="saveNotesModal()">Save</button>
       </div>
     </div>
   </div>
@@ -1915,6 +1943,7 @@
       }
       if (e.key === 'Escape') {
         if (document.getElementById('outline-modal').classList.contains('is-open')) { closeOutlineModal(); return; }
+        if (document.getElementById('notes-modal').classList.contains('is-open')) { closeNotesModal(); return; }
         if (document.getElementById('add-picker').style.display === 'flex') { closeAddPicker(); return; }
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
@@ -2099,6 +2128,7 @@
         const x2 = tn.x + (tn.w || NODE_W) / 2, y2 = tn.y + (tn.h || NODE_H) / 2;
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.dataset.from = edge.from; g.dataset.to = edge.to;
         if (focusId && edge.from !== focusId && edge.to !== focusId) g.style.opacity = '0.1';
 
         // Visual line
@@ -2626,6 +2656,7 @@
           selectedNodeId = ids[ids.length - 1];
           applySelectionClasses();
         });
+        add('🗒', node.notes ? 'Edit speaker notes' : 'Add speaker notes…', () => openNotesModal(nodeId));
         colorRow([nodeId], node.color || 'c-gray');
         sep();
         add('✕', 'Delete frame (keeps contents)', () => deleteNodes([nodeId]), 'qm-danger');
@@ -2907,6 +2938,7 @@
       frames.slice().sort(byPos).forEach(f => {
         const items = db.nodes.filter(n => home.get(n.id) === f.id).sort(byPos);
         lines.push(`## ${nodeLabel(f)}`, '');
+        if (f.notes) { f.notes.split('\n').forEach(l => lines.push('> ' + l)); lines.push(''); }
         items.forEach(n => lines.push(`- ${mdNodeLine(n)}`));
         if (!items.length) lines.push('- (empty)');
         lines.push('');
@@ -2993,6 +3025,7 @@
       }
       db.nodes.filter(isFrame).forEach(f => {
         const out = { id: f.id, type: 'group', x: Math.round(f.x), y: Math.round(f.y), width: Math.round(f.w || 640), height: Math.round(f.h || 400), label: nodeLabel(f) };
+        if (f.notes) out.thinkingHub = { notes: f.notes };
         if (OBS_COLOR[f.color]) out.color = OBS_COLOR[f.color];
         groups.push(out);
       });
@@ -3053,7 +3086,7 @@
           if (th.lane === 'col' || th.lane === 'row') {
             lanes.push({ id: String(n.id), axis: th.lane, label: str(n.label) || 'Layer', start: th.lane === 'col' ? x : y, size: th.lane === 'col' ? w : h, color: color(n.color) });
           } else {
-            nodes.push({ id: String(n.id), x, y, w, h, kind: 'frame', text: str(n.label) || 'Group', color: color(n.color) });
+            nodes.push({ id: String(n.id), x, y, w, h, kind: 'frame', text: str(n.label) || 'Group', color: color(n.color), notes: str(th.notes) });
           }
           return;
         }
@@ -3131,6 +3164,7 @@
           color: KNOWN_COLORS.has(n.color) ? n.color : 'c-gray'
         };
         if (kind) out.kind = kind;
+        if (kind === 'frame' && typeof n.notes === 'string' && n.notes.trim()) out.notes = n.notes.slice(0, NOTES_MAX);
         if (n.w) out.w = Math.max(40, num(n.w));
         if (n.h) out.h = Math.max(30, num(n.h));
         if (n.link && typeof n.link === 'object' && kind && isLinkedKind(kind) && n.link.tool === toolLinkFor(kind)) {
@@ -3213,10 +3247,12 @@
       viewAnim = requestAnimationFrame(step);
     }
 
-    function fitRect(x, y, w, h, pad, maxZoom) {
+    // reserve: pixels at the bottom kept free (speaker notes in Present).
+    function fitRect(x, y, w, h, pad, maxZoom, reserve) {
       const vw = viewport.clientWidth, vh = viewport.clientHeight;
-      const zoom = Math.min(maxZoom || 1.5, (vw - pad * 2) / w, (vh - pad * 2) / h);
-      animateTo(x + w / 2, y + h / 2, zoom);
+      reserve = Math.min(reserve || 0, vh * 0.5);
+      const zoom = Math.max(0.15, Math.min(maxZoom || 1.5, (vw - pad * 2) / w, (vh - reserve - pad * 2) / h));
+      animateTo(x + w / 2, y + h / 2 + reserve / (2 * zoom), zoom);
     }
 
     function saveView(slot, name) {
@@ -3247,7 +3283,7 @@
       pulseSave();
     }
 
-    function goFrame(f) { fitRect(f.x, f.y, f.w || NODE_W, f.h || NODE_H, 50, 1.5); }
+    function goFrame(f, reserve) { fitRect(f.x, f.y, f.w || NODE_W, f.h || NODE_H, 50, 1.5, reserve); }
 
     // A layer has no length, so keep the other axis where it is.
     function goLane(lane) {
@@ -3313,7 +3349,7 @@
     let presenting = null;   // { slides, i, before }
     function presentSlides() {
       const frames = db.nodes.filter(isFrame).sort(frameOrder);
-      if (frames.length) return frames.map(f => ({ title: nodeLabel(f), go: () => goFrame(f) }));
+      if (frames.length) return frames.map(f => ({ title: nodeLabel(f), notes: f.notes || '', go: reserve => goFrame(f, reserve) }));
       return views().map(v => ({ title: v.name, go: () => goView(v.slot) }));
     }
     function enterPresent() {
@@ -3324,15 +3360,27 @@
       document.body.classList.add('presenting');
       showSlide();
     }
+    let presentNotesHidden = false;
     function showSlide() {
       const p = presenting;
-      p.slides[p.i].go();
+      const s = p.slides[p.i];
+      const box = document.getElementById('present-notes');
+      box.textContent = s.notes || '';
+      box.classList.toggle('show', !!s.notes && !presentNotesHidden);
+      document.getElementById('pb-notes').style.display = p.slides.some(x => x.notes) ? '' : 'none';
+      const reserve = box.classList.contains('show') ? box.offsetHeight + 60 : 0;
+      s.go(reserve);
       document.getElementById('pb-text').textContent = `${p.i + 1} / ${p.slides.length} · ${p.slides[p.i].title}`;
     }
     function presentStep(d) {
       if (!presenting) return;
       const n = presenting.slides.length;
       presenting.i = Math.max(0, Math.min(n - 1, presenting.i + d));
+      showSlide();
+    }
+    function togglePresentNotes() {
+      if (!presenting) return;
+      presentNotesHidden = !presentNotesHidden;
       showSlide();
     }
     function exitPresent() {
@@ -3350,6 +3398,9 @@
         const k = e.key;
         const next = k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Enter';
         const prev = k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace';
+        if ((k === 'n' || k === 'N') && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault(); e.stopImmediatePropagation(); togglePresentNotes(); return;
+        }
         if (next || prev || k === 'Escape' || k === 'Home' || k === 'End' || k === 'Delete') {
           e.preventDefault(); e.stopImmediatePropagation();
           if (next) presentStep(1);
@@ -3694,7 +3745,7 @@
 
     function buildFrameEl(node) {
       const el = document.createElement('div');
-      el.className = `node frame ${node.color || 'c-gray'}`;
+      el.className = `node frame ${node.color || 'c-gray'}` + (node.notes ? ' has-notes' : '');
       if (selectedIds.has(node.id)) el.classList.add(selectedIds.size > 1 ? 'in-selection' : 'selected');
       el.dataset.id = node.id;
       el.style.left = Math.round(node.x) + 'px';
@@ -5424,27 +5475,27 @@
       };
     }
 
-    async function buildBoardPng() {
-      const b = exportBounds();
+    // The board as a static DOM scene at 100% zoom (P133, split out P137).
+    // rect: only this canvas area (a slide), without layer names.
+    async function buildExportScene(opts) {
+      opts = opts || {};
+      let b = opts.rect || exportBounds();
       if (!b) throw new Error('empty');
       const ls = db.lanes || [];
-      const hasCols = ls.some(l => l.axis === 'col'), hasRows = ls.some(l => l.axis === 'row');
+      const heads = !opts.rect;
+      const hasCols = heads && ls.some(l => l.axis === 'col'), hasRows = heads && ls.some(l => l.axis === 'row');
+      const pad = opts.rect ? SLIDE_PAD : EXPORT_PAD;
       // Layer names get their own margin, so they never cover a node.
-      const padL = EXPORT_PAD + (hasRows ? 200 : 0), padT = EXPORT_PAD + (hasCols ? 44 : 0);
-      const W = Math.ceil(b.R - b.L + padL + EXPORT_PAD), H = Math.ceil(b.B - b.T + padT + EXPORT_PAD);
+      const padL = pad + (hasRows ? 200 : 0), padT = pad + (hasCols ? 44 : 0);
+      const W = Math.ceil(b.R - b.L + padL + pad), H = Math.ceil(b.B - b.T + padT + pad);
       const ox = padL - b.L, oy = padT - b.T;   // canvas point (x,y) → image (x+ox, y+oy)
-      let scale = 2;
-      scale = Math.min(scale, EXPORT_MAX_SIDE / W, EXPORT_MAX_SIDE / H, Math.sqrt(EXPORT_MAX_AREA / (W * H)));
-      scale = Math.max(0.25, scale);
 
       const cssText = await exportCssText();
+      const tokens = exportTokenStyle(cssText);
       const wrap = document.createElement('div');
-      wrap.setAttribute('style', `${exportTokenStyle(cssText)};position:relative;width:${W}px;height:${H}px;overflow:hidden;` +
+      wrap.setAttribute('style', `${tokens};position:relative;width:${W}px;height:${H}px;overflow:hidden;` +
         `background-color:var(--bg);background-image:radial-gradient(var(--border2) 1px, transparent 1px);` +
         `background-size:20px 20px;background-position:${ox}px ${oy}px;font-family:var(--font-body);color:var(--text);`);
-      const style = document.createElement('style');
-      style.textContent = cssText;
-      wrap.appendChild(style);
 
       // Layers: bands across the whole image, names in the margins.
       ls.forEach(l => {
@@ -5463,20 +5514,32 @@
           Object.assign(head.style, { left: '12px', top: (l.start + oy + 6) + 'px', maxWidth: '180px' });
         }
         wrap.appendChild(band);
-        wrap.appendChild(head);
+        if (heads) wrap.appendChild(head);
       });
 
       // The board itself, at 100% zoom, without selection or focus state.
       const clone = layer.cloneNode(true);
       clone.removeAttribute('id');
+      clone.className = 'export-layer';
       clone.style.cssText = `position:absolute;left:0;top:0;width:0;height:0;transform:translate(${ox}px,${oy}px)`;
-      clone.querySelectorAll('.selected,.in-selection,.connect-source,.dimmed').forEach(el =>
-        el.classList.remove('selected', 'in-selection', 'connect-source', 'dimmed'));
+      clone.querySelectorAll('.selected,.in-selection,.connect-source,.dimmed,.has-notes,.focus-center').forEach(el =>
+        el.classList.remove('selected', 'in-selection', 'connect-source', 'dimmed', 'has-notes', 'focus-center'));
       clone.querySelectorAll('.node').forEach(el => { el.style.boxShadow = ''; el.style.transition = ''; });
       clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+      clone.querySelectorAll('g').forEach(g => { g.style.opacity = ''; });
       wrap.appendChild(clone);
       await exportInlineImages(wrap);
+      return { wrap, cssText, tokens, W, H, ox, oy };
+    }
 
+    async function rasterScene(scene) {
+      const { wrap, cssText, W, H } = scene;
+      let scale = 2;
+      scale = Math.min(scale, EXPORT_MAX_SIDE / W, EXPORT_MAX_SIDE / H, Math.sqrt(EXPORT_MAX_AREA / (W * H)));
+      scale = Math.max(0.25, scale);
+      const style = document.createElement('style');
+      style.textContent = cssText;
+      wrap.insertBefore(style, wrap.firstChild);
       const xhtml = new XMLSerializer().serializeToString(wrap);
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W} ${H}">` +
         `<foreignObject x="0" y="0" width="${W}" height="${H}">${xhtml}</foreignObject></svg>`;
@@ -5489,6 +5552,378 @@
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise((res, rej) => canvas.toBlob(bl => bl ? res(bl) : rej(new Error('toBlob')), 'image/png'));
       return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    async function buildBoardPng(opts) {
+      return rasterScene(await buildExportScene(opts));
+    }
+
+    // ── P137: slides, speaker notes, interactive HTML ─────────
+    const SLIDE_PAD = 40;
+    const NOTES_MAX = 4000;
+
+    // A frame's area as a slide. The title sits above the frame.
+    function frameRect(f) {
+      return { L: f.x, T: f.y - 26, R: f.x + (f.w || 640), B: f.y + (f.h || 400) };
+    }
+
+    let _notesId = null, _notesUntrap = null;
+    function openNotesModal(id) {
+      const f = db.nodes.find(n => n.id === id);
+      if (!f) return;
+      _notesId = id;
+      const ov = document.getElementById('notes-modal');
+      const ta = document.getElementById('nm-text');
+      document.getElementById('nm-title').textContent = 'Speaker notes · ' + nodeLabel(f).slice(0, 50);
+      ta.value = f.notes || '';
+      ov.classList.add('is-open');
+      if (HubUtils.trapFocus) _notesUntrap = HubUtils.trapFocus(ov.querySelector('.ui-modal'));
+      ta.focus();
+      setTimeout(() => ta.focus(), 0);
+    }
+    function closeNotesModal() {
+      document.getElementById('notes-modal').classList.remove('is-open');
+      if (_notesUntrap) { _notesUntrap(); _notesUntrap = null; }
+      _notesId = null;
+      if (document.activeElement) document.activeElement.blur();
+    }
+    function saveNotesModal() {
+      const f = db.nodes.find(n => n.id === _notesId);
+      const text = document.getElementById('nm-text').value.replace(/\s+$/, '').slice(0, NOTES_MAX);
+      closeNotesModal();
+      if (!f || (f.notes || '') === text) return;
+      pushHistory();
+      if (text.trim()) f.notes = text; else delete f.notes;
+      renderAll(); pulseSave();
+      if (window.showToast) showToast(text.trim() ? 'Speaker notes saved' : 'Speaker notes removed');
+    }
+    document.getElementById('nm-text').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveNotesModal(); }
+    });
+
+    // Minimal ZIP writer (store, no compression). PNGs are already compressed.
+    const CRC_TABLE = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+      return t;
+    })();
+    function crc32(bytes) {
+      let c = 0xFFFFFFFF;
+      for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+      return (c ^ 0xFFFFFFFF) >>> 0;
+    }
+    function makeZip(files) {   // [{ name, data: Uint8Array }]
+      const enc = new TextEncoder(), d = new Date();
+      const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+      const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+      const parts = [], central = [];
+      let offset = 0;
+      files.forEach(f => {
+        const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+        const h = new DataView(new ArrayBuffer(30));
+        h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+        h.setUint16(8, 0, true); h.setUint16(10, time, true); h.setUint16(12, date, true);
+        h.setUint32(14, crc, true); h.setUint32(18, size, true); h.setUint32(22, size, true);
+        h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+        parts.push(new Uint8Array(h.buffer), name, f.data);
+        const c = new DataView(new ArrayBuffer(46));
+        c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+        c.setUint16(10, 0, true); c.setUint16(12, time, true); c.setUint16(14, date, true);
+        c.setUint32(16, crc, true); c.setUint32(20, size, true); c.setUint32(24, size, true);
+        c.setUint16(28, name.length, true); c.setUint32(42, offset, true);
+        central.push(new Uint8Array(c.buffer), name);
+        offset += 30 + name.length + size;
+      });
+      const cdSize = central.reduce((a, p) => a + p.length, 0);
+      const e = new DataView(new ArrayBuffer(22));
+      e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+      e.setUint32(12, cdSize, true); e.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
+    }
+
+    let _slidesBusy = false;
+    async function exportSlides() {
+      const frames = db.nodes.filter(isFrame).sort(frameOrder);
+      if (!frames.length) { if (window.showToast) showToast('Add frames first — each frame becomes one slide'); return; }
+      if (_slidesBusy) return;
+      _slidesBusy = true;
+      try {
+        const files = [], digits = String(frames.length).length < 2 ? 2 : String(frames.length).length;
+        const md = [`# ${db.name} — slides`, '', `Exported from Thinking Hub Canvas · ${HubUtils.todayLocal()}`, ''];
+        for (let i = 0; i < frames.length; i++) {
+          const f = frames[i];
+          if (window.showToast) showToast(`Rendering slide ${i + 1} of ${frames.length}…`);
+          const r = await buildBoardPng({ rect: frameRect(f) });
+          const num = String(i + 1).padStart(digits, '0');
+          files.push({ name: `${num}-${fileSlug(nodeLabel(f))}.png`, data: new Uint8Array(await r.blob.arrayBuffer()) });
+          md.push(`## ${num}. ${nodeLabel(f)}`, '');
+          if (f.notes) md.push(f.notes, '');
+        }
+        files.push({ name: 'slides.md', data: new TextEncoder().encode(md.join('\n')) });
+        downloadBlob(makeZip(files), `canvas-${fileSlug(db.name)}-slides-${HubUtils.todayLocal()}.zip`);
+        if (window.showToast) showToast(`Exported ${plural(frames.length, 'slide')} · one PNG per frame + slides.md`);
+      } catch (err) {
+        if (window.showToast) showToast('Slide export failed in this browser');
+      } finally { _slidesBusy = false; }
+    }
+
+    // Card details for the interactive file. Live cards read fresh now.
+    function exportCardInfo(withNotes) {
+      const cache = {};
+      const itemFor = n => {
+        if (!cache[n.kind]) cache[n.kind] = liveItemsFor(n.kind);
+        return cache[n.kind].find(i => i.id === n.link.id);
+      };
+      const cards = {};
+      db.nodes.forEach(n => {
+        if (isFrame(n)) return;
+        const c = { title: nodeLabel(n).split('\n')[0].slice(0, 120) };
+        if (isLinkedKind(n.kind)) {
+          const it = n.link ? itemFor(n) : null;
+          c.kind = kindTitle(n.kind);
+          c.title = it ? it.label : (n.link ? n.link.label : '(unlinked)');
+          if (it && it.status) c.status = it.status;
+          if (n.link && !it) c.status = '(item removed)';
+        } else {
+          c.kind = n.kind === 'rd' ? 'R&D bet' : 'Note';
+          c.text = htmlToMarkdown(n.text).slice(0, 4000);
+          c.title = (c.text.split('\n')[0] || '(empty note)').replace(/\*\*/g, '').slice(0, 120);
+        }
+        cards[n.id] = c;
+      });
+      const frames = db.nodes.filter(isFrame).sort(frameOrder).map(f => {
+        const r = frameRect(f);
+        const out = { id: f.id, title: nodeLabel(f), x: r.L, y: r.T, w: r.R - r.L, h: r.B - r.T };
+        if (withNotes && f.notes) out.notes = f.notes;
+        return out;
+      });
+      const edges = (db.edges || []).filter(e => cards[e.from] && cards[e.to])
+        .map(e => ({ from: e.from, to: e.to, rel: e.relType || 'relates', label: e.label || '' }));
+      return { cards, frames, edges };
+    }
+
+    // Self-contained viewer. Runs inside the exported file only, so it may
+    // not use anything from this page.
+    function thxViewer() {
+      const data = JSON.parse(document.getElementById('thx-data').textContent);
+      const stage = document.getElementById('thx-stage'), world = document.getElementById('thx-world');
+      const info = document.getElementById('thx-info'), notesBox = document.getElementById('thx-notes');
+      const sel = document.getElementById('thx-frames');
+      let x = 0, y = 0, z = 1, current = null, frameIdx = -1;
+      const apply = () => { world.style.transform = `translate(${x}px,${y}px) scale(${z})`; };
+      const fitTo = (rx, ry, rw, rh, reserve) => {
+        const vw = stage.clientWidth, vh = stage.clientHeight - (reserve || 0), pad = 40;
+        z = Math.max(0.05, Math.min(1.5, (vw - pad * 2) / rw, (vh - pad * 2) / rh));
+        x = vw / 2 - (rx + rw / 2) * z; y = vh / 2 - (ry + rh / 2) * z;
+        apply();
+      };
+      const fitAll = () => { fitTo(0, 0, data.W, data.H); };
+      const zoomAt = (f, cx, cy) => {
+        const nz = Math.max(0.05, Math.min(4, z * f));
+        x = cx - (cx - x) * nz / z; y = cy - (cy - y) * nz / z; z = nz; apply();
+      };
+      const nodeEl = id => world.querySelector(`.node[data-id="${CSS.escape(id)}"]`);
+      const neighbours = id => {
+        const set = new Set([id]);
+        data.edges.forEach(e => { if (e.from === id) set.add(e.to); if (e.to === id) set.add(e.from); });
+        return set;
+      };
+      const row = (label, value) => {
+        const d = document.createElement('div'); d.className = 'thx-row';
+        const b = document.createElement('b'); b.textContent = label; d.appendChild(b);
+        d.appendChild(document.createTextNode(' ' + value)); return d;
+      };
+      function select(id) {
+        current = id;
+        const set = id ? neighbours(id) : null;
+        world.querySelectorAll('.node:not(.frame)').forEach(el => {
+          el.classList.toggle('dimmed', !!set && !set.has(el.dataset.id));
+          el.classList.toggle('thx-sel', el.dataset.id === id);
+        });
+        world.querySelectorAll('g[data-from]').forEach(g => {
+          g.style.opacity = set && g.dataset.from !== id && g.dataset.to !== id ? '0.1' : '';
+        });
+        info.innerHTML = '';
+        if (!id) { info.classList.remove('show'); return; }
+        const c = data.cards[id];
+        const k = document.createElement('div'); k.className = 'thx-kind'; k.textContent = c.kind + (c.status ? ' · ' + c.status : '');
+        const t = document.createElement('div'); t.className = 'thx-title'; t.textContent = c.title;
+        info.append(k, t);
+        if (c.text && c.text !== c.title) { const p = document.createElement('div'); p.className = 'thx-text'; p.textContent = c.text; info.appendChild(p); }
+        const links = data.edges.filter(e => e.from === id || e.to === id);
+        if (links.length) {
+          const h = document.createElement('div'); h.className = 'thx-kind'; h.textContent = 'Connections'; info.appendChild(h);
+          links.forEach(e => {
+            const other = e.from === id ? e.to : e.from;
+            const word = e.rel === 'blocks' ? (e.from === id ? 'blocks' : 'blocked by') : e.rel === 'depends-on' ? (e.from === id ? 'needs' : 'needed by') : 'relates to';
+            const a = document.createElement('button'); a.className = 'thx-link';
+            a.textContent = `${word} · ${data.cards[other].title}` + (e.label ? ` (${e.label})` : '');
+            a.onclick = () => { select(other); centerOn(other); };
+            info.appendChild(a);
+          });
+        }
+        info.classList.add('show');
+      }
+      function centerOn(id) {
+        const el = nodeEl(id); if (!el) return;
+        const cx = (el.offsetLeft + el.offsetWidth / 2) + data.ox, cy = (el.offsetTop + el.offsetHeight / 2) + data.oy;
+        const vw = stage.clientWidth, vh = stage.clientHeight;
+        z = Math.max(z, 0.8); x = vw / 2 - cx * z; y = vh / 2 - cy * z; apply();
+      }
+      function goFrame(i) {
+        if (!data.frames.length) return;
+        frameIdx = Math.max(0, Math.min(data.frames.length - 1, i));
+        const f = data.frames[frameIdx];
+        sel.value = String(frameIdx);
+        notesBox.textContent = f.notes || '';
+        notesBox.classList.toggle('show', !!f.notes);
+        const reserve = f.notes ? notesBox.offsetHeight + 20 : 0;
+        fitTo(f.x + data.ox, f.y + data.oy, f.w, f.h, reserve);
+      }
+      data.frames.forEach((f, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${i + 1}. ${f.title}`; sel.appendChild(o); });
+      if (!data.frames.length) document.getElementById('thx-framebar').style.display = 'none';
+      sel.onchange = () => goFrame(Number(sel.value));
+      document.getElementById('thx-prev').onclick = () => goFrame(frameIdx - 1);
+      document.getElementById('thx-next').onclick = () => goFrame(frameIdx + 1);
+      document.getElementById('thx-fit').onclick = () => { frameIdx = -1; notesBox.classList.remove('show'); fitAll(); };
+      document.getElementById('thx-in').onclick = () => zoomAt(1.25, stage.clientWidth / 2, stage.clientHeight / 2);
+      document.getElementById('thx-out').onclick = () => zoomAt(0.8, stage.clientWidth / 2, stage.clientHeight / 2);
+
+      stage.addEventListener('wheel', e => {
+        e.preventDefault();
+        const r = stage.getBoundingClientRect();
+        zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+      }, { passive: false });
+      let drag = null;
+      stage.addEventListener('pointerdown', e => {
+        if (e.button > 1) return;
+        drag = { sx: e.clientX, sy: e.clientY, x, y, moved: false, id: e.pointerId };
+        stage.setPointerCapture(e.pointerId);
+      });
+      stage.addEventListener('pointermove', e => {
+        if (!drag) return;
+        const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+        if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+        drag.moved = true; stage.classList.add('panning');
+        x = drag.x + dx; y = drag.y + dy; apply();
+      });
+      stage.addEventListener('pointerup', e => {
+        if (!drag) return;
+        const moved = drag.moved; drag = null; stage.classList.remove('panning');
+        if (moved) return;
+        const hit = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.closest && el.closest('#thx-world .node:not(.frame)'));
+        const card = hit && hit.closest('.node');
+        const title = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.classList && el.classList.contains('frame-title'));
+        if (card && data.cards[card.dataset.id]) select(card.dataset.id === current ? null : card.dataset.id);
+        else if (title) { const i = data.frames.findIndex(f => f.id === title.parentNode.dataset.id); if (i >= 0) goFrame(i); }
+        else select(null);
+      });
+      document.addEventListener('keydown', e => {
+        if (e.target.tagName === 'SELECT') return;
+        if (e.key === 'Escape') select(null);
+        else if (e.key === '0' || e.key === 'f') { frameIdx = -1; notesBox.classList.remove('show'); fitAll(); }
+        else if (e.key === '+' || e.key === '=') zoomAt(1.25, stage.clientWidth / 2, stage.clientHeight / 2);
+        else if (e.key === '-') zoomAt(0.8, stage.clientWidth / 2, stage.clientHeight / 2);
+        else if (e.key === 'ArrowRight' || e.key === 'PageDown') goFrame(frameIdx + 1);
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') goFrame(frameIdx - 1);
+      });
+      window.addEventListener('resize', () => { if (frameIdx >= 0) goFrame(frameIdx); });
+      fitAll();
+      window.thxApi = { select, goFrame, fitAll, state: () => ({ x, y, z, current, frameIdx }) };
+    }
+
+    const THX_CSS = `
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-body); display: block; user-select: none; }
+#thx-stage { position: fixed; inset: 0; overflow: hidden; cursor: default; touch-action: none; }
+#thx-stage.panning { cursor: grabbing; }
+#thx-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#thx-world .node:not(.frame) { cursor: pointer; }
+#thx-world .node.thx-sel { box-shadow: 0 0 0 2px var(--accent); }
+#thx-world .frame-title { cursor: pointer; }
+.thx-bar { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 6px; align-items: center; z-index: 10;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 8px; }
+.thx-bar button, .thx-bar select { font: inherit; font-size: 12.5px; color: var(--text); background: var(--surface3);
+  border: 1px solid var(--border2); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.thx-bar select { max-width: 40vw; }
+.thx-name { font-size: 12.5px; color: var(--text2); padding: 0 6px; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#thx-info { position: fixed; right: 12px; top: 12px; width: min(340px, calc(100vw - 24px)); max-height: calc(100vh - 90px); overflow-y: auto;
+  display: none; z-index: 10; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; user-select: text; }
+#thx-info.show { display: block; }
+.thx-kind { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin: 6px 0 4px; }
+.thx-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.thx-text { white-space: pre-wrap; font-size: 13.5px; line-height: 1.5; color: var(--text2); margin-bottom: 8px; }
+.thx-link { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--text); background: var(--surface3);
+  border: 1px solid var(--border2); border-radius: var(--r-sm); padding: 6px 8px; margin-top: 4px; cursor: pointer; }
+#thx-notes { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); max-height: 28vh;
+  overflow-y: auto; display: none; z-index: 10; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 10px 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; user-select: text; }
+#thx-notes.show { display: block; }
+.thx-foot { position: fixed; right: 12px; bottom: 16px; font-size: 11px; color: var(--text3); z-index: 5; }
+`;
+
+    // Keep only what a static page needs; no handlers, no controls.
+    function cleanExportDom(root) {
+      root.querySelectorAll('script, button, select, input, textarea, .node-resize-handle, .node-actions, .nk-row').forEach(el => el.remove());
+      root.querySelectorAll('*').forEach(el => {
+        [...el.attributes].forEach(a => {
+          const n = a.name.toLowerCase();
+          if (n.startsWith('on') || n === 'draggable' || n === 'tabindex' || n === 'contenteditable') el.removeAttribute(a.name);
+          if ((n === 'href' || n === 'xlink:href') && !/^(https?:|#)/i.test(a.value.trim())) el.removeAttribute(a.name);
+        });
+        if (el.tagName === 'A' && el.getAttribute('href')) { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener noreferrer'); }
+      });
+    }
+
+    let _htmlBusy = false;
+    async function exportInteractiveHtml() {
+      if (!db.nodes.length) { if (window.showToast) showToast('Nothing to export on this board'); return; }
+      if (_htmlBusy) return;
+      const hasNotes = db.nodes.some(n => isFrame(n) && n.notes);
+      const withNotes = hasNotes && confirm('Include speaker notes in the file?\n\nOK = include · Cancel = leave them out');
+      _htmlBusy = true;
+      try {
+        const scene = await buildExportScene();
+        cleanExportDom(scene.wrap);
+        const info = exportCardInfo(withNotes);
+        const payload = Object.assign(info, { W: scene.W, H: scene.H, ox: scene.ox, oy: scene.oy });
+        const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+        const esc = HubUtils.esc;
+        const cssSafe = t => t.replace(/<\/style/gi, '<\\/style');
+        scene.wrap.id = 'thx-scene';
+        const html = `<!DOCTYPE html>
+<html lang="en" style="${esc(scene.tokens)}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'">
+<title>${esc(db.name)}</title>
+<style>${cssSafe(scene.cssText)}</style>
+<style>${THX_CSS}</style>
+</head>
+<body>
+<div id="thx-stage"><div id="thx-world" style="width:${scene.W}px;height:${scene.H}px">${scene.wrap.outerHTML}</div></div>
+<div class="thx-bar">
+  <span class="thx-name">${esc(db.name)}</span>
+  <button id="thx-fit" title="Whole board (0)">Fit</button>
+  <button id="thx-out" title="Zoom out (-)">−</button>
+  <button id="thx-in" title="Zoom in (+)">+</button>
+  <span id="thx-framebar"><button id="thx-prev" title="Previous frame (←)">◀</button>
+  <select id="thx-frames" aria-label="Frames"></select>
+  <button id="thx-next" title="Next frame (→)">▶</button></span>
+</div>
+<div id="thx-info" aria-live="polite"></div>
+<div id="thx-notes"></div>
+<div class="thx-foot">Thinking Hub Canvas · exported ${esc(HubUtils.todayLocal())} · drag to pan, wheel to zoom, click a card</div>
+<script type="application/json" id="thx-data">${json}<\/script>
+<script>(${thxViewer.toString()})();<\/script>
+</body>
+</html>`;
+        const blob = new Blob([html], { type: 'text/html' });
+        downloadBlob(blob, `canvas-${fileSlug(db.name)}-${HubUtils.todayLocal()}.html`);
+        if (window.showToast) showToast(`Exported interactive file · ${Math.round(blob.size / 1024)} KB` + (hasNotes ? (withNotes ? ' · with notes' : ' · notes left out') : ''));
+      } catch (err) {
+        if (window.showToast) showToast('HTML export failed');
+      } finally { _htmlBusy = false; }
     }
 
     function downloadBlob(blob, filename) {

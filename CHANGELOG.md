@@ -7,6 +7,9 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Canvas Hub speaker notes: right-click a frame → Add speaker notes. They show under the frame in Present mode. N hides them. Not included in PNG exports.
+- Canvas Hub "Export frames as slides": one 2× PNG per frame, in Present order, in one .zip with a `slides.md` of titles and notes.
+- Canvas Hub "Export interactive HTML": one self-contained file with zoom, pan, clickable cards with connections, and frame stepping. It makes no network requests. Speaker notes are included only if you say yes.
 - Spatial Canvas: board templates. "+" offers five built-in layouts
   (Wardley, Capability, Dependency, Enterprise, R&D Transformation) and
   your own templates saved from any board. A System map board is built

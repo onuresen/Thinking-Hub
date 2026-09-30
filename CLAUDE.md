@@ -34,7 +34,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `idea-swiper.html` | Rapid idea triage (swipe) |
 | ~~`kmqt-board.html`~~ | ❌ **Deleted (P88)** — file removed. `kmqt_current_v2` data is NOT purged (retained in Full Backup + MCP-sync + Reflection Board's "↓ From KMQT Board" import bridge). |
 | `decision-hub.html` | Decision log + alignment matrix + **Assumptions tab** (reads `assumptions-hub-v1`). Canonical schema fields (alternative / revisit-when / revisit-date / outcome) + `⚖ Calibration` modal (P51) |
-| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133). Live cards also for tasks, decisions, risks, meetings, stakeholders; note → real task/decision/risk; lines → Dependency Graph links; Obsidian `.canvas` export/import (P134). Expand a project card into its world, paste Markdown/Mermaid → cards, Layout → Flow along lines (P135). "+" menu: blank, 5 built-in templates, your saved templates (`canvas-v1.templates`); System map board (`board.systemMap`) built from the hub; pull Dependency Graph links onto a board (P136) |
+| `canvas-hub.html` | Infinite spatial canvas — freeform sticky notes plus typed Goal/Project/Tool/R&D-bet nodes that can live-link to a real Goals Hub objective / Project Hub project / Tool Portfolio entry (P110); multiple named boards, and typed connections (relates/blocks/depends-on) via a click popover (P111); right-click empty canvas to add a note or a searchable live-linked node, replacing the old bulk-checklist modal (P112). Goal/Project/Tool nodes are display-only cards (icon + live name, favicon-led for Tool) with no editable text — the select/open row to relink only appears once selected (P117). Multi-select + Layout menu (align, spread, tidy grid, by type, fit, snap) (P127). Right-click node menu (open linked item, focus, connect, duplicate, color, delete), double-click a linked card to open it, Focus mode (F), Ctrl+F find across boards (P128). Frames (labelled areas that move their contents), labels on connections, fade parked projects/tools (P129). Copy/cut/paste between boards, board menu: duplicate, export .json / Markdown, import board file with HTML cleaning (P130). Drag on empty canvas = box select, right/middle/Space-drag = pan; column/row layers with pinned headers (P131). Jump menu, saved views on 1–9, present mode through frames (P132). Export PNG = whole board at 2× via SVG foreignObject (P133). Live cards also for tasks, decisions, risks, meetings, stakeholders; note → real task/decision/risk; lines → Dependency Graph links; Obsidian `.canvas` export/import (P134). Expand a project card into its world, paste Markdown/Mermaid → cards, Layout → Flow along lines (P135). "+" menu: blank, 5 built-in templates, your saved templates (`canvas-v1.templates`); System map board (`board.systemMap`) built from the hub; pull Dependency Graph links onto a board (P136). Speaker notes per frame (`node.notes`) shown in Present mode; export frames as slides (.zip of PNGs + slides.md); export a self-contained interactive HTML file (P137) |
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
@@ -2637,6 +2637,39 @@ Group C of the second upgrade shortlist.
 - **Decision:** One System map per hub. **Why:** a second build should refresh, not multiply boards. **Confidence:** high.
 
 **Verified** on the user's 2026-09-30 data (after layers): 27 checks (menu contents, template board name/layers/Read me/view/fit, unique names, cancel, save template from the real Dependency Map (12 kept, 16 live left out), board from own template with fresh ids, reload, delete; System map 39 projects / 8 goals / 26 tools in 8 group rows, every card in its column and row, no overlaps, rebuild reuses the board and keeps a hand note, undo, Rebuild item only on that board; pull adds typed lines with notes, second pull adds none). Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 137 — Canvas Hub: speaker notes, slides export, interactive HTML~~ ✓ Done `[group: canvas-structure]`
+Group B of the second upgrade shortlist ("show your work to others").
+
+- **Speaker notes:** `node.notes` on frames only (plain text, max 4000).
+  - Right-click a frame → Add / Edit speaker notes. Ctrl+Enter saves, Esc cancels. One undo step.
+  - Frames with notes show 🗒 after the title (not in exports).
+  - Present mode shows them in a panel under the frame. The frame fits above the panel. N or the 🗒 button hides them.
+  - Kept by duplicate, copy/paste, templates, board file, Markdown (as a quote under the frame) and Obsidian (`thinkingHub.notes`).
+  - Import keeps notes on frames only. Always rendered as text.
+- **Export frames as slides** (board menu): one PNG per frame, 2×, in Present order.
+  - Slide = the frame plus its title and a 40px margin. Layer bands shown, layer names not.
+  - Bundled in one `.zip` (store-only writer, `makeZip`, no library) with `slides.md` (numbered titles + notes).
+- **Export interactive HTML** (board menu): one file, `canvas-<board>-<date>.html`.
+  - Same scene as the PNG export (`buildExportScene`, split out of `buildBoardPng`): inlined CSS, fonts, tokens and favicons.
+  - Viewer (`thxViewer`, embedded via `toString()`): drag pans, wheel zooms, Fit, ◀ ▶ and a frame picker, click a card for kind, status, text and its connections, Esc clears.
+  - CSP `default-src 'none'` plus inline only. Buttons, inputs, handlers and non-http links are stripped.
+  - Asks before including speaker notes.
+- Edge `<g>` elements now carry `data-from` / `data-to`.
+- `sw.js` cache `v16` → `v17`. New smoke check.
+
+**Key decisions:**
+- **Decision:** One `.zip` for slides, not one download per slide. **Why:** many downloads trigger a browser prompt and clutter the folder. A store-only ZIP is ~40 lines and needs no library. **Alternative:** sequential downloads. **Confidence:** high.
+- **Decision:** Speaker notes are frame-only and never drawn into PNGs. **Why:** frames are the slides; notes are for the presenter, not the audience. **Confidence:** high.
+- **Decision:** The HTML file asks before including notes. **Why:** the file is meant to be passed on; notes can hold things you say, not show. **Confidence:** high.
+- **Decision:** HTML export reuses the static scene, not a live canvas. **Why:** it matches the PNG look exactly and needs no app code in the file. Cards can't be edited there. **Alternative:** embed the board data and a mini renderer. **Revisit when:** someone needs to edit in the shared file. **Confidence:** med.
+- **Decision:** The interactive file is a local download only. **Why:** P84/P93 — no upload, no hosting. The user decides who gets it. **Confidence:** high.
+
+**Verified** on the user's R&D Transformation Map (2026-09-30 data) with realistic mouse timing: 36 checks (notes menu, dialog focus, save, undo/redo, Esc, Present panel and fit, N key, Markdown, board file, hostile notes as text, Obsidian round trip, duplicate; zip CRC, 8 slides in Present order, 2× size, slides.md; HTML with and without notes, CSP, no handlers, no network requests when opened offline, fit, card click with connections, connection jump, Esc, pan, zoom, frame stepping). Visual check of a slide and the viewer. P134–P136 scripts still pass. Full smoke + flows + vault-bridge green.
 
 **Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
 
