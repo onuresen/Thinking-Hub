@@ -1,4 +1,4 @@
-// machi-fun.js — Thinking Hub's playful layer for Machi Hub (P139).
+// machi-fun.js — Thinking Hub's playful layer for Machi Hub (P140).
 // NOT a stamped copy: this file is Thinking-Hub-specific and lives only here.
 // It draws through the engine's setDecorator() hook and reads Hub data directly.
 //

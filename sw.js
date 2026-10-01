@@ -14,7 +14,7 @@
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
  */
 
-const CACHE = 'thinking-hub-v19';
+const CACHE = 'thinking-hub-v20';
 
 const PRECACHE = [
   './index.html',
@@ -35,6 +35,7 @@ const PRECACHE = [
   './hub-starter-data.js',
   './hub-obsidian.js',
   './hub-vault-bridge.js',
+  './hub-vault-notes.js',
   './hub-data.js',
   './hub-tags.js',
   './hub-links.js',

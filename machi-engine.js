@@ -1,6 +1,6 @@
 /* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-engine.js (Machi Hub project).
    Edit there, then re-copy here. Do not edit this copy directly.
-   ⚠ Local addition not yet in the canonical source: setDecorator() (Thinking Hub P139).
+   ⚠ Local addition not yet in the canonical source: setDecorator() (Thinking Hub P140).
    Port it to Vibe_Coding/MachiHub before the next re-copy, or it will be lost. */
 
 // machi-engine.js — portable core for Machi Hub.

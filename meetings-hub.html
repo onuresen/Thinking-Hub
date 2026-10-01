@@ -7,6 +7,9 @@
   <title>Meeting Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-obsidian.js"></script>
+  <script src="hub-vault-bridge.js"></script>
+  <script src="hub-vault-notes.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-toast.js"></script>
@@ -840,7 +843,8 @@
         <select class="dec-owner-sel" onchange="updateDecision('${d.id}','owner',this.value)">${ownerOpts}</select>
         <span class="dec-status-chip" data-status="${d.status || 'open'}"
           onclick="cycleDecisionStatus('${d.id}')">${STATUS_LABEL[d.status || 'open']}</span>
-        <button class="dec-send-btn" onclick="sendDecisionToHub('${d.id}')" title="Send to Decision Hub">→ Hub</button>
+        ${d.inHub ? `<span class="dec-send-btn" title="Already in Decision Hub" style="opacity:.6;cursor:default">✓ Hub</span>`
+          : `<button class="dec-send-btn" onclick="sendDecisionToHub('${d.id}')" title="Send to Decision Hub">→ Hub</button>`}
         <button class="dec-del-btn" onclick="deleteDecision('${d.id}')">✕</button>
       </div>`;
     }).join('');
@@ -910,6 +914,7 @@
       projectId: m.projectId || '', tags: [], reasoning: '', options: '', outcome: '',
     });
     HubStorage.set('decision-hub-v1', arr);
+    d.inHub = true; save(); refreshDecisionsBody();
     showToast('Decision sent to Decision Hub');
     if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
   }
@@ -1487,6 +1492,8 @@
             title="${m.scheduleEventId ? 'Already synced' : 'Sync to Schedule'}">
             ${m.scheduleEventId ? '✓ Schedule' : '→ Schedule'}
           </button>`}
+          <button class="btn btn-ghost" id="vault-meeting-btn" onclick="openVaultMeeting()" style="font-size:11px;padding:5px 10px"
+            title="${esc(target.obsidianNote ? 'Decisions and actions from ' + target.obsidianNote : 'Link this meeting to its vault note')}">⟡ ${target.obsidianNote ? 'Vault note' : 'Link note'}</button>
           <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
           <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
           ${m.recurring
@@ -1696,6 +1703,69 @@
     HubStorage.set('decision-hub-v1', arr);
     showToast('Decision draft created');
     if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
+  }
+
+  // ── Vault note → decisions + actions (P138) ──────────────────────────────────
+  // Real meeting notes live in the vault. Link the note once (per week for a
+  // weekly series); its decisions and asks show up here to add.
+  function vaultMeetingCfg(m) {
+    const target = activeLogEntry(m);
+    const date = target.date || m.date || '';
+    return {
+      title: 'Vault note · ' + (m.title || 'Meeting') + (m.recurring && date ? ' · ' + fmtShortDate(date) : ''),
+      notePath: target.obsidianNote || '',
+      suggest: notes => {
+        const byDate = date ? notes.filter(n => n.includes(date)) : [];
+        byDate.sort((a, b) => (/meeting|mtg|打合/i.test(b) ? 1 : 0) - (/meeting|mtg|打合/i.test(a) ? 1 : 0));
+        const words = [...new Set(String(m.title || '').toLowerCase().split(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+/).filter(w => w.length > 2))];
+        const byName = words.length ? notes.filter(n => !byDate.includes(n) && /meeting|mtg|打合/i.test(n) &&
+          words.some(w => n.split('/').pop().toLowerCase().includes(w))) : [];
+        return [...byDate, ...byName];
+      },
+      saveNote: path => {
+        target.obsidianNote = path.replace(/\.md$/i, '');
+        HubUtils.stampUpdate(m); save();
+      },
+      build: (text, path) => {
+        const r = HubVaultBridge.parseMeetingNote(text, path);
+        const norm = HubVaultBridge.normTitle;
+        const haveActions = new Set((target.actionItems || []).map(a => norm(a.text)));
+        const haveDecisions = new Set((target.decisions || []).map(d => norm(d.text)));
+        const decisions = r.decisions.filter(d => !haveDecisions.has(norm(d.title))).map(d => ({
+          key: d.sourceKey, text: d.title,
+          sub: d.summary !== d.title ? d.summary.slice(0, 160) + (d.summary.length > 160 ? '…' : '') : (d.context || ''),
+          label: 'Add decision',
+          accept: () => {
+            HubVaultBridge.accept(d, { projectId: m.projectId || '' });
+            if (!target.decisions) target.decisions = [];
+            target.decisions.push({ id: uid(), text: d.title, owner: '', status: 'decided', inHub: true });
+            HubUtils.stampUpdate(m); save();
+          },
+        }));
+        const actions = r.actions.filter(a => !haveActions.has(norm(a.text))).map(a => ({
+          key: HubVaultBridge.itemKey('action', path, a.text), text: a.text,
+          sub: [a.owner && 'Owner: ' + a.owner, a.heading].filter(Boolean).join(' · '),
+          label: 'Add action',
+          accept: () => {
+            if (!target.actionItems) target.actionItems = [];
+            target.actionItems.push({ id: uid(), text: a.owner ? `${a.text} (${a.owner})` : a.text, done: false,
+              taskCreated: false, dueDate: null, createdAt: new Date().toISOString() });
+            HubUtils.stampUpdate(m); save();
+          },
+        }));
+        return [
+          { title: 'Decisions → Decision Hub', addAllLabel: 'Add all', items: decisions },
+          { title: 'Actions', addAllLabel: 'Add all', items: actions },
+        ];
+      },
+      onChange: () => { renderDetail(); renderList(); },
+    };
+  }
+
+  function openVaultMeeting() {
+    const m = activeMeeting(); if (!m || typeof HubVaultNotes === 'undefined') return;
+    flushCurrentDetail();
+    HubVaultNotes.open(vaultMeetingCfg(m));
   }
 
   function openActionModal() {

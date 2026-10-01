@@ -8,6 +8,9 @@
   <title>Project Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-obsidian.js"></script>
+  <script src="hub-vault-bridge.js"></script>
+  <script src="hub-vault-notes.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -100,6 +103,7 @@
         <div id="panel-project-links"></div>
       </div>
       <button class="panel-close" id="panel-onepager-btn" title="One-Pager brief (print / copy)" onclick="openOnePager()" style="font-size:14px">📄</button>
+      <button class="panel-close" id="panel-vault-btn" title="Tasks from this project's vault note" onclick="openVaultTasks()" style="font-size:13px;width:auto;min-width:28px;padding:0 6px">⟡</button>
       <button class="panel-close" id="panel-link-btn" title="Link to another tool" style="font-size:13px">🔗</button>
       <button class="panel-close" title="View Profile &amp; Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},window.location.origin||'*')" style="font-size:14px">🏅</button>
       <button class="panel-close" onclick="closePanel()">✕</button>
@@ -264,7 +268,8 @@
       </div>
       <div class="form-group">
         <label class="form-label">Obsidian Note</label>
-        <input class="form-input" id="task-obsidian" placeholder="Optional: path/to/note.md">
+        <input class="form-input" id="task-obsidian" list="ph-vault-notes" placeholder="Optional: path/to/note">
+        <datalist id="ph-vault-notes" data-vault-notes></datalist>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('modal-task')">Cancel</button>
@@ -1716,6 +1721,95 @@
     }
 
     // ─── DETAIL PANEL ────────────────────────────────────────────────────────────
+    // ── Vault note → tasks (P138) ─────────────────────────────────────────
+    // A project links its vault note once. Open checkboxes there that are
+    // not yet tasks here are offered as tasks; boxes ticked in the note whose
+    // task is still open here are offered as "mark done". Nothing is written
+    // until you press a button.
+    function vaultTaskCfg(proj) {
+      return {
+        title: 'Vault tasks · ' + proj.name,
+        notePath: proj.obsidianNote || '',
+        suggest: notes => suggestNotesFor(proj.name, notes),
+        saveNote: path => {
+          proj.obsidianNote = path.replace(/\.md$/i, '');
+          touchProject(proj.id); saveState();
+        },
+        build: (text, path) => {
+          const norm = HubVaultBridge.normTitle;
+          const byTitle = new Map(proj.tasks.filter(t => !t.archived).map(t => [norm(t.title), t]));
+          const fresh = [], done = [];
+          HubVaultBridge.parseChecklist(text).forEach(c => {
+            const t = byTitle.get(norm(c.text));
+            if (!t && !c.done) fresh.push({
+              key: HubVaultBridge.itemKey('task', path, c.text), text: c.text, sub: c.heading,
+              label: 'Add task', accept: () => addVaultTask(proj.id, c.text, path),
+            });
+            else if (t && c.done && !t.done) done.push({
+              key: HubVaultBridge.itemKey('done', path, c.text) + ':' + t.id, text: t.title, sub: 'Ticked in the note',
+              label: 'Mark done', accept: () => markVaultTaskDone(proj.id, t.id),
+            });
+          });
+          return [
+            { title: 'New tasks in the note', addAllLabel: 'Add all', items: fresh },
+            { title: 'Done in the note, open here', addAllLabel: 'Mark all done', items: done },
+          ];
+        },
+        onChange: () => { renderContent(); if (state.selectedProject) renderPanel(state.selectedProject); },
+      };
+    }
+
+    // Likely notes for a name: rarer matching words score higher, so
+    // "Autodesk IS04" prefers IS04 notes over every Autodesk note.
+    function suggestNotesFor(name, notes) {
+      const words = [...new Set(String(name || '').toLowerCase().split(/[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+/).filter(w => w.length > 2))];
+      if (!words.length) return [];
+      const base = n => n.split('/').pop().toLowerCase();
+      const df = {};
+      words.forEach(w => { df[w] = notes.filter(n => base(n).includes(w)).length; });
+      return notes.map(n => {
+        const b = base(n);
+        const score = words.reduce((a, w) => a + (b.includes(w) ? 1 / (df[w] || 1) : 0), 0);
+        return { n, score };
+      }).filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score || a.n.length - b.n.length)
+        .map(x => x.n);
+    }
+
+    function addVaultTask(projId, title, path) {
+      const proj = getProject(projId); if (!proj) return;
+      const nowTs = new Date().toISOString();
+      proj.tasks.push({ id: uid(), title, milestoneId: '', assigneeId: '', priority: 'medium', due: '', done: false, status: 'todo',
+        completedAt: '', blockedReason: '', taskCode: '', taskType: '', obsidianNote: String(path).replace(/\.md$/i, ''),
+        createdAt: nowTs, updatedAt: nowTs, archivedAt: '' });
+      touchProject(projId); saveState();
+    }
+
+    function markVaultTaskDone(projId, taskId) {
+      const task = findTask(taskId, projId); if (!task || task.done) return;
+      task.done = true; task.status = 'done'; task.completedAt = new Date().toISOString(); task.blockedReason = '';
+      HubUtils.stampUpdate(task);
+      touchProject(projId); saveState();
+    }
+
+    function openVaultTasks() {
+      const proj = getProject(state.selectedProject); if (!proj || typeof HubVaultNotes === 'undefined') return;
+      HubVaultNotes.open(vaultTaskCfg(proj));
+    }
+
+    function refreshVaultBadge(proj) {
+      const btn = document.getElementById('panel-vault-btn');
+      if (!btn || typeof HubVaultNotes === 'undefined') return;
+      btn.textContent = '⟡';
+      btn.title = proj.obsidianNote ? 'Tasks from ' + proj.obsidianNote : 'Link this project to its vault note';
+      if (!proj.obsidianNote) return;
+      HubVaultNotes.pending(vaultTaskCfg(proj)).then(n => {
+        if (state.selectedProject !== proj.id || !n) return;
+        btn.textContent = '⟡ ' + n;
+        btn.title = n + ' new from ' + proj.obsidianNote;
+      }).catch(() => {});
+    }
+
     function openProject(projId) {
       state.selectedProject = projId;
       document.getElementById('detail-panel').classList.remove('hidden');
@@ -1761,6 +1855,8 @@
         const boardsEl = HubLinks.canvasPlacementsEl('project-hub', proj.id);
         if (boardsEl) document.getElementById('panel-project-links').appendChild(boardsEl);
       }
+
+      refreshVaultBadge(proj);
 
       const body = document.getElementById('panel-body');
       body.innerHTML = '';
@@ -2028,6 +2124,12 @@
             <label class="form-label">Color</label>
             <input class="form-input" id="ps-color" value="${proj.color}">
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Vault note</label>
+          <input class="form-input" id="ps-vault" list="ph-vault-notes" placeholder="e.g. projects/Kit-of-Parts" value="${HubUtils.esc(proj.obsidianNote || '')}" style="font-family:var(--font-mono);font-size:12px">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Its open checkboxes show under ⟡ as tasks to add.</div>
         </div>
 
         <button class="btn btn-primary" style="width:100%"
@@ -2499,6 +2601,8 @@
       p.desc = document.getElementById('ps-desc').value.trim();
       p.status = document.getElementById('ps-status').value;
       p.color = document.getElementById('ps-color').value;
+      const vaultEl = document.getElementById('ps-vault');
+      if (vaultEl) p.obsidianNote = vaultEl.value.trim().replace(/\.md$/i, '');
 
       touchProject(projId);
       saveState();
@@ -3185,6 +3289,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       HubBootstrap.start('project-hub');
+      if (typeof HubVaultNotes !== 'undefined') HubVaultNotes.primeNoteLists();
     });
   </script>
 </body>

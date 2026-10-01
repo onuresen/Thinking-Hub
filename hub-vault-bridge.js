@@ -129,7 +129,10 @@ window.HubVaultBridge = (() => {
     return typeof window.showDirectoryPicker === 'function';
   }
 
-  async function init() {
+  // opts.scan === false: restore the handle only (tools in iframes use this;
+  // the day scan belongs to the shell).
+  async function init(opts) {
+    const doScan = !(opts && opts.scan === false);
     if (!isSupported()) return status();
     const handle = await _loadHandle();
     if (!handle) return status();
@@ -139,7 +142,7 @@ window.HubVaultBridge = (() => {
     if (perm === 'granted') {
       _needsPermission = false;
       _shareHandleWithObsidian();
-      try { await scanDays(); } catch (e) { console.warn('[VaultBridge] scan on init:', e); }
+      if (doScan) { try { await scanDays(); } catch (e) { console.warn('[VaultBridge] scan on init:', e); } }
     } else {
       // Handle survives, permission does not. A single click restores it —
       // but the browser requires that click, so surface it rather than
@@ -165,14 +168,14 @@ window.HubVaultBridge = (() => {
     }
   }
 
-  async function reconnect() {
+  async function reconnect(opts) {
     if (!_handle) return connect();
     try {
       const perm = await _handle.requestPermission({ mode: 'read' });
       if (perm !== 'granted') return false;
       _needsPermission = false;
       _shareHandleWithObsidian();
-      await scanDays();
+      if (!(opts && opts.scan === false)) await scanDays();
       return true;
     } catch (e) {
       console.warn('[VaultBridge] reconnect:', e);
@@ -541,6 +544,193 @@ window.HubVaultBridge = (() => {
     return proposals.sort((a, b) => b.date.localeCompare(a.date));
   }
 
+
+  // ── linked notes: a project's or meeting's own vault note (P138) ─────────────
+  // Tasks live as checkboxes in project notes, and meeting notes are their own
+  // files. Name-matching those to hub items is unreliable (IS04/IS05/IS06 all
+  // match "Autodesk"), so the user links a note once and we read that note.
+
+  function normNotePath(p) {
+    let s = String(p || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
+    s = s.replace(/^\[\[|\]\]$/g, '').split('|')[0].split('#')[0].trim();
+    if (!s) return '';
+    return /\.md$/i.test(s) ? s : s + '.md';
+  }
+
+  async function readNote(path) {
+    const rel = normNotePath(path);
+    if (!rel || !_handle || _needsPermission) return null;
+    return _readNote(rel);
+  }
+
+  let _noteList = null;
+  /** Every .md path in the vault (names only, no reads). Cached per page. */
+  async function listNotes() {
+    if (_noteList) return _noteList;
+    if (!_handle || _needsPermission) return [];
+    const out = [];
+    const walk = async (dir, prefix, depth) => {
+      if (depth > 6) return;
+      for await (const [name, entry] of dir.entries()) {
+        if (name.startsWith('.') || (depth === 0 && name === 'raw')) continue;
+        const rel = prefix ? prefix + '/' + name : name;
+        if (entry.kind === 'directory') await walk(entry, rel, depth + 1);
+        else if (/\.md$/i.test(name)) out.push(rel.replace(/\.md$/i, ''));
+      }
+    };
+    try { await walk(_handle, '', 0); } catch (e) { console.warn('[VaultBridge] listNotes:', e); }
+    _noteList = out.sort();
+    return _noteList;
+  }
+
+  function itemKey(kind, path, text) {
+    return kind + ':' + _sourceKey(normNotePath(path), String(text).toLowerCase());
+  }
+
+  function markSeen(key, value) {
+    const st = getState();
+    _setState({ seen: { ...st.seen, [key]: value || 'ignored' } });
+  }
+
+  function isSeen(key) { return !!getState().seen[key]; }
+
+  const CHECK_RE = /^([ \t]*)[-*+][ \t]+\[([ xX])\][ \t]+(.+)$/;
+  const ACTION_HEADING_RE = /(action|next step|to-?do|follow[- ]?up|\basks?\b|宿題|アクション|対応|次回|タスク)/i;
+  // "Terminology decisions", "Decisions", "決定事項". Not "the discussion
+  // behind the decision" — that section is narrative, not a list of calls.
+  const DECISION_SECTION_RE = /(^(\d+\.\s*)?decisions?\b|\bdecisions\s*$|決定|合意)/i;
+  const DONE_STATE_RE = /^(done|closed|resolved|complete|completed|cancel+ed|完了|済|対応済)/i;
+
+  /**
+   * Checkboxes in a note: [{ text, done, heading }]. Nested checkboxes keep
+   * their own text; the nearest heading is kept as context.
+   */
+  function parseChecklist(text) {
+    const out = [];
+    let heading = '';
+    for (const line of String(text || '').split(/\r?\n/)) {
+      const h = /^#{1,6}\s+(.*)$/.exec(line);
+      if (h) { heading = _cleanInline(h[1]); continue; }
+      const m = CHECK_RE.exec(line);
+      if (!m) continue;
+      const t = _cleanInline(m[3]);
+      if (t.length < 2) continue;
+      out.push({ text: _clip(t), done: m[2] !== ' ', heading });
+    }
+    return out;
+  }
+
+  function _clip(t) { return t.length > 200 ? t.slice(0, 197) + '…' : t; }
+
+  function _cells(line) {
+    return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => _cleanInline(c));
+  }
+
+  /**
+   * A meeting note, in the shapes the vault really uses:
+   * - decisions: canonical **Decision:** blocks, and top-level bullets under a
+   *   "…decisions" heading;
+   * - actions: open checkboxes anywhere, plus bullets and table rows under an
+   *   "Asks / Follow-ups / Next steps / 宿題" heading. Table rows whose State
+   *   column says Done/Closed are skipped.
+   */
+  function parseMeetingNote(text, path) {
+    const src = String(text || '');
+    const rel = normNotePath(path);
+    const decisions = parseNote(src, rel, '');
+    const decSeen = new Set(decisions.map(d => d.summary.toLowerCase()));
+    const actions = [];
+    const actSeen = new Set();
+    const pushAction = (t, heading, owner) => {
+      if (!t || t.length < 2 || /^[-:| ]+$/.test(t)) return;
+      const k = t.toLowerCase();
+      if (actSeen.has(k)) return;
+      actSeen.add(k);
+      actions.push({ text: _clip(t), heading, owner: owner || '' });
+    };
+
+    const lines = src.split(/\r?\n/);
+    let heading = '', inActions = false, inDecisions = false;
+    let table = null;        // { stateCol, ownerCol } while inside a table
+    let bullet = null;       // open decision bullet being collected
+
+    const closeBullet = () => {
+      if (!bullet) return;
+      const body = _cleanInline(bullet.lines.join(' '));
+      if (body.length > 3 && !decSeen.has(body.toLowerCase())) {
+        decSeen.add(body.toLowerCase());
+        const lead = /^\*\*([^*]+)\*\*/.exec(bullet.lines[0].trim());
+        const title = lead ? _cleanInline(lead[1]).replace(/[.:：]\s*$/, '') : _titleFromText(body);
+        decisions.push({
+          sourceKey: _sourceKey(rel, body), path: rel, date: '',
+          title: title.length > 110 ? title.slice(0, 107) + '…' : title,
+          context: bullet.heading, summary: body,
+          why: '', alternative: '', revisitWhen: '', consequence: '',
+          confidence: 'medium', hasConfidence: false,
+        });
+      }
+      bullet = null;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const h = /^#{1,6}\s+(.*)$/.exec(line);
+      if (h) {
+        closeBullet(); table = null;
+        heading = _cleanInline(h[1]);
+        inActions = ACTION_HEADING_RE.test(heading);
+        inDecisions = !inActions && DECISION_SECTION_RE.test(heading);
+        continue;
+      }
+      const c = CHECK_RE.exec(line);
+      if (c) { closeBullet(); if (c[2] === ' ') pushAction(_cleanInline(c[3]), heading); continue; }
+
+      if (inActions && /^\s*\|/.test(line)) {
+        const next = lines[i + 1] || '';
+        if (!table && /^\s*\|?[\s:-]+\|[\s|:-]*$/.test(next)) {
+          const head = _cells(line).map(x => x.toLowerCase());
+          table = {
+            stateCol: head.findIndex(x => /^(state|status|状態|ステータス)/.test(x)),
+            ownerCol: head.findIndex(x => /^(owner|who|担当)/.test(x)),
+          };
+          i++;                       // skip the separator row
+          continue;
+        }
+        if (table) {
+          const cells = _cells(line);
+          const state = table.stateCol >= 0 ? (cells[table.stateCol] || '') : '';
+          if (!DONE_STATE_RE.test(state)) pushAction(cells[0], heading, table.ownerCol >= 0 ? cells[table.ownerCol] : '');
+        }
+        continue;
+      }
+      if (table && !/^\s*\|/.test(line)) table = null;
+
+      if (inActions) {
+        // Top-level bullet only; its text is the bold lead, else its first
+        // sentence (wrapped bullets carry the detail on later lines).
+        const b = /^(?:[-*+]|\d+[.)])[ \t]+(.+)$/.exec(line);
+        if (b) {
+          const lead = /^\*\*([^*]+)\*\*/.exec(b[1].trim());
+          const t = lead ? _cleanInline(lead[1]).replace(/[.:：]\s*$/, '') : _titleFromText(_cleanInline(b[1]));
+          pushAction(t, heading);
+        }
+        continue;
+      }
+      if (inDecisions) {
+        const b = /^[-*+][ \t]+(.+)$/.exec(line);              // top-level only
+        if (b) { closeBullet(); bullet = { lines: [b[1]], heading }; continue; }
+        if (bullet && /^\s+\S/.test(line)) { bullet.lines.push(line.trim()); continue; }
+        if (!line.trim()) closeBullet();
+      }
+    }
+    closeBullet();
+    return { decisions, actions };
+  }
+
+  function _normTitle(s) {
+    return String(s || '').toLowerCase().replace(/[*_`~\[\]()]/g, '').replace(/[\s.,;:!?。、・]+/g, ' ').trim();
+  }
+
   // ── accept / ignore ─────────────────────────────────────────────────────────
 
   /**
@@ -591,6 +781,8 @@ window.HubVaultBridge = (() => {
   return {
     isSupported, init, connect, reconnect, status, getState,
     scanDays, scanDecisions, accept, ignore, dismissDay, setDailyFolder,
+    readNote, listNotes, normNotePath, parseChecklist, parseMeetingNote,
+    itemKey, markSeen, isSeen, normTitle: _normTitle,
     parseNote, // exported for tests
   };
 })();

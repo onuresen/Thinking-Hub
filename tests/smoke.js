@@ -451,6 +451,41 @@ function appFiles(ext) {
     await page.close();
   }
 
+  // Linked vault notes + suggested links (P138): parsers read the vault's real
+  // shapes, and a task naming another project is suggested as a link.
+  {
+    const vctx = await browser.newContext({ serviceWorkers: 'block' });
+    const page = await vctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const vn = await page.evaluate(() => {
+      const note = [
+        '## Backlog', '- [ ] **Build** the thing', '- [x] Ship v1', '',
+        '## Terminology decisions', '- **Use one word.** Agreed to say "record" everywhere.', '',
+        '## Open asks', '| Item | Owner | State |', '|---|---|---|',
+        '| Send the deck | Onur | Open |', '| Old item | Onur | Done |',
+      ].join('\n');
+      const tasks = HubVaultBridge.parseChecklist(note);
+      const mtg = HubVaultBridge.parseMeetingNote(note, 'projects/X-Meeting-2026-09-10');
+      localStorage.setItem('project-hub-v1', JSON.stringify({ projects: [
+        { id: 'pa', name: 'Alpha', tasks: [{ id: 'ta', title: 'Wire Bravo into the export' }] },
+        { id: 'pb', name: 'Bravo', tasks: [] },
+      ] }));
+      localStorage.setItem('hub-links-v1', '[]');
+      const sg = HubLinks.suggestLinks();
+      return {
+        tasks: tasks.map(t => (t.done ? 'x:' : 'o:') + t.text).join('|'),
+        dec: mtg.decisions.map(d => d.title).join('|'),
+        act: mtg.actions.map(a => a.text + '/' + a.owner).join('|'),
+        sg: sg.map(x => x.from.itemId + '>' + x.to.itemId).join(','),
+        ui: typeof HubVaultNotes.open === 'function' && !!document.getElementById('panel-vault-btn'),
+      };
+    });
+    check('vault notes: tasks, meeting decisions/actions, and suggested links parse',
+      vn.tasks === 'o:Build the thing|x:Ship v1' && vn.dec === 'Use one word' &&
+      vn.act === 'Build the thing/|Send the deck/Onur' && vn.sg === 'ta>pb' && vn.ui, JSON.stringify(vn));
+    await vctx.close();
+  }
+
   // "Today" must be the local calendar day. toISOString() is UTC, so in Tokyo
   // before 09:00 it gave yesterday's date (P126). Pin the clock to 07:30 JST.
   {
