@@ -1420,7 +1420,7 @@
 
       // Projects (parent nodes — always load so edges can reference them)
       try {
-        (ph.projects || []).forEach(p => addNode('project-hub', p.id, p.name));
+        (ph.projects || []).forEach(p => { const pId = addNode('project-hub', p.id, p.name); addTagEdges(pId, p.tags); });
       } catch { }
 
       // Decisions → project

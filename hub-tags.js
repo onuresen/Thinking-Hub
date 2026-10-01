@@ -38,6 +38,16 @@ window.HubTags = (() => {
       }
     },
     {
+      id: 'project-hub', label: 'Project Hub',
+      storageKey: 'project-hub-v1',
+      collect(data) {
+        return (data.projects || []).map(p => ({
+          get: () => Array.isArray(p.tags) ? p.tags : [],
+          set: arr => { p.tags = arr; },
+        }));
+      }
+    },
+    {
       id: 'meetings-hub', label: 'Meeting Hub',
       storageKey: 'meetings-hub-v1',
       collect(data) {

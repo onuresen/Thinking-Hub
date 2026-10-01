@@ -62,7 +62,7 @@ Tools are grouped by the kind of work they support.
 |------|-------------|
 | **Learning Hub** | Reading and learning records with Feynman-style key insights |
 | **Idea Swiper** | Rapidly triage ideas into Like / Super / Nope and promote survivors into projects |
-| **Spatial Canvas** | An infinite canvas for freeform notes, diagrams, and spatial thinking |
+| **Canvas Hub** | An infinite canvas for freeform notes, diagrams, and spatial thinking |
 
 ### Strategy & Decisions
 
@@ -230,7 +230,7 @@ capture-hub.html        # Fast capture inbox
 journal-hub.html        # Daily reflection and journal
 idea-swiper.html        # Rapid idea triage (swipe)
 decision-hub.html       # Decision log + assumptions + alignment matrix + calibration
-canvas-hub.html         # Infinite spatial canvas
+canvas-hub.html         # Infinite canvas
 graph-hub.html          # Task dependency graph (vis-network)
 people-hub.html         # People directory and follow-ups
 town-hub.html           # Machi Hub living pixel city
