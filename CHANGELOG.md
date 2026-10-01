@@ -7,6 +7,9 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Project Hub vault note (⟡): link a project to its Obsidian note once. Its open checkboxes are offered as tasks, and boxes ticked there offer to mark the task done. Nothing is added until you press Add. Ignored items stay hidden.
+- Meeting Hub vault note (⟡): link a meeting (or one week of a series) to its Obsidian note, suggested by the meeting date. Its decisions go to Decision Hub and its asks become action items.
+- Dependency Graph "💡 Suggested": items that name a project but aren't linked to it. Link or Ignore each one.
 - Canvas Hub speaker notes: right-click a frame → Add speaker notes. They show under the frame in Present mode. N hides them. Not included in PNG exports.
 - Canvas Hub "Export frames as slides": one 2× PNG per frame, in Present order, in one .zip with a `slides.md` of titles and notes.
 - Canvas Hub "Export interactive HTML": one self-contained file with zoom, pan, clickable cards with connections, and frame stepping. It makes no network requests. Speaker notes are included only if you say yes.

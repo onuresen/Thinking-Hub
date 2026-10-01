@@ -804,6 +804,7 @@
       </select>
       <button class="btn" onclick="exportGraphPNG()">⬇ PNG</button>
       <button class="btn" onclick="openNewLinkModal()">+ New Link</button>
+      <button class="btn" id="suggest-btn" onclick="openSuggestModal()" title="Items that name a project but aren't linked to it">💡 Suggested</button>
     </div>
 
     <div class="legend" id="legend"></div>
@@ -2846,6 +2847,87 @@
     });
   </script>
   <div id="graph-ctx-menu" style="display:none"></div>
+
+  <!-- P138: suggested links — items that name a project but aren't linked -->
+  <div class="ui-modal-overlay" id="suggest-overlay">
+    <div class="ui-modal sg-modal" role="dialog" aria-modal="true" aria-labelledby="sg-title">
+      <div class="sg-head">
+        <div class="sg-title" id="sg-title">Suggested links</div>
+        <button class="sg-btn ghost" id="sg-all" onclick="acceptAllSuggestions()">Link all</button>
+        <button class="sg-x" onclick="closeSuggestModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="sg-hint">These items name a project but aren't linked to it. Link adds a "relates" link.</div>
+      <div class="sg-list" id="sg-list"></div>
+    </div>
+  </div>
+  <style>
+    .sg-modal { max-width: 640px; max-height: 84vh; display: flex; flex-direction: column; gap: 10px; padding: 22px; }
+    .sg-head { display: flex; align-items: center; gap: 8px; }
+    .sg-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--text); flex: 1; }
+    .sg-hint { font-size: 12px; color: var(--text3); }
+    .sg-list { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+    .sg-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: var(--r-sm); background: var(--surface); }
+    .sg-main { flex: 1; min-width: 0; }
+    .sg-from { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sg-to { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
+    .sg-to b { color: var(--accent); font-weight: 600; }
+    .sg-btn { font-family: var(--font-body); font-size: 12px; padding: 5px 10px; border-radius: var(--r-sm); cursor: pointer;
+      border: 1px solid var(--accent); background: var(--accent); color: var(--bg); font-weight: 600; white-space: nowrap; }
+    .sg-btn.ghost { background: none; color: var(--text3); border-color: var(--border2); font-weight: 400; }
+    .sg-x { border: none; background: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: var(--r-sm); }
+    .sg-x:hover { background: var(--surface3); color: var(--text); }
+    .sg-empty { font-size: 13px; color: var(--text3); padding: 12px 2px; }
+  </style>
+  <script>
+    let _sgList = [], _sgUntrap = null;
+    function refreshSuggestCount() {
+      const btn = document.getElementById('suggest-btn');
+      if (!btn || !HubLinks.suggestLinks) return;
+      let n = 0; try { n = HubLinks.suggestLinks().length; } catch { }
+      btn.textContent = n ? `💡 Suggested (${n})` : '💡 Suggested';
+    }
+    function openSuggestModal() {
+      const ov = document.getElementById('suggest-overlay');
+      ov.classList.add('is-open');
+      renderSuggestions();
+      if (HubUtils.trapFocus) _sgUntrap = HubUtils.trapFocus(ov.querySelector('.ui-modal'));
+    }
+    function closeSuggestModal() {
+      document.getElementById('suggest-overlay').classList.remove('is-open');
+      if (_sgUntrap) { _sgUntrap(); _sgUntrap = null; }
+      refreshSuggestCount();
+    }
+    function renderSuggestions() {
+      _sgList = HubLinks.suggestLinks();
+      const list = document.getElementById('sg-list');
+      document.getElementById('sg-all').style.display = _sgList.length > 1 ? '' : 'none';
+      document.getElementById('sg-title').textContent = _sgList.length ? `Suggested links (${_sgList.length})` : 'Suggested links';
+      if (!_sgList.length) { list.innerHTML = '<div class="sg-empty">No suggestions. Every item that names a project is already linked to it.</div>'; return; }
+      list.innerHTML = _sgList.map((sg, i) => `
+        <div class="sg-row">
+          <div class="sg-main">
+            <div class="sg-from" title="${HubUtils.esc(sg.from.label)}">${HubUtils.esc(sg.from.label)}</div>
+            <div class="sg-to">${HubUtils.esc(TOOL_LABELS[sg.from.tool] || sg.from.tool)} → <b>${HubUtils.esc(sg.to.label)}</b> · names “${HubUtils.esc(sg.match)}”</div>
+          </div>
+          <button class="sg-btn" onclick="acceptSuggestionAt(${i})">Link</button>
+          <button class="sg-btn ghost" onclick="ignoreSuggestionAt(${i})" title="Don't suggest again">Ignore</button>
+        </div>`).join('');
+    }
+    function acceptSuggestionAt(i) { const sg = _sgList[i]; if (sg) HubLinks.acceptSuggestion(sg); renderSuggestions(); }
+    function ignoreSuggestionAt(i) { const sg = _sgList[i]; if (sg) HubLinks.ignoreSuggestion(sg); renderSuggestions(); }
+    function acceptAllSuggestions() {
+      const n = _sgList.length;
+      _sgList.forEach(sg => HubLinks.acceptSuggestion(sg));
+      renderSuggestions();
+      if (typeof showToast === 'function') showToast(`Linked ${n} item${n === 1 ? '' : 's'}`);
+    }
+    document.getElementById('suggest-overlay').addEventListener('mousedown', e => { if (e.target.id === 'suggest-overlay') closeSuggestModal(); });
+    document.getElementById('suggest-overlay').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSuggestModal(); } });
+    ['hub-links-v1', 'project-hub-v1', 'decision-hub-v1', 'meetings-hub-v1', 'risk-hub-v1', 'learning-hub-v1']
+      .forEach(k => HubStorage.subscribe(k, refreshSuggestCount));
+    refreshSuggestCount();
+  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
