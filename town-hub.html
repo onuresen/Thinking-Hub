@@ -12,6 +12,7 @@
   <script src="hub-bootstrap.js"></script>
   <script src="machi-engine.js"></script>
   <script src="machi-achievements.js"></script>
+  <script src="machi-fun.js"></script>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <style>
@@ -135,7 +136,9 @@
       <strong>Cars</strong> are projects. <strong>People</strong> walk the streets.
       The <strong>blimp</strong> carries your badges.<br>
       Trouble shows as incidents: 🔥 a tool gone cold, 💥 a blocked project, ⚠️ an overdue one.
-      🚑 marks a risk being mitigated. Too much trouble and a storm rolls in.
+      🚑 marks a risk being mitigated. Too much trouble and a storm rolls in.<br>
+      Some buildings have a life of their own: the 📚 library, 📮 post office, 🚏 bus stop and 🎨 art studio.
+      🕊 Pigeons carry your Dependency Graph links between tools.
     </p>
 
     <div class="lens-bar" id="lens-bar"></div>
@@ -277,14 +280,18 @@
 
     function hubPageEntities() {
       const usage = hubUsage();
-      const ids = Object.keys(usage).filter((appId) => HUB_PAGES[appId]);
+      // Tools with a life of their own (library, post office…) appear once they
+      // have data, even if never opened — their building is the fun part.
+      const ids = [...new Set(Object.keys(usage).concat(MachiFun.wantedBuildings()))]
+        .filter((appId) => HUB_PAGES[appId]);
       if (!ids.length) return [];
       return ids.map((appId) => {
         const [label, icon, group] = HUB_PAGES[appId];
-        const u = usage[appId];
+        const u = usage[appId] || { count: 0, last: null };
         const days = daysSince(u.last);
-        const activity = activityFrom(days);
-        const staleness = stalenessFrom(days);
+        // Never opened (only here for its data) is "unknown", not neglected (P90).
+        const activity = u.last ? activityFrom(days) : 0.35;
+        const staleness = u.last ? stalenessFrom(days) : 0;
         const tier = u.count >= 50 ? 4 : u.count >= 20 ? 3 : u.count >= 5 ? 2 : 1;
         return {
           id: 'hub-' + appId,
@@ -295,10 +302,10 @@
           tier,
           activity,
           staleness,
-          incident: buildingIncident(staleness, activity, u.count),
+          incident: buildingIncident(staleness, activity, u.count, Boolean(u.last)),
           meta: { lens: 'hub-page', appId, icon, group, useCount: u.count, lastUsedAt: u.last },
         };
-      });
+      }).map(MachiFun.tweak);
     }
 
     // ── Lens 3: Projects as cars ────────────────────────────────────────────
@@ -554,8 +561,8 @@
       }
       previousTrouble = trouble;
 
-      const milestones = HubStorage.get(MILESTONES_KEY) || { tier5Seen: [] };
-      const seen = new Set(milestones.tier5Seen);
+      const milestones = HubStorage.get(MILESTONES_KEY) || {};
+      const seen = new Set(milestones.tier5Seen || []);
       let changed = false;
       for (const e of entities) {
         if (e.kind === 'building' && e.tier >= TOP_TIER && !seen.has(e.id)) {
@@ -565,7 +572,8 @@
           if (window.showToast) showToast(`🏆 ${e.name} reached the top tier!`);
         }
       }
-      if (changed) HubStorage.set(MILESTONES_KEY, { tier5Seen: [...seen] });
+      // Spread: machi-fun.js keeps its own field (inboxSeen) in the same key.
+      if (changed) HubStorage.set(MILESTONES_KEY, { ...milestones, tier5Seen: [...seen] });
     }
 
     // ── Achievement rules (buildings) ───────────────────────────────────────
@@ -723,6 +731,7 @@
       if (!text) return;
       const el = document.createElement(cls === 'd-note' ? 'p' : 'div');
       el.className = cls;
+      el.style.whiteSpace = 'pre-line'; // bus timetables use one line per weekly meeting
       el.textContent = text;
       parent.appendChild(el);
     }
@@ -780,8 +789,11 @@
       closeBtn.addEventListener('click', closeDetail);
       detail.appendChild(closeBtn);
 
+      MachiFun.sparkle(box);
+      const fun = m.lens && m.lens.startsWith('fun-') ? MachiFun.describe(e) : null;
+
       const h2 = document.createElement('h2');
-      h2.textContent = (m.icon ? m.icon + ' ' : '') + e.name;
+      h2.textContent = fun ? fun.title : (m.icon ? m.icon + ' ' : '') + e.name;
       detail.appendChild(h2);
 
       const days = daysSince(m.lastUsedAt);
@@ -791,7 +803,11 @@
         line(detail, 'd-status', [m.status, `${m.useCount}× used`, lastTxt || 'never used'].filter(Boolean).join(' · '));
         line(detail, 'd-note', m.note);
       } else if (m.lens === 'hub-page') {
-        line(detail, 'd-status', [m.group, `opened ${m.useCount}×`, lastTxt].filter(Boolean).join(' · '));
+        line(detail, 'd-status', [m.group, m.useCount ? `opened ${m.useCount}×` : null, lastTxt].filter(Boolean).join(' · '));
+        line(detail, 'd-note', MachiFun.buildingNote(m.appId));
+      } else if (fun) {
+        line(detail, 'd-status', fun.status);
+        line(detail, 'd-note', fun.note);
       } else if (m.lens === 'project') {
         line(detail, 'd-status', [m.status, `${m.openTasks} open / ${m.doneTasks} done tasks`, `${m.milestones} milestones`, `${m.members} members`].filter(Boolean).join(' · '));
         line(detail, 'd-note', m.desc);
@@ -858,7 +874,7 @@
         'responder': ['risk-hub.html', 'Open in Risk Register →'],
         'calibration': ['decision-hub.html', 'Open in Decision Hub →'],
       };
-      const [href, label] = links[m.lens] || [];
+      const [href, label] = (fun && fun.link) || links[m.lens] || [];
       if (href) {
         const a = document.createElement('a');
         a.href = href;
@@ -883,6 +899,7 @@
     }
 
     function rebuild(fromDataChange = false) {
+      MachiFun.refresh();
       let entities = [];
       for (const l of LENSES) {
         if (lensOn[l.id]) entities = entities.concat(l.build());
@@ -914,8 +931,11 @@
           .render()
           .setTimeOfDay(timeMode)
           .setSeason(seasonMode)
-          .enableInteraction({ onClick: showDetail });
-        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) town.start();
+          .enableInteraction({ onClick: showDetail })
+          .setDecorator(MachiFun.draw);
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        MachiFun.setMotion(!reduced);
+        if (!reduced) town.start();
         // clicking empty ground/sky dismisses the popover
         canvas.addEventListener('click', (ev) => {
           const rect = canvas.getBoundingClientRect();
@@ -944,10 +964,12 @@
     // fromDataChange=true here (unlike lens toggles/resize) so milestone
     // celebrations only fire when something real actually changed.
     for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1',
-                       'decision-hub-v1', 'hub-vault-bridge-v1']) {
+                       'decision-hub-v1', 'hub-vault-bridge-v1', 'learning-hub-v1', 'capture-hub-v1',
+                       'meetings-hub-v1', 'canvas-v1', 'hub-links-v1']) {
       HubStorage.subscribe(key, () => rebuild(true));
     }
 
+    MachiFun.setToolNames(Object.fromEntries(Object.entries(HUB_PAGES).map(([id, v]) => [id, v[0]])));
     renderLensBar();
     renderEnvBar();
     rebuild();

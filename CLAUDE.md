@@ -60,7 +60,8 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `capture-hub.html` | Capture Hub — brain-dump inbox with auto-routing of items to other tools. Storage `capture-hub-v1` |
 | `people-hub.html` | People Hub — member roster, org tree, load matrix, "Me View" (canonical `selfMemberId` reader). Storage `people-hub-v1` |
 | `town-hub.html` | Machi Hub — living pixel city rendering Hub activity, tools, projects, people, achievements and risk response (Codex-agent work; see "Machi Hub history" section). Reads other tools' keys; own storage `machi-milestones-v1` (ephemeral) |
-| `machi-engine.js` | Machi town renderer core — host-agnostic canvas engine. ⚠ STAMPED COPY: canonical source lives in `Vibe_Coding/MachiHub`; edit there and re-copy |
+| `machi-engine.js` | Machi town renderer core — host-agnostic canvas engine. ⚠ STAMPED COPY: canonical source lives in `Vibe_Coding/MachiHub`; edit there and re-copy. ⚠ Local addition not yet upstream: `setDecorator()` (P139) — port it before the next re-copy (smoke test fails if it's lost) |
+| `machi-fun.js` | **Machi fun layer (P139)** — Thinking-Hub-only, NOT stamped. Draws through `Town.setDecorator()`: library (Learning Hub), post office (Capture Hub), bus stop + buses/taxis (Meeting Hub), art studio + easels (Spatial Canvas), pigeons for `hub-links-v1`, click sparkles. Keeps `inboxSeen` in `machi-milestones-v1` |
 | `machi-achievements.js` | Machi achievement rule engine (derives badges on town entities). ⚠ STAMPED COPY from `Vibe_Coding/MachiHub` |
 | `manifest.json` | PWA manifest — installable app metadata + icons (P80) |
 | `sw.js` | Service worker — precaches all app assets, stale-while-revalidate offline support (P80). ⚠ New app files must be added to its `PRECACHE` list. |
@@ -2696,6 +2697,31 @@ Asked after P120/P123 removed tools. `HUB_PAGES` was already correct. The leftov
 
 ---
 
+### ~~Priority 139 — Machi Hub: tool buildings with a life of their own + pigeons~~ ✓ Done `[group: machi-hub]`
+User picked ideas 4, 5, 7 and a reworked 1, plus pigeons. Standing direction from Onur: *"make machi hub more fun and cute not more useful … I won't open it to see usage insights."* So: no new stats, only playful life driven by real data.
+
+- **Library** (Learning Hub building): one floor of books per finished item. A lit lamp per item with a key insight. Readers on the steps for items in progress. Golden dome when finished items outgrow the floors.
+- **Post office** (Capture Hub): red building, mailbox, mail sacks (1 per 3 inbox items, max 6). Inbox zero → a napping cat. Inbox smaller than last visit → delivery vans drive off.
+- **Bus stop** (Meeting Hub): each weekly series is a bus that runs on its day and stops to let riders off. Today's one-off meetings are taxis. No bus today → one sleepy bus with zzz. Click the stop for the week's timetable.
+- **Art studio** (Spatial Canvas): paint splatters, colour-cycling gallery windows (more cards, more lights), bunting per line, one easel per board painted in its card colours, a painter in a beret. Click an easel for that board.
+- **Pigeons:** the 6 newest Dependency Graph links fly letters between the two tools' buildings. Seal colour = relationship. Click one to read the letter.
+- **Sparkles** (hearts and pixels) wherever you click.
+- These four buildings appear once they have data, even if never opened. Never-opened = unknown, not "haunted".
+- Engine: new generic `Town.setDecorator(fn)` hook. All Thinking-Hub drawing lives in `machi-fun.js`.
+- Subscribes to learning/capture/meetings/canvas/links keys. `sw.js` cache `v18` → `v19`. Two smoke checks.
+
+**Key decisions:**
+- **Decision:** Add one generic hook to the stamped engine, not the features themselves. **Why:** the canonical repo (`Vibe_Coding/MachiHub`) isn't reachable here, and the engine must stay host-agnostic. **Alternative:** draw on a second overlay canvas — rejected; no click boxes, hover or day/night timing. **Revisit when:** next re-copy from Vibe_Coding — port `setDecorator()` there first. **Confidence:** med.
+- **Decision:** Decorate the existing tool buildings instead of adding buildings per board/meeting. **Why:** user asked for #1 to work like #7 — effects on one building, not one building per item. **Confidence:** high.
+- **Decision:** Pigeons fly tool-to-tool, not item-to-item. **Why:** items aren't on the map; tools are. Max 6, newest first, keeps the sky cute not crowded. **Confidence:** med.
+- **Decision:** Van trigger compares with the last visit (`machi-milestones-v1.inboxSeen`). **Why:** you rarely have Machi open while triaging; the van should greet you next time. Key stays ephemeral (P81C). **Confidence:** high.
+
+**Verified** in a real browser with seeded data: all four buildings, 2 pigeons, bus + taxi, 2 vans after inbox 13 → 7, popover text for pigeon/stop/easel/bus/library, no "haunted" on a never-opened building, no JS errors. Visual check of a close-up. Full smoke + flows + vault-bridge green.
+
+**Files:** `machi-fun.js` (new), `machi-engine.js`, `town-hub.html`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Enterprise-readiness roadmap ("free tool that passes IT/security/legal review")~~ ✓ GROUPS A–D DONE `[group: enterprise-readiness]` — recorded 2026-07-21
 User wants Thinking Hub usable inside enterprises despite being a free tool (context: at work they'd normally need enterprise licenses). No code written yet — this is the ranked checklist to work through when ready.
 
@@ -2733,6 +2759,7 @@ A second agent (Codex, reading `AGENTS.md`) built **Machi Hub** (`town-hub.html`
 - **What it is:** a living pixel-city visualization of real Hub data — six lenses (Hub page activity from `hub-activity-v1`, Tool Portfolio buildings, projects, people, achievements, risk response). Buildings catch fire only on *evidence* of neglect (a real `lastUsedAt` ≥60 days old — missing history is "unknown", never "neglected"). Sidebar group: People & Network.
 - **Architecture:** `machi-engine.js` is a host-agnostic canvas engine whose **canonical source is `Vibe_Coding/MachiHub`** — the copies here are stamped ("edit there, re-copy here"). `machi-achievements.js` same. Adapters/hosts own all Thinking-Hub-specific data mapping.
 - **Visual experiments retired:** a Neon District tab (`machi-neon.js`) and a Fantasy Realm theme (+ asset atlas) were built, tried in real use, and deleted from this repo same-session — "our normal town seems best." The Hi-Res Town tab (`machi-hires.js`, a finer-pixel-grid sprite-detail experiment sharing only entity data with the main Town view) got the same verdict after testing — deleted along with its tab, its own switchMainView plumbing, and its dead `activeEngine()`/`activeCanvasEl()` dual-view indirection. Isolation-by-tab is the established pattern for trying Machi visual redesigns at zero risk to the real view; three-for-three retired confirms the normal Town rendering is the one worth keeping.
+- **Standing direction (Onur, 2026-10-01): Machi is for fun, not insight.** "I won't open it to see usage insights … seeing it interactive with my usage data is just fun." Add playful, data-driven life; don't add stats, health scores or dashboards here.
 - **`machi-milestones-v1` is deliberately ephemeral** (milestone dedupe/baseline state) — excluded from backup/sync per Codex P81C; do not add it to export key lists.
 
 **Also ported — Codex P86 (Dependency Graph fixes, `graph-hub.html` + `hub-links.js`):** bottleneck detection got its own narrow causal-only adjacency (`_bottleneckAdjacency()`, `blocks`/`depends-on` only — intentionally narrower than Impact Analysis's, permanently); View Options panel is always-visible-collapsed at `bottom:60px;left:20px` (repositioned after it silently absorbed canvas clicks at top-left); node-drag pauses physics so drag-to-quick-link works; "+ New Link" modal has a note textarea (`HubLinks.addLink(..., {note})`); relTypes consolidated 4→3 (`leads-to` merged into `blocks`, with an idempotent `_migrateLegacyRelTypes()` in `hub-links.js` rewriting stored data on load); auto-generated edges show a read-only info panel (`showAutoEdgePanel()`) instead of doing nothing.

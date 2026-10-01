@@ -7,6 +7,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Machi Hub: tool buildings come alive. Learning Hub is a library (a floor per finished item, lamps for key insights). Capture Hub is a post office (mail sacks; vans leave when the inbox shrinks). Meeting Hub has a bus stop (weekly meetings are buses on their day, one-offs are taxis). Spatial Canvas is an art studio (an easel per board). Pigeons carry Dependency Graph links between tools. Clicks sparkle.
 - Canvas Hub speaker notes: right-click a frame → Add speaker notes. They show under the frame in Present mode. N hides them. Not included in PNG exports.
 - Canvas Hub "Export frames as slides": one 2× PNG per frame, in Present order, in one .zip with a `slides.md` of titles and notes.
 - Canvas Hub "Export interactive HTML": one self-contained file with zoom, pan, clickable cards with connections, and frame stepping. It makes no network requests. Speaker notes are included only if you say yes.
