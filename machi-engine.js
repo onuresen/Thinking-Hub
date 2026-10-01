@@ -1,5 +1,7 @@
 /* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-engine.js (Machi Hub project).
-   Edit there, then re-copy here. Do not edit this copy directly. */
+   Edit there, then re-copy here. Do not edit this copy directly.
+   ⚠ Local addition not yet in the canonical source: setDecorator() (Thinking Hub P140).
+   Port it to Vibe_Coding/MachiHub before the next re-copy, or it will be lost. */
 
 // machi-engine.js — portable core for Machi Hub.
 // Host-agnostic: knows nothing about vault / Thinking Hub / One+. Adapters live outside this file.
@@ -174,6 +176,20 @@ const MachiHub = (() => {
       this._assetAtlas = null;
       this._assetAtlasUrl = '';
       this._assetAtlasReady = false;
+      this._decorator = null;
+    }
+
+    /**
+     * Host drawing hook. Called every frame after roads, buildings, walkers and vehicles,
+     * before seasonal particles and the hover outline. The engine stays host-agnostic:
+     * it hands over its buffer context plus read-only layout facts, and the host may add
+     * clickable boxes for anything it draws. A throwing decorator is logged, never fatal.
+     * @param {((ctx: CanvasRenderingContext2D, api: Object) => void)|null} fn
+     */
+    setDecorator(fn) {
+      this._decorator = typeof fn === 'function' ? fn : null;
+      if (!this._raf && this.grid) this.#drawFrame();
+      return this;
     }
 
     setEntities(entities) {
@@ -956,6 +972,23 @@ const MachiHub = (() => {
           }
 
           this._actorBoxes.push({ entity: e, x: vx - 1, y: laneY - 2, w: 7, h: 7 });
+        }
+      }
+
+      if (this._decorator) {
+        try {
+          this._decorator(ctx, {
+            time: this._time,
+            dayness,
+            lightGreen: this.#lightIsGreen(),
+            grid: this.grid,
+            hitboxes: this.hitboxes,
+            buildingsVisible: show('building'),
+            layout: { TOP_SKY, ROW_H, BUILD_ZONE, SIDEWALK_H, ROAD_H, MARGIN_X, CELL_W, AVENUE_W },
+            addHitbox: (box) => { if (box && box.entity) this._actorBoxes.push(box); },
+          });
+        } catch (err) {
+          console.error('Machi decorator failed', err);
         }
       }
 

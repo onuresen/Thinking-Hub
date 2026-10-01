@@ -14,7 +14,7 @@
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
  */
 
-const CACHE = 'thinking-hub-v18';
+const CACHE = 'thinking-hub-v20';
 
 const PRECACHE = [
   './index.html',
@@ -47,6 +47,7 @@ const PRECACHE = [
   './enterprise-config.js',
   './machi-engine.js',
   './machi-achievements.js',
+  './machi-fun.js',
   // vendored libraries (pinned)
   './vendor/vis-network.min.js',
   './vendor/html2canvas.min.js',
