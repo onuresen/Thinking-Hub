@@ -11,6 +11,7 @@
   <script src="hub-obsidian.js"></script>
   <script src="hub-vault-bridge.js"></script>
   <script src="hub-vault-notes.js"></script>
+  <script src="hub-tags.js"></script>
   <script src="hub-links.js"></script>
   <script src="hub-data.js"></script>
   <script src="hub-bootstrap.js"></script>
@@ -966,7 +967,7 @@
         visible = visible.filter(p => p.status === of.status);
       if (of.search.trim()) {
         const q = of.search.trim().toLowerCase();
-        visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q));
+        visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q)));
       }
       if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
       else if (of.sort === 'recent') visible.sort((a, b) => projectRecency(b) - projectRecency(a));
@@ -2127,6 +2128,12 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input class="form-input" id="ps-tags" placeholder="e.g. BIM, AI, Autodesk (comma separated)" value="${HubUtils.esc((proj.tags || []).join(', '))}">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Shared with Tags Hub and the Dependency Graph.</div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Vault note</label>
           <input class="form-input" id="ps-vault" list="ph-vault-notes" placeholder="e.g. projects/Kit-of-Parts" value="${HubUtils.esc(proj.obsidianNote || '')}" style="font-family:var(--font-mono);font-size:12px">
           <div style="font-size:11px;color:var(--text3);margin-top:4px">Its open checkboxes show under ⟡ as tasks to add.</div>
@@ -2601,6 +2608,13 @@
       p.desc = document.getElementById('ps-desc').value.trim();
       p.status = document.getElementById('ps-status').value;
       p.color = document.getElementById('ps-color').value;
+      const tagsEl = document.getElementById('ps-tags');
+      if (tagsEl) {
+        const seen = new Set();
+        p.tags = tagsEl.value.split(',').map(s => s.trim()).filter(Boolean)
+          .map(t => (typeof HubTags !== 'undefined') ? HubTags.ensure(t) : t)
+          .filter(t => { const k = t.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+      }
       const vaultEl = document.getElementById('ps-vault');
       if (vaultEl) p.obsidianNote = vaultEl.value.trim().replace(/\.md$/i, '');
 

@@ -2783,6 +2783,25 @@ User wants Thinking Hub usable inside enterprises despite being a free tool (con
 
 **Status:** Groups A–D are ✓ Done (P91–P94). The v1.1.0 tag must be created only after these changes are committed, reviewed, pushed to `main`, and CI passes; the tag then activates the release workflow. Workspaces remains explicitly parked until the user reopens it.
 
+
+---
+
+### ~~Priority 141 — Project tags + "Spatial Canvas" → "Canvas Hub"~~ ✓ Done `[group: project-ux]`
+User asked how to tag a project. Project Hub had no tags field.
+
+- **Project tags:** Settings → Tags (comma separated). Stored as `proj.tags` (array) in `project-hub-v1`.
+  - New `project-hub` entry in `hub-tags.js` `TAG_SOURCES`. Tags Hub, rename, merge and delete now cover projects.
+  - Typed tags go through `HubTags.ensure()`, so casing matches existing tags.
+  - Dependency Graph adds a dotted tag edge from each project.
+  - Overview search also matches tags.
+- **Rename:** the sidebar label, Help & Guide (tool card + framework lists), Machi, README, tab title and the Canvas Painter text now say "Canvas Hub". Tool id `canvas-hub` and key `canvas-v1` are unchanged.
+- `sw.js` cache `v20` → `v21`.
+
+**Decision:** Tags field in Settings only, not on the project card or the new-project dialog.
+**Why:** light touch, matches how Group and Vault note are set. **Revisit when:** you want to filter the Overview by tag chips. **Confidence:** med.
+
+**Files:** `hub-tags.js`, `project-hub.html`, `graph-hub.html`, `tags-hub.html`, `index.html`, `help-hub.html`, `town-hub.html`, `canvas-hub.html`, `machi-fun.js`, `achievements-hub.html`, `README.md`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
 ---
 
 ## Machi Hub history (condensed — ported from AGENTS.md, Codex-agent work)

@@ -8,7 +8,7 @@
 //                    sends a delivery van off down the road.
 //   Meeting Hub    → a bus stop. Weekly meetings are buses that run on their day;
 //                    today's one-off meetings are taxis.
-//   Spatial Canvas → an art studio. An easel per board, gallery lights per card,
+//   Canvas Hub → an art studio. An easel per board, gallery lights per card,
 //                    bunting for lines.
 //   Dependency Graph links → pigeons carrying letters between tool buildings.
 // Plus sparkles wherever you click.
@@ -622,7 +622,7 @@ const MachiFun = (() => {
         title: '🎨 ' + e.name,
         status: `${m.cards} card${m.cards === 1 ? '' : 's'} · ${m.lines} line${m.lines === 1 ? '' : 's'}`,
         note: '',
-        link: ['canvas-hub.html', 'Open Spatial Canvas →'],
+        link: ['canvas-hub.html', 'Open Canvas Hub →'],
       };
     }
     return null;
