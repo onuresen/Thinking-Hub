@@ -2786,6 +2786,23 @@ User wants Thinking Hub usable inside enterprises despite being a free tool (con
 
 ---
 
+### ~~Priority 142 — Canvas Hub: Connect rubber-band line + Schedule day tags~~ ✓ Done `[group: canvas-structure]`
+Ported the one valuable part of stale PR #159 (branch from 2026-09-28). The rest of that PR was already in main under other work.
+
+- **Connect preview line:** a dashed `--accent` line follows the cursor from the armed source card.
+  - Own `#connect-preview-svg`, so `renderEdges()` never wipes it. Hidden on cancel, Esc, undo, board switch and when the edge is made.
+  - Right-click → "Connect from here" also starts it.
+- **Schedule day tags:** Telework 💻, Seminar 🎤, Training 🎓 added to `DAY_TAGS`.
+
+**Decision:** Port by hand onto current code, not merge PR #159.
+**Why:** it was written before P125–P140; the file had moved a lot.
+**Decision:** Preview svg is 1px, not 0px.
+**Why:** the PR used 0×0 and could not see its own line in a screenshot. It blamed the sandbox. It was the same zero-size bug as P125. **Confidence:** high.
+
+**Files:** `canvas-hub.html`, `schedule.html`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 141 — Project tags + "Spatial Canvas" → "Canvas Hub"~~ ✓ Done `[group: project-ux]`
 User asked how to tag a project. Project Hub had no tags field.
 

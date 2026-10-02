@@ -1217,6 +1217,11 @@
     <div id="lane-bands"></div>
     <div id="canvas-layer">
       <svg id="edges-svg"></svg>
+      <!-- Connect-mode rubber band: live line from the armed source to the cursor.
+           Separate svg so renderEdges() never wipes it. 1px, not 0 (see #edges-svg). -->
+      <svg id="connect-preview-svg" style="position:absolute;top:0;left:0;width:1px;height:1px;overflow:visible;pointer-events:none;">
+        <line id="connect-preview-line" x1="0" y1="0" x2="0" y2="0" stroke-width="2.5" stroke-dasharray="6 5" style="display:none;"/>
+      </svg>
     </div>
     <div id="lane-heads"></div>
   </div>
@@ -1649,7 +1654,7 @@
       db.lanes = snap.lanes || [];
       activeLaneId = null;
       selectedNodeId = null; selectedIds = new Set();
-      connectMode = false; connectSource = null;
+      connectMode = false; connectSource = null; hideConnectPreview();
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       renderAll(); renderMinimap(); renderBoardBar();
@@ -1697,7 +1702,7 @@
       db = b;
       if (!db.edges) db.edges = [];
       selectedNodeId = null; selectedIds = new Set();
-      connectMode = false; connectSource = null; focusId = null; activeLaneId = null;
+      connectMode = false; connectSource = null; hideConnectPreview(); focusId = null; activeLaneId = null;
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       fullState.activeBoardId = id;
@@ -1820,6 +1825,8 @@
     }
 
     window.addEventListener('mousemove', e => {
+      lastPointer.x = e.clientX; lastPointer.y = e.clientY;
+      if (connectMode && connectSource) updateConnectPreview(e.clientX, e.clientY);
       if (rightPan && !rightPan.moved &&
         Math.hypot(e.clientX - rightPan.x0, e.clientY - rightPan.y0) > PAN_THRESHOLD) rightPan.moved = true;
       if (isPanning) {
@@ -2051,6 +2058,7 @@
     function toggleConnectMode() {
       connectMode = !connectMode;
       connectSource = null;
+      hideConnectPreview();
       document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
       const btn = document.getElementById('connect-btn');
       btn.classList.toggle('active', connectMode);
@@ -2086,6 +2094,27 @@
       db.edges.push({ id: 'e-' + Date.now().toString(36), from: fromId, to: toId, relType: 'relates' });
       pulseSave();
       renderEdges();
+    }
+
+    // Rubber-band preview: armed source centre → cursor, in canvas-layer space.
+    const lastPointer = { x: 0, y: 0 };
+    function updateConnectPreview(clientX, clientY) {
+      const line = document.getElementById('connect-preview-line');
+      if (!line) return;
+      const src = connectMode && connectSource && db.nodes.find(n => n.id === connectSource);
+      if (!src) { line.style.display = 'none'; return; }
+      const rect = viewport.getBoundingClientRect();
+      line.setAttribute('x1', src.x + (src.w || NODE_W) / 2);
+      line.setAttribute('y1', src.y + (src.h || NODE_H) / 2);
+      line.setAttribute('x2', (clientX - rect.left - db.panX) / db.zoom);
+      line.setAttribute('y2', (clientY - rect.top - db.panY) / db.zoom);
+      // Bright accent: muted border tokens are near-invisible as a thin line.
+      line.style.stroke = resolveCssVar('var(--accent)');
+      line.style.display = '';
+    }
+    function hideConnectPreview() {
+      const line = document.getElementById('connect-preview-line');
+      if (line) line.style.display = 'none';
     }
 
     function resolveCssVar(v) {
@@ -2366,6 +2395,7 @@
         if (connectMode) {
           // Cancel connect
           connectSource = null;
+          hideConnectPreview();
           document.querySelectorAll('.node').forEach(el => el.classList.remove('connect-source'));
           return;
         }
@@ -2605,6 +2635,7 @@
       connectSource = nodeId;
       const el = document.querySelector(`.node[data-id="${nodeId}"]`);
       if (el) el.classList.add('connect-source');
+      updateConnectPreview(lastPointer.x, lastPointer.y);
       document.getElementById('help-text').textContent =
         'Click a target node — click empty space or Esc to cancel';
     }
@@ -4306,10 +4337,12 @@
           if (!connectSource) {
             connectSource = node.id;
             el.classList.add('connect-source');
+            updateConnectPreview(e.clientX, e.clientY);
           } else if (connectSource !== node.id) {
             createEdge(connectSource, node.id);
             document.querySelectorAll('.node').forEach(n => n.classList.remove('connect-source'));
             connectSource = null;
+            hideConnectPreview();
           }
           return;
         }
