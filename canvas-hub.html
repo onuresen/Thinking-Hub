@@ -271,6 +271,30 @@
       outline-offset: 3px;
     }
 
+    /* Tag highlight (P146): matches glow, the rest only soften.
+       Nothing is hidden and lines are never faded, so the map stays readable. */
+    .node.tag-hit {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .node.tag-miss {
+      opacity: 0.5;
+    }
+
+    #edges-svg g.edge-hit line:first-of-type {
+      stroke-width: 3.5px;
+    }
+
+    .tag-menu { min-width: 240px; max-width: 300px; gap: 4px; padding: 10px; }
+    .tm-list { display: flex; flex-direction: column; gap: 1px; max-height: 280px; overflow-y: auto; }
+    .tm-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--r-sm); font-size: 12px; color: var(--text2); cursor: pointer; }
+    .tm-row:hover { background: var(--surface3); }
+    .tm-row.on { color: var(--text); background: var(--accent-dim); }
+    .tm-row .tm-n { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+    .tm-empty { padding: 8px 6px; font-size: 12px; color: var(--text3); }
+
     .qm-sep {
       height: 1px;
       background: var(--border);
@@ -1251,6 +1275,8 @@
       title="Draw connections between nodes">Connect</button>
     <button class="btn" id="layout-btn" onclick="toggleLayoutMenu()"
       title="Align and arrange nodes">Layout ▾</button>
+    <button class="btn" id="tag-btn" onclick="toggleTagMenu()"
+      title="Highlight cards by tag — nothing is hidden">🏷 Tags</button>
     <button class="btn" id="jump-btn" onclick="toggleJumpMenu()"
       title="Jump to a frame, layer or saved view · Present">Jump ▾</button>
     <button class="btn" onclick="exportPNG()" title="Export the whole board as a high-quality PNG">Export PNG</button>
@@ -1276,6 +1302,15 @@
     <input type="text" class="qm-search" id="add-picker-search" placeholder="Search…">
     <div class="qm-list" id="add-picker-list"></div>
   </div>
+  <!-- Tag menu (P146): highlight cards by tag, group by tag -->
+  <div class="quick-menu tag-menu" id="tag-menu">
+    <div class="lm-hint" id="tm-hint"></div>
+    <div class="tm-list" id="tm-list"></div>
+    <div class="lm-grid lm-2">
+      <button onclick="clearTagHi()">Clear</button>
+      <button onclick="arrangeByTag()" title="One block per shared tag, each in a labelled frame">Group by tag</button>
+    </div>
+  </div>
   <!-- Layout menu: align / spread / arrange selected nodes (P127) -->
   <div class="quick-menu layout-menu" id="layout-menu">
     <div class="lm-hint" id="lm-hint"></div>
@@ -1297,6 +1332,9 @@
     <div class="lm-grid lm-2">
       <button data-need="0" onclick="tidyGrid()">Tidy grid</button>
       <button data-need="0" onclick="arrangeByType()">By type</button>
+    </div>
+    <div class="lm-grid lm-1">
+      <button data-need="0" onclick="arrangeByTag()" title="One block per shared tag, each in a labelled frame">By tag</button>
     </div>
     <div class="lm-head">Flow (follows lines)</div>
     <div class="lm-grid lm-2">
@@ -1955,6 +1993,7 @@
         if (document.getElementById('add-menu').style.display === 'flex') { closeAddMenu(); return; }
         if (document.getElementById('node-menu').style.display === 'flex') { closeNodeMenu(); return; }
         if (document.getElementById('layout-menu').style.display === 'flex') { closeLayoutMenu(); return; }
+        if (document.getElementById('tag-menu').style.display === 'flex') { closeTagMenu(); return; }
         if (document.getElementById('jump-menu').style.display === 'flex') { closeJumpMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('find-box').style.display === 'flex') { closeFind(); return; }
@@ -2361,6 +2400,7 @@
       if (!e.target.closest('#new-board-menu') && !e.target.closest('#new-board-btn')) closeNewBoardMenu();
       if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
       if (!e.target.closest('#jump-menu') && !e.target.closest('#jump-btn')) closeJumpMenu();
+      if (!e.target.closest('#tag-menu') && !e.target.closest('#tag-btn')) closeTagMenu();
     }, true);
 
     // ── Node CRUD ────────────────────────────────────────────
@@ -3897,6 +3937,199 @@
       pulseSave();
     }
 
+    // ── Tag highlight + By tag (P146) ──────────────────────────
+    // Tags live in the hubs (projects, decisions, meetings), never on the card.
+    // Tasks and goals inherit their project's tags. Highlight only marks
+    // cards; it never hides anything, so the connections stay readable.
+    let tagHi = new Set(); // lowercase tag names, session only
+
+    function tagSplit(v) {
+      const arr = Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',') : []);
+      return arr.map(t => String(t).trim()).filter(Boolean);
+    }
+
+    // Returns node -> tags[] (fresh read of the source hubs).
+    function nodeTagsFn() {
+      const projTags = new Map(), taskProj = new Map(), goalProj = new Map(), decTags = new Map(), meetTags = new Map();
+      try {
+        ((window.HubData ? HubData.getProjects() : []) || []).forEach(p => {
+          projTags.set(p.id, tagSplit(p.tags));
+          (p.tasks || []).forEach(t => taskProj.set(t.id, p.id));
+        });
+      } catch {}
+      try {
+        const g = HubStorage.get('goals-hub-v1') || {};
+        (g.quarters || []).forEach(q => (q.objectives || []).forEach(o => { if (o.projectId) goalProj.set(o.id, o.projectId); }));
+      } catch {}
+      try {
+        const d = HubStorage.get('decision-hub-v1');
+        (Array.isArray(d) ? d : []).forEach(x => decTags.set(x.id, tagSplit(x.tags)));
+      } catch {}
+      try {
+        const m = HubStorage.get('meetings-hub-v1');
+        ((m && m.meetings) || []).forEach(x => meetTags.set(x.id, tagSplit(x.tags)));
+      } catch {}
+      return n => {
+        if (!n.link) return [];
+        const id = n.link.id;
+        if (n.kind === 'project') return projTags.get(id) || [];
+        if (n.kind === 'task') return projTags.get(taskProj.get(id)) || [];
+        if (n.kind === 'goal') return projTags.get(goalProj.get(id)) || [];
+        if (n.kind === 'decision') return decTags.get(id) || [];
+        if (n.kind === 'meeting') return meetTags.get(id) || [];
+        return [];
+      };
+    }
+
+    function boardTagCounts() {
+      const tagsOf = nodeTagsFn();
+      const counts = new Map(); // lower -> {name, count}
+      db.nodes.filter(n => !isFrame(n)).forEach(n => {
+        const seen = new Set();
+        tagsOf(n).forEach(t => {
+          const k = t.toLowerCase();
+          if (seen.has(k)) return;
+          seen.add(k);
+          const c = counts.get(k) || { name: t, count: 0 };
+          c.count++; counts.set(k, c);
+        });
+      });
+      return [...counts.entries()].map(([k, v]) => ({ key: k, name: v.name, count: v.count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    }
+
+    function tagHitIds() {
+      if (!tagHi.size) return null;
+      const tagsOf = nodeTagsFn();
+      const hit = new Set();
+      db.nodes.forEach(n => {
+        if (isFrame(n)) return;
+        if (tagsOf(n).some(t => tagHi.has(t.toLowerCase()))) hit.add(n.id);
+      });
+      return hit;
+    }
+
+    function applyTagHi() {
+      const hit = tagHitIds();
+      layer.querySelectorAll('.node:not(.frame)').forEach(el => {
+        el.classList.toggle('tag-hit', !!hit && hit.has(el.dataset.id));
+        el.classList.toggle('tag-miss', !!hit && !hit.has(el.dataset.id));
+      });
+      document.querySelectorAll('#edges-svg g[data-from]').forEach(g => {
+        g.classList.toggle('edge-hit', !!hit && hit.has(g.dataset.from) && hit.has(g.dataset.to));
+      });
+      const btn = document.getElementById('tag-btn');
+      if (btn) {
+        btn.classList.toggle('active', tagHi.size > 0);
+        btn.textContent = tagHi.size ? `🏷 Tags (${tagHi.size})` : '🏷 Tags';
+      }
+    }
+
+    function tagHelp() {
+      const hit = tagHitIds();
+      if (!hit) return '';
+      const names = boardTagCounts().filter(t => tagHi.has(t.key)).map(t => t.name);
+      return `Highlighting ${names.join(', ') || [...tagHi].join(', ')} · ${hit.size} card${hit.size === 1 ? '' : 's'} · Tags ▸ Clear to stop`;
+    }
+
+    function toggleTagHi(key) {
+      if (tagHi.has(key)) tagHi.delete(key); else tagHi.add(key);
+      applyFocus();
+      renderTagMenu();
+    }
+
+    function clearTagHi() {
+      tagHi = new Set();
+      applyFocus();
+      renderTagMenu();
+    }
+
+    function renderTagMenu() {
+      const list = document.getElementById('tm-list');
+      const counts = boardTagCounts();
+      list.innerHTML = '';
+      if (!counts.length) {
+        list.innerHTML = '<div class="tm-empty">No tags on this board yet. Tags come from Project Hub (project Settings), Decision Hub and Meeting Hub.</div>';
+      }
+      counts.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'tm-row' + (tagHi.has(t.key) ? ' on' : '');
+        row.innerHTML = `<input type="checkbox" ${tagHi.has(t.key) ? 'checked' : ''} tabindex="-1"><span></span><span class="tm-n">${t.count}</span>`;
+        row.children[1].textContent = t.name;
+        row.onmousedown = e => { e.preventDefault(); e.stopPropagation(); toggleTagHi(t.key); };
+        list.appendChild(row);
+      });
+      const hit = tagHitIds();
+      document.getElementById('tm-hint').textContent = hit
+        ? `${hit.size} card${hit.size === 1 ? '' : 's'} highlighted. Others fade, nothing is hidden.`
+        : 'Pick tags to highlight cards. Counts are cards on this board.';
+    }
+
+    function toggleTagMenu() {
+      const menu = document.getElementById('tag-menu');
+      if (menu.style.display === 'flex') { closeTagMenu(); return; }
+      closeLayoutMenu();
+      renderTagMenu();
+      menu.style.display = 'flex';
+      const r = document.getElementById('tag-btn').getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+    }
+
+    function closeTagMenu() {
+      const m = document.getElementById('tag-menu');
+      if (m) m.style.display = 'none';
+    }
+
+    // Layout → By tag: one block per tag shared by 2+ cards. A card with
+    // several tags goes under the biggest one. Each block gets a frame named
+    // after the tag (marked autoTag, so a re-run replaces them).
+    function arrangeByTag() {
+      const boxes = layoutTargets();
+      if (!boxes.length) return;
+      const tagsOf = nodeTagsFn();
+      const info = new Map(boxes.map(b => [b.n.id, tagsOf(b.n)]));
+      // Biggest shared tag first: it takes all its cards, then the next
+      // biggest takes what is left. Keeps big topics in one block.
+      const groups = new Map();
+      let left = boxes.slice();
+      for (;;) {
+        const counts = new Map();
+        left.forEach(b => new Set(info.get(b.n.id).map(t => t.toLowerCase())).forEach(k => counts.set(k, (counts.get(k) || 0) + 1)));
+        let best = null;
+        counts.forEach((c, k) => { if (c >= 2 && (!best || c > best.c || (c === best.c && k < best.k))) best = { k, c }; });
+        if (!best) break;
+        const mine = left.filter(b => info.get(b.n.id).some(t => t.toLowerCase() === best.k));
+        const name = info.get(mine[0].n.id).find(t => t.toLowerCase() === best.k);
+        groups.set(best.k, { name, boxes: mine });
+        left = left.filter(b => !mine.includes(b));
+      }
+      const rest = left;
+      if (!groups.size) {
+        if (window.showToast) showToast('No tag is shared by two or more cards here', 'error');
+        return;
+      }
+      const x0 = snap(Math.min(...boxes.map(b => b.n.x)));
+      let y = snap(Math.min(...boxes.map(b => b.n.y))) + 60;
+      const name = b => ((b.n.link && b.n.link.label) || b.n.text || '').toLowerCase();
+      const order = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+      commitLayout(boxes, () => {
+        db.nodes = db.nodes.filter(n => !n.autoTag);
+        const block = (title, bs) => {
+          bs.sort((a, c) => KIND_ORDER.indexOf(a.n.kind || 'note') - KIND_ORDER.indexOf(c.n.kind || 'note') || name(a).localeCompare(name(c)));
+          const cols = Math.min(6, Math.max(2, Math.ceil(Math.sqrt(bs.length * 1.5))));
+          const h = placeGrid(bs, x0, y, cols);
+          const L = Math.min(...bs.map(b => b.n.x)), R = Math.max(...bs.map(b => b.n.x + b.w));
+          const B = Math.max(...bs.map(b => b.n.y + b.h));
+          db.nodes.push({ id: 'cnv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), x: L - 30, y: y - 50, w: R - L + 60, h: B - y + 80, text: title, color: 'c-gray', kind: 'frame', autoTag: true });
+          y += h + 110;
+        };
+        order.forEach(g => block(g.name, g.boxes));
+        if (rest.length) block('No shared tag', rest);
+      });
+      if (window.showToast) showToast(`Grouped into ${order.length} tag block${order.length === 1 ? '' : 's'}`);
+    }
+
     // ── Focus mode (P128): one node + its direct connections stay bright ──
 
     function nodeLabel(n) {
@@ -3918,6 +4151,7 @@
 
     function applyFocus() {
       if (focusId && !db.nodes.some(n => n.id === focusId)) focusId = null;
+      applyTagHi();
       const set = focusSet();
       layer.querySelectorAll('.node:not(.frame)').forEach(el => {
         el.classList.toggle('dimmed', !!set && !set.has(el.dataset.id));
@@ -3929,7 +4163,7 @@
         const n = db.nodes.find(x => x.id === focusId);
         help.textContent = `Focus: ${nodeLabel(n).slice(0, 40)} · ${set.size - 1} connected · Esc or click empty space to exit`;
       } else {
-        help.textContent = DEFAULT_HELP;
+        help.textContent = tagHelp() || DEFAULT_HELP;
       }
     }
 
