@@ -264,6 +264,9 @@
     const DAY_TAGS = {
       oof:     { icon: '🏠', label: 'Out of Office',   bg: 'var(--node-blue)',   fg: 'var(--border-blue)' },
       trip:    { icon: '✈️', label: 'Business Trip',   bg: 'var(--node-purple)', fg: 'var(--border-purple)' },
+      telework:{ icon: '💻', label: 'Telework',        bg: 'var(--node-yellow)', fg: 'var(--border-yellow)' },
+      seminar: { icon: '🎤', label: 'Seminar',         bg: 'var(--node-purple)', fg: 'var(--border-purple)' },
+      training:{ icon: '🎓', label: 'Training',        bg: 'var(--node-gray)',   fg: 'var(--border-gray)' },
       holiday: { icon: '🎌', label: 'Public Holiday',  bg: 'var(--node-red)',    fg: 'var(--border-red)' },
       off:     { icon: '🌴', label: 'Day Off',         bg: 'var(--node-green)',  fg: 'var(--border-green)' },
     };
@@ -625,7 +628,7 @@
       }).join('');
     }
 
-    // ── Day-tag picker (Out of Office / Business Trip / Public Holiday / Day Off) ──
+    // ── Day-tag picker (Out of Office / Business Trip / Telework / Seminar / Training / Public Holiday / Day Off) ──
     let _dayTagPopover = null;
 
     function closeDayTagPicker() {
