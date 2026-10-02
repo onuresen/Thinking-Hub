@@ -12,6 +12,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Project tags now work as chips with suggestions. Type to see existing tags (most used first), press Enter to pick one or create a new one. "Shop-drawing" suggests the existing "Shop drawing". Typing a comma also adds the tag.
 - Tool Portfolio: upload your own icon for a tool (stored locally, resized to 64px). Sites on github.io, gitlab.io, pages.dev, netlify.app and vercel.app now show the tool's emoji instead of Google's generic globe.
 - Canvas Hub Connect mode: a dashed line now follows the cursor from the armed source card, so you can see the connection while you draw it.
 - Schedule day tags: Telework 💻, Seminar 🎤 and Training 🎓, next to Out of Office, Business Trip, Public Holiday and Day Off. Saved days keep working.
