@@ -2803,6 +2803,21 @@ Ported the one valuable part of stale PR #159 (branch from 2026-09-28). The rest
 
 ---
 
+### ~~Priority 143 — Concept Matrix: readable column widths~~ ✓ Done `[group: project-ux]`
+After P121 (projects as rows) the table stretched. Extra width went to the project column. Concept columns stayed 48px with tilted, clipped names.
+
+- Table is `width:auto` with `table-layout:fixed`. Spare width no longer goes to the project column.
+- Project column 220px. Names wrap to 2 lines before the ellipsis.
+- Concept columns 90px. Names are flat, wrap on spaces, never abbreviated.
+- ∑ column is sticky on the right, so it stays visible when columns scroll sideways.
+- `sw.js` cache `v22` → `v23`.
+
+**Decision:** Flat wrapped names, not tilted. **Why:** 45° text at 11px was the hard-to-read part. 90px fits two-word names on two lines. **Alternative:** wider tilted columns — rejected, still clipped long names. **Confidence:** high.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 141 — Project tags + "Spatial Canvas" → "Canvas Hub"~~ ✓ Done `[group: project-ux]`
 User asked how to tag a project. Project Hub had no tags field.
 
