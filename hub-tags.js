@@ -269,12 +269,170 @@ window.HubTags = (() => {
       .map(n => `<option value="${esc(n)}"></option>`).join('');
   }
 
+
+  // ── Chip input with suggestions ──────────────────────────────────────────
+  // Turns a comma-separated text input into chips + a suggestion list.
+  // The original input stays in the DOM (hidden) and always holds the CSV,
+  // so existing save code that reads `input.value` keeps working.
+  //   Type      → matching existing tags appear; Enter/Tab/click picks one.
+  //   No match  → the last row reads Create "x"; Enter makes a new tag.
+  //   Near-miss → "Shop-drawing" vs "Shop drawing" suggests the existing one first.
+  let _chipStyle = false;
+  function _injectChipStyle() {
+    if (_chipStyle) return;
+    _chipStyle = true;
+    const st = document.createElement('style');
+    st.textContent = `
+      .ht-wrap{position:relative;display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);cursor:text}
+      .ht-wrap:focus-within{border-color:var(--accent)}
+      .ht-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;border-radius:999px;background:var(--accent-dim);border:1px solid var(--accent-glow);color:var(--text);font-size:12px;font-weight:500}
+      .ht-chip button{all:unset;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 4px;border-radius:50%}
+      .ht-chip button:hover{color:var(--accent-nope)}
+      .ht-in{flex:1;min-width:120px;background:none;border:none;outline:none;color:var(--text);font:inherit;font-size:13px;padding:3px 0}
+      .ht-menu{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:var(--z-popover,50);background:var(--surface);border:1px solid var(--border2,var(--border));border-radius:var(--r-sm);box-shadow:0 8px 24px rgba(0,0,0,.35);max-height:220px;overflow:auto;display:none}
+      .ht-opt{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;font-size:13px;color:var(--text);cursor:pointer}
+      .ht-opt small{color:var(--text3);font-size:11px}
+      .ht-opt.on,.ht-opt:hover{background:var(--accent-dim)}
+      .ht-opt.new{color:var(--accent)}
+    `;
+    document.head.appendChild(st);
+  }
+
+  const _key = s => (s || '').toLowerCase().replace(/[^a-z0-9À-￿]/g, '');
+
+  function attachTagInput(inputEl) {
+    if (!inputEl || inputEl.dataset.htChip) return;
+    inputEl.dataset.htChip = '1';
+    _injectChipStyle();
+    const esc = (typeof HubUtils !== 'undefined' && HubUtils.esc) ? HubUtils.esc
+      : s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    let tags = (inputEl.value || '').split(',').map(x => x.trim()).filter(Boolean);
+    let known = [];            // [{name, count}]
+    let active = -1;
+    let items = [];            // current menu rows
+
+    const wrap = document.createElement('div');
+    wrap.className = 'ht-wrap';
+    const typed = document.createElement('input');
+    typed.className = 'ht-in';
+    typed.type = 'text';
+    typed.placeholder = inputEl.getAttribute('placeholder') || 'Add tag…';
+    typed.setAttribute('autocomplete', 'off');
+    const menu = document.createElement('div');
+    menu.className = 'ht-menu';
+    wrap.appendChild(typed);
+    wrap.appendChild(menu);
+    inputEl.style.display = 'none';
+    inputEl.insertAdjacentElement('afterend', wrap);
+
+    function loadKnown() {
+      const m = new Map();
+      getRegistry().forEach(t => m.set(t.name, 0));
+      scanUsage().forEach(u => m.set(u.name, u.count || 0));
+      known = Array.from(m, ([name, count]) => ({ name, count }));
+    }
+    function canonical(txt) {
+      const k = _key(txt);
+      const hit = known.find(t => t.name.toLowerCase() === txt.toLowerCase())
+        || known.find(t => _key(t.name) === k);
+      return hit ? hit.name : txt;
+    }
+    function sync() {
+      inputEl.value = tags.join(', ');
+      wrap.querySelectorAll('.ht-chip').forEach(n => n.remove());
+      tags.forEach((t, i) => {
+        const c = document.createElement('span');
+        c.className = 'ht-chip';
+        c.innerHTML = `${esc(t)}<button type="button" aria-label="Remove ${esc(t)}">×</button>`;
+        c.querySelector('button').addEventListener('mousedown', e => { e.preventDefault(); tags.splice(i, 1); sync(); typed.focus(); });
+        wrap.insertBefore(c, typed);
+      });
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function add(txt) {
+      txt = (txt || '').trim().replace(/,+$/, '').trim();
+      if (!txt) return;
+      const name = canonical(txt);
+      if (!tags.some(t => t.toLowerCase() === name.toLowerCase())) tags.push(name);
+      typed.value = '';
+      sync();
+      render();
+    }
+    function render() {
+      const q = typed.value.trim();
+      const qk = _key(q);
+      const have = new Set(tags.map(t => t.toLowerCase()));
+      let rows = known.filter(t => !have.has(t.name.toLowerCase()) && (!qk || _key(t.name).includes(qk)));
+      rows.sort((a, b) => {
+        if (qk) {
+          const ea = _key(a.name) === qk ? 0 : _key(a.name).startsWith(qk) ? 1 : 2;
+          const eb = _key(b.name) === qk ? 0 : _key(b.name).startsWith(qk) ? 1 : 2;
+          if (ea !== eb) return ea - eb;
+        }
+        return b.count - a.count || a.name.localeCompare(b.name);
+      });
+      items = rows.slice(0, 8).map(t => ({ name: t.name, hint: t.count ? t.count + ' use' + (t.count > 1 ? 's' : '') : 'topic' }));
+      const exact = q && known.some(t => _key(t.name) === qk);
+      if (q && !exact && !have.has(q.toLowerCase())) items.push({ name: q, isNew: true });
+      active = items.length ? 0 : -1;
+      draw();
+    }
+    function draw() {
+      if (!items.length) { menu.style.display = 'none'; return; }
+      menu.innerHTML = items.map((it, i) =>
+        `<div class="ht-opt${it.isNew ? ' new' : ''}${i === active ? ' on' : ''}" data-i="${i}">` +
+        (it.isNew ? `<span>Create “${esc(it.name)}”</span><small>new tag</small>` : `<span>${esc(it.name)}</span><small>${esc(it.hint)}</small>`) + `</div>`).join('');
+      menu.style.display = 'block';
+    }
+    menu.addEventListener('mousedown', e => {
+      const o = e.target.closest('.ht-opt');
+      if (!o) return;
+      e.preventDefault();
+      add(items[+o.dataset.i].name);
+      typed.focus();
+    });
+    wrap.addEventListener('mousedown', e => { if (e.target === wrap) { e.preventDefault(); typed.focus(); } });
+    typed.addEventListener('focus', () => { loadKnown(); render(); });
+    typed.addEventListener('input', () => {
+      if (typed.value.includes(',')) {
+        const parts = typed.value.split(',');
+        typed.value = parts.pop();
+        parts.forEach(add);
+      }
+      render();
+    });
+    typed.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (!items.length) return;
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        draw();
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        if (typed.value.trim()) {
+          e.preventDefault();
+          add(items[active] ? items[active].name : typed.value);
+        } else if (e.key === 'Enter') e.preventDefault();
+      } else if (e.key === 'Backspace' && !typed.value && tags.length) {
+        tags.pop(); sync(); render();
+      } else if (e.key === 'Escape' && menu.style.display === 'block') {
+        e.stopPropagation(); menu.style.display = 'none';
+      }
+    });
+    typed.addEventListener('blur', () => {
+      if (typed.value.trim()) add(typed.value);
+      menu.style.display = 'none';
+    });
+    loadKnown();
+    sync();
+  }
+
   return {
     STORAGE_KEY,
     TAG_SOURCES,
     getRegistry, saveRegistry,
     ensure, findCanonical, removeFromRegistry, removeTag,
     scanUsage, rename,
-    attachAutocomplete,
+    attachAutocomplete, attachTagInput,
   };
 })();

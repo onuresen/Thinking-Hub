@@ -2820,6 +2820,25 @@ Cause: Google's favicon service looks at the host root only. A project site like
 
 ---
 
+### ~~Priority 145 — Project tags: chips with suggestions~~ ✓ Done `[group: tags-hub]`
+The project Tags field was a plain comma box. A native `<datalist>` can't suggest per item in a comma list, so nothing was suggested.
+
+- New `HubTags.attachTagInput(input)` in `hub-tags.js`. Reusable for any tag field.
+  - Chips with ×. Backspace on an empty box removes the last chip.
+  - Suggestions come from the registry plus every tag in use, most used first, existing ones only.
+  - A near-miss ("shop-dr", "Shop-drawing") lists the existing tag first. The last row is `Create "…"`.
+  - Enter or Tab picks the highlighted row. A comma commits the text. Blur commits half-typed text.
+  - The original input stays in the page, hidden, and always holds the CSV. `saveProjectSettings` is unchanged and still runs `HubTags.ensure()`, so casing is canonical.
+- Used in Project Hub → project Settings → Tags.
+- `sw.js` cache `v23` → `v24`.
+
+**Decision:** Chip input in `hub-tags.js`, hidden CSV input kept. **Why:** the other tag fields (Decision Hub, Learning Log) can adopt it with one call, and no save code changes. **Alternative:** build it inside Project Hub only. **Confidence:** high.
+**Decision:** Compare tags by lowercase letters and digits only. **Why:** catches the common duplicates (case, spaces, hyphens). It does not catch real typos ("Autodsk"). **Revisit when:** those still slip through. **Confidence:** med.
+
+**Files:** `hub-tags.js`, `project-hub.html`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 143 — Concept Matrix: readable column widths~~ ✓ Done `[group: project-ux]`
 After P121 (projects as rows) the table stretched. Extra width went to the project column. Concept columns stayed 48px with tilted, clipped names.
 
