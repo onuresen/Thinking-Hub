@@ -2803,6 +2803,38 @@ Ported the one valuable part of stale PR #159 (branch from 2026-09-28). The rest
 
 ---
 
+### ~~Priority 144 — Tool Portfolio: icons for github.io tools + own icon upload~~ ✓ Done `[group: bugfix]`
+User's own tools (ONEXUS, Thinking Hub, Kotoba Lab, Kit of Parts) all showed a grey globe.
+
+Cause: Google's favicon service looks at the host root only. A project site like `onuresen.github.io/onexus/` has no root icon. Google then returns its generic globe as a normal image (HTTP 200), so `onerror` never fires and the emoji fallback never shows.
+
+- `_isSharedHost()`: github.io, gitlab.io, pages.dev, netlify.app, vercel.app skip the Google call and show the emoji.
+- **Upload icon…** in the tool detail: image is resized to 64px PNG and stored as `tool.iconImg` (data URL, local only). **Remove** clears it. Own icon wins over everything.
+- Preview tag reads `own icon`, `emoji` or `auto`.
+- No new egress. `data:` is already allowed in CSP `img-src`.
+
+**Decision:** Upload, not "fetch the site's own favicon". **Why:** fetching from arbitrary hosts needs CSP and egress for every domain (P93 boundary). **Confidence:** high.
+**Decision:** Hard-code the shared-host list. **Why:** the globe cannot be detected from the page (cross-origin image). **Revisit when:** another host shows the globe; add it to the list. **Confidence:** med.
+
+**Files:** `tool-portfolio.html`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 143 — Concept Matrix: readable column widths~~ ✓ Done `[group: project-ux]`
+After P121 (projects as rows) the table stretched. Extra width went to the project column. Concept columns stayed 48px with tilted, clipped names.
+
+- Table is `width:auto` with `table-layout:fixed`. Spare width no longer goes to the project column.
+- Project column 220px. Names wrap to 2 lines before the ellipsis.
+- Concept columns 90px. Names are flat, wrap on spaces, never abbreviated.
+- ∑ column is sticky on the right, so it stays visible when columns scroll sideways.
+- `sw.js` cache `v22` → `v23`.
+
+**Decision:** Flat wrapped names, not tilted. **Why:** 45° text at 11px was the hard-to-read part. 90px fits two-word names on two lines. **Alternative:** wider tilted columns — rejected, still clipped long names. **Confidence:** high.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 141 — Project tags + "Spatial Canvas" → "Canvas Hub"~~ ✓ Done `[group: project-ux]`
 User asked how to tag a project. Project Hub had no tags field.
 

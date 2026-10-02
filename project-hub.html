@@ -2925,7 +2925,7 @@
 
       let colHeadersHtml = `<th class="cm-corner"></th>`;
       sortedConcepts.forEach(c => {
-        const abbr = c.name.length > 12 ? c.name.slice(0, 11) + '…' : c.name;
+        const abbr = c.name;
         colHeadersHtml += `<th class="cm-proj-th"><div class="cm-rotate"><span class="cm-proj-label" onclick="openConceptModal('${c.id}')" title="${HubUtils.esc(c.name)}${c.desc ? ' — ' + HubUtils.esc(c.desc) : ''} (click to edit)">${HubUtils.esc(abbr)}</span></div></th>`;
       });
       colHeadersHtml += `<th class="cm-count-th">∑</th>`;
@@ -2940,7 +2940,7 @@
           const badge = deg >= hi ? 'hi' : deg <= 1 ? 'lo' : '';
           bodyHtml += `<tr>
             <td class="cm-label-cell">
-              <div class="cm-concept-name"><span title="${HubUtils.esc(p.name)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${HubUtils.esc(p.name)}</span><span class="cm-concept-edit" onclick="openProjectTagDrawer('${p.id}')" title="Tag concepts for this project">🏷</span></div>
+              <div class="cm-concept-name"><span title="${HubUtils.esc(p.name)}" style="overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:break-word">${HubUtils.esc(p.name)}</span><span class="cm-concept-edit" onclick="openProjectTagDrawer('${p.id}')" title="Tag concepts for this project">🏷</span></div>
             </td>`;
           sortedConcepts.forEach(c => {
             const v = (c.vals || {})[p.id] || 0;
