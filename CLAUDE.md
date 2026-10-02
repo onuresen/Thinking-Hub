@@ -2839,6 +2839,25 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 146 — Canvas Hub: tag highlight + group by tag~~ ✓ Done `[group: canvas-structure]`
+Onur tags projects with concepts (door, joinery, maker…) to find common topics, gaps and direction. Canvas could not show tags.
+
+- **🏷 Tags** (bottom bar): pick tags, matching cards get an accent outline and glow. Other cards drop to 50% opacity. Nothing is hidden. Lines are never faded; a line between two matches gets thicker.
+  - Tags are read live from the hubs: projects, decisions, meetings. Tasks and goals use their project's tags. Notes, tools, risks, stakeholders have none.
+  - Counts in the menu are cards on this board. Several tags = any match. Session only, not saved.
+  - Survives renders, board switches and PNG export.
+- **Layout → By tag** (also in the Tags menu): one block per tag shared by 2+ cards, each in a frame named after the tag (`autoTag`). "No shared tag" last. One undo step. Running it again replaces its own frames.
+
+**Decision:** Highlight, not isolate. **Why:** Onur: isolating would break connection understanding. **Alternative:** a filter that hides non-matches. Rejected. **Confidence:** high.
+**Decision:** By tag gives each card to the biggest shared tag first. **Why:** assigning to the rarest tag split real topics into 10 tiny blocks on the real Dependency Map; biggest-first gave 4 blocks. **Confidence:** med.
+**Decision:** Read tags at render time, store nothing on cards. **Why:** retagging in Project Hub shows on the board at once. **Confidence:** high.
+
+**Verified** on the real 2026-10-02 reconciled backup (Dependency Map, 27 cards): 5 `cdi` cards highlight, 22 soften, 0 lines faded, no overlaps after grouping, undo restores. New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `sw.js` (v25), `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 143 — Concept Matrix: readable column widths~~ ✓ Done `[group: project-ux]`
 After P121 (projects as rows) the table stretched. Extra width went to the project column. Concept columns stayed 48px with tilted, clipped names.
 

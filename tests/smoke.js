@@ -329,6 +329,31 @@ function appFiles(ext) {
     check('canvas layers pin their headers, let clicks through, undo and import',
       g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
 
+    // Tag highlight marks cards without hiding anything; By tag groups them (P146)
+    const gTag = await page.evaluate(() => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'p1', name: 'P1', tags: ['door', 'BIM'], tasks: [] }, { id: 'p2', name: 'P2', tags: ['Door'], tasks: [] },
+        { id: 'p3', name: 'P3', tags: ['BIM'], tasks: [] }, { id: 'p4', name: 'P4', tags: [], tasks: [] }] });
+      const prevId = fullState.activeBoardId;
+      const b = newBoard('Tags'); fullState.boards.push(b); switchBoard(b.id);
+      db.nodes = ['p1', 'p2', 'p3', 'p4'].map((id, i) => ({ id: 'n' + id, x: i * 300, y: 0, text: '', color: '', kind: 'project', link: { tool: 'project-hub', id, label: id.toUpperCase() } }));
+      db.edges = [{ id: 'e1', from: 'np1', to: 'np2', relType: 'relates' }, { id: 'e2', from: 'np3', to: 'np4', relType: 'relates' }];
+      renderAll();
+      toggleTagHi('door');
+      const hit = document.querySelectorAll('.node.tag-hit').length, miss = document.querySelectorAll('.node.tag-miss').length;
+      const edgeHit = document.querySelectorAll('#edges-svg g.edge-hit').length;
+      const faded = [...document.querySelectorAll('#edges-svg g')].filter(g => g.style.opacity).length;
+      clearTagHi();
+      const cleared = document.querySelectorAll('.node.tag-hit,.node.tag-miss').length;
+      arrangeByTag();
+      const frames = db.nodes.filter(n => n.autoTag).map(n => n.text);
+      switchBoard(prevId); fullState.boards = fullState.boards.filter(x => x !== b);
+      return { hit, miss, edgeHit, faded, cleared, frames };
+    });
+    check('canvas tag highlight keeps every card and line visible; By tag groups by shared tag',
+      gTag.hit === 2 && gTag.miss === 2 && gTag.edgeHit === 1 && gTag.faded === 0 && gTag.cleared === 0 && gTag.frames.length === 2,
+      JSON.stringify(gTag));
+
     // Saved views, jump to frame, present mode (P132)
     const g5 = await page.evaluate(() => {
       createFrame(0, 0, 400, 300, 'F1'); createFrame(0, 600, 400, 300, 'F2');
