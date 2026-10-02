@@ -1216,7 +1216,11 @@
               placeholder="🛠 emoji fallback"
               oninput="updateField('icon', this.value)"
             />
-            <div class="field-hint">${t.url ? 'Shown when favicon cannot load' : 'Emoji — add URL to auto-fetch favicon'}</div>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+              <label class="btn btn-ghost" style="cursor:pointer;font-size:12px">Upload icon…<input type="file" accept="image/*" style="display:none" onchange="uploadToolIcon(this)"></label>
+              ${t.iconImg ? '<button class="btn btn-ghost" style="font-size:12px" onclick="clearToolIcon()">Remove</button>' : ''}
+            </div>
+            <div class="field-hint">${t.iconImg ? 'Using your uploaded image' : (t.url ? 'Emoji shows when no favicon loads (always for github.io sites). Or upload your own image.' : 'Emoji — add URL to auto-fetch favicon')}</div>
           </div>
         </div>
       </div>
@@ -1372,10 +1376,16 @@
 
         function toolIconHtml(t, sz) {
             sz = sz || 20;
+            // Own uploaded icon wins: local data URL, no network.
+            if (t.iconImg) {
+                return `<img src="${escapeAttr(t.iconImg)}" width="${sz}" height="${sz}" style="object-fit:contain;border-radius:3px;display:block" alt="">`;
+            }
             if (t.url) {
                 try {
                     const domain = new URL(t.url).hostname;
-                    if (domain) {
+                    // Shared hosting (github.io etc.): Google only knows the host root, so it answers
+                    // with its generic globe (a successful load, so onerror never fires). Use the emoji.
+                    if (domain && !_isSharedHost(domain)) {
                         const fb = escapeHtml(t.icon || '🛠');
                         return `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32" width="${sz}" height="${sz}" style="object-fit:contain;border-radius:3px;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display=''" alt=""><span style="display:none">${fb}</span>`;
                     }
@@ -1384,15 +1394,52 @@
             return escapeHtml(t.icon || '🛠');
         }
 
+        function _isSharedHost(h) {
+            return /(^|\.)(github\.io|gitlab\.io|pages\.dev|netlify\.app|vercel\.app)$/i.test(h);
+        }
+
+        // Resize an image file to 64px PNG, store as data URL on the tool (local only).
+        function uploadToolIcon(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f) return;
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+            const url = URL.createObjectURL(f);
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = c.height = 64;
+                const k = Math.min(64 / img.width, 64 / img.height) || 1;
+                const w = img.width * k, h = img.height * k;
+                c.getContext('2d').drawImage(img, (64 - w) / 2, (64 - h) / 2, w, h);
+                URL.revokeObjectURL(url);
+                HubUtils.stampUpdate(t);
+                t.iconImg = c.toDataURL('image/png');
+                save(); renderList(); renderDetail();
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); showToast('Could not read that image', 'error'); };
+            img.src = url;
+        }
+
+        function clearToolIcon() {
+            const t = tools.find(x => x.id === currentId);
+            if (!t) return;
+            HubUtils.stampUpdate(t);
+            delete t.iconImg;
+            save(); renderList(); renderDetail();
+        }
+
         function _iconPreviewHtml(t) {
-            if (!t.url) return '';
+            if (!t.url && !t.iconImg) return '';
             try {
-                const domain = new URL(t.url).hostname;
-                if (!domain) return '';
+                const domain = t.url ? new URL(t.url).hostname : '';
+                if (!domain && !t.iconImg) return '';
+                const tag = t.iconImg ? 'own icon' : (_isSharedHost(domain) ? 'emoji' : 'auto');
                 return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);margin-bottom:6px">
                     <div style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:7px;font-size:14px;flex-shrink:0">${toolIconHtml(t, 18)}</div>
-                    <span style="font-size:11px;color:var(--text2);font-family:var(--font-mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(domain)}</span>
-                    <span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.5px">auto</span>
+                    <span style="font-size:11px;color:var(--text2);font-family:var(--font-mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(domain || 'uploaded image')}</span>
+                    <span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.5px">${tag}</span>
                 </div>`;
             } catch { return ''; }
         }
