@@ -11,6 +11,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Canvas Hub Connect mode: a dashed line now follows the cursor from the armed source card, so you can see the connection while you draw it.
 - Schedule day tags: Telework 💻, Seminar 🎤 and Training 🎓, next to Out of Office, Business Trip, Public Holiday and Day Off. Saved days keep working.
 - Project tags: Project Hub → project Settings → Tags. They show in Tags Hub (as "Project Hub"), as tag nodes in the Dependency Graph, and in the Overview search.
 - Project Hub vault note (⟡): link a project to its Obsidian note once. Its open checkboxes are offered as tasks, and boxes ticked there offer to mark the task done. Nothing is added until you press Add. Ignored items stay hidden.
