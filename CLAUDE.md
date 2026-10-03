@@ -2839,6 +2839,26 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 147 — Canvas Hub on phones: touch gestures + toolbar~~ ✓ Done `[group: mobile]`
+A phone review (390×844, real touch events, real data) found Canvas Hub unusable: no pan, zoom, tap or menu on touch, and the bottom bar was 635px wide, so the page grew to 655px and Layout/Tags/Jump/Export were out of reach.
+
+- **Gestures** (`touchLayer()` in `canvas-hub.html`): one finger on empty canvas = pan. Two fingers = pinch zoom + pan. Tap = select/open (the browser's own click does it). Double-tap on empty canvas = new note. Hold 550ms = the right-click menu (card or empty). Drag a *selected* card = move it. In Connect mode a drag pans.
+- Card drag reuses the mouse code by sending it mouse events, so undo, snap and group drag work the same.
+- `touch-action: none` on the viewport; `maximum-scale=1` so the page itself doesn't zoom.
+- **Bottom bar** at ≤700px: scrolls sideways, buttons never wrap, 40px high. Help line hidden. On touch screens the board bar, card action buttons and menu rows are bigger. A one-line hint shows once per session.
+- `clampIntoView()` keeps every button-anchored menu on screen.
+
+**Decision:** Only a drag that starts on an already-selected card moves it. **Why:** one finger has to pan most of the time; moving a card by accident on every touch would be worse. **Alternative:** drag any card. Rejected. **Confidence:** med.
+**Decision:** Reuse the mouse handlers by dispatching mouse events for card drag, not a second drag implementation. **Why:** undo, snap, group move and edge redraw already live there. **Confidence:** high.
+**Not built:** box-select, multi-select and layer/frame dragging on touch. Layout menu actions that need a selection still work from the menu.
+**Test note:** Chrome snaps a tap to the nearest card within about 24px, so a tap near a card selects it. That is normal phone behaviour.
+
+**Verified** on your real Dependency Map at 390px with real touch events: 14 checks (fits width, bar scrolls, pan, pinch in/out, tap selects, selected card drags and undoes, tap empty clears, double-tap note, hold menus on empty and card, Tags menu on screen). New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `sw.js` (v26), `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 146 — Canvas Hub: tag highlight + group by tag~~ ✓ Done `[group: canvas-structure]`
 Onur tags projects with concepts (door, joinery, maker…) to find common topics, gaps and direction. Canvas could not show tags.
 
