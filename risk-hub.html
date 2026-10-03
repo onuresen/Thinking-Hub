@@ -185,6 +185,11 @@
     .modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
     .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
     .modal-footer .spacer { flex: 1; }
+    /* Phones: topbar wraps so every button stays reachable (P149) */
+    @media (max-width: 640px) {
+      .topbar { height: auto; min-height: 54px; flex-wrap: wrap; padding: 6px 12px; }
+      .topbar-spacer { flex: 1 1 0; min-width: 0; }
+    }
   </style>
 </head>
 <body>

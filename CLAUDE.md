@@ -2839,6 +2839,23 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 149 — Phones: no cut-off buttons, Graph and Machi fit~~ ✓ Done `[group: mobile]`
+Group 3 of the phone review. Per-tool media queries at 640–700px.
+
+- Graph Hub: header wraps, bottom button bar scrolls sideways, dialog has no fixed min-height. Page was 433px, now 390.
+- Machi Hub: topbar wraps, subtitle hidden, stats row smaller. Page was 426px, now 390.
+- Decision, Goals, Risk Hub: topbar wraps. Archive/Delete and the filter/add buttons were off-screen.
+- Project Hub: the project panel was 420px wide on a 390px screen. It is now full width and its header wraps.
+- `sw.js` cache `v28`. New smoke check.
+
+**Decision:** Wrap toolbars, scroll only the Graph button bar. **Why:** the Graph bar has ~10 equal buttons, like Canvas (P147); the others have few. **Not done:** HTML5 drag-and-drop on touch (kanban, Groupings, org drag) — untested, may not work. **Confidence:** med.
+
+**Verified** at 390px with the real reconciled data: every page measured for buttons beyond the right edge; only closed off-screen drawers remain.
+
+**Files:** `graph-hub.html`, `town-hub.html`, `decision-hub.html`, `goals-hub.html`, `risk-hub.html`, `styles/project-hub.css`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 148 — Touch screens: hover-only buttons + 40px targets~~ ✓ Done `[group: mobile]`
 Group 2 of the phone review. One shared block at the end of `theme.css`, selectors prefixed with `html` so tool CSS can't undo it.
 

@@ -560,6 +560,17 @@ function appFiles(ext) {
     check('touch screens show hover-only task buttons and use 40px targets', t.disp === 'flex' && t.h >= 36, JSON.stringify(t));
     await tctx.close();
   }
+  {
+    const wctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const wp = await wctx.newPage();
+    const res = {};
+    for (const pg of ['graph-hub', 'town-hub', 'decision-hub', 'goals-hub', 'risk-hub']) {
+      await wp.goto(`${BASE}/${pg}.html`, { waitUntil: 'load' }); await wp.waitForTimeout(500);
+      res[pg] = await wp.evaluate(() => document.documentElement.scrollWidth);
+    }
+    check('phone width: Graph, Machi, Decision, Goals, Risk fit 390px', Object.values(res).every(w => w <= 391), JSON.stringify(res));
+    await wctx.close();
+  }
 
   const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
     const page = await tzCtx.newPage();

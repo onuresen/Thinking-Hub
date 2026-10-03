@@ -438,6 +438,11 @@
       .mob-nav-btn { display: flex; align-items: center; }
       .topbar { padding: 0 8px; gap: 6px; }
     }
+    /* Phones: topbar wraps so Archive/Delete stay reachable (P149) */
+    @media (max-width: 640px) {
+      .topbar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 6px 8px; }
+      .topbar-title { min-width: 0; flex: 1 1 140px; }
+    }
   </style>
 </head>
 

@@ -267,6 +267,11 @@
       text-align: center; outline: none; font-family: var(--font-mono);
     }
     .kr-inline-input:focus { border-color: var(--accent); }
+    /* Phones: topbar wraps so every button stays reachable (P149) */
+    @media (max-width: 640px) {
+      .topbar { height: auto; min-height: 54px; flex-wrap: wrap; padding: 6px 12px; }
+      .topbar-spacer { flex: 1 1 0; min-width: 0; }
+    }
   </style>
 </head>
 <body>

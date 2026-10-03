@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.
+
 - Touch screens: buttons that only showed on hover (task actions, drag handles, edit/delete icons) are always visible, and buttons, chips and tabs are at least 40px.
 
 - Project Hub Concept Matrix: concept columns are wider with names written flat (no tilt, no cut-off), the project column is fixed, and ∑ stays visible while scrolling.
