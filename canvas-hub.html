@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Canvas Hub - Thinking Hub</title>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
@@ -38,6 +38,9 @@
       background-size: 20px 20px;
       background-position: 0 0;
       cursor: default;
+      touch-action: none; /* P147: the canvas handles its own touch gestures */
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .viewport.panning {
@@ -269,6 +272,29 @@
     .node.focus-center {
       outline: 2px solid var(--accent);
       outline-offset: 3px;
+    }
+
+    /* Phones (P147): the bottom bar scrolls sideways instead of running off
+       the screen, the help line is hidden, and touch targets get bigger. */
+    @media (max-width: 700px) {
+      .controls {
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+      }
+      .controls::-webkit-scrollbar { display: none; }
+      .controls > button { flex: 0 0 auto; white-space: nowrap; min-height: 40px; }
+      .help-text { display: none; }
+      .board-bar { max-width: calc(100vw - 20px); }
+    }
+    @media (pointer: coarse) {
+      .bb-btn { min-width: 36px; min-height: 36px; }
+      .node-actions button { min-width: 34px; min-height: 34px; }
+      .qm-item { min-height: 40px; }
+      .tm-row { padding: 9px 6px; }
     }
 
     /* Tag highlight (P146): matches glow, the rest only soften.
@@ -1397,7 +1423,8 @@
     const NODE_H = 80; // approximate height for edge anchoring
 
     let focusId = null; // Focus mode (P128)
-    const DEFAULT_HELP = 'Drag: select · Right-drag: pan · Right-click: menu · Double-click: note · 1–9: views · Ctrl+F: find · Scroll: zoom';
+    const IS_TOUCH = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    const DEFAULT_HELP = IS_TOUCH ? 'Drag: pan · Pinch: zoom · Tap: select · Hold: menu · Double-tap: note' : 'Drag: select · Right-drag: pan · Right-click: menu · Double-click: note · 1–9: views · Ctrl+F: find · Scroll: zoom';
 
     const COLORS = [
       { id: 'c-gray', dot: '#666' },
@@ -1950,6 +1977,132 @@
       const rect = viewport.getBoundingClientRect();
       applyZoom(Math.exp(-e.deltaY * 0.001), e.clientX - rect.left, e.clientY - rect.top);
     }, { passive: false });
+
+    // Keep a popover fully on screen (phones are narrower than the menus).
+    function clampIntoView(menu) {
+      const w = menu.offsetWidth, h = menu.offsetHeight;
+      const left = Math.max(8, Math.min(parseFloat(menu.style.left) || 0, window.innerWidth - w - 8));
+      const top = Math.max(8, Math.min(parseFloat(menu.style.top) || 0, window.innerHeight - h - 8));
+      menu.style.left = left + 'px'; menu.style.top = top + 'px';
+    }
+
+    // ── Touch (P147) ─────────────────────────────────────────
+    // One finger: drag empty canvas = pan; drag a selected card = move it;
+    // tap = select/open (the browser's own tap events do that); double-tap on
+    // empty canvas = new note; hold = the right-click menu. Two fingers: pinch
+    // zoom + pan. Moving a card reuses the mouse code by sending it mouse events.
+    (function touchLayer() {
+      const MOVE = 8, LONG = 550, DTAP = 320;
+      let g = null, pinch = null, lastTap = { t: 0, x: 0, y: 0 };
+      const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const mid = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+      const fire = (type, el, x, y, button) => el.dispatchEvent(new MouseEvent(type,
+        { bubbles: true, cancelable: true, clientX: x, clientY: y, button: button || 0, view: window }));
+      // Only text being edited keeps its own touch behaviour (caret, selection).
+      // Everything else — cards, their buttons and menus — can start a pan or a
+      // card drag; a plain tap still reaches the browser's click.
+      const isControl = el => { const ed = el.closest('input, textarea, [contenteditable="true"]'); return !!ed && ed === document.activeElement; };
+      const closeAll = () => { closeEdgePopover(); closeAddMenu(); closeAddPicker(); closeNodeMenu(); };
+      const mouseUp = () => window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+
+      function startPinch(e) {
+        if (g) {
+          clearTimeout(g.timer);
+          if (g.mode === 'node') mouseUp();
+          g.mode = 'pinch-after';
+          viewport.classList.remove('panning');
+        }
+        closeAll();
+        pinch = { d: dist(e.touches[0], e.touches[1]), c: mid(e.touches[0], e.touches[1]) };
+        e.preventDefault();
+      }
+
+      function movePinch(e) {
+        const a = e.touches[0], b = e.touches[1];
+        const d = dist(a, b), c = mid(a, b), r = viewport.getBoundingClientRect();
+        if (pinch.d > 0 && d > 0) applyZoom(d / pinch.d, c.x - r.left, c.y - r.top);
+        db.panX += c.x - pinch.c.x; db.panY += c.y - pinch.c.y;
+        updateTransform();
+        pinch.d = d; pinch.c = c;
+      }
+
+      viewport.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) { startPinch(e); return; }
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0], target = e.target;
+        if (isControl(target)) { g = null; return; }
+        const nodeEl = target.closest('.node:not(.frame)');
+        g = { x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY, target, nodeEl, mode: null, long: false, panX0: db.panX, panY0: db.panY, timer: null };
+        g.timer = setTimeout(() => {
+          if (!g || g.mode || pinch) return;
+          g.long = true;
+          fire('contextmenu', nodeEl || target, g.x, g.y, 2);
+        }, LONG);
+      }, { passive: false });
+
+      viewport.addEventListener('touchmove', e => {
+        if (pinch && e.touches.length >= 2) { e.preventDefault(); movePinch(e); return; }
+        if (!g || g.mode === 'pinch-after' || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - g.x0, dy = t.clientY - g.y0;
+        if (!g.mode) {
+          if (Math.hypot(dx, dy) < MOVE) return;
+          clearTimeout(g.timer);
+          closeAll();
+          if (g.nodeEl && !connectMode && selectedIds.has(g.nodeEl.dataset.id)) {
+            g.mode = 'node';
+            fire('mousedown', g.nodeEl, g.x0, g.y0);
+          } else {
+            g.mode = 'pan';
+            viewport.classList.add('panning');
+          }
+        }
+        e.preventDefault();
+        if (g.mode === 'pan') {
+          db.panX = g.panX0 + dx; db.panY = g.panY0 + dy;
+          updateTransform();
+        } else {
+          window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: t.clientX, clientY: t.clientY }));
+        }
+        g.x = t.clientX; g.y = t.clientY;
+      }, { passive: false });
+
+      function endTouch(e) {
+        if (pinch && e.touches.length < 2) { pinch = null; pulseSave(); }
+        if (!g || e.touches.length) return;
+        clearTimeout(g.timer);
+        const gg = g; g = null;
+        viewport.classList.remove('panning');
+        if (e.type === 'touchcancel') { if (gg.mode === 'node') mouseUp(); return; }
+        if (gg.mode === 'pan') { pulseSave(); e.preventDefault(); return; }
+        if (gg.mode === 'node') { mouseUp(); e.preventDefault(); return; }
+        if (gg.mode === 'pinch-after' || gg.long) { e.preventDefault(); return; }
+        // A tap. Double-tap on empty canvas makes a note; any other tap is
+        // left to the browser, which sends the click that selects or opens.
+        const now = Date.now();
+        if (!gg.nodeEl && gg.target === viewport && now - lastTap.t < DTAP &&
+          Math.hypot(gg.x0 - lastTap.x, gg.y0 - lastTap.y) < 30) {
+          e.preventDefault();
+          lastTap.t = 0;
+          const r = viewport.getBoundingClientRect();
+          createNode((gg.x0 - r.left - db.panX) / db.zoom, (gg.y0 - r.top - db.panY) / db.zoom);
+          return;
+        }
+        lastTap = { t: now, x: gg.x0, y: gg.y0 };
+      }
+      viewport.addEventListener('touchend', endTouch, { passive: false });
+      viewport.addEventListener('touchcancel', endTouch, { passive: false });
+
+      // One short hint per session on touch screens.
+      if (IS_TOUCH) {
+        try {
+          if (!sessionStorage.getItem('canvas-touch-hint')) {
+            sessionStorage.setItem('canvas-touch-hint', '1');
+            if (window.showToast) setTimeout(() => showToast('Drag to pan · pinch to zoom · hold for the menu'), 800);
+          }
+        } catch {}
+      }
+    })();
 
     // ── Keyboard ─────────────────────────────────────────────
 
@@ -2926,6 +3079,7 @@
       menu.style.left = r.left + 'px';
       menu.style.top = (r.bottom + 6) + 'px';
       menu.style.display = 'flex';
+      clampIntoView(menu);
     }
     function closeBoardMenu() {
       const menu = document.getElementById('board-menu');
@@ -3413,6 +3567,7 @@
       const r = document.getElementById('jump-btn').getBoundingClientRect();
       menu.style.left = r.left + 'px';
       menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      clampIntoView(menu);
       document.getElementById('jump-btn').classList.add('active');
     }
 
@@ -4074,6 +4229,7 @@
       const r = document.getElementById('tag-btn').getBoundingClientRect();
       menu.style.left = r.left + 'px';
       menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      clampIntoView(menu);
     }
 
     function closeTagMenu() {
@@ -5309,6 +5465,7 @@
       menu.style.left = r.left + 'px';
       menu.style.top = (r.bottom + 6) + 'px';
       menu.style.display = 'flex';
+      clampIntoView(menu);
     }
     function closeNewBoardMenu() {
       const menu = document.getElementById('new-board-menu');
@@ -5524,6 +5681,7 @@
       const r = document.getElementById('layout-btn').getBoundingClientRect();
       menu.style.left = r.left + 'px';
       menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      clampIntoView(menu);
       document.getElementById('layout-btn').classList.add('active');
     }
 

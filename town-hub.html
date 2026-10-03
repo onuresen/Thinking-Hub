@@ -116,6 +116,11 @@
       border: 1px dashed var(--border); border-radius: var(--r-md); max-width: 520px; margin: 0 auto;
     }
     .empty-state a { color: var(--accent); }
+    @media (max-width: 700px) {
+      .topbar { flex-wrap: wrap; gap: 6px 12px; padding: 10px 12px; }
+      .topbar-sub { display: none; }
+      .mayor-hud { margin-left: 0; gap: 4px 10px; font-size: 11px; }
+    }
   </style>
 </head>
 <body>

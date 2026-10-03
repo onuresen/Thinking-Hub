@@ -514,7 +514,65 @@ function appFiles(ext) {
   // "Today" must be the local calendar day. toISOString() is UTC, so in Tokyo
   // before 09:00 it gave yesterday's date (P126). Pin the clock to 07:30 JST.
   {
-    const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
+    // Canvas on a phone (P147): fits the screen, bottom bar scrolls, one finger pans,
+  // two fingers zoom, a tap selects, hold opens the menu, double-tap makes a note.
+  {
+    const mctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const mp = await mctx.newPage();
+    await mp.goto(`${BASE}/tags-hub.html`, { waitUntil: 'load' });
+    await mp.evaluate(() => localStorage.setItem('canvas-v1', JSON.stringify({
+      activeBoardId: 'b1',
+      boards: [{ id: 'b1', name: 'M', panX: 0, panY: 0, zoom: 1, edges: [],
+        nodes: [{ id: 'a', x: 40, y: 200, text: 'A', color: '' }, { id: 'b', x: 200, y: 400, text: '', color: '', kind: 'project', link: { tool: 'project-hub', id: 'x', label: 'B' } }] }],
+    })));
+    await mp.goto(`${BASE}/canvas-hub.html`, { waitUntil: 'load' });
+    await mp.waitForTimeout(500);
+    const cdp = await mctx.newCDPSession(mp);
+    const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+    const swipe = async (x1, y1, x2, y2) => { await T('touchStart', [{ x: x1, y: y1 }]); for (let i = 1; i <= 6; i++) await T('touchMove', [{ x: x1 + (x2 - x1) * i / 6, y: y1 + (y2 - y1) * i / 6 }]); await T('touchEnd', []); await mp.waitForTimeout(150); };
+    const lay = await mp.evaluate(() => { const c = document.querySelector('.controls'); return { sw: document.documentElement.scrollWidth, cr: c.getBoundingClientRect().right, scrolls: c.scrollWidth > c.clientWidth }; });
+    const p0 = await mp.evaluate(() => ({ x: db.panX, y: db.panY, z: db.zoom }));
+    await swipe(300, 700, 220, 640);
+    const p1 = await mp.evaluate(() => ({ x: db.panX, y: db.panY, z: db.zoom }));
+    await T('touchStart', [{ x: 150, y: 500, id: 1 }, { x: 250, y: 500, id: 2 }]);
+    for (let i = 1; i <= 6; i++) await T('touchMove', [{ x: 150 - i * 12, y: 500, id: 1 }, { x: 250 + i * 12, y: 500, id: 2 }]);
+    await T('touchEnd', []); await mp.waitForTimeout(150);
+    const p2 = await mp.evaluate(() => db.zoom);
+    await mp.evaluate(() => { db.zoom = 1; db.panX = 0; db.panY = 0; updateTransform(); });
+    await mp.waitForTimeout(150);
+    const r = await mp.evaluate(() => { const rr = document.querySelector('.node[data-id="b"]').getBoundingClientRect(); return { x: rr.x + rr.width / 2, y: rr.y + rr.height / 2 }; });
+    await T('touchStart', [{ x: r.x, y: r.y }]); await mp.waitForTimeout(40); await T('touchEnd', []); await mp.waitForTimeout(250);
+    const sel = await mp.evaluate(() => [...selectedIds].join(','));
+    await T('touchStart', [{ x: 20, y: 700 }]); await mp.waitForTimeout(800); await T('touchEnd', []); await mp.waitForTimeout(250);
+    const menu = await mp.evaluate(() => document.getElementById('add-menu').style.display);
+    check('canvas works on a phone: fits, bar scrolls, one-finger pan, pinch zoom, tap select, hold menu',
+      lay.sw <= 390 && lay.cr <= 390 && lay.scrolls && Math.abs(p1.x - (p0.x - 80)) < 3 && Math.abs(p1.y - (p0.y - 60)) < 3 &&
+      p2 > p1.z * 1.3 && sel === 'b' && menu === 'flex', JSON.stringify({ lay, p0, p1, p2, sel, menu }));
+    await mctx.close();
+  }
+  {
+    const tctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const tp = await tctx.newPage();
+    await tp.addInitScript(() => { localStorage.setItem('project-hub-v1', JSON.stringify({ members: [], concepts: [], projects: [{ id: 'p1', name: 'A', status: 'active', tasks: [{ id: 't1', title: 'Task one', status: 'open', priority: 'med' }], milestones: [], goals: [], members: [] }] })); });
+    await tp.goto(`${BASE}/project-hub.html`); await tp.waitForTimeout(700);
+    await tp.locator('.project-card').first().click().catch(() => {}); await tp.waitForTimeout(500);
+    const t = await tp.evaluate(() => { const a = document.querySelector('.task-item-actions'); const b = document.querySelector('.task-action-btn'); return { disp: a && getComputedStyle(a).display, h: b && b.getBoundingClientRect().height }; });
+    check('touch screens show hover-only task buttons and use 40px targets', t.disp === 'flex' && t.h >= 36, JSON.stringify(t));
+    await tctx.close();
+  }
+  {
+    const wctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const wp = await wctx.newPage();
+    const res = {};
+    for (const pg of ['graph-hub', 'town-hub', 'decision-hub', 'goals-hub', 'risk-hub']) {
+      await wp.goto(`${BASE}/${pg}.html`, { waitUntil: 'load' }); await wp.waitForTimeout(500);
+      res[pg] = await wp.evaluate(() => document.documentElement.scrollWidth);
+    }
+    check('phone width: Graph, Machi, Decision, Goals, Risk fit 390px', Object.values(res).every(w => w <= 391), JSON.stringify(res));
+    await wctx.close();
+  }
+
+  const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
     const page = await tzCtx.newPage();
     await page.clock.setFixedTime(new Date('2026-09-29T22:30:00Z')); // 07:30 JST on 09-30
     await page.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });

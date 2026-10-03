@@ -7,11 +7,16 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.
+
+- Touch screens: buttons that only showed on hover (task actions, drag handles, edit/delete icons) are always visible, and buttons, chips and tabs are at least 40px.
+
 - Project Hub Concept Matrix: concept columns are wider with names written flat (no tilt, no cut-off), the project column is fixed, and ∑ stays visible while scrolling.
 - "Spatial Canvas" is now "Canvas Hub" everywhere (sidebar, Help, Machi, README). The tool id and saved data are unchanged.
 
 ### Added
 
+- Canvas Hub on phones: one finger pans, two fingers pinch-zoom, tap selects, double-tap on empty canvas makes a note, hold opens the right-click menu, and a selected card can be dragged. The bottom bar scrolls sideways instead of running off the screen, menus stay on screen, and buttons are bigger on touch screens. Desktop is unchanged.
 - Canvas Hub tags: **🏷 Tags** highlights cards by tag. Matches glow, the rest soften, and nothing is hidden. Lines stay as they are, and lines between two matches get thicker. Pick several tags to highlight any of them. Works on project, decision and meeting cards; task and goal cards use their project's tags. **Layout → By tag** (or Group by tag in the Tags menu) makes one block per shared tag, each in a labelled frame. One undo step.
 - Project tags now work as chips with suggestions. Type to see existing tags (most used first), press Enter to pick one or create a new one. "Shop-drawing" suggests the existing "Shop drawing". Typing a comma also adds the tag.
 - Tool Portfolio: upload your own icon for a tool (stored locally, resized to 64px). Sites on github.io, gitlab.io, pages.dev, netlify.app and vercel.app now show the tool's emoji instead of Google's generic globe.

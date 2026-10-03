@@ -2839,6 +2839,56 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 149 — Phones: no cut-off buttons, Graph and Machi fit~~ ✓ Done `[group: mobile]`
+Group 3 of the phone review. Per-tool media queries at 640–700px.
+
+- Graph Hub: header wraps, bottom button bar scrolls sideways, dialog has no fixed min-height. Page was 433px, now 390.
+- Machi Hub: topbar wraps, subtitle hidden, stats row smaller. Page was 426px, now 390.
+- Decision, Goals, Risk Hub: topbar wraps. Archive/Delete and the filter/add buttons were off-screen.
+- Project Hub: the project panel was 420px wide on a 390px screen. It is now full width and its header wraps.
+- `sw.js` cache `v28`. New smoke check.
+
+**Decision:** Wrap toolbars, scroll only the Graph button bar. **Why:** the Graph bar has ~10 equal buttons, like Canvas (P147); the others have few. **Not done:** HTML5 drag-and-drop on touch (kanban, Groupings, org drag) — untested, may not work. **Confidence:** med.
+
+**Verified** at 390px with the real reconciled data: every page measured for buttons beyond the right edge; only closed off-screen drawers remain.
+
+**Files:** `graph-hub.html`, `town-hub.html`, `decision-hub.html`, `goals-hub.html`, `risk-hub.html`, `styles/project-hub.css`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 148 — Touch screens: hover-only buttons + 40px targets~~ ✓ Done `[group: mobile]`
+Group 2 of the phone review. One shared block at the end of `theme.css`, selectors prefixed with `html` so tool CSS can't undo it.
+
+- `(hover: none)`: 14 hover-reveal controls get `opacity:1`; Project Hub `.task-item-actions` shows (`display:flex`).
+- `(pointer: coarse)`: `.btn`, tag chips, schedule view buttons, Portfolio tabs, task action buttons, menu button, Journal tabs, topbar controls are 40px min.
+- `sw.js` cache `v27`. New smoke check.
+
+**Decision:** Shared rules in `theme.css`, not per-tool edits. **Why:** 15 tools had the same pattern; one block is easy to extend. **Not done:** cut-off right-edge buttons, Graph/Machi width (Group 3). **Confidence:** med.
+
+**Files:** `theme.css`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 147 — Canvas Hub on phones: touch gestures + toolbar~~ ✓ Done `[group: mobile]`
+A phone review (390×844, real touch events, real data) found Canvas Hub unusable: no pan, zoom, tap or menu on touch, and the bottom bar was 635px wide, so the page grew to 655px and Layout/Tags/Jump/Export were out of reach.
+
+- **Gestures** (`touchLayer()` in `canvas-hub.html`): one finger on empty canvas = pan. Two fingers = pinch zoom + pan. Tap = select/open (the browser's own click does it). Double-tap on empty canvas = new note. Hold 550ms = the right-click menu (card or empty). Drag a *selected* card = move it. In Connect mode a drag pans.
+- Card drag reuses the mouse code by sending it mouse events, so undo, snap and group drag work the same.
+- `touch-action: none` on the viewport; `maximum-scale=1` so the page itself doesn't zoom.
+- **Bottom bar** at ≤700px: scrolls sideways, buttons never wrap, 40px high. Help line hidden. On touch screens the board bar, card action buttons and menu rows are bigger. A one-line hint shows once per session.
+- `clampIntoView()` keeps every button-anchored menu on screen.
+
+**Decision:** Only a drag that starts on an already-selected card moves it. **Why:** one finger has to pan most of the time; moving a card by accident on every touch would be worse. **Alternative:** drag any card. Rejected. **Confidence:** med.
+**Decision:** Reuse the mouse handlers by dispatching mouse events for card drag, not a second drag implementation. **Why:** undo, snap, group move and edge redraw already live there. **Confidence:** high.
+**Not built:** box-select, multi-select and layer/frame dragging on touch. Layout menu actions that need a selection still work from the menu.
+**Test note:** Chrome snaps a tap to the nearest card within about 24px, so a tap near a card selects it. That is normal phone behaviour.
+
+**Verified** on your real Dependency Map at 390px with real touch events: 14 checks (fits width, bar scrolls, pan, pinch in/out, tap selects, selected card drags and undoes, tap empty clears, double-tap note, hold menus on empty and card, Tags menu on screen). New smoke check. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `sw.js` (v26), `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 146 — Canvas Hub: tag highlight + group by tag~~ ✓ Done `[group: canvas-structure]`
 Onur tags projects with concepts (door, joinery, maker…) to find common topics, gaps and direction. Canvas could not show tags.
 

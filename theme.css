@@ -634,3 +634,48 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Touch screens: no hover, so controls that only appear on hover are always shown (P148). */
+@media (hover: none) {
+  html .ic-card .ic-actions,
+  html .tj-log-row .tj-log-del,
+  html .rh-rock-slot .rh-rock-remove,
+  html .rock-slot .rock-remove,
+  html .list-item .lh-drag-handle,
+  html .matrix-card .mc-edit-btn,
+  html .retro-card .card-delete,
+  html .tool-item .drag-handle,
+  html .sticky .sticky-handle,
+  html .cm-label-cell .cm-concept-edit,
+  html .user-pill .drag-handle,
+  html .goal-item .ph-drag-handle,
+  html .task-item .ph-drag-handle,
+  html .mx-card .mx-edit-btn,
+  html .iceberg-card .expand-row { opacity: 1; }
+  html .task-item .task-item-actions { display: flex; flex-wrap: wrap; }
+}
+
+/* Phones and tablets with touch: bigger tap targets (P148). */
+@media (pointer: coarse) {
+  html .btn,
+  html .tg-chip,
+  html .sch-view-btn,
+  html .tp-tab,
+  html .task-action-btn,
+  html #mob-menu-btn,
+  html .sidebar-team-add,
+  html .tf-chip,
+  html .jh-tab {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  html .btn,
+  html .tg-chip,
+  html .sch-view-btn,
+  html .tp-tab,
+  html .jh-tab { padding-left: 12px; padding-right: 12px; }
+  html .topbar select,
+  html .topbar .btn,
+  html .topbar button { min-height: 40px; }
+  html .task-action-btn { width: 36px; height: 36px; }
+}
