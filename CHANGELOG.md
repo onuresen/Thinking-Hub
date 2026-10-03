@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Touch screens: buttons that only showed on hover (task actions, drag handles, edit/delete icons) are always visible, and buttons, chips and tabs are at least 40px.
+
 - Project Hub Concept Matrix: concept columns are wider with names written flat (no tilt, no cut-off), the project column is fixed, and ∑ stays visible while scrolling.
 - "Spatial Canvas" is now "Canvas Hub" everywhere (sidebar, Help, Machi, README). The tool id and saved data are unchanged.
 

@@ -2839,6 +2839,19 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 148 — Touch screens: hover-only buttons + 40px targets~~ ✓ Done `[group: mobile]`
+Group 2 of the phone review. One shared block at the end of `theme.css`, selectors prefixed with `html` so tool CSS can't undo it.
+
+- `(hover: none)`: 14 hover-reveal controls get `opacity:1`; Project Hub `.task-item-actions` shows (`display:flex`).
+- `(pointer: coarse)`: `.btn`, tag chips, schedule view buttons, Portfolio tabs, task action buttons, menu button, Journal tabs, topbar controls are 40px min.
+- `sw.js` cache `v27`. New smoke check.
+
+**Decision:** Shared rules in `theme.css`, not per-tool edits. **Why:** 15 tools had the same pattern; one block is easy to extend. **Not done:** cut-off right-edge buttons, Graph/Machi width (Group 3). **Confidence:** med.
+
+**Files:** `theme.css`, `sw.js`, `tests/smoke.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 147 — Canvas Hub on phones: touch gestures + toolbar~~ ✓ Done `[group: mobile]`
 A phone review (390×844, real touch events, real data) found Canvas Hub unusable: no pan, zoom, tap or menu on touch, and the bottom bar was 635px wide, so the page grew to 655px and Layout/Tags/Jump/Export were out of reach.
 

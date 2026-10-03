@@ -550,6 +550,16 @@ function appFiles(ext) {
       p2 > p1.z * 1.3 && sel === 'b' && menu === 'flex', JSON.stringify({ lay, p0, p1, p2, sel, menu }));
     await mctx.close();
   }
+  {
+    const tctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const tp = await tctx.newPage();
+    await tp.addInitScript(() => { localStorage.setItem('project-hub-v1', JSON.stringify({ members: [], concepts: [], projects: [{ id: 'p1', name: 'A', status: 'active', tasks: [{ id: 't1', title: 'Task one', status: 'open', priority: 'med' }], milestones: [], goals: [], members: [] }] })); });
+    await tp.goto(`${BASE}/project-hub.html`); await tp.waitForTimeout(700);
+    await tp.locator('.project-card').first().click().catch(() => {}); await tp.waitForTimeout(500);
+    const t = await tp.evaluate(() => { const a = document.querySelector('.task-item-actions'); const b = document.querySelector('.task-action-btn'); return { disp: a && getComputedStyle(a).display, h: b && b.getBoundingClientRect().height }; });
+    check('touch screens show hover-only task buttons and use 40px targets', t.disp === 'flex' && t.h >= 36, JSON.stringify(t));
+    await tctx.close();
+  }
 
   const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
     const page = await tzCtx.newPage();
