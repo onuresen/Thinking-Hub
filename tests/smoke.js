@@ -329,6 +329,30 @@ function appFiles(ext) {
     check('canvas layers pin their headers, let clicks through, undo and import',
       g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
 
+    // Pasted table → one column layer per header, rows aligned; hover lights a card's lines (P150)
+    const gTbl = await page.evaluate(() => {
+      const prevId = fullState.activeBoardId;
+      const b = newBoard('Table'); fullState.boards.push(b); switchBoard(b.id);
+      const r = parseOutlineText('| A | B |\n|---|---|\n| one | two |\n| three | |');
+      const tsv = parseOutlineText('X\tY\n1\t2');
+      _outlineAt = { x: 0, y: 0 };
+      createFromTable(r);
+      const cols = db.lanes.map(l => l.label).join(',');
+      const one = db.nodes.find(n => n.text === 'one'), two = db.nodes.find(n => n.text === 'two'), three = db.nodes.find(n => n.text === 'three');
+      const aligned = one.y === two.y && three.y > one.y && two.x > one.x;
+      db.edges = [{ id: 'e1', from: one.id, to: two.id, relType: 'relates' }];
+      renderAll(); setHover(one.id);
+      const svg = document.getElementById('edges-svg');
+      const hl = svg.classList.contains('hovering') && svg.querySelectorAll('g.hover-hl').length === 1
+        && !!document.querySelector(`.node[data-id="${two.id}"].hover-peer`);
+      setHover(three.id); const quiet = !svg.classList.contains('hovering');
+      setHover(null);
+      switchBoard(prevId); fullState.boards = fullState.boards.filter(x => x !== b);
+      return { kind: r.kind, cards: r.nodes.length, tsv: tsv.kind, cols, aligned, hl, quiet };
+    });
+    check('canvas table paste makes columns and aligned rows; hover lights only a card\'s own lines',
+      gTbl.kind === 'Table' && gTbl.cards === 3 && gTbl.tsv === 'Table' && gTbl.cols === 'A,B' && gTbl.aligned && gTbl.hl && gTbl.quiet, JSON.stringify(gTbl));
+
     // Tag highlight marks cards without hiding anything; By tag groups them (P146)
     const gTag = await page.evaluate(() => {
       HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
