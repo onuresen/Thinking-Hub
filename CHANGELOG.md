@@ -16,6 +16,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Canvas Hub color key: board menu (⋯) → **Color key…** names what each color means on that board. A small key shows the named colors and the line types the board uses. Click a color to light up its cards. The card color menu lists colors by name. The key goes into PNG, slides, interactive HTML, Markdown, board files, duplicates and templates. The Capability Map template comes with one.
 - Canvas Hub: paste a table (Markdown, or cells copied from Excel). Each header becomes a column layer and each cell a card, with rows lined up. One undo step. Right-click → Paste outline / table…, or Ctrl+V on the canvas.
 - Canvas Hub: hover a card to light up its own lines. Other lines fade and the cards at the other end get an outline. Mouse only; nothing changes on touch or in exports.
 - Canvas Hub on phones: one finger pans, two fingers pinch-zoom, tap selects, double-tap on empty canvas makes a note, hold opens the right-click menu, and a selected card can be dragged. The bottom bar scrolls sideways instead of running off the screen, menus stay on screen, and buttons are bigger on touch screens. Desktop is unchanged.

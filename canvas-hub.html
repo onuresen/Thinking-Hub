@@ -313,6 +313,33 @@
       stroke-width: 3.5px;
     }
 
+    /* Color key (P151): what each color means on this board. */
+    .color-key {
+      position: absolute; left: 20px; bottom: 68px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); padding: 6px 8px; min-width: 150px; max-width: 240px;
+      font-size: 12px; color: var(--text2); display: none;
+    }
+    .color-key.has-key { display: block; }
+    .ck-head { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); }
+    .ck-head span { flex: 1; }
+    .ck-head button { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: var(--r-sm); }
+    .ck-head button:hover { color: var(--text); background: var(--surface2); }
+    .ck-body { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
+    .color-key.collapsed .ck-body { display: none; }
+    .ck-row { display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: var(--r-sm); background: none; border: none; color: inherit; font: inherit; text-align: left; }
+    button.ck-row { cursor: pointer; }
+    button.ck-row:hover { background: var(--surface2); color: var(--text); }
+    button.ck-row.on { background: var(--accent-dim); color: var(--text); }
+    .ck-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .ck-line { width: 22px; height: 8px; flex: none; }
+    .ck-sep { height: 1px; background: var(--border); margin: 3px 0; }
+    .ck-form { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+    .ck-form label { display: flex; align-items: center; gap: 10px; }
+    .ck-form input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 9px; color: var(--text); font: inherit; font-size: 13px; }
+    .qm-keyrow { display: flex; align-items: center; gap: 8px; }
+    body.presenting .color-key { display: none !important; }
+
     /* Hover a card: its lines stand out, the others fade (mouse only). */
     #edges-svg.hovering g[data-from] { opacity: 0.18; }
     #edges-svg.hovering g.hover-hl { opacity: 1; }
@@ -1262,6 +1289,7 @@
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); pullGraphLinks()"><span>⛓</span><span>Pull lines from Dependency Graph</span></button>
     <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); openColorKeyModal()"><span>●</span><span>Color key…</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); saveBoardAsTemplate()"><span>▦</span><span>Save board as template…</span></button>
     <button class="qm-item" id="bm-rebuild" onmousedown="event.stopPropagation(); closeBoardMenu(); buildSystemMap()"><span>↻</span><span>Rebuild system map</span></button>
     <div class="qm-sep"></div>
@@ -1410,6 +1438,20 @@
       <div class="om-actions">
         <button class="om-btn" onclick="closeNotesModal()">Cancel</button>
         <button class="om-btn primary" onclick="saveNotesModal()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- P151: color key — what each color means on this board -->
+  <div class="color-key" id="color-key"></div>
+  <div class="ui-modal-overlay" id="ck-modal" onclick="closeColorKeyModal()">
+    <div class="ui-modal outline-modal" role="dialog" aria-modal="true" aria-labelledby="ck-title" onclick="event.stopPropagation()">
+      <div class="om-title" id="ck-title">Color key</div>
+      <div class="om-hint">Say what each color means on this board. Leave a color blank to hide it from the key.</div>
+      <div class="ck-form" id="ck-form"></div>
+      <div class="om-actions">
+        <button class="om-btn" onclick="closeColorKeyModal()">Cancel</button>
+        <button class="om-btn primary" onclick="saveColorKeyModal()">Save</button>
       </div>
     </div>
   </div>
@@ -1774,7 +1816,7 @@
       db = b;
       if (!db.edges) db.edges = [];
       selectedNodeId = null; selectedIds = new Set();
-      connectMode = false; connectSource = null; hideConnectPreview(); focusId = null; activeLaneId = null;
+      connectMode = false; connectSource = null; hideConnectPreview(); focusId = null; activeLaneId = null; keyHi = null;
       document.getElementById('connect-btn')?.classList.remove('active');
       viewport.classList.remove('connect-mode');
       fullState.activeBoardId = id;
@@ -2894,10 +2936,19 @@
       const colorRow = (ids, current) => {
         const row = document.createElement('div');
         row.className = 'qm-colors';
+        // Named colors first, by meaning; the dot row stays for the rest.
+        COLORS.filter(c => keyName(c.id)).forEach(c => {
+          const btn = document.createElement('button');
+          btn.className = 'qm-item qm-keyrow' + (current === c.id ? ' active' : '');
+          btn.innerHTML = `<span class="ck-dot" style="background:${c.dot}"></span><span></span>`;
+          btn.lastChild.textContent = keyName(c.id);
+          btn.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); setColorMany(ids, c.id); };
+          menu.appendChild(btn);
+        });
         COLORS.forEach(c => {
           const dot = document.createElement('button');
           dot.style.background = c.dot;
-          dot.title = c.id.replace('c-', '');
+          dot.title = colorTitle(c);
           if (current === c.id) dot.classList.add('active');
           dot.onmousedown = e => { e.stopPropagation(); closeNodeMenu(); setColorMany(ids, c.id); };
           row.appendChild(dot);
@@ -3150,7 +3201,7 @@
 
     function duplicateBoard() {
       const { nodes, edges } = cloneWithNewIds(db.nodes, db.edges);
-      addBoard(db.name + ' (copy)', nodes, edges, { panX: db.panX, panY: db.panY, zoom: db.zoom, lanes: cleanLanes(db.lanes), views: cleanViews(db.views) });
+      addBoard(db.name + ' (copy)', nodes, edges, { panX: db.panX, panY: db.panY, zoom: db.zoom, lanes: cleanLanes(db.lanes), views: cleanViews(db.views), colorKey: colorKey() });
       if (window.showToast) showToast('Board duplicated');
     }
 
@@ -3171,7 +3222,7 @@
       const payload = {
         format: BOARD_FILE_FORMAT, version: 1,
         exportedAt: new Date().toISOString(),
-        board: { name: db.name, nodes: db.nodes, edges: db.edges || [], lanes: db.lanes || [], views: db.views || [], panX: db.panX, panY: db.panY, zoom: db.zoom }
+        board: { name: db.name, nodes: db.nodes, edges: db.edges || [], lanes: db.lanes || [], views: db.views || [], colorKey: colorKey(), panX: db.panX, panY: db.panY, zoom: db.zoom }
       };
       downloadText(`canvas-${fileSlug(db.name)}-${HubUtils.todayLocal()}.json`, JSON.stringify(payload, null, 2), 'application/json');
     }
@@ -3194,6 +3245,12 @@
       const lines = [`# ${db.name}`, '', `Exported from Thinking Hub Canvas · ${HubUtils.todayLocal()}`, ''];
       const cols = (db.lanes || []).filter(l => l.axis === 'col').sort((a, b) => a.start - b.start);
       const rows = (db.lanes || []).filter(l => l.axis === 'row').sort((a, b) => a.start - b.start);
+      const key = colorKey();
+      if (Object.keys(key).length) {
+        lines.push('## Color key', '');
+        COLORS.filter(c => key[c.id]).forEach(c => lines.push(`- **${c.id.replace('c-', '')}:** ${key[c.id]}`));
+        lines.push('');
+      }
       if (cols.length || rows.length) {
         lines.push('## Layers', '');
         if (cols.length) lines.push('- **Columns:** ' + cols.map(l => l.label).join(' · '));
@@ -3443,7 +3500,7 @@
         return out;
       });
       const fresh = cloneWithNewIds(nodes, edges);
-      const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)), lanes: cleanLanes(b.lanes), views: cleanViews(b.views) };
+      const view = { panX: num(b.panX) || db.panX, panY: num(b.panY) || db.panY, zoom: Math.min(4, Math.max(0.15, num(b.zoom) || 1)), lanes: cleanLanes(b.lanes), views: cleanViews(b.views), colorKey: cleanColorKey(b.colorKey) };
       const board = addBoard(String(b.name || 'Imported board').slice(0, 80), fresh.nodes, fresh.edges, view);
       // Obsidian canvases carry no view, so show the whole thing.
       if (typeof b.zoom !== 'number' && fresh.nodes.length) setTimeout(() => fitToScreen(), 50);
@@ -4138,6 +4195,118 @@
     // cards; it never hides anything, so the connections stay readable.
     let tagHi = new Set(); // lowercase tag names, session only
 
+    // ── Color key (P151) ──────────────────────────────────────
+    // board.colorKey = { 'c-green': 'In place', ... } — named colors only.
+    // Clicking a color highlights its cards, the same way Tags does.
+    let keyHi = null;          // color id, session only
+    let keyCollapsed = false;  // session only
+    const KEY_NAME_MAX = 40;
+
+    function cleanColorKey(obj) {
+      const out = {};
+      if (obj && typeof obj === 'object') COLORS.forEach(c => {
+        const v = typeof obj[c.id] === 'string' ? obj[c.id].trim().slice(0, KEY_NAME_MAX) : '';
+        if (v) out[c.id] = v;
+      });
+      return out;
+    }
+    function colorKey() { return cleanColorKey(db && db.colorKey); }
+    function keyName(colorId) { return colorKey()[colorId] || ''; }
+    function colorTitle(c) { const n = keyName(c.id); return n ? n : c.id.replace('c-', ''); }
+    // Notes, R&D bets and frames carry a free color; live cards don't.
+    function colorApplies(n) { return !isLinkedKind(n.kind) && n.kind !== 'frame'; }
+
+    function keyLineTypes() {
+      const used = new Set((db.edges || []).map(e => e.relType || 'relates'));
+      return EDGE_TYPES.filter(t => used.has(t.id));
+    }
+
+    function renderColorKey() {
+      const box = document.getElementById('color-key');
+      if (!box) return;
+      const key = colorKey();
+      const named = COLORS.filter(c => key[c.id]);
+      if (keyHi && !key[keyHi]) keyHi = null;
+      box.classList.toggle('has-key', named.length > 0);
+      box.classList.toggle('collapsed', keyCollapsed);
+      if (!named.length) { box.innerHTML = ''; return; }
+      box.innerHTML = `<div class="ck-head"><span>Key</span><button title="Edit color key" data-a="edit">✎</button><button title="${keyCollapsed ? 'Show' : 'Hide'}" data-a="fold">${keyCollapsed ? '▸' : '▾'}</button></div><div class="ck-body"></div>`;
+      const body = box.querySelector('.ck-body');
+      named.forEach(c => {
+        const count = db.nodes.filter(n => colorApplies(n) && n.color === c.id).length;
+        const row = document.createElement('button');
+        row.className = 'ck-row' + (keyHi === c.id ? ' on' : '');
+        row.title = `Highlight ${count} card${count === 1 ? '' : 's'}`;
+        row.innerHTML = `<span class="ck-dot" style="background:${c.dot}"></span><span></span>`;
+        row.lastChild.textContent = key[c.id];
+        row.onmousedown = e => { e.preventDefault(); e.stopPropagation(); toggleKeyHi(c.id); };
+        body.appendChild(row);
+      });
+      const lines = keyLineTypes();
+      if (lines.length) {
+        const sep = document.createElement('div'); sep.className = 'ck-sep'; body.appendChild(sep);
+        lines.forEach(t => {
+          const row = document.createElement('div');
+          row.className = 'ck-row';
+          const color = resolveCssVar(t.color);
+          row.innerHTML = `<svg class="ck-line" viewBox="0 0 22 8"><line x1="1" y1="4" x2="${t.directed ? 16 : 21}" y2="4" stroke="${color}" stroke-width="2"${t.dash ? ` stroke-dasharray="${t.dash.replace(' ', ' ')}"` : ''}/>${t.directed ? `<path d="M15 0 L21 4 L15 8 z" fill="${color}"/>` : ''}</svg><span></span>`;
+          row.lastChild.textContent = t.id === 'depends-on' ? 'Needs' : t.id === 'blocks' ? 'Blocks' : 'Relates';
+          body.appendChild(row);
+        });
+      }
+      box.querySelector('[data-a="edit"]').onmousedown = e => { e.preventDefault(); e.stopPropagation(); openColorKeyModal(); };
+      box.querySelector('[data-a="fold"]').onmousedown = e => { e.preventDefault(); e.stopPropagation(); keyCollapsed = !keyCollapsed; renderColorKey(); };
+    }
+
+    function toggleKeyHi(colorId) {
+      keyHi = keyHi === colorId ? null : colorId;
+      if (keyHi) tagHi = new Set();
+      applyFocus();
+      renderColorKey();
+    }
+
+    let _ckUntrap = null;
+    function openColorKeyModal() {
+      const key = colorKey();
+      const form = document.getElementById('ck-form');
+      form.innerHTML = '';
+      COLORS.forEach(c => {
+        const row = document.createElement('label');
+        row.innerHTML = `<span class="ck-dot" style="background:${c.dot}"></span><input type="text" maxlength="${KEY_NAME_MAX}" data-color="${c.id}">`;
+        const input = row.lastChild;
+        input.value = key[c.id] || '';
+        input.placeholder = c.id.replace('c-', '') + ' — e.g. ' + ({ 'c-green': 'In place', 'c-yellow': 'Being tested', 'c-red': 'Gap', 'c-gray': 'Not started', 'c-blue': 'Draft', 'c-purple': 'Idea' }[c.id]);
+        input.onkeydown = e => {
+          if (e.key === 'Enter') { e.preventDefault(); saveColorKeyModal(); }
+          if (e.key === 'Escape') { e.preventDefault(); closeColorKeyModal(); }
+        };
+        form.appendChild(row);
+      });
+      const ov = document.getElementById('ck-modal');
+      ov.classList.add('is-open');
+      if (HubUtils.trapFocus) _ckUntrap = HubUtils.trapFocus(ov.querySelector('.ui-modal'));
+      const first = form.querySelector('input');
+      first.focus();
+      // Opened from a menu mousedown: focus returns to that button, so again next tick.
+      setTimeout(() => first.focus(), 0);
+    }
+    function closeColorKeyModal() {
+      document.getElementById('ck-modal').classList.remove('is-open');
+      if (_ckUntrap) { _ckUntrap(); _ckUntrap = null; }
+      if (document.activeElement) document.activeElement.blur();
+    }
+    function saveColorKeyModal() {
+      const out = {};
+      document.querySelectorAll('#ck-form input').forEach(i => { out[i.dataset.color] = i.value; });
+      const key = cleanColorKey(out);
+      if (Object.keys(key).length) db.colorKey = key; else delete db.colorKey;
+      keyCollapsed = false;
+      closeColorKeyModal();
+      pulseSave();
+      renderColorKey();
+      if (window.showToast) showToast(Object.keys(key).length ? 'Color key saved' : 'Color key removed');
+    }
+
     function tagSplit(v) {
       const arr = Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',') : []);
       return arr.map(t => String(t).trim()).filter(Boolean);
@@ -4194,6 +4363,7 @@
     }
 
     function tagHitIds() {
+      if (keyHi) return new Set(db.nodes.filter(n => colorApplies(n) && n.color === keyHi).map(n => n.id));
       if (!tagHi.size) return null;
       const tagsOf = nodeTagsFn();
       const hit = new Set();
@@ -4223,12 +4393,14 @@
     function tagHelp() {
       const hit = tagHitIds();
       if (!hit) return '';
+      if (keyHi) return `Highlighting "${keyName(keyHi)}" · ${hit.size} card${hit.size === 1 ? '' : 's'} · click it in the key again to stop`;
       const names = boardTagCounts().filter(t => tagHi.has(t.key)).map(t => t.name);
       return `Highlighting ${names.join(', ') || [...tagHi].join(', ')} · ${hit.size} card${hit.size === 1 ? '' : 's'} · Tags ▸ Clear to stop`;
     }
 
     function toggleTagHi(key) {
       if (tagHi.has(key)) tagHi.delete(key); else tagHi.add(key);
+      if (keyHi) { keyHi = null; renderColorKey(); }
       applyFocus();
       renderTagMenu();
     }
@@ -4493,6 +4665,7 @@
       }
       applyFocus();
       applyParked();
+      renderColorKey();
     }
 
     function rebuildActionBar(actions, node) {
@@ -4519,7 +4692,7 @@
         COLORS.forEach(c => {
           const btn = document.createElement('button');
           btn.className = 'na-btn' + (node.color === c.id ? ' active-color' : '');
-          btn.title = c.id.replace('c-', '');
+          btn.title = colorTitle(c);
           btn.innerHTML = `<div class="color-dot" style="background:${c.dot}"></div>`;
           btn.onmousedown = e => { e.stopPropagation(); setColor(node.id, c.id); };
           actions.appendChild(btn);
@@ -5487,7 +5660,8 @@
       { id: 'capability', name: 'Capability Map',
         read: ['Capability Map — what we must be able to do', 'Columns = capability areas. Rename them.', 'Top row: the capability. Bottom row: projects that serve it.', 'A gap = a capability no project serves.'],
         cols: ['Area A', 'Area B', 'Area C', 'Area D'],
-        rows: ['Capabilities', 'Served by projects'] },
+        rows: ['Capabilities', 'Served by projects'],
+        colorKey: { 'c-green': 'In place', 'c-yellow': 'Being tested', 'c-red': 'Gap', 'c-gray': 'Not started' } },
       { id: 'dependency', name: 'Dependency Map',
         read: ['Dependency Map — what needs what', 'Arrow points to what a part needs.', 'Left = outside our control. Right = what we deliver.', 'Use "blocks" and "needs" lines. Send them to the Dependency Graph.'],
         cols: ['Blockers', 'Inputs & sources', 'Building blocks', 'Products', 'Direction'] },
@@ -5611,7 +5785,8 @@
         ({ nodes, edges } = cloneWithNewIds(src.user.nodes || [], src.user.edges || []));
         vws = cleanViews(src.user.views);
       }
-      addBoard(name.trim() || suggested, nodes, edges, { lanes: cleanLanes(lanes.length ? lanes : (src && src.user ? src.user.lanes : [])), views: vws });
+      const ck = cleanColorKey(src ? (src.builtin || src.user).colorKey : null);
+      addBoard(name.trim() || suggested, nodes, edges, { lanes: cleanLanes(lanes.length ? lanes : (src && src.user ? src.user.lanes : [])), views: vws, colorKey: ck });
       if (src && src.user && vws.length) goView(vws[0].slot);
       else if (src) fitAndSaveWholeView();
       if (window.showToast) showToast(src ? `Board created from "${suggested}"` : 'Board created');
@@ -5630,7 +5805,7 @@
       const same = list.findIndex(t => t.name === clean);
       if (same >= 0 && !confirm(`Replace your template "${clean}"?`)) return;
       const tpl = { id: same >= 0 ? list[same].id : 'tpl-' + Date.now().toString(36), name: clean, createdAt: new Date().toISOString(),
-        nodes, edges, lanes: JSON.parse(JSON.stringify(db.lanes || [])), views: JSON.parse(JSON.stringify(db.views || [])) };
+        nodes, edges, lanes: JSON.parse(JSON.stringify(db.lanes || [])), views: JSON.parse(JSON.stringify(db.views || [])), colorKey: colorKey() };
       if (same >= 0) list[same] = tpl; else list.push(tpl);
       pulseSave();
       const left = db.nodes.length - nodes.length;
@@ -6041,7 +6216,11 @@
       const pad = opts.rect ? SLIDE_PAD : EXPORT_PAD;
       // Layer names get their own margin, so they never cover a node.
       const padL = pad + (hasRows ? 200 : 0), padT = pad + (hasCols ? 44 : 0);
-      const W = Math.ceil(b.R - b.L + padL + pad), H = Math.ceil(b.B - b.T + padT + pad);
+      // Color key gets its own bottom margin, so it never covers a node.
+      const key = colorKey();
+      const keyColors = COLORS.filter(c => key[c.id]);
+      const keyH = keyColors.length ? 44 : 0;
+      const W = Math.ceil(b.R - b.L + padL + pad), H = Math.ceil(b.B - b.T + padT + pad + keyH);
       const ox = padL - b.L, oy = padT - b.T;   // canvas point (x,y) → image (x+ox, y+oy)
 
       const cssText = await exportCssText();
@@ -6082,6 +6261,28 @@
       clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
       clone.querySelectorAll('g').forEach(g => { g.style.opacity = ''; });
       wrap.appendChild(clone);
+      if (keyH) {
+        const strip = document.createElement('div');
+        strip.setAttribute('style', `position:absolute;left:${pad}px;bottom:14px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;` +
+          `font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;`);
+        const items = keyColors.map(c => ({ dot: c.dot, text: key[c.id] }));
+        items.forEach(it => {
+          const s = document.createElement('span');
+          s.setAttribute('style', 'display:inline-flex;align-items:center;gap:6px;');
+          s.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${it.dot};display:inline-block"></span><span></span>`;
+          s.lastChild.textContent = it.text;
+          strip.appendChild(s);
+        });
+        keyLineTypes().forEach(t => {
+          const s = document.createElement('span');
+          const color = resolveCssVar(t.color);
+          s.setAttribute('style', 'display:inline-flex;align-items:center;gap:6px;');
+          s.innerHTML = `<span style="display:inline-block;width:20px;border-top:2px ${t.dash ? 'dashed' : 'solid'} ${color}"></span><span></span>`;
+          s.lastChild.textContent = t.id === 'depends-on' ? 'Needs' : t.id === 'blocks' ? 'Blocks' : 'Relates';
+          strip.appendChild(s);
+        });
+        wrap.appendChild(strip);
+      }
       await exportInlineImages(wrap);
       return { wrap, cssText, tokens, W, H, ox, oy };
     }

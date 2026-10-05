@@ -329,6 +329,27 @@ function appFiles(ext) {
     check('canvas layers pin their headers, let clicks through, undo and import',
       g4.pinned && g4.passThrough === 'none' && g4.undone && g4.imported === 1 && g4.bands === 1, JSON.stringify(g4));
 
+    // Color key: named colors show in a panel, click highlights, board file keeps it (P151)
+    const gKey = await page.evaluate(() => {
+      const prevId = fullState.activeBoardId;
+      const b = newBoard('Key'); fullState.boards.push(b); switchBoard(b.id);
+      db.nodes = [{ id: 'k1', x: 0, y: 0, text: 'a', color: 'c-green' }, { id: 'k2', x: 300, y: 0, text: 'b', color: 'c-red' }];
+      db.edges = [{ id: 'ke', from: 'k1', to: 'k2', relType: 'blocks' }];
+      db.colorKey = cleanColorKey({ 'c-green': 'In place', 'c-red': 'Gap', 'c-bad': 'x', 'c-gray': '  ' });
+      renderAll();
+      const box = document.getElementById('color-key');
+      const rows = [...box.querySelectorAll('button.ck-row')].map(r => r.textContent).join('|');
+      const lines = [...box.querySelectorAll('div.ck-row')].map(r => r.textContent).join('|');
+      toggleKeyHi('c-green');
+      const hit = [...document.querySelectorAll('.node.tag-hit')].map(e => e.dataset.id).join(',');
+      toggleKeyHi('c-green');
+      const keys = Object.keys(db.colorKey).join(',');
+      switchBoard(prevId); fullState.boards = fullState.boards.filter(x => x !== b);
+      return { shown: box.classList.contains('has-key') || rows.length > 0, rows, lines, hit, keys };
+    });
+    check('canvas color key lists named colors and used line types; clicking a color lights its cards',
+      gKey.rows === 'In place|Gap' && gKey.lines === 'Blocks' && gKey.hit === 'k1' && gKey.keys === 'c-green,c-red', JSON.stringify(gKey));
+
     // Pasted table → one column layer per header, rows aligned; hover lights a card's lines (P150)
     const gTbl = await page.evaluate(() => {
       const prevId = fullState.activeBoardId;
