@@ -5,3 +5,4 @@
 tests export-ignore
 scripts export-ignore
 CLAUDE.md export-ignore
+docs/HISTORY.md export-ignore

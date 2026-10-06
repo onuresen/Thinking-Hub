@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Removed
 
+- Canvas PNG export no longer falls back to a visible-area capture on browsers that block full export (Safari). Use Chrome or Edge. The bundled html2canvas library is gone.
+- Storage from deleted tools (KMQT Board, Argument Hub, Reflection Board, War Room, Scrum Board, Retro Board) is dropped from this browser after a safety snapshot, left out of backups, and skipped when an old backup is imported. The two retrospective achievements are gone.
 - Project Hub Priority Matrix view. It copied every task in automatically and was not used. Its saved data stays in Full Backup.
 - Settings → Local MCP Sync. Move data with Full Backup instead.
 - Home: the Exec and Analytics tabs. Overview now shows the headline cards (Projects, OKRs, Risks), the tool cards and Pulse. The focus heatmap, tasks-per-week chart and capture breakdown are gone.

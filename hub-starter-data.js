@@ -40,8 +40,6 @@ window.HubStarter = (() => {
     tool1:   'tool-starter1',
     tool2:   'tool-starter2',
     tool3:   'tool-starter3',
-    // Retro
-    retro1:  'retro-starter1',
   };
 
   const NOW = new Date().toISOString();
@@ -352,33 +350,6 @@ window.HubStarter = (() => {
     HubStorage.set('tool-portfolio-v1', tools);
   }
 
-  function seedRetroHub() {
-    const data = {
-      retros: [
-        {
-          id: IDS.retro1,
-          name: 'Website Sprint 1 Retro',
-          createdAt: NOW,
-          items: {
-            well: [
-              { id: 'r-w1', text: 'Kickoff meeting was well-structured — everyone left with clear owners', reactions: {}, createdAt: NOW },
-              { id: 'r-w2', text: 'Sam\'s wireframes sparked great discussion and saved rework later', reactions: {}, createdAt: NOW },
-            ],
-            improve: [
-              { id: 'r-i1', text: 'Content scope wasn\'t defined early enough — Alex got pulled in late', reactions: {}, createdAt: NOW },
-              { id: 'r-i2', text: 'CMS decision took longer than expected — next time set a decision deadline upfront', reactions: {}, createdAt: NOW },
-            ],
-            actions: [
-              { id: 'r-a1', text: 'Define content freeze date at the start of each sprint', reactions: {}, createdAt: NOW },
-            ],
-          },
-        },
-      ],
-      activeId: IDS.retro1,
-    };
-    HubStorage.set('retro-hub-v1', data);
-  }
-
   function seedLogHub() {
     const today = (typeof HubUtils !== 'undefined' && HubUtils.todayLocal) ? HubUtils.todayLocal() : daysFromNow(0);
     const yesterday = daysFromNow(-1);
@@ -486,7 +457,6 @@ window.HubStarter = (() => {
     seedMeetingsHub();
     seedLearningHub();
     seedToolPortfolio();
-    seedRetroHub();
     seedLogHub();
     seedSchedule();
     seedIdeaSwiper();

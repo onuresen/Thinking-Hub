@@ -14,7 +14,6 @@
   <script src="hub-links.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
-  <script src="vendor/html2canvas.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -6130,8 +6129,8 @@
     // Exports the WHOLE board, not the visible screen, at 2× by default.
     // The board is cloned into an SVG <foreignObject>, so the browser's own
     // CSS engine draws it: same fonts, colors, frames, layers and lines as
-    // the canvas. html2canvas (its own re-implementation of CSS) is kept only
-    // as a fallback for browsers that block foreignObject export.
+    // the canvas. Browsers that block foreignObject export (Safari) get an
+    // error toast; html2canvas was removed in P156.
     const EXPORT_PAD = 60;
     const EXPORT_MAX_SIDE = 16000;       // browser canvas limit per side
     const EXPORT_MAX_AREA = 120e6;       // stay well under canvas area limits
@@ -6724,16 +6723,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
         downloadBlob(r.blob, filename);
         if (window.showToast) showToast(`Exported whole board · ${r.width}×${r.height}px`);
       } catch (err) {
-        // Fallback: the old visible-area capture.
-        try {
-          const canvas = await html2canvas(viewport, {
-            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#111',
-            scale: window.devicePixelRatio || 1, logging: false, useCORS: true
-          });
-          const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-          downloadBlob(blob, filename);
-          if (window.showToast) showToast('This browser blocked the full export — saved the visible area instead');
-        } catch { if (window.showToast) showToast('Export failed'); }
+        if (window.showToast) showToast('Export failed — this browser blocks it. Use Chrome or Edge.');
       } finally {
         btn.textContent = 'Export ▾';
         btn.disabled = false;

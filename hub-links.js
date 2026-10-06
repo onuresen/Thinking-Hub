@@ -31,7 +31,6 @@ window.HubLinks = (() => {
     'goals-hub': 'Goals',
     'risk-hub': 'Risk Register',
     'learning-hub': 'Learning Log',
-    'retro-hub': 'Retrospective',
     'stakeholder-hub': 'Stakeholders',
     'tool-portfolio': 'Tool Portfolio',
     'tags-hub': 'Tags',
@@ -203,20 +202,6 @@ window.HubLinks = (() => {
           label: it.title || '(untitled)',
           subtitle: (TI[it.type] || '◈') + ' ' + (it.type || 'learning')
         }));
-      }
-
-      if (toolId === 'retro-hub') {
-        const data = HubStorage.get('retro-hub-v1');
-        if (!data) return [];
-        const items = [];
-        for (const retro of (data.retros || [])) {
-          for (const col of ['well', 'improve', 'actions']) {
-            for (const item of (retro.items?.[col] || [])) {
-              items.push({ id: item.id, label: (item.text || '').slice(0, 60) || '(empty)', subtitle: retro.name || col });
-            }
-          }
-        }
-        return items;
       }
 
       if (toolId === 'stakeholder-hub') {

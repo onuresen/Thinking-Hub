@@ -54,27 +54,6 @@
     },
     {
       "type": "library",
-      "name": "html2canvas",
-      "version": "1.4.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/html2canvas@1.4.1",
-      "scope": "required",
-      "description": "Canvas export. Self-hosted at vendor/html2canvas.min.js.",
-      "externalReferences": [
-        {
-          "type": "website",
-          "url": "https://github.com/niklasvh/html2canvas"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "DM Sans",
       "licenses": [
         {
