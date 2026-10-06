@@ -2839,6 +2839,38 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 153 — Home: 4 tabs → 2 (Today · Overview)~~ ✓ Done `[group: declutter]`
+Lean pass #2. Today, Overview, Exec and Analytics showed overlapping counts.
+
+- **Overview** = Exec's 3 headline cards (Projects · OKRs · Risks) → the tool cards (`buildStatusWidgets`) → Pulse.
+- `buildExecView` → `buildOverviewKpis` (cards only). `buildAnalyticsView` → `buildOverviewPulse` (Pulse only).
+- Dropped: Exec's Attention / Active Projects / Recent Decisions lists, Analytics' focus heatmap, tasks-per-week chart, capture breakdown and top stat row.
+- A saved `dashView` of `exec` / `analytics` opens Overview.
+- 56 unused `.ev-* / .an-* / .hm-*` CSS rules removed from `styles/index.css`.
+
+**Decision:** Keep only views that don't repeat. **Why:** the lists repeated Today (overdue) and the tool cards (projects, decisions); the charts had almost no data (1 time-journal session, 5 capture items). **Revisit when:** Time Journal is used again and a heatmap is wanted. **Confidence:** med.
+
+**Files:** `index.html`, `styles/index.css`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 154 — Canvas: one Export menu, one graph Sync~~ ✓ Done `[group: declutter]`
+Lean pass #3. The board menu (⋯) had 15 items; 5 were exports and a 6th export sat in the bottom bar.
+
+- Bottom bar **Export ▾** (`#export-menu`): PNG, slides, interactive HTML, Markdown, Obsidian Canvas, board file. Closes on Esc / outside click.
+- Board menu: Duplicate, Sync, Color key, Save as template, (Rebuild system map), Paste outline, Import.
+- **Sync lines with Dependency Graph** (`syncBoardWithGraph`) replaces Send + Pull. It pulls first, then sends, so drawn lines are not sent back. `pullGraphLinks()` now returns a count and no longer toasts.
+- The per-line "Send to Dependency Graph" button in the line popover stays.
+- `sw.js` cache `v32`.
+
+**Decision:** One Sync, both directions. **Why:** Send and Pull were always used as a pair. It still only runs on click (P134 rule kept). **Alternative:** keep two items. **Confidence:** med.
+
+**Verified:** 16 browser checks with real mouse timing — 6 downloads, menu on screen, Esc / outside close, sync, second sync adds nothing. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 152 — Delete 7 unreachable standalone pages~~ ✓ Done `[group: declutter]`
 Lean pass #1. These pages had no sidebar entry. Their features already live as tabs elsewhere.
 
