@@ -58,10 +58,6 @@
           <span class="nav-icon">◇</span> Goals
           <span class="nav-badge" id="badge-goals">0</span>
         </div>
-        <div class="nav-item" onclick="setView('matrix')">
-          <span class="nav-icon">⊞</span> Priority Matrix
-          <span class="nav-badge" id="badge-matrix">0</span>
-        </div>
         <div class="nav-item" onclick="setView('concepts')">
           <span class="nav-icon">⊠</span> Concept Matrix
           <span class="nav-badge" id="badge-concepts">0</span>
@@ -762,10 +758,6 @@
       document.getElementById('badge-tasks').textContent = allTasks.filter(t => !t.done).length;
       document.getElementById('badge-milestones').textContent = state.projects.flatMap(p => p.milestones).length;
       document.getElementById('badge-goals').textContent = state.projects.flatMap(p => p.goals).length;
-      try {
-        const mxd = HubStorage.get('matrix-hub-v1') || { items: [] };
-        document.getElementById('badge-matrix').textContent = (mxd.items || []).filter(i => !i.done).length;
-      } catch { document.getElementById('badge-matrix').textContent = '0'; }
       document.getElementById('badge-concepts').textContent = (state.concepts || []).length;
       const groupNames = new Set(state.projects.map(p => (p.group || '').trim()).filter(Boolean));
       document.getElementById('badge-groupings').textContent = groupNames.size;
@@ -791,7 +783,7 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', matrix: 'Priority Matrix', concepts: 'Concept Matrix' };
+      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', concepts: 'Concept Matrix' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
       const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept' };
       document.getElementById('main-action-btn').textContent = btnLabels[view] || '+ Task';
@@ -814,8 +806,6 @@
       } else if (state.currentView === 'goals') {
         if (!state.selectedProject && state.projects.length) state.selectedProject = state.projects[0].id;
         openGoalModal();
-      } else if (state.currentView === 'matrix') {
-        openMxModal(null);
       } else if (state.currentView === 'concepts') {
         openConceptModal(null);
       } else { showAddTask(); }
@@ -834,7 +824,6 @@
       }
       else if (state.currentView === 'milestones') renderAllMilestones(c);
       else if (state.currentView === 'goals') renderAllGoals(c);
-      else if (state.currentView === 'matrix') renderMxView(c);
       else if (state.currentView === 'concepts') renderConceptMatrix(c);
       else if (state.currentView === 'groupings') renderGroupings(c);
     }
@@ -2688,201 +2677,6 @@
       }
     });
 
-    // ─── PRIORITY MATRIX ──────────────────────────────────────────────────────────
-    const MX_KEY = 'matrix-hub-v1';
-    const MX_QUADRANTS = ['quick-win', 'major-project', 'fill-in', 'thankless'];
-    const MX_LABELS = { 'quick-win': 'Quick Win', 'major-project': 'Major Project', 'fill-in': 'Fill-in', 'thankless': 'Thankless Task' };
-    // Eisenhower's Urgent/Important (do-now/schedule/delegate/eliminate) assumed a team to
-    // delegate to and a manager's daily inbox — a poor fit for solo strategic/project work.
-    // Swapped for the Action Priority Matrix (Impact x Effort), a real named framework with
-    // no quadrant that assumes anyone but you. Legacy items are migrated below.
-    const MX_LEGACY_MIGRATION = { 'do-now': 'quick-win', 'schedule': 'major-project', 'delegate': 'fill-in', 'eliminate': 'thankless' };
-    let mxData = { items: [] };
-    let mxEditId = null;
-    let mxDragId = null;
-    let mxShowDone = false;
-
-    function loadMx() {
-      mxData = HubStorage.get(MX_KEY) || { items: [] };
-      if (!mxData.items) mxData.items = [];
-      // One-time, idempotent migration from the old Urgent/Important quadrants — only
-      // writes if a legacy value is actually found.
-      let migrated = false;
-      mxData.items.forEach(it => {
-        if (MX_LEGACY_MIGRATION[it.quadrant]) { it.quadrant = MX_LEGACY_MIGRATION[it.quadrant]; migrated = true; }
-      });
-      if (migrated) HubStorage.set(MX_KEY, mxData);
-    }
-    function saveMx() { HubStorage.set(MX_KEY, mxData); updateBadges(); }
-
-    // Keeps the matrix in sync with real Project Hub tasks — no manual import step.
-    // Items with a taskId mirror their source task's title/done state and get dropped
-    // if the task is deleted; each open task not yet represented gets auto-added into
-    // Fill-in (untriaged) once — the least presumptuous quadrant, since an unreviewed
-    // task's real impact/effort isn't known yet. Manually-added items (no taskId, via
-    // "+ Item") are never touched here.
-    function syncMxWithTasks() {
-      const liveTasks = new Map();
-      state.projects.forEach(p => (p.tasks || []).forEach(t => liveTasks.set(t.id, { ...t, _projectName: p.name, _projectId: p.id })));
-
-      mxData.items = mxData.items.filter(it => !it.taskId || liveTasks.has(it.taskId));
-      mxData.items.forEach(it => {
-        if (!it.taskId) return;
-        const t = liveTasks.get(it.taskId);
-        it.title = t.title;
-        it.done = t.done;
-        it.projectName = t._projectName;
-        it.projectId = t._projectId;
-      });
-
-      const known = new Set(mxData.items.filter(it => it.taskId).map(it => it.taskId));
-      liveTasks.forEach((t, id) => {
-        if (known.has(id) || t.done) return;
-        mxData.items.push({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          taskId: id, title: t.title, notes: '', projectName: t._projectName, projectId: t._projectId,
-          quadrant: 'fill-in', done: false, createdAt: new Date().toISOString(),
-        });
-      });
-
-      saveMx();
-    }
-
-    function renderMxView(container) {
-      loadMx();
-      syncMxWithTasks();
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      container.style.overflow = 'hidden';
-
-      // Toolbar
-      const toolbar = document.createElement('div');
-      toolbar.className = 'mx-toolbar';
-      toolbar.innerHTML = `
-        <label class="mx-show-done">
-          <input type="checkbox" id="mx-show-done-chk" ${mxShowDone ? 'checked' : ''} onchange="mxShowDone=this.checked;renderContent()"> Show done
-        </label>
-      `;
-      container.appendChild(toolbar);
-
-      // Grid wrapper
-      const wrap = document.createElement('div');
-      wrap.className = 'mx-wrap';
-      wrap.innerHTML = `
-        <div class="mx-y-label">Impact →</div>
-        <div class="mx-inner">
-          <div class="mx-x-row">
-            <div class="mx-x-label">Low Effort</div>
-            <div class="mx-x-label">High Effort</div>
-          </div>
-          <div class="mx-grid-row">
-            <div class="mx-quadrant quick-win" id="mxq-quick-win" ondragover="onMxDragOver(event,'quick-win')" ondrop="onMxDrop(event,'quick-win')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title quick-win">Quick Win</div><div class="mx-q-count" id="mxcnt-quick-win"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('quick-win')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-quick-win"></div>
-            </div>
-            <div class="mx-quadrant major-project" id="mxq-major-project" ondragover="onMxDragOver(event,'major-project')" ondrop="onMxDrop(event,'major-project')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title major-project">Major Project</div><div class="mx-q-count" id="mxcnt-major-project"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('major-project')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-major-project"></div>
-            </div>
-          </div>
-          <div class="mx-grid-row">
-            <div class="mx-quadrant fill-in" id="mxq-fill-in" ondragover="onMxDragOver(event,'fill-in')" ondrop="onMxDrop(event,'fill-in')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title fill-in">Fill-in</div><div class="mx-q-count" id="mxcnt-fill-in"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('fill-in')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-fill-in"></div>
-            </div>
-            <div class="mx-quadrant thankless" id="mxq-thankless" ondragover="onMxDragOver(event,'thankless')" ondrop="onMxDrop(event,'thankless')" ondragleave="onMxDragLeave(event)">
-              <div class="mx-q-header"><div class="mx-q-title thankless">Thankless Task</div><div class="mx-q-count" id="mxcnt-thankless"></div><div class="mx-q-spacer"></div><button class="mx-q-add" onclick="openMxModal('thankless')" title="Add">+</button></div>
-              <div class="mx-cards" id="mxcards-thankless"></div>
-            </div>
-          </div>
-        </div>`;
-      container.appendChild(wrap);
-      renderMxCards();
-    }
-
-    function renderMxCards() {
-      MX_QUADRANTS.forEach(q => {
-        const cards = document.getElementById('mxcards-' + q);
-        const cnt = document.getElementById('mxcnt-' + q);
-        if (!cards || !cnt) return;
-        let items = mxData.items.filter(it => it.quadrant === q);
-        if (!mxShowDone) items = items.filter(it => !it.done);
-        const allInQ = mxData.items.filter(it => it.quadrant === q);
-        cnt.textContent = `${allInQ.filter(i => !i.done).length} / ${allInQ.length}`;
-        cards.innerHTML = items.length
-          ? items.map(it => `<div class="mx-card${it.done ? ' done-card' : ''}" id="mxc-${it.id}" draggable="true" ondragstart="onMxDragStart(event,'${it.id}')" ondragend="onMxDragEnd(event)">
-              <div class="mx-check${it.done ? ' done' : ''}" onclick="toggleMxDone('${it.id}')"></div>
-              <div class="mx-card-body">
-                <div class="mx-card-title${it.done ? ' done' : ''}">${HubUtils.esc(it.title)}</div>
-                ${it.notes ? `<div class="mx-card-meta">${HubUtils.esc(it.notes.slice(0, 60))}</div>` : ''}
-                ${it.projectName ? `<div class="mx-card-meta">${HubUtils.esc(it.projectName)}</div>` : ''}
-              </div>
-              <button class="mx-edit-btn" onclick="openMxModal('${it.quadrant}','${it.id}')" title="Edit">✎</button>
-            </div>`).join('')
-          : `<div style="font-size:11px;color:var(--text3);padding:4px 2px;font-style:italic">Drop items here</div>`;
-      });
-    }
-
-    function onMxDragStart(e, id) {
-      mxDragId = id;
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => { const el = document.getElementById('mxc-' + id); if (el) el.classList.add('dragging'); }, 0);
-    }
-    function onMxDragEnd() {
-      if (mxDragId) { const el = document.getElementById('mxc-' + mxDragId); if (el) el.classList.remove('dragging'); }
-      document.querySelectorAll('.mx-quadrant').forEach(q => q.classList.remove('drag-over'));
-    }
-    function onMxDragOver(e, q) {
-      e.preventDefault();
-      document.querySelectorAll('.mx-quadrant').forEach(el => el.classList.remove('drag-over'));
-      document.getElementById('mxq-' + q).classList.add('drag-over');
-    }
-    function onMxDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-    function onMxDrop(e, q) {
-      e.preventDefault();
-      document.querySelectorAll('.mx-quadrant').forEach(el => el.classList.remove('drag-over'));
-      if (!mxDragId) return;
-      const item = mxData.items.find(it => it.id === mxDragId);
-      if (item) { item.quadrant = q; saveMx(); renderMxCards(); }
-      mxDragId = null;
-    }
-
-    function toggleMxDone(id) {
-      const item = mxData.items.find(it => it.id === id);
-      if (!item) return;
-      item.done = !item.done;
-      saveMx(); renderMxCards();
-    }
-
-    function openMxModal(defaultQ, id) {
-      mxEditId = id || null;
-      const item = id ? mxData.items.find(it => it.id === id) : null;
-      document.getElementById('mx-modal-title').textContent = item ? 'Edit Item' : 'New Item';
-      document.getElementById('mx-am-title').value = item ? item.title : '';
-      document.getElementById('mx-am-notes').value = item ? (item.notes || '') : '';
-      document.getElementById('mx-am-quadrant').value = item ? item.quadrant : (defaultQ || 'quick-win');
-      document.getElementById('mx-am-delete').style.display = item ? '' : 'none';
-      document.getElementById('mx-modal-overlay').classList.add('is-open');
-      setTimeout(() => document.getElementById('mx-am-title').focus(), 50);
-    }
-    function closeMxModal() { document.getElementById('mx-modal-overlay').classList.remove('is-open'); mxEditId = null; }
-    function saveMxItem() {
-      const title = document.getElementById('mx-am-title').value.trim();
-      if (!title) { document.getElementById('mx-am-title').focus(); return; }
-      if (mxEditId) {
-        const item = mxData.items.find(it => it.id === mxEditId);
-        if (item) { item.title = title; item.notes = document.getElementById('mx-am-notes').value.trim(); item.quadrant = document.getElementById('mx-am-quadrant').value; }
-      } else {
-        mxData.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title, notes: document.getElementById('mx-am-notes').value.trim(), quadrant: document.getElementById('mx-am-quadrant').value, done: false, createdAt: new Date().toISOString() });
-      }
-      saveMx(); closeMxModal(); renderMxCards();
-    }
-    function deleteMxItem() {
-      if (!mxEditId) return;
-      mxData.items = mxData.items.filter(it => it.id !== mxEditId);
-      saveMx(); closeMxModal(); renderMxCards();
-    }
-
     // ─── CONCEPT MATRIX ──────────────────────────────────────────────────────────
     let cmSort = 'degree';
     let cmFilter = 'all';
@@ -3240,30 +3034,6 @@
     }
   </script>
 
-  <!-- Priority Matrix modals -->
-  <div class="ui-modal-overlay" id="mx-modal-overlay" onclick="if(event.target===this)closeMxModal()" style="z-index:300">
-    <div class="ui-modal" onclick="event.stopPropagation()" style="width:420px">
-      <div class="modal-title" id="mx-modal-title">New Item</div>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
-        <div><div class="label">Title</div><input class="input" id="mx-am-title" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter')saveMxItem()"></div>
-        <div><div class="label">Quadrant</div>
-          <select class="select" id="mx-am-quadrant">
-            <option value="quick-win">Quick Win — High Impact, Low Effort</option>
-            <option value="major-project">Major Project — High Impact, High Effort</option>
-            <option value="fill-in">Fill-in — Low Impact, Low Effort</option>
-            <option value="thankless">Thankless Task — Low Impact, High Effort</option>
-          </select>
-        </div>
-        <div><div class="label">Notes (optional)</div><textarea class="textarea" id="mx-am-notes" rows="2" placeholder="Context, links, details…"></textarea></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn btn-primary" onclick="saveMxItem()">Save</button>
-        <button class="btn btn-ghost" onclick="closeMxModal()">Cancel</button>
-        <div style="flex:1"></div>
-        <button class="btn btn-danger" id="mx-am-delete" onclick="deleteMxItem()" style="display:none">Delete</button>
-      </div>
-    </div>
-  </div>
   <!-- Concept Matrix modal -->
   <div class="ui-modal-overlay" id="cm-modal-overlay" onclick="if(event.target===this)closeConceptModal()" style="z-index:300">
     <div class="ui-modal" onclick="event.stopPropagation()" style="width:400px">

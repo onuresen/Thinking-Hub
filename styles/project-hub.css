@@ -1673,7 +1673,6 @@
       color: var(--text2);
     }
 
-
     .obsidian-badge {
       display: inline-flex;
       align-items: center;
@@ -1704,51 +1703,6 @@
       font-size: 11px; font-family: var(--font-mono);
       border: 1px solid var(--border2); flex-shrink: 0; line-height: 1.4;
     }
-
-    /* ── PRIORITY MATRIX ────────────────────────────────────── */
-    .mx-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .mx-show-done { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 5px; cursor: pointer; }
-    .mx-show-done input { cursor: pointer; accent-color: var(--accent); }
-    .mx-wrap { flex: 1; display: flex; overflow: hidden; padding: 10px 14px; gap: 0; min-height: 0; }
-    .mx-y-label { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; justify-content: center; width: 16px; flex-shrink: 0; user-select: none; }
-    .mx-inner { flex: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; }
-    .mx-x-row { display: flex; gap: 0; }
-    .mx-x-label { flex: 1; text-align: center; font-size: 10px; font-family: var(--font-mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 4px; user-select: none; }
-    .mx-grid-row { flex: 1; display: flex; gap: 8px; min-height: 0; }
-    .mx-grid-row + .mx-grid-row { margin-top: 8px; }
-    .mx-quadrant { flex: 1; border-radius: var(--r); border: 2px solid; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0; transition: opacity 0.15s; }
-    .mx-quadrant.quick-win     { border-color: var(--border-green); background: var(--node-green); }
-    .mx-quadrant.major-project { border-color: var(--border-blue); background: var(--node-blue); }
-    .mx-quadrant.fill-in       { border-color: var(--border-gray); background: var(--node-gray); }
-    .mx-quadrant.thankless     { border-color: var(--border-red); background: var(--node-red); }
-    .mx-quadrant.drag-over { opacity: 0.7; }
-    .mx-q-header { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .mx-q-title { font-family: var(--font-display); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
-    .mx-q-title.quick-win     { color: var(--border-green); }
-    .mx-q-title.major-project { color: var(--border-blue); }
-    .mx-q-title.fill-in       { color: var(--text3); }
-    .mx-q-title.thankless     { color: var(--border-red); }
-    .mx-q-count { font-size: 10px; font-family: var(--font-mono); color: var(--text3); }
-    .mx-q-spacer { flex: 1; }
-    .mx-q-add { background: none; border: none; color: var(--text3); font-size: 16px; cursor: pointer; line-height: 1; padding: 0 2px; transition: color 0.12s; }
-    .mx-q-add:hover { color: var(--text); }
-    .mx-cards { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; }
-    .mx-cards::-webkit-scrollbar { width: 3px; }
-    .mx-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .mx-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; cursor: grab; user-select: none; transition: border-color 0.12s, opacity 0.15s; display: flex; align-items: flex-start; gap: 7px; }
-    .mx-card:hover { border-color: var(--border2); }
-    .mx-card.dragging { opacity: 0.45; cursor: grabbing; }
-    .mx-card.done-card { opacity: 0.45; }
-    .mx-check { width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--border); background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
-    .mx-check.done { border-color: var(--accent); background: var(--accent); }
-    .mx-check.done::after { content: '✓'; font-size: 8px; color: #111; font-weight: 800; }
-    .mx-card-body { flex: 1; min-width: 0; }
-    .mx-card-title { font-size: 12.5px; color: var(--text); line-height: 1.35; font-weight: 500; }
-    .mx-card-title.done { text-decoration: line-through; color: var(--text3); }
-    .mx-card-meta { font-size: 10.5px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mx-edit-btn { background: none; border: none; color: var(--text3); font-size: 12px; cursor: pointer; padding: 1px; opacity: 0; transition: opacity 0.12s; }
-    .mx-card:hover .mx-edit-btn { opacity: 1; }
-    .mx-edit-btn:hover { color: var(--text); }
 
     /* ── VIEW TOGGLE ─────────────────────────────────────────── */
     .view-toggle {

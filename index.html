@@ -120,17 +120,16 @@
         <div class="dash-tabs">
           <button class="dash-tab" id="dash-tab-today" onclick="switchDashView('today')">Today</button>
           <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
-          <button class="dash-tab" id="dash-tab-exec" onclick="switchDashView('exec')">Exec</button>
-          <button class="dash-tab" id="dash-tab-analytics" onclick="switchDashView('analytics')">Analytics</button>
         </div>
 
         <div id="today-view"></div>
-        <div id="exec-view" style="display:none"></div>
-        <div id="analytics-view" style="display:none"></div>
-
-        <div id="status-section" style="display:none">
-          <div class="home-section-label">Overview</div>
-          <div class="status-grid" id="status-grid"></div>
+        <div id="overview-view" style="display:none">
+          <div id="overview-kpis"></div>
+          <div id="status-section" style="display:none">
+            <div class="home-section-label">Tools</div>
+            <div class="status-grid" id="status-grid"></div>
+          </div>
+          <div id="overview-pulse"></div>
         </div>
 
         <!-- Today-only: recent strip, getting started, tools grid -->
@@ -293,31 +292,6 @@
           </div>
           <div id="health-results" style="display:none;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;line-height:1.6"></div>
           <div id="snapshot-list" style="max-height:180px;overflow-y:auto"></div>
-        </div>
-
-        <!-- MCP Sync -->
-        <div id="mcp-sync-panel"
-          style="display:none;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
-          <div class="sfield-group-title">⬡ Local MCP Sync</div>
-          <div class="sfield-hint" style="margin-bottom:8px">Writes a <code
-              style="background:var(--surface3);padding:1px 4px;border-radius:3px">thinking-hub-data.json</code> file so
-            the local MCP server can read your data without cloud.</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-            <button class="btn btn-ghost" onclick="pickMcpFolder()" style="font-size:12px">📁 Pick Sync Folder</button>
-            <button class="btn btn-ghost" id="mcp-sync-now-btn" onclick="syncToMcpFile(true)"
-              style="font-size:12px;display:none">↑ Sync Now</button>
-            <button class="btn btn-ghost" id="mcp-load-btn" onclick="loadFromMcpFile()"
-              style="font-size:12px;display:none">↓ Load from file</button>
-          </div>
-          <div id="mcp-sync-status" class="sfield-hint">No folder selected — pick a folder to enable</div>
-          <div id="mcp-path-hint"
-            style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border)">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Set this in your Claude Desktop config as
-              <code style="background:var(--surface3);padding:1px 3px;border-radius:3px">DATA_FILE</code>:
-            </div>
-            <div id="mcp-path-value"
-              style="font-size:11px;font-family:var(--font-mono);color:var(--text);word-break:break-all"></div>
-          </div>
         </div>
 
         <!-- Export -->
@@ -1044,30 +1018,6 @@
             more: todaySessions.length > 3 ? `+${todaySessions.length - 3} more` : '',
             staleness: relativeAge(latestTimestamp(todaySessions, ['endedAt', 'startedAt']))
           });
-        }
-      } catch { }
-
-      // ── Retro actions (retro-hub-v1) ───────────────────────────────────────
-      try {
-        const retroRaw = JSON.parse(localStorage.getItem('retro-hub-v1') || '{}');
-        const retros = retroRaw.retros || [];
-        if (retros.length) {
-          const retro = retros[retros.length - 1];
-          const actions = (retro.items && retro.items.actions) || [];
-          if (actions.length) {
-            const shown = actions.slice(0, 3);
-            const rows = shown.map(a => `<div class="stat-item" data-tool="retro-hub" data-item-id="${_esc(a.id || '')}">
-              <div class="stat-item-dot" style="background:var(--border-purple)"></div>
-              <div class="stat-item-text">${_esc(a.text || '')}</div>
-            </div>`).join('');
-            widgets.push({
-              id: 'retro-hub', icon: '⟲', title: `Retro — ${_esc(retro.name || 'Latest')}`,
-              count: `${actions.length} action${actions.length !== 1 ? 's' : ''}`,
-              body: rows,
-              more: actions.length > 3 ? `+${actions.length - 3} more` : '',
-              staleness: relativeAge(latestTimestamp(actions))
-            });
-          }
         }
       } catch { }
 
@@ -1879,22 +1829,18 @@
 
     // ── Executive View ────────────────────────────────────────────────────────────
 
-    function buildExecView() {
-      const container = document.getElementById('exec-view');
+    function buildOverviewKpis() {
+      const container = document.getElementById('overview-kpis');
       if (!container) return;
       const todayStr = HubUtils.todayLocal();
 
-      let ph = {}, goals = {}, riskData = {}, mtgData = {}, decisions = [];
+      let ph = {}, goals = {}, riskData = {};
       try { ph        = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
       try { goals     = JSON.parse(localStorage.getItem('goals-hub-v1')    || '{}'); } catch {}
       try { riskData  = JSON.parse(localStorage.getItem('risk-hub-v1')     || '{}'); } catch {}
-      try { mtgData   = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch {}
-      try { const dl  = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
-            decisions = Array.isArray(dl) ? dl : (dl.entries || []); } catch {}
 
       const projects   = ph.projects || [];
       const allRisks   = riskData.risks || [];
-      const allMeetings = mtgData.meetings || [];
 
       // ── Project stats ────────────────────────────────────────────
       const activeProjects = projects.filter(p => p.status !== 'done' && p.status !== 'archived');
@@ -1902,7 +1848,6 @@
       const doneTasks = allTasks.filter(t => t.done);
       const projPct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
       const blockedTasks = allTasks.filter(t => !t.done && t.status === 'blocked');
-      const overdueTasks = allTasks.filter(t => !t.done && t.due && t.due < todayStr);
 
       // ── OKR stats ────────────────────────────────────────────────
       const activeQtrs = (goals.quarters || []).filter(q => !q.archived);
@@ -1934,65 +1879,7 @@
       const medRisks  = openRisks.filter(r => { const s = (parseInt(r.probability)||1)*(parseInt(r.impact)||1); return s >= 6 && s < 15; });
       const riskColor = highRisks.length ? 'var(--accent-nope)' : medRisks.length ? 'var(--accent-super)' : 'var(--accent-like)';
 
-      // ── Attention items ──────────────────────────────────────────
-      const attn = [];
-
-      // Blocked tasks (grouped by project)
-      const blockedByProj = {};
-      blockedTasks.forEach(t => {
-        const k = t._proj.id;
-        if (!blockedByProj[k]) blockedByProj[k] = { name: t._proj.name, tasks: [] };
-        blockedByProj[k].tasks.push(t);
-      });
-      Object.values(blockedByProj).forEach(g => {
-        attn.push({ sev: 'high', text: `${g.tasks.length} blocked task${g.tasks.length>1?'s':''} in ${g.name}`, sub: g.tasks[0].blockedReason || '', tool: 'project-hub' });
-      });
-
-      // Overdue tasks (projects not already reported as blocked)
-      const overdueByProj = {};
-      overdueTasks.forEach(t => {
-        const k = t._proj.id;
-        if (!overdueByProj[k]) overdueByProj[k] = { name: t._proj.name, count: 0, oldest: t.due };
-        overdueByProj[k].count++;
-        if (t.due < overdueByProj[k].oldest) overdueByProj[k].oldest = t.due;
-      });
-      Object.values(overdueByProj).forEach(g => {
-        if (blockedByProj[Object.keys(overdueByProj).find(k => overdueByProj[k] === g)]) return;
-        const days = Math.floor((new Date(todayStr) - new Date(g.oldest)) / 86400000);
-        attn.push({ sev: 'med', text: `${g.count} overdue task${g.count>1?'s':''} in ${g.name}`, sub: `oldest ${days}d ago`, tool: 'project-hub' });
-      });
-
-      // High risks without owners
-      highRisks.filter(r => !r.owner).forEach(r => {
-        attn.push({ sev: 'high', text: `Risk with no owner: "${r.title}"`, sub: `Severity ${(parseInt(r.probability)||1)*(parseInt(r.impact)||1)} — assign an owner`, tool: 'risk-hub' });
-      });
-
-      // Open meeting actions
-      const openActions = allMeetings.flatMap(m => mhActionItemsOf(m).filter(a => !a.done && !a.taskCreated));
-      if (openActions.length) {
-        attn.push({ sev: openActions.length > 7 ? 'med' : 'low', text: `${openActions.length} unresolved meeting action item${openActions.length>1?'s':''}`, sub: '', tool: 'meetings-hub' });
-      }
-
-      // ── Active projects (sorted by open task count desc) ─────────
-      const projRows = activeProjects.map(p => {
-        const tasks = p.tasks || [];
-        const done = tasks.filter(t => t.done).length;
-        const pct = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-        const open = tasks.filter(t => !t.done).length;
-        const overdue = tasks.filter(t => !t.done && t.due && t.due < todayStr).length;
-        const blocked = tasks.filter(t => !t.done && t.status === 'blocked').length;
-        const memberCount = (p.members || []).length;
-        return { id: p.id, name: p.name, color: p.color || 'var(--accent)', pct, open, done, overdue, blocked, memberCount };
-      }).sort((a, b) => b.open - a.open);
-
-      // ── Recent decisions ─────────────────────────────────────────
-      const recentDecs = [...decisions]
-        .sort((a, b) => (b.createdAt||'').localeCompare(a.createdAt||''))
-        .slice(0, 5);
-
       // ── Render ───────────────────────────────────────────────────
-      const fmtDate = d => { if (!d) return ''; const dt = new Date(d); return dt.toLocaleDateString('en', {month:'short',day:'numeric'}); };
-
       const kpiBarColor = p => p >= 70 ? 'var(--accent-like)' : p >= 40 ? 'var(--accent-super)' : 'var(--accent-nope)';
 
       container.innerHTML = `
@@ -2019,156 +1906,24 @@
             <div class="ev-kpi-sub" style="margin-top:2px">${openRisks.length === 0 ? 'All clear' : `${openRisks.length} open`}</div>
           </div>
         </div>
-
-        <div class="ev-section">
-          <div class="ev-section-title">Attention Needed</div>
-          ${attn.length ? `<div class="ev-attn-list">${attn.map(a => `
-            <div class="ev-attn-item" onclick="openApp('${a.tool}')">
-              <div class="ev-attn-dot ${a.sev}"></div>
-              <div>
-                <div>${_esc(a.text)}</div>
-                ${a.sub ? `<div class="ev-attn-reason">${_esc(a.sub)}</div>` : ''}
-              </div>
-            </div>`).join('')}</div>`
-          : `<div class="ev-empty">✓ Nothing urgent right now.</div>`}
-        </div>
-
-        ${projRows.length ? `
-        <div class="ev-section">
-          <div class="ev-section-title">Active Projects</div>
-          <div class="ev-proj-list">${projRows.map(p => `
-            <div class="ev-proj-row" onclick="openApp('project-hub')">
-              <div>
-                <div class="ev-proj-name">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:7px;flex-shrink:0"></span>${_esc(p.name)}
-                  ${p.blocked ? `<span style="font-size:10px;color:var(--accent-nope);font-weight:700;margin-left:6px">● ${p.blocked} blocked</span>` : ''}
-                  ${!p.blocked && p.overdue ? `<span style="font-size:10px;color:var(--accent-super);font-weight:700;margin-left:6px">▲ ${p.overdue} overdue</span>` : ''}
-                </div>
-                <div class="ev-proj-meta" style="margin-top:3px">${p.open} open task${p.open!==1?'s':''} · ${p.memberCount} member${p.memberCount!==1?'s':''}</div>
-              </div>
-              <div class="ev-proj-bar-wrap">
-                <div class="ev-proj-bar"><div class="ev-proj-bar-fill" style="width:${p.pct}%;background:${kpiBarColor(p.pct)}"></div></div>
-                <div class="ev-proj-pct">${p.pct}%</div>
-              </div>
-            </div>`).join('')}</div>
-        </div>` : ''}
-
-        ${recentDecs.length ? `
-        <div class="ev-section">
-          <div class="ev-section-title">Recent Decisions</div>
-          <div class="ev-dec-list" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">${recentDecs.map(d => `
-            <div class="ev-dec-row" onclick="openApp('decision-hub')">
-              <div class="ev-dec-title">${_esc(d.title || '—')}</div>
-              <span class="ev-dec-badge ${d.status||'considering'}">${d.status||'considering'}</span>
-              <div class="ev-dec-date">${fmtDate(d.createdAt)}</div>
-            </div>`).join('')}</div>
-        </div>` : ''}
       `;
     }
 
-    // ── Analytics View ────────────────────────────────────────────────────────
+    // ── Overview Pulse (P99; was the Analytics tab until P153) ────────────────────────────────────────────────────────
 
-    function buildAnalyticsView() {
-      const container = document.getElementById('analytics-view');
+    function buildOverviewPulse() {
+      const container = document.getElementById('overview-pulse');
       if (!container) return;
 
       const todayStr  = HubUtils.todayLocal();
       const weekAgo   = HubUtils.localYmd(new Date(Date.now() - 7 * 86400000));
-      const monthAgo  = HubUtils.localYmd(new Date(Date.now() - 30 * 86400000));
 
-      let ph = {}, focusData = {}, decArr = [], captureData = {};
+      let ph = {}, decArr = [];
       try { ph          = JSON.parse(localStorage.getItem('project-hub-v1')  || '{}'); } catch {}
-      try { focusData   = JSON.parse(localStorage.getItem('focus-hub-v1')    || '{}'); } catch {}
       try { const d     = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
             decArr      = Array.isArray(d) ? d : []; } catch {}
-      try { captureData = JSON.parse(localStorage.getItem('capture-hub-v1')  || '{}'); } catch {}
 
       const allTasks    = (ph.projects || []).flatMap(p => p.tasks || []);
-      const sessions    = focusData.sessions || [];
-      const inboxItems  = captureData.inbox  || [];
-
-      // ── Key stats ────────────────────────────────────────────────────
-      const thisWeekTasks    = allTasks.filter(t => (t.createdAt || '') >= weekAgo);
-      const completedTasks   = allTasks.filter(t => t.done || t.status === 'done');
-      const weekSessions     = sessions.filter(s => s.completed && (s.startedAt || '') >= weekAgo);
-      const weekFocusMins    = weekSessions.reduce((s, r) => s + (r.durationMin || 0), 0);
-      const weekFocusHrs     = (weekFocusMins / 60).toFixed(1);
-      const monthDecs        = decArr.filter(d => (d.createdAt || '') >= monthAgo).length;
-      const completionRate   = allTasks.length ? Math.round(completedTasks.length / allTasks.length * 100) : 0;
-
-      // ── Focus heatmap ─────────────────────────────────────────────────
-      const focusMap = {};
-      sessions.forEach(s => {
-        const day = HubUtils.isoToLocalDay(s.startedAt || '');
-        if (day) focusMap[day] = (focusMap[day] || 0) + (s.durationMin || 0);
-      });
-
-      // Start 13 weeks ago on a Monday
-      const heatStart = new Date();
-      heatStart.setDate(heatStart.getDate() - 90);
-      const dow = heatStart.getDay();
-      heatStart.setDate(heatStart.getDate() - (dow === 0 ? 6 : dow - 1));
-      heatStart.setHours(0, 0, 0, 0);
-
-      const heatCells = [];
-      const cur = new Date(heatStart);
-      const todayTs = new Date(todayStr).getTime();
-      while (cur.getTime() <= todayTs + 86400000 * 6) {
-        const ds   = HubUtils.localYmd(cur);
-        const mins = focusMap[ds] || 0;
-        const future = cur.getTime() > todayTs;
-        let bg;
-        if (future)     bg = 'transparent';
-        else if (!mins) bg = 'var(--surface3)';
-        else if (mins <= 30) bg = 'var(--accent-dim)';
-        else if (mins <= 60) bg = 'var(--accent-glow)';
-        else             bg = 'var(--accent)';
-        const isToday = ds === todayStr;
-        heatCells.push(`<div class="hm-cell${isToday ? ' hm-today' : ''}"
-          style="background:${bg}" title="${future ? '' : ds + ': ' + (mins || 'no') + (mins ? 'min' : ' sessions')}"></div>`);
-        cur.setDate(cur.getDate() + 1);
-      }
-
-      // ── Tasks per week bar chart (last 8 weeks) ───────────────────────
-      const barWeeks = [];
-      for (let i = 7; i >= 0; i--) {
-        const wStart = new Date(Date.now() - (i + 1) * 7 * 86400000);
-        const wEnd   = new Date(Date.now() - i * 7 * 86400000);
-        const wStartStr = HubUtils.localYmd(wStart);
-        const wEndStr   = HubUtils.localYmd(wEnd);
-        const count = allTasks.filter(t => {
-          const d = HubUtils.isoToLocalDay(t.createdAt || '');
-          return d >= wStartStr && d < wEndStr;
-        }).length;
-        const label = wStart.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-        barWeeks.push({ label, count });
-      }
-      const barMax = Math.max(...barWeeks.map(w => w.count), 1);
-      const barHTML = barWeeks.map(w => {
-        const h = Math.round(w.count / barMax * 100);
-        return `<div class="an-bar-col">
-          <div class="an-bar-count">${w.count || ''}</div>
-          <div class="an-bar" style="height:${Math.max(h, 2)}%"></div>
-          <div class="an-bar-label">${w.label}</div>
-        </div>`;
-      }).join('');
-
-      // ── Capture breakdown (horizontal bars) ──────────────────────────
-      const CAT_LABELS = { task:'Task', question:'Question', idea:'Idea', decision:'Decision', risk:'Risk', learning:'Learning', event:'Event', note:'Note' };
-      const CAT_COLORS = { task:'var(--border-blue)', question:'var(--border-purple)', idea:'var(--border-yellow)', decision:'var(--border-green)', risk:'var(--border-red)', learning:'var(--accent)', event:'var(--accent-super)', note:'var(--border2)' };
-      const catCounts = {};
-      inboxItems.forEach(it => { catCounts[it.cat] = (catCounts[it.cat] || 0) + 1; });
-      const catTotal = inboxItems.length;
-      const hbarHTML = catTotal === 0
-        ? '<div class="an-empty">No captured items yet</div>'
-        : Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, n]) => {
-          const pct = Math.round(n / catTotal * 100);
-          return `<div class="an-hbar-row">
-            <div class="an-hbar-label">${CAT_LABELS[cat] || cat}</div>
-            <div class="an-hbar-track"><div class="an-hbar-fill" style="width:${pct}%;background:${CAT_COLORS[cat] || 'var(--border2)'}"></div></div>
-            <div class="an-hbar-count">${n}</div>
-          </div>`;
-        }).join('');
 
       // ── Pulse: momentum & staleness (P99, leverages P90 timestamps) ──
       const esc = (HubUtils && HubUtils.esc) ? HubUtils.esc : (s => s);
@@ -2190,7 +1945,7 @@
         <div class="an-stat-label">${label}</div>
         <div class="an-stat-sub">${sub}</div></div>`;
       const pulseHTML = `
-        <div class="an-section-head" style="margin-top:26px">Pulse — momentum &amp; what's going stale</div>
+        <div class="home-section-label" style="margin-top:26px">Pulse — momentum &amp; what's going stale</div>
         <div class="an-stats-row">
           ${pulseStat(completedWeek, 'Tasks Completed', 'this week')}
           ${pulseStat(staleTasks.length, 'Stale Open Tasks', '30+ days untouched', true)}
@@ -2206,87 +1961,22 @@
         </div>` : (staleTasks.length + inactiveProjects.length === 0 ? '<div class="an-empty" style="margin-top:10px">Nothing stale — everything with a timestamp is fresh. 🌱</div>' : '')}
         ${calDebt.length ? `<div class="an-empty" style="margin-top:10px;cursor:pointer" onclick="pulseNav('decision-hub','${calDebt[0].id}')">⚖ ${calDebt.length} decision${calDebt.length !== 1 ? 's are' : ' is'} past their revisit date and unscored — review to calibrate.</div>` : ''}`;
 
-      // ── Render ────────────────────────────────────────────────────────
-      container.innerHTML = `
-        <div class="an-stats-row">
-          <div class="an-stat">
-            <div class="an-stat-value">${thisWeekTasks.length}</div>
-            <div class="an-stat-label">Tasks Created</div>
-            <div class="an-stat-sub">this week</div>
-          </div>
-          <div class="an-stat">
-            <div class="an-stat-value">${weekFocusHrs}<span style="font-size:1rem;color:var(--text3)">h</span></div>
-            <div class="an-stat-label">Focus Time</div>
-            <div class="an-stat-sub">this week · ${weekSessions.length} session${weekSessions.length !== 1 ? 's' : ''}</div>
-          </div>
-          <div class="an-stat">
-            <div class="an-stat-value">${monthDecs}</div>
-            <div class="an-stat-label">Decisions Logged</div>
-            <div class="an-stat-sub">last 30 days</div>
-          </div>
-          <div class="an-stat">
-            <div class="an-stat-value">${completionRate}<span style="font-size:1rem;color:var(--text3)">%</span></div>
-            <div class="an-stat-label">Task Completion</div>
-            <div class="an-stat-sub">${completedTasks.length} of ${allTasks.length} tasks</div>
-          </div>
-        </div>
-
-        <div class="hm-wrap">
-          <div class="an-section-head">Focus Activity — last 13 weeks</div>
-          <div class="hm-outer">
-            <div class="hm-day-labels">
-              ${['Mon','','Wed','','Fri','','Sun'].map(d => `<div class="hm-day-label">${d}</div>`).join('')}
-            </div>
-            <div class="hm-grid">${heatCells.join('')}</div>
-          </div>
-          <div class="hm-legend">
-            Less
-            <div class="hm-legend-cell" style="background:var(--surface3)"></div>
-            <div class="hm-legend-cell" style="background:var(--accent-dim)"></div>
-            <div class="hm-legend-cell" style="background:var(--accent-glow)"></div>
-            <div class="hm-legend-cell" style="background:var(--accent)"></div>
-            More
-          </div>
-        </div>
-
-        <div class="an-charts-row">
-          <div class="an-chart-box">
-            <div class="an-chart-title">Tasks Created / Week</div>
-            ${barWeeks.some(w => w.count > 0)
-              ? `<div class="an-bar-wrap">${barHTML}</div>`
-              : '<div class="an-empty">No tasks created in this period</div>'}
-          </div>
-          <div class="an-chart-box">
-            <div class="an-chart-title">Capture Inbox by Category</div>
-            ${hbarHTML}
-          </div>
-        </div>
-        ${pulseHTML}`;
+      container.innerHTML = pulseHTML;
     }
     function pulseNav(tool, id) { _pendingHighlight = id || null; openApp(tool); }
 
     function switchDashView(v) {
+      if (v !== 'today') v = 'overview'; // old saved 'exec' / 'analytics' land on Overview
       saveSession({ dashView: v });
-      document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-      const tab = document.getElementById('dash-tab-' + v);
-      if (tab) tab.classList.add('active');
-
-      const todayView      = document.getElementById('today-view');
-      const execView       = document.getElementById('exec-view');
-      const analyticsView  = document.getElementById('analytics-view');
-      const statusSection  = document.getElementById('status-section');
-      const todayOnly      = document.getElementById('today-only-content');
-
-      todayView.style.display     = v === 'today'     ? '' : 'none';
-      execView.style.display      = v === 'exec'       ? '' : 'none';
-      analyticsView.style.display = v === 'analytics'  ? '' : 'none';
-      statusSection.style.display = 'none';
+      document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.id === 'dash-tab-' + v));
+      const todayOnly = document.getElementById('today-only-content');
+      document.getElementById('today-view').style.display    = v === 'today' ? '' : 'none';
+      document.getElementById('overview-view').style.display = v === 'overview' ? '' : 'none';
       if (todayOnly) todayOnly.style.display = v === 'today' ? '' : 'none';
-
-      if (v === 'today')         buildTodayView();
-      else if (v === 'exec')     buildExecView();
-      else if (v === 'analytics') buildAnalyticsView();
-      else buildStatusWidgets(); // overview — will set statusSection display itself
+      if (v === 'today') { buildTodayView(); return; }
+      buildOverviewKpis();
+      buildStatusWidgets();
+      buildOverviewPulse();
     }
 
     function startTour() {
@@ -2445,135 +2135,6 @@
           : `Up to date with your vault · scanned ${when}`;
       }
     }
-
-    // ── Local MCP Sync ────────────────────────────────────────────────────────────
-    // Writes thinking-hub-data.json into a user-chosen folder so the local
-    // MCP server (thinking-hub-local-mcp) can read hub data.
-
-    let _mcpDirHandle = null;   // FileSystemDirectoryHandle — lives for this session only
-    let _mcpLastSync = null;   // ISO timestamp of last successful write
-    let _mcpFolderName = '';     // Display name of chosen folder
-    let _mcpLoadingFromFile = false; // True while loadFromMcpFile() is running — suppresses auto-sync
-
-    const MCP_SYNC_KEYS = [
-      'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
-      'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
-      'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-      'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1',
-      'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'tool-portfolio-v1',
-      'argument-hub-v1', 'hub-tags-v1',
-      'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
-      'scrum-hub-v1', 'hub-warroom-v1', 'hub-vault-bridge-v1',
-    ];
-    // scrum-hub-v1 removed 2026-07-13 — the tool was deleted (P50) and this loop writes
-    // every key unconditionally (JSON.parse(null) === null), so a dead key here means a
-    // literal "scrum-hub-v1": null entry in every synced backup file forever.
-    // (Note: this array still carries several orphaned keys from later tool
-    // retirements — argument-hub-v1/reflection-hub-v1 among them, P120 — kept
-    // for data-safety consistency with the scrum-hub-v1/hub-warroom-v1 precedent
-    // above, even though the above comment argues for removing them.)
-
-    async function pickMcpFolder() {
-      try {
-        _mcpDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        _mcpFolderName = _mcpDirHandle.name;
-        // Do NOT auto-sync here — let the user choose to load or sync manually.
-        // Auto-syncing would overwrite any Claude-written data in the file.
-        _mcpLastSync = null;
-        updateMcpSyncUI();
-        showToast('Sync folder set — click ↑ Sync Now to push browser data, or ↓ Load from file to pull', 'success');
-      } catch (e) {
-        if (e.name !== 'AbortError') showToast('Could not access folder: ' + e.message, 'error');
-      }
-    }
-
-    async function syncToMcpFile(manual = false) {
-      if (!_mcpDirHandle) return;
-      try {
-        const payload = { syncedAt: new Date().toISOString() };
-        for (const key of MCP_SYNC_KEYS) {
-          try { payload[key] = JSON.parse(localStorage.getItem(key)); } catch { /* skip */ }
-        }
-        const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json', { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(payload, null, 2));
-        await writable.close();
-        _mcpLastSync = payload.syncedAt;
-        updateMcpSyncUI();
-        if (manual) showToast('MCP sync file updated', 'success');
-      } catch (e) {
-        if (manual) showToast('Sync failed: ' + e.message, 'error');
-      }
-    }
-
-    function updateMcpSyncUI() {
-      const statusEl = document.getElementById('mcp-sync-status');
-      const syncBtn = document.getElementById('mcp-sync-now-btn');
-      const hintEl = document.getElementById('mcp-path-hint');
-      const pathEl = document.getElementById('mcp-path-value');
-      if (!statusEl) return;
-      const loadBtn = document.getElementById('mcp-load-btn');
-      if (_mcpDirHandle && _mcpLastSync) {
-        const mins = Math.round((Date.now() - new Date(_mcpLastSync)) / 60000);
-        statusEl.textContent = `📂 ${_mcpFolderName} · synced ${mins < 1 ? 'just now' : mins + 'm ago'} · auto-syncing`;
-        if (syncBtn) syncBtn.style.display = '';
-        if (loadBtn) loadBtn.style.display = '';
-        if (hintEl) hintEl.style.display = '';
-        if (pathEl) pathEl.textContent = _mcpFolderName + '\\thinking-hub-data.json';
-      } else if (_mcpDirHandle) {
-        statusEl.textContent = `📂 ${_mcpFolderName} · ready — use ↑ Sync Now or ↓ Load from file`;
-        if (syncBtn) syncBtn.style.display = '';
-        if (loadBtn) loadBtn.style.display = '';
-      } else {
-        statusEl.textContent = 'No folder selected — pick a folder to enable';
-        if (syncBtn) syncBtn.style.display = 'none';
-        if (loadBtn) loadBtn.style.display = 'none';
-        if (hintEl) hintEl.style.display = 'none';
-      }
-    }
-
-    async function loadFromMcpFile() {
-      if (!_mcpDirHandle) { showToast('Pick a sync folder first', 'error'); return; }
-      try {
-        const fileHandle = await _mcpDirHandle.getFileHandle('thinking-hub-data.json');
-        const file = await fileHandle.getFile();
-        const parsed = JSON.parse(await file.text());
-
-        // Pause auto-sync so we don't overwrite the file with stale browser data
-        // while the loop is only halfway through loading.
-        _mcpLoadingFromFile = true;
-
-        let count = 0;
-        for (const [key, value] of Object.entries(parsed)) {
-          if (key === 'syncedAt' || value === null || typeof value !== 'object') continue;
-          // Write directly to localStorage — bypass HubStorage.set() to avoid
-          // triggering subscribers (and the auto-sync) on every single key.
-          try { localStorage.setItem(key, JSON.stringify(value)); count++; } catch { }
-        }
-
-        _mcpLoadingFromFile = false;
-
-        // Reload the active iframe so the tool re-reads fresh localStorage.
-        // The main window keeps _mcpDirHandle — settings stay open.
-        const frame = document.getElementById('app-frame');
-        if (frame && frame.src && !frame.src.endsWith('about:blank')) {
-          const currentSrc = frame.src;
-          frame.src = 'about:blank';
-          setTimeout(() => { frame.src = currentSrc; }, 80);
-        }
-
-        showToast(`Loaded ${count} keys — tool refreshed ✓`, 'success');
-        updateMcpSyncUI();
-      } catch (e) {
-        _mcpLoadingFromFile = false;
-        showToast('Load failed: ' + e.message, 'error');
-      }
-    }
-
-    // Sync is manual-only (↑ Sync Now button).
-    // Auto-sync was removed because it overwrites Claude-written file edits
-    // whenever any tool saves to localStorage — defeating the load-from-file flow.
-    // Workflow: Claude writes → user clicks ↓ Load from file → user clicks ↑ Sync Now when ready.
 
     function updateExportSizeEstimate() {
       const scope = document.querySelector('input[name="export-scope"]:checked')?.value || 'full';
@@ -2995,10 +2556,6 @@
         updateObsidianIndexUI();
       }
       updateVaultBridgeUI();
-      if ('showDirectoryPicker' in window) {
-        document.getElementById('mcp-sync-panel').style.display = '';
-        updateMcpSyncUI();
-      }
       // Show which tool "Current Tool" scope would export
       const currentApp = activeAppId ? APPS.find(a => a.id === activeAppId) : null;
       document.getElementById('export-current-tool-label').textContent =
@@ -3057,14 +2614,8 @@
       'idea-swiper.html': ['ideaswipe_history_v6'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
-      'focus-hub.html': ['focus-hub-v1'],
       'journal-hub.html': ['log-hub-v1', 'review-hub-v1'],
-      'log-hub.html': ['log-hub-v1'],
-      'review-hub.html': ['review-hub-v1'],
-      'retro-hub.html': ['retro-hub-v1'],
-      'assumptions-hub.html': ['assumptions-hub-v1'],
       'goals-hub.html': ['goals-hub-v1'],
-      'matrix-hub.html': ['matrix-hub-v1'],
       'learning-hub.html': ['learning-hub-v1'],
       'meetings-hub.html': ['meetings-hub-v1'],
       'stakeholder-hub.html': ['stakeholder-hub-v1'],
@@ -3082,7 +2633,7 @@
       curated: [
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
-        'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
+        'schedule-v1', 'learning-hub-v1', 'stakeholder-hub-v1',
         'retro-hub-v1', 'tool-portfolio-v1', 'people-hub-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
@@ -3235,7 +2786,6 @@
           let restoreScope;
           if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
             // v2 format — restore each section to its correct storage key
-            // Use HubStorage.set() so local MCP file subscribers fire
             for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
               if (parsed.data[section] !== undefined) {
                 let val = parsed.data[section];

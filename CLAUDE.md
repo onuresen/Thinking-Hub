@@ -39,14 +39,14 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `graph-hub.html` | Task dependency graph (vis-network) — Critical Path highlighting (P75); per-node Reasoning Path / Impact Analysis trace (P77) |
 | `tool-portfolio.html` | Curated tool/vendor directory |
 | ~~`scrum-hub.html`~~ | ❌ **Deleted 2026-06-13** (Priority 50) — file removed. `scrum-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
-| `focus-hub.html` | ⚠ Retired from sidebar (P123) — data lives on in `focus-hub-v1`, accessed via Journal Hub → Time Journal tab. The standalone file is unchanged and still fully functional if opened directly (retrospective work-block logging + optional Pomodoro timer, P100). |
-| `log-hub.html` | ⚠ Retired from sidebar — data lives on in `log-hub-v1`, accessed via Journal Hub → Daily tab |
-| `retro-hub.html` | ⚠ Retired from sidebar — data lives on in `retro-hub-v1` (its former "Import Retro" destination, Reflection Board, was deleted P120) |
+| ~~`focus-hub.html`~~ | ❌ **Deleted (P152)** — Time Journal (now Journal Hub → Time Journal tab). Data in `focus-hub-v1`. Data kept in Full Backup. |
+| ~~`log-hub.html`~~ | ❌ **Deleted (P152)** — Daily Log (now Journal Hub → Daily tab). Data in `log-hub-v1`. Data kept in Full Backup. |
+| ~~`retro-hub.html`~~ | ❌ **Deleted (P152)** — Retro Board. Data in `retro-hub-v1`, not read by any tool. Data kept in Full Backup. |
 | ~~`reflection-hub.html`~~ | ❌ **Deleted (P120)** — file removed. `reflection-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
-| `assumptions-hub.html` | ⚠ Retired from sidebar — data lives on in `assumptions-hub-v1`, accessed via Decision Hub → Assumptions tab |
-| `review-hub.html` | ⚠ Retired from sidebar — data lives on in `review-hub-v1`, accessed via Journal Hub → Weekly tab |
+| ~~`assumptions-hub.html`~~ | ❌ **Deleted (P152)** — Assumptions (now Decision Hub → Assumptions tab). Data in `assumptions-hub-v1`. Data kept in Full Backup. |
+| ~~`review-hub.html`~~ | ❌ **Deleted (P152)** — Weekly Review (now Journal Hub → Weekly tab). Data in `review-hub-v1`. Data kept in Full Backup. |
 | `journal-hub.html` | Journal Hub — Daily Log + Weekly Review + **Time Journal** (P123) under one tab bar; day chips link weekly → daily; data stays in `log-hub-v1` + `review-hub-v1` + `focus-hub-v1` |
-| `matrix-hub.html` | ⚠ Retired from sidebar — data lives on in `matrix-hub-v1`, accessed via Project Hub → Priority Matrix view |
+| ~~`matrix-hub.html`~~ | ❌ **Deleted (P152)** — Priority Matrix (now Project Hub → Priority Matrix view). Data in `matrix-hub-v1`. Data kept in Full Backup. |
 | `meetings-hub.html` | Meeting Hub — structured meetings with type templates, RACI-lite attendee roles, decision register, schedule sync, recurring templates, dependency graph links, and .ics calendar import (Outlook/Teams) |
 | ~~`argument-hub.html`~~ | ❌ **Deleted (P120)** — file removed. `argument-hub-v1` localStorage data is NOT purged (still in Full Backup + MCP sync key lists) but no tool reads it. |
 | `goals-hub.html` | OKR / quarterly goals hub |
@@ -56,7 +56,7 @@ The app holds **confidential work data**. Cloud persistence of any kind (Supabas
 | `achievements-hub.html` | Achievements & milestones tracker + **Profile** (identity header: name / role / who-is-me, edits `hub-settings-v1.profile`; P53) |
 | `help-hub.html` | Help & Guide — tool directory, framework reference (37 frameworks), 4 suggested workflows |
 | ~~`frameworks-hub.html`~~ | ❌ **Deleted (P120)** — file removed. It had no storage key of its own (Blocked Depth/V-Model read live from Project Hub). |
-| `blocked-depth.html` | Blocked Depth — iceberg cascade view. ⚠ Orphaned: its only host, `frameworks-hub.html`, was deleted (P120); the file is kept on disk (matches the P50 file-retention convention) but is currently unreachable from the sidebar. |
+| ~~`blocked-depth.html`~~ | ❌ **Deleted (P152)** — Blocked Depth iceberg view. Unreachable since P120. No storage key. Data kept in Full Backup. |
 | `tags-hub.html` | Tags — central tag/topic registry; rename/merge duplicates and add topic-only tags, applies everywhere via `hub-tags.js` |
 | `capture-hub.html` | Capture Hub — brain-dump inbox with auto-routing of items to other tools. Storage `capture-hub-v1` |
 | `people-hub.html` | People Hub — member roster, org tree, load matrix, "Me View" (canonical `selfMemberId` reader). Storage `people-hub-v1` |
@@ -2836,6 +2836,70 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 **Decision:** Compare tags by lowercase letters and digits only. **Why:** catches the common duplicates (case, spaces, hyphens). It does not catch real typos ("Autodsk"). **Revisit when:** those still slip through. **Confidence:** med.
 
 **Files:** `hub-tags.js`, `project-hub.html`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 155 — Delete Priority Matrix and Local MCP Sync~~ ✓ Done `[group: declutter]`
+Lean pass #4. Both were unused.
+
+- **Priority Matrix** (Project Hub view): it auto-copied every open task into "Fill-in", so its 122 items were never triaged. Removed the sidebar item, view, modal, `syncMxWithTasks` and ~4 KB of `.mx-*` CSS.
+- `matrix-hub-v1` stays in Full Backup (data kept), removed from AI Context. Help: Eisenhower framework kept, tool link removed.
+- **Local MCP Sync** (Settings → Data): wrote `thinking-hub-data.json` to a picked folder. Data moves by Full Backup instead. Removed the panel and `pickMcpFolder` / `syncToMcpFile` / `loadFromMcpFile`.
+- `MCP_SYNC_KEYS` is gone. The "backup + sync key lists" mentioned in older entries now means `SCOPE_KEYS.full` only.
+- PRIVACY, SECURITY and DEPLOYMENT no longer mention MCP file sync. `sw.js` cache `v33`.
+
+**Decision:** Delete, keep data. **Why:** same rule as P50/P88/P120. **Confidence:** high.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `index.html`, `help-hub.html`, `README.md`, `PRIVACY.md`, `SECURITY.md`, `docs/DEPLOYMENT.md`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 153 — Home: 4 tabs → 2 (Today · Overview)~~ ✓ Done `[group: declutter]`
+Lean pass #2. Today, Overview, Exec and Analytics showed overlapping counts.
+
+- **Overview** = Exec's 3 headline cards (Projects · OKRs · Risks) → the tool cards (`buildStatusWidgets`) → Pulse.
+- `buildExecView` → `buildOverviewKpis` (cards only). `buildAnalyticsView` → `buildOverviewPulse` (Pulse only).
+- Dropped: Exec's Attention / Active Projects / Recent Decisions lists, Analytics' focus heatmap, tasks-per-week chart, capture breakdown and top stat row.
+- A saved `dashView` of `exec` / `analytics` opens Overview.
+- 56 unused `.ev-* / .an-* / .hm-*` CSS rules removed from `styles/index.css`.
+
+**Decision:** Keep only views that don't repeat. **Why:** the lists repeated Today (overdue) and the tool cards (projects, decisions); the charts had almost no data (1 time-journal session, 5 capture items). **Revisit when:** Time Journal is used again and a heatmap is wanted. **Confidence:** med.
+
+**Files:** `index.html`, `styles/index.css`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 154 — Canvas: one Export menu, one graph Sync~~ ✓ Done `[group: declutter]`
+Lean pass #3. The board menu (⋯) had 15 items; 5 were exports and a 6th export sat in the bottom bar.
+
+- Bottom bar **Export ▾** (`#export-menu`): PNG, slides, interactive HTML, Markdown, Obsidian Canvas, board file. Closes on Esc / outside click.
+- Board menu: Duplicate, Sync, Color key, Save as template, (Rebuild system map), Paste outline, Import.
+- **Sync lines with Dependency Graph** (`syncBoardWithGraph`) replaces Send + Pull. It pulls first, then sends, so drawn lines are not sent back. `pullGraphLinks()` now returns a count and no longer toasts.
+- The per-line "Send to Dependency Graph" button in the line popover stays.
+- `sw.js` cache `v32`.
+
+**Decision:** One Sync, both directions. **Why:** Send and Pull were always used as a pair. It still only runs on click (P134 rule kept). **Alternative:** keep two items. **Confidence:** med.
+
+**Verified:** 16 browser checks with real mouse timing — 6 downloads, menu on screen, Esc / outside close, sync, second sync adds nothing. Full smoke + flows + vault-bridge green.
+
+**Files:** `canvas-hub.html`, `help-hub.html`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
+### ~~Priority 152 — Delete 7 unreachable standalone pages~~ ✓ Done `[group: declutter]`
+Lean pass #1. These pages had no sidebar entry. Their features already live as tabs elsewhere.
+
+- Deleted: `focus-hub`, `log-hub`, `review-hub`, `retro-hub`, `assumptions-hub`, `matrix-hub`, `blocked-depth` (~4,500 lines).
+- Removed from `sw.js` PRECACHE (cache `v31`) and `APP_FILE_STORAGE_KEYS`.
+- Home Overview: removed the Retro widget. It opened a page with no UI.
+- Cmd+K: no search over `retro-hub` / `focus-hub`. The `focus` quick action opens Journal Hub.
+- Smoke: AI policy check runs on Journal Hub only.
+
+**Kept:** all storage keys, backup/sync lists, `HubLinks` resolvers and the health-check tool list. Old links still resolve; old data still restores.
+
+**Decision:** Delete the files, keep the data. **Why:** git keeps the code; backups keep the data. Same rule as P50/P88/P120. **Confidence:** high.
+
+**Files:** `index.html`, `hub-search.js`, `sw.js`, `tests/smoke.js`, `README.md`, `CHANGELOG.md`, `CLAUDE.md` · **Deleted:** 7 pages above
 
 ---
 

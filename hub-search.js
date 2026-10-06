@@ -8,8 +8,8 @@ window.HubSearch = (() => {
 
   const TOOLS = [
     'project-hub', 'schedule', 'idea-swiper', 'decision-hub', 'canvas-hub',
-    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub', 'stakeholder-hub',
-    'tags-hub', 'tool-portfolio', 'journal-hub', 'focus-hub'
+    'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'stakeholder-hub',
+    'tags-hub', 'tool-portfolio', 'journal-hub'
   ];
 
   function init() {
@@ -89,7 +89,7 @@ window.HubSearch = (() => {
       case 'task': return { icon: '✓', label: `New task: “${t}”`, sub: '→ Capture Hub' };
       case 'capture': return { icon: '⊕', label: `Capture: “${t}”`, sub: '→ Capture Hub' };
       case 'decide': return { icon: '⊖', label: `Log decision: “${t}”`, sub: '→ Decision Hub' };
-      case 'focus': return { icon: '◷', label: 'Start Focus', sub: '→ Focus Timer' };
+      case 'focus': return { icon: '◷', label: 'Open Journal', sub: '→ Journal Hub' };
       default: return { icon: '›', label: t, sub: '' };
     }
   }
@@ -222,7 +222,7 @@ window.HubSearch = (() => {
         toast('Decision logged');
         _navigate('decision-hub', id);
       } else if (action.type === 'focus') {
-        _navigate('focus-hub', null);
+        _navigate('journal-hub', null);
       }
     } catch (e) {
       toast('Action failed: ' + (e.message || e));

@@ -850,7 +850,7 @@ function appFiles(ext) {
     };
   });
   let allPolicySurfacesHidden = lockedResult.allHidden;
-  for (const file of ['focus-hub.html', 'journal-hub.html']) {
+  for (const file of ['journal-hub.html']) {
     const policyPage = await lockedCtx.newPage();
     await policyPage.goto(`${BASE}/${file}`, { waitUntil: 'load', timeout: 20000 });
     const hidden = await policyPage.evaluate(() => {
@@ -862,7 +862,7 @@ function appFiles(ext) {
     await policyPage.close();
   }
   check('enterprise AI policy hides all marked AI surfaces', allPolicySurfacesHidden === true,
-    'shell + Focus + Journal');
+    'shell + Journal');
   check('enterprise AI policy blocks execution before network',
     lockedResult.enabled === false && lockedResult.configured === false &&
     /disabled by your organization/i.test(lockedResult.error) && lockedApiCalls === 0 &&

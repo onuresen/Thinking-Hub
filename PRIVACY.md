@@ -19,7 +19,7 @@ privacy behavior.
 | localStorage | Tool records, settings, links, UI state, and the optional Anthropic API key | Until the user imports/replaces data, resets a tool, clears site data, or the browser removes it |
 | IndexedDB | Automatic, manual, and pre-restore snapshots of localStorage | Automatic daily snapshots: 14 days; older Monday snapshots: up to 60 days; newest 10 manual/safety snapshots |
 | Cache Storage | Offline application assets, including self-hosted fonts | Until replaced by service-worker cache maintenance or cleared as site data |
-| Selected local files/directories | Backup import, Obsidian read access, and explicit MCP file sync | Governed by the browser permission and the user's selected location |
+| Selected local files/directories | Backup import and Obsidian read access | Governed by the browser permission and the user's selected location |
 
 Browser storage is scoped to the exact origin: scheme, host, and port. Moving a
 deployment to a different origin creates a separate data store unless the user
@@ -103,8 +103,6 @@ not control those terms.
   accepts an individual proposal. Its directory handle is stored in IndexedDB
   so the browser can re-grant access without a second folder selection; the
   handle is not a copy of vault content and confers no access on its own.
-- MCP file sync writes only after the user selects a directory and explicitly
-  enables that workflow.
 
 ## Access, deletion, and portability
 
@@ -117,7 +115,7 @@ the browser and operating system:
 - clear the deployment origin's browser site data to remove localStorage,
   IndexedDB snapshots, Cache Storage, and permissions from that browser
   profile;
-- separately delete downloaded backups or MCP-synced files from their storage
+- separately delete downloaded backups from their storage
   locations.
 
 Clearing site data is destructive and cannot be undone unless a separate valid

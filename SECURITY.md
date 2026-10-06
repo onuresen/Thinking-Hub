@@ -93,8 +93,7 @@ layer. A disabled provider fails before clipboard or network activity. See
 ### Local-file access
 
 Obsidian integration requests read-only access through the browser's File
-System Access API after an explicit directory-picker action. MCP file sync
-requests read/write directory access after an explicit picker action. Browser
+System Access API after an explicit directory-picker action. Browser
 permission indicators and the selected directory define that boundary.
 Thinking Hub does not upload selected files to its own server.
 

@@ -1272,7 +1272,7 @@
     <select id="board-select" class="board-select" onchange="switchBoard(this.value)"></select>
     <button class="bb-btn" id="new-board-btn" onclick="toggleNewBoardMenu()" title="New board, from a template or your hub">+</button>
     <button class="bb-btn" onclick="renameActiveBoard()" title="Rename board">✎</button>
-    <button class="bb-btn" id="board-menu-btn" onclick="toggleBoardMenu()" title="Duplicate, export, import">⋯</button>
+    <button class="bb-btn" id="board-menu-btn" onclick="toggleBoardMenu()" title="Duplicate, import, color key, templates">⋯</button>
     <button class="bb-btn" onclick="deleteActiveBoard()" title="Delete board">✕</button>
   </div>
   <!-- P136: new board — blank, template, or system map -->
@@ -1280,14 +1280,8 @@
   <!-- Board menu (P130): duplicate / export / import one board -->
   <div class="quick-menu" id="board-menu">
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); duplicateBoard()"><span>⧉</span><span>Duplicate board</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardFile()"><span>⇩</span><span>Export board file (.json)</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportBoardMarkdown()"><span>⇩</span><span>Export as Markdown</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportObsidianCanvas()"><span>⇩</span><span>Export Obsidian Canvas (.canvas)</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportSlides()"><span>🖼</span><span>Export frames as slides (.zip)</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); exportInteractiveHtml()"><span>🌐</span><span>Export interactive HTML</span></button>
     <div class="qm-sep"></div>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); sendBoardToGraph()"><span>⛓</span><span>Send lines to Dependency Graph</span></button>
-    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); pullGraphLinks()"><span>⛓</span><span>Pull lines from Dependency Graph</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); syncBoardWithGraph()"><span>⛓</span><span>Sync lines with Dependency Graph</span></button>
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); openColorKeyModal()"><span>●</span><span>Color key…</span></button>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); saveBoardAsTemplate()"><span>▦</span><span>Save board as template…</span></button>
@@ -1340,7 +1334,17 @@
       title="Highlight cards by tag — nothing is hidden">🏷 Tags</button>
     <button class="btn" id="jump-btn" onclick="toggleJumpMenu()"
       title="Jump to a frame, layer or saved view · Present">Jump ▾</button>
-    <button class="btn" onclick="exportPNG()" title="Export the whole board as a high-quality PNG">Export PNG</button>
+    <button class="btn" id="export-btn" onclick="toggleExportMenu()" title="PNG, slides, HTML, Markdown, board file, Obsidian">Export ▾</button>
+  </div>
+  <!-- P154: every export in one menu -->
+  <div class="quick-menu" id="export-menu">
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportPNG()"><span>🖼</span><span>PNG — whole board</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportSlides()"><span>▶</span><span>Slides — one PNG per frame (.zip)</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportInteractiveHtml()"><span>🌐</span><span>Interactive HTML</span></button>
+    <div class="qm-sep"></div>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportBoardMarkdown()"><span>⇩</span><span>Markdown</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportObsidianCanvas()"><span>⇩</span><span>Obsidian Canvas (.canvas)</span></button>
+    <button class="qm-item" onmousedown="event.stopPropagation(); closeExportMenu(); exportBoardFile()"><span>⇩</span><span>Board file (.json)</span></button>
   </div>
 
   <!-- Jump menu (P132): saved views, frames, layers, present mode -->
@@ -2197,6 +2201,7 @@
         if (document.getElementById('layout-menu').style.display === 'flex') { closeLayoutMenu(); return; }
         if (document.getElementById('tag-menu').style.display === 'flex') { closeTagMenu(); return; }
         if (document.getElementById('jump-menu').style.display === 'flex') { closeJumpMenu(); return; }
+        if (document.getElementById('export-menu').style.display === 'flex') { closeExportMenu(); return; }
         if (document.getElementById('edge-popover').style.display === 'flex') { closeEdgePopover(); return; }
         if (document.getElementById('find-box').style.display === 'flex') { closeFind(); return; }
         if (document.getElementById('board-menu').style.display === 'flex') { closeBoardMenu(); return; }
@@ -2570,14 +2575,15 @@
       refreshEdgeGraphBtn(edge);
     }
 
-    function sendBoardToGraph() {
-      const n = { added: 0, exists: 0, skip: 0 };
-      (db.edges || []).forEach(e => { n[sendEdgeToGraph(e)]++; });
-      const parts = [];
-      if (n.added) parts.push(`${n.added} added`);
-      if (n.exists) parts.push(`${n.exists} already there`);
-      if (n.skip) parts.push(`${n.skip} skipped (not between two linked cards)`);
-      if (window.showToast) showToast(parts.length ? 'Dependency Graph: ' + parts.join(' · ') : 'No lines on this board');
+    // P154: one Sync instead of separate Send / Pull. Pull first, then send,
+    // so lines drawn from the graph are not sent back as new links.
+    function syncBoardWithGraph() {
+      const drawn = pullGraphLinks();
+      let sent = 0;
+      (db.edges || []).forEach(e => { if (sendEdgeToGraph(e) === 'added') sent++; });
+      if (!window.showToast) return;
+      if (!drawn && !sent) showToast('Already in sync with the Dependency Graph');
+      else showToast(`Drew ${plural(drawn, 'line')} from the graph · sent ${plural(sent, 'link')} to it`);
     }
 
     // Saves the label typed in the popover. Runs whenever the popover
@@ -2635,6 +2641,7 @@
       if (!e.target.closest('#new-board-menu') && !e.target.closest('#new-board-btn')) closeNewBoardMenu();
       if (!e.target.closest('#layout-menu') && !e.target.closest('#layout-btn')) closeLayoutMenu();
       if (!e.target.closest('#jump-menu') && !e.target.closest('#jump-btn')) closeJumpMenu();
+      if (!e.target.closest('#export-menu') && !e.target.closest('#export-btn')) closeExportMenu();
       if (!e.target.closest('#tag-menu') && !e.target.closest('#tag-btn')) closeTagMenu();
     }, true);
 
@@ -5913,7 +5920,7 @@
     }
 
     // Pull: draw Dependency Graph links that exist between cards on this
-    // board (the reverse of Send, P134). Existing canvas lines are kept.
+    // board. Existing canvas lines are kept. Returns how many were drawn.
     function pullGraphLinks() {
       const byItem = new Map();
       db.nodes.forEach(n => {
@@ -5936,12 +5943,12 @@
           add.push(e);
         }));
       });
-      if (!add.length) { if (window.showToast) showToast('No new Dependency Graph links between cards on this board'); return; }
+      if (!add.length) return 0;
       pushHistory();
       db.edges = (db.edges || []).concat(add);
       renderEdges(); renderMinimap();
       pulseSave();
-      if (window.showToast) showToast(`Drew ${plural(add.length, 'line')} from the Dependency Graph`);
+      return add.length;
     }
 
     // Zoom and pan so every node on the board is in view.
@@ -6689,8 +6696,25 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
+    function toggleExportMenu() {
+      const menu = document.getElementById('export-menu');
+      if (menu.style.display === 'flex') { closeExportMenu(); return; }
+      menu.style.display = 'flex';
+      const btn = document.getElementById('export-btn');
+      btn.classList.add('active');
+      const r = btn.getBoundingClientRect();
+      menu.style.left = r.left + 'px';
+      menu.style.top = Math.max(8, r.top - menu.offsetHeight - 8) + 'px';
+      clampIntoView(menu);
+    }
+    function closeExportMenu() {
+      const m = document.getElementById('export-menu');
+      if (m) m.style.display = 'none';
+      document.getElementById('export-btn')?.classList.remove('active');
+    }
+
     async function exportPNG() {
-      const btn = document.querySelector('[onclick="exportPNG()"]');
+      const btn = document.getElementById('export-btn');
       if (!db.nodes.length) { if (window.showToast) showToast('Nothing to export on this board'); return; }
       btn.textContent = 'Exporting…';
       btn.disabled = true;
@@ -6711,7 +6735,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
           if (window.showToast) showToast('This browser blocked the full export — saved the visible area instead');
         } catch { if (window.showToast) showToast('Export failed'); }
       } finally {
-        btn.textContent = 'Export PNG';
+        btn.textContent = 'Export ▾';
         btn.disabled = false;
       }
     }

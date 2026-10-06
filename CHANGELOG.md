@@ -5,8 +5,17 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Removed
+
+- Project Hub Priority Matrix view. It copied every task in automatically and was not used. Its saved data stays in Full Backup.
+- Settings → Local MCP Sync. Move data with Full Backup instead.
+- Home: the Exec and Analytics tabs. Overview now shows the headline cards (Projects, OKRs, Risks), the tool cards and Pulse. The focus heatmap, tasks-per-week chart and capture breakdown are gone.
+- Seven old standalone pages with no sidebar entry: Time Journal, Daily Log, Weekly Review, Retro Board, Assumptions, Priority Matrix and Blocked Depth. Their features live on as tabs in Journal Hub, Decision Hub and Project Hub. All saved data is kept and still restores from backups.
+- The home Retro widget, which opened a page with no UI.
+
 ### Changed
 
+- Canvas Hub: all exports are in one **Export ▾** menu (PNG, slides, interactive HTML, Markdown, Obsidian Canvas, board file). The board menu (⋯) is shorter. "Send lines" and "Pull lines" are one **Sync lines with Dependency Graph**.
 - Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.
 
 - Touch screens: buttons that only showed on hover (task actions, drag handles, edit/delete icons) are always visible, and buttons, chips and tabs are at least 40px.
