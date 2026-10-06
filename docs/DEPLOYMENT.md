@@ -100,7 +100,7 @@ iframes, workers, exports, and the chosen AI policy.
 
 - Chromium-based Edge or Chrome is the recommended managed desktop target.
 - Core tools also load in other modern browsers, but File System Access
-  features such as Obsidian directory selection and MCP file sync require a
+  features such as Obsidian directory selection require a
   compatible Chromium browser.
 - Browser storage is isolated by exact origin and browser profile. Keep the
   scheme, host, port, and application path stable.
@@ -177,7 +177,7 @@ iframes, workers, exports, and the chosen AI policy.
   immediate deletion.
 - Clear site data for the deployment origin to remove localStorage, IndexedDB,
   Cache Storage, service workers, and stored permissions from that profile.
-- Delete exported backups and MCP-synced files separately according to policy.
+- Delete exported backups separately according to policy.
 - Revoke or rotate the Anthropic API key through Anthropic if it may have been
   exposed; clearing Thinking Hub storage does not revoke the credential.
 - Review web-server, proxy, DNS, and browser-management logs available to the

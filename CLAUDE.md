@@ -2839,6 +2839,21 @@ The project Tags field was a plain comma box. A native `<datalist>` can't sugges
 
 ---
 
+### ~~Priority 155 — Delete Priority Matrix and Local MCP Sync~~ ✓ Done `[group: declutter]`
+Lean pass #4. Both were unused.
+
+- **Priority Matrix** (Project Hub view): it auto-copied every open task into "Fill-in", so its 122 items were never triaged. Removed the sidebar item, view, modal, `syncMxWithTasks` and ~4 KB of `.mx-*` CSS.
+- `matrix-hub-v1` stays in Full Backup (data kept), removed from AI Context. Help: Eisenhower framework kept, tool link removed.
+- **Local MCP Sync** (Settings → Data): wrote `thinking-hub-data.json` to a picked folder. Data moves by Full Backup instead. Removed the panel and `pickMcpFolder` / `syncToMcpFile` / `loadFromMcpFile`.
+- `MCP_SYNC_KEYS` is gone. The "backup + sync key lists" mentioned in older entries now means `SCOPE_KEYS.full` only.
+- PRIVACY, SECURITY and DEPLOYMENT no longer mention MCP file sync. `sw.js` cache `v33`.
+
+**Decision:** Delete, keep data. **Why:** same rule as P50/P88/P120. **Confidence:** high.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `index.html`, `help-hub.html`, `README.md`, `PRIVACY.md`, `SECURITY.md`, `docs/DEPLOYMENT.md`, `sw.js`, `CHANGELOG.md`, `CLAUDE.md`
+
+---
+
 ### ~~Priority 153 — Home: 4 tabs → 2 (Today · Overview)~~ ✓ Done `[group: declutter]`
 Lean pass #2. Today, Overview, Exec and Analytics showed overlapping counts.
 

@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Removed
 
+- Project Hub Priority Matrix view. It copied every task in automatically and was not used. Its saved data stays in Full Backup.
+- Settings → Local MCP Sync. Move data with Full Backup instead.
 - Home: the Exec and Analytics tabs. Overview now shows the headline cards (Projects, OKRs, Risks), the tool cards and Pulse. The focus heatmap, tasks-per-week chart and capture breakdown are gone.
 - Seven old standalone pages with no sidebar entry: Time Journal, Daily Log, Weekly Review, Retro Board, Assumptions, Priority Matrix and Blocked Depth. Their features live on as tabs in Journal Hub, Decision Hub and Project Hub. All saved data is kept and still restores from backups.
 - The home Retro widget, which opened a page with no UI.

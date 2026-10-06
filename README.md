@@ -155,7 +155,6 @@ Each tool is mapped to one or more established frameworks:
 | Cynefin | Decision Hub |
 | OKR | Goals Hub |
 | GTD | Journal Hub |
-| Action Priority Matrix (Impact × Effort) | Project Hub |
 | Assumption-Based Planning (RAND) | Decision Hub → Assumptions tab |
 | Technology Radar (ThoughtWorks) | Tool Portfolio |
 | TOGAF | Tool Portfolio |
