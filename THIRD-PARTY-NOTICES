@@ -18,11 +18,6 @@ https://github.com/visjs/vis-network
 Dual-licensed under Apache License 2.0 and the MIT License. Thinking Hub uses
 it under Apache License 2.0; the license text is included in LICENSE.
 
-html2canvas 1.4.1
-Copyright (c) 2022 Niklas von Hertzen
-https://github.com/niklasvh/html2canvas
-Licensed under the MIT License. The license text appears below.
-
 Vendored font families
 ----------------------
 
@@ -46,6 +41,8 @@ Playwright is used only by the tests and is not a runtime dependency.
 
 MIT License text
 ----------------
+
+Applies to MIT-licensed code bundled inside vis-network.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

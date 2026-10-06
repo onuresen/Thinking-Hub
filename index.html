@@ -2230,7 +2230,7 @@
     // dangling link endpoints. Anything else is skipped, never flagged.
     const HEALTH_RESOLVABLE_TOOLS = [
       'project-hub', 'decision-hub', 'idea-swiper', 'canvas-hub', 'schedule',
-      'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub', 'retro-hub',
+      'meetings-hub', 'goals-hub', 'risk-hub', 'learning-hub',
       'stakeholder-hub', 'focus-hub', 'journal-hub',
       'tool-portfolio', 'tags-hub',
     ];
@@ -2296,7 +2296,7 @@
       // 3. Unknown localStorage keys (informational only)
       const KNOWN = new Set([...SCOPE_KEYS.full, 'hub-session-v1', 'th-theme', 'tutorial-seen-v1',
         'quick-tour-seen-v1', 'hub-resurface-v1', 'hub-last-backup-v1', 'machi-milestones-v1',
-        'rb-migration-done-v1', 'rb-reacted-v1', 'ai-drawer-pos-v1', 'review-hub-v1',
+        'ai-drawer-pos-v1', 'review-hub-v1',
         'hub-briefing-v1']);
       const unknown = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -2389,8 +2389,15 @@
     // Daily auto-snapshot into IndexedDB (P84) — deferred so it never competes
     // with first paint; snapshot-if-due + retention pruning.
     setTimeout(() => {
-      if (typeof HubSnapshots !== 'undefined') HubSnapshots.init();
+      if (typeof HubSnapshots !== 'undefined') HubSnapshots.init().then(dropRetiredKeys);
     }, 2500);
+
+    async function dropRetiredKeys() {
+      const present = RETIRED_KEYS.filter(k => localStorage.getItem(k) !== null);
+      if (!present.length) return;
+      try { await HubSnapshots.take('retired-keys'); } catch { return; } // no snapshot → keep the data
+      present.forEach(k => localStorage.removeItem(k));
+    }
 
     // Vault Bridge (P104): restore the stored vault handle and run the cheap
     // filename-only scan. Deferred for the same reason as snapshots. The gap
@@ -2583,12 +2590,10 @@
       'risk-hub-v1': 'risks',
       'meetings-hub-v1': 'meetings',
       'assumptions-hub-v1': 'assumptions',
-      'kmqt_current_v2': 'kmqt_board',
       'schedule-v1': 'schedule',
       'learning-hub-v1': 'learning_log',
       'matrix-hub-v1': 'priority_matrix',
       'stakeholder-hub-v1': 'stakeholders',
-      'retro-hub-v1': 'retrospectives',
       'focus-hub-v1': 'focus_sessions',
       'log-hub-v1': 'daily_log',
       'canvas-v1': 'canvas',
@@ -2597,13 +2602,9 @@
       'hub-activity-v1': 'activity_log',
       'hub-settings-v1': 'settings',
       'tool-portfolio-v1': 'tool_portfolio',
-      'argument-hub-v1': 'arguments',
       'hub-tags-v1': 'tag_registry',
-      'reflection-hub-v1': 'reflection_board',
       'capture-hub-v1': 'capture_inbox',
       'people-hub-v1': 'people',
-      'scrum-hub-v1': 'scrum_board',
-      'hub-warroom-v1': 'war_room',
       'hub-vault-bridge-v1': 'vault_bridge',
     };
 
@@ -2632,22 +2633,26 @@
       // AI Context: high-signal tools only — no canvas, sessions, raw swipe history
       curated: [
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
-        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
+        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1',
         'schedule-v1', 'learning-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'tool-portfolio-v1', 'people-hub-v1',
+        'tool-portfolio-v1', 'people-hub-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
-        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1', 'kmqt_current_v2',
+        'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1',
         'schedule-v1', 'learning-hub-v1', 'matrix-hub-v1', 'stakeholder-hub-v1',
-        'retro-hub-v1', 'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
+        'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
-        'tool-portfolio-v1', 'argument-hub-v1', 'hub-tags-v1',
-        'reflection-hub-v1', 'capture-hub-v1', 'people-hub-v1',
-        'scrum-hub-v1', 'hub-warroom-v1', 'hub-vault-bridge-v1',
+        'tool-portfolio-v1', 'hub-tags-v1', 'capture-hub-v1', 'people-hub-v1',
+        'hub-vault-bridge-v1',
       ],
     };
+    // P157: keys of deleted tools. Dropped from this browser once (after a
+    // safety snapshot) and skipped when an old backup is imported.
+    const RETIRED_KEYS = ['kmqt_current_v2', 'argument-hub-v1', 'reflection-hub-v1',
+      'hub-warroom-v1', 'scrum-hub-v1', 'retro-hub-v1', 'rb-migration-done-v1', 'rb-reacted-v1'];
+
 
     function safeParseStorage(key) {
       try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -2787,6 +2792,7 @@
           if (parsed.version === 2 && parsed.storageKeys && parsed.data) {
             // v2 format — restore each section to its correct storage key
             for (const [section, storageKey] of Object.entries(parsed.storageKeys)) {
+              if (RETIRED_KEYS.includes(storageKey)) continue;
               if (parsed.data[section] !== undefined) {
                 let val = parsed.data[section];
                 // Exports never carry the Anthropic key (stripped for safety) — keep
@@ -2802,12 +2808,12 @@
           } else if (parsed.storageKey && parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data)) {
             // Single-tool export format — { storageKey: "project-hub-v1", data: { ... } }
             // Generated by Project Hub's own export button (not Thinking Hub's full backup)
-            HubStorage.set(parsed.storageKey, parsed.data);
+            if (!RETIRED_KEYS.includes(parsed.storageKey)) HubStorage.set(parsed.storageKey, parsed.data);
             restoreScope = parsed.storageKey;
           } else {
             // v1 legacy format — flat { storageKey: jsonString } map
             for (const k in parsed) {
-              if (Object.prototype.hasOwnProperty.call(parsed, k) && typeof parsed[k] === 'string') {
+              if (Object.prototype.hasOwnProperty.call(parsed, k) && typeof parsed[k] === 'string' && !RETIRED_KEYS.includes(k)) {
                 try { HubStorage.set(k, JSON.parse(parsed[k])); } catch { HubStorage.set(k, parsed[k]); }
               }
             }

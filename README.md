@@ -257,7 +257,7 @@ help-hub.html           # Help, framework reference, workflow guides
 
 - **Local-first and serverless** — no Thinking Hub backend, accounts, cloud persistence, telemetry, or analytics.
 - **Offline-capable PWA** — the shell, tools, and pinned runtime libraries are precached for offline use.
-- **Self-hosted runtime** — fonts, vis-network, and html2canvas are stored locally; optional Anthropic AI uses a small direct API client rather than a runtime SDK/CDN.
+- **Self-hosted runtime** — fonts and vis-network are stored locally; optional Anthropic AI uses a small direct API client rather than a runtime SDK/CDN.
 - **Deployment policy** — `enterprise-config.js` can allow only Microsoft Copilot handoff, only Anthropic direct, both, or no AI. Disabled providers fail before clipboard or network activity.
 - **Content Security Policy** — all application pages restrict scripts, styles, fonts, images, frames, workers, forms, and connections to the documented boundary.
 - **Automated safeguards** — GitHub Actions runs auto-discovered page smoke tests, service-worker coverage checks, and interaction flows on every pull request and push to `main`.

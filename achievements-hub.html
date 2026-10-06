@@ -478,7 +478,6 @@
     const projects  = (HubStorage.get('project-hub-v1') || {}).projects || [];
     const focusSess = (HubStorage.get('focus-hub-v1') || {}).sessions || [];
     const logEntries= (HubStorage.get('log-hub-v1') || {}).entries || {};
-    const retros    = (HubStorage.get('retro-hub-v1') || {}).retros || [];
     const links     = HubStorage.get('hub-links-v1') || [];
     const stakes    = (HubStorage.get('stakeholder-hub-v1') || {}).stakeholders || [];
     const meetings  = (HubStorage.get('meetings-hub-v1') || {}).meetings || [];
@@ -526,7 +525,7 @@
       decisions, projects, allTasks, completedTasks,
       focusSess, focusTotalSecs,
       logEntries, logStreak, moodCount,
-      retros, links, stakes, meetings, assump, resolvedAssumps, risks, goals, canvas,
+      links, stakes, meetings, assump, resolvedAssumps, risks, goals, canvas,
       uniqueAppIds, activityStreak, hasVarietyDay, distinctDays,
       shippedProject,
     };
@@ -623,12 +622,6 @@
 
     makeAch('ref-mood-tracker', '😊', 'Mood Watcher','reflector', 100, 'Log your mood for 14 days',
       ctx => ({ unlocked: ctx.moodCount >= 14, progress: ctx.moodCount, total: 14 })),
-
-    makeAch('ref-first-retro', '🔄', 'Retrospector', 'reflector', 100, 'Run your first retrospective',
-      ctx => ({ unlocked: ctx.retros.length >= 1, progress: Math.min(ctx.retros.length, 1), total: 1 })),
-
-    makeAch('ref-three-retros', '🔁', 'Iteration Loop','reflector', 200, 'Run 3 retrospectives',
-      ctx => ({ unlocked: ctx.retros.length >= 3, progress: ctx.retros.length, total: 3 })),
 
     // ── Connector ──
     makeAch('con-first-link', '🔗', 'Linked Up',    'connector', 50,  'Create a cross-tool link',

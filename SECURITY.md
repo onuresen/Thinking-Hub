@@ -99,7 +99,7 @@ Thinking Hub does not upload selected files to its own server.
 
 ### Supply chain and browser controls
 
-- `vis-network`, `html2canvas`, and all font subsets are pinned and distributed
+- `vis-network` and all font subsets are pinned and distributed
   locally from `vendor/`.
 - Optional AI uses a small local direct client; there is no runtime SDK/CDN.
 - Third-party attributions are recorded in `THIRD-PARTY-NOTICES`.
