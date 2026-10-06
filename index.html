@@ -1047,30 +1047,6 @@
         }
       } catch { }
 
-      // ── Retro actions (retro-hub-v1) ───────────────────────────────────────
-      try {
-        const retroRaw = JSON.parse(localStorage.getItem('retro-hub-v1') || '{}');
-        const retros = retroRaw.retros || [];
-        if (retros.length) {
-          const retro = retros[retros.length - 1];
-          const actions = (retro.items && retro.items.actions) || [];
-          if (actions.length) {
-            const shown = actions.slice(0, 3);
-            const rows = shown.map(a => `<div class="stat-item" data-tool="retro-hub" data-item-id="${_esc(a.id || '')}">
-              <div class="stat-item-dot" style="background:var(--border-purple)"></div>
-              <div class="stat-item-text">${_esc(a.text || '')}</div>
-            </div>`).join('');
-            widgets.push({
-              id: 'retro-hub', icon: '⟲', title: `Retro — ${_esc(retro.name || 'Latest')}`,
-              count: `${actions.length} action${actions.length !== 1 ? 's' : ''}`,
-              body: rows,
-              more: actions.length > 3 ? `+${actions.length - 3} more` : '',
-              staleness: relativeAge(latestTimestamp(actions))
-            });
-          }
-        }
-      } catch { }
-
       // ── Learning Hub (learning-hub-v1) ────────────────────────────────────
       try {
         const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
@@ -3057,14 +3033,8 @@
       'idea-swiper.html': ['ideaswipe_history_v6'],
       'decision-hub.html': ['decision-hub-v1'],
       'canvas-hub.html': ['canvas-v1'],
-      'focus-hub.html': ['focus-hub-v1'],
       'journal-hub.html': ['log-hub-v1', 'review-hub-v1'],
-      'log-hub.html': ['log-hub-v1'],
-      'review-hub.html': ['review-hub-v1'],
-      'retro-hub.html': ['retro-hub-v1'],
-      'assumptions-hub.html': ['assumptions-hub-v1'],
       'goals-hub.html': ['goals-hub-v1'],
-      'matrix-hub.html': ['matrix-hub-v1'],
       'learning-hub.html': ['learning-hub-v1'],
       'meetings-hub.html': ['meetings-hub-v1'],
       'stakeholder-hub.html': ['stakeholder-hub-v1'],

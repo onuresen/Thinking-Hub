@@ -5,6 +5,11 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Removed
+
+- Seven old standalone pages with no sidebar entry: Time Journal, Daily Log, Weekly Review, Retro Board, Assumptions, Priority Matrix and Blocked Depth. Their features live on as tabs in Journal Hub, Decision Hub and Project Hub. All saved data is kept and still restores from backups.
+- The home Retro widget, which opened a page with no UI.
+
 ### Changed
 
 - Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.
