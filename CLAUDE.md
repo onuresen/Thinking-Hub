@@ -6,7 +6,7 @@ Short on purpose. Full priority history (P1–P157, every decision and verificat
 Multi-tool personal productivity web app for one user. **No build step, no Node.js.** Pure HTML/CSS/JS loaded directly in the browser. `index.html` (shell) loads each tool in `<iframe id="app-frame">`; tools share state through `HubStorage` (localStorage).
 
 ## ⛔ Standing decision: NO cloud sync (P84)
-The app holds **confidential work data**. No Supabase, Firebase or any server persistence, telemetry, or feature that sends user data to a server. Supabase was built once and deliberately removed. Fonts and libraries are self-hosted. Optional AI is deployment-controlled: Anthropic direct is the only automatic API egress; Copilot handoff only previews/copies locally and opens a browser tab after confirmation. Durability is local: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`). Hub backups never go into the esen-vault repo (it gitignores them).
+The app holds **confidential work data**. No Supabase, Firebase or any server persistence, telemetry, or feature that sends user data to a server. Supabase was built once and deliberately removed. Fonts and libraries are self-hosted. Optional AI is deployment-controlled: Anthropic direct is the only automatic API egress; Copilot handoff only previews/copies locally and opens a browser tab after confirmation. Durability is local: Full Backup export/import + IndexedDB snapshots (`hub-snapshots.js`).
 
 ## File map
 Sidebar tools (19, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hub.html` — smoke-tested):
