@@ -617,6 +617,36 @@ function appFiles(ext) {
     await wctx.close();
   }
 
+  {
+    // Machi has two views behind a tab (P160). Bird's-eye must render the same
+    // entities, remember the choice, and open the popover on a real click.
+    const ictx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 1400 } });
+    const ip = await ictx.newPage();
+    await ip.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      localStorage.setItem('project-hub-v1', JSON.stringify({ projects: [{ id: 'p1', name: 'Bird Car', color: '#ff6b6b', tasks: [{ id: 't1', done: false, status: 'blocked' }] }] }));
+      localStorage.setItem('hub-activity-v1', JSON.stringify({ log: [{ appId: 'project-hub', ts: new Date().toISOString() }, { appId: 'schedule', ts: new Date().toISOString() }] }));
+    });
+    await ip.goto(`${BASE}/town-hub.html`); await ip.waitForTimeout(600);
+    await ip.click('#tab-iso'); await ip.waitForTimeout(600);
+    const st = await ip.evaluate(() => ({
+      iso: _machiTown instanceof MachiIso.Town, buildings: _machiTown.hitboxes.length,
+      streetHidden: getComputedStyle(document.getElementById('town')).display === 'none',
+    }));
+    const pt = await ip.evaluate(() => {
+      const t = _machiTown, b = t._actorBoxes.find((x) => x.entity.id === 'proj-p1'), r = t.canvas.getBoundingClientRect();
+      return b && { x: r.left + (b.x + b.w / 2) * t.scale, y: r.top + (b.y + b.h / 2) * t.scale };
+    });
+    if (pt) { await ip.mouse.move(pt.x, pt.y); await ip.mouse.down(); await ip.waitForTimeout(80); await ip.mouse.up(); await ip.waitForTimeout(200); }
+    const pop = await ip.evaluate(() => document.getElementById('detail').classList.contains('open') && document.querySelector('#detail h2').textContent);
+    await ip.reload(); await ip.waitForTimeout(600);
+    const kept = await ip.evaluate(() => _machiTown instanceof MachiIso.Town);
+    check("Machi bird's-eye view renders, opens a car's popover and is remembered",
+      st.iso && st.buildings === 2 && st.streetHidden && pop === 'Bird Car' && kept, JSON.stringify({ st, pop, kept }));
+    await ictx.close();
+  }
+
   const tzCtx = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
     const page = await tzCtx.newPage();
     await page.clock.setFixedTime(new Date('2026-09-29T22:30:00Z')); // 07:30 JST on 09-30

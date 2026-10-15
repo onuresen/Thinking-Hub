@@ -11,6 +11,8 @@
 //   Canvas Hub → an art studio. An easel per board, gallery lights per card,
 //                    bunting for lines.
 //   Dependency Graph links → pigeons carrying letters between tool buildings.
+//   Journal Line   → a raised train above the town. One carriage per day you wrote
+//                    in the Daily Log this week (both the street and bird's-eye view).
 // Plus sparkles wherever you click.
 
 const MachiFun = (() => {
@@ -41,6 +43,7 @@ const MachiFun = (() => {
       taxis: [],     // { id, title, time, riders }
       studio: { boards: [], cards: 0, lines: 0 },
       links: [],     // { id, from, to, relType, note, fromLabel, toLabel }
+      journal: { week: 0 },
     };
   }
 
@@ -129,6 +132,20 @@ const MachiFun = (() => {
     }));
   }
 
+  // Days in the last 7 (today included) with a Daily Log entry.
+  function readJournal() {
+    const raw = HubStorage.get('log-hub-v1') || {};
+    const entries = raw.entries && typeof raw.entries === 'object' ? raw.entries : {};
+    let week = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const e = entries[HubUtils.localYmd(d)];
+      if (e && (String(e.text || '').trim() || e.mood)) week++;
+    }
+    return { week };
+  }
+
   /** Re-reads Hub data. Cheap: a handful of storage reads. */
   function refresh() {
     const m = readMeetings();
@@ -139,6 +156,7 @@ const MachiFun = (() => {
       taxis: m.taxis,
       studio: readStudio(),
       links: readLinks(),
+      journal: readJournal(),
     };
     // Inbox cleared since the last visit (or since the last refresh)? Send vans.
     const st = HubStorage.get(STATE_KEY) || {};
@@ -510,6 +528,44 @@ const MachiFun = (() => {
     for (const id of pigeons.keys()) if (!live.has(id)) pigeons.delete(id);
   }
 
+  // ── Journal Line (raised train) ───────────────────────────────────────────
+  // Runs on a viaduct just above the first row's skyline (tallest building + flag
+  // stays below it). Pillars only go down in the gaps between buildings.
+  let trainX = -40;
+  function drawTrain(ctx, api, dt) {
+    const { TOP_SKY, BUILD_ZONE } = api.layout;
+    const width = api.grid.width;
+    const railY = TOP_SKY - 1;
+    const groundY = TOP_SKY + BUILD_ZONE;
+    const spans = api.hitboxes.filter((b) => b.row === 0).map((b) => [b.x - 2, b.x + b.w + 2]);
+    px(ctx, '#6b707c', 0, railY, width, 1);
+    px(ctx, '#8a8f9c', 0, railY + 1, width, 1);
+    for (let x = 14; x < width - 2; x += 44) {
+      let pxX = x;
+      while (spans.some(([a, b]) => pxX >= a && pxX <= b) && pxX < x + 20) pxX++;
+      if (spans.some(([a, b]) => pxX >= a && pxX <= b)) continue;
+      px(ctx, '#8a8f9c', pxX, railY + 2, 2, groundY - railY - 2);
+    }
+    const cars = data.journal.week;
+    const len = 8 + cars * 8;
+    if (motion) trainX += dt * 18;
+    if (trainX > width + 4) trainX = -len - 4;
+    const night = api.dayness < 0.45;
+    const y = railY - 4;
+    for (let i = 0; i <= cars; i++) {
+      const cx = Math.round(trainX) + (cars - i) * 8; // engine leads on the right
+      const head = i === 0;
+      px(ctx, head ? '#5bd67a' : '#f2f2f2', cx, y, 7, 4);
+      px(ctx, head ? '#2f6b3f' : '#5bd67a', cx, y + 2, 7, 1);
+      for (let w = 1; w < 6; w += 2) px(ctx, night ? '#ffe07a' : '#5b8cff', cx + w, y + 1, 1, 1);
+      if (head) px(ctx, '#ffe07a', cx + 6, y + 3, 1, 1);
+    }
+    api.addHitbox({
+      entity: { id: 'fun-train', name: 'Journal Line', kind: 'fun', meta: { lens: 'fun-train' } },
+      x: Math.round(trainX) - 1, y: y - 1, w: len + 2, h: 6,
+    });
+  }
+
   // ── Sparkles ──────────────────────────────────────────────────────────────
   function sparkle(box) {
     if (!motion || !box) return;
@@ -552,8 +608,18 @@ const MachiFun = (() => {
     const meet = boxFor(api, 'meetings-hub');
     if (meet && (data.buses.length || data.taxis.length)) drawBusStop(ctx, api, meet, dt);
     drawPigeons(ctx, api, dt);
+    drawTrain(ctx, api, dt);
     drawSparkles(ctx, dt);
   }
+
+  /** Bird's-eye view decorator: only the parts that are not tied to street layout. */
+  function drawIso(ctx, api) {
+    const dt = lastTime === null ? 0 : Math.max(0, Math.min(0.1, api.time - lastTime));
+    lastTime = api.time;
+    drawSparkles(ctx, dt);
+  }
+
+  function trainCars() { return data.journal.week; }
 
   // ── Detail text for the popover ───────────────────────────────────────────
   let toolNames = {};
@@ -596,6 +662,15 @@ const MachiFun = (() => {
         link: ['graph-hub.html', 'Open Dependency Graph →'],
       };
     }
+    if (m.lens === 'fun-train') {
+      const n = data.journal.week;
+      return {
+        title: '🚃 Journal Line',
+        status: n ? `${n} carriage${n === 1 ? '' : 's'} · one per day you wrote this week` : 'Just the engine today',
+        note: n ? '' : 'Write in the Daily Log and a carriage joins the train.',
+        link: ['journal-hub.html', 'Open Journal Hub →'],
+      };
+    }
     if (m.lens === 'fun-busstop') {
       const lines = data.buses.slice()
         .sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7))
@@ -631,7 +706,7 @@ const MachiFun = (() => {
   function setMotion(on) { motion = Boolean(on); }
 
   return {
-    refresh, tweak, wantedBuildings, draw, sparkle, buildingNote, describe, setMotion, setToolNames,
+    refresh, tweak, wantedBuildings, draw, drawIso, trainCars, sparkle, buildingNote, describe, setMotion, setToolNames,
     _debug: () => ({ data, pigeons: pigeons.size, vehicles: vehicles.size, vans: vans.length, pendingVans }),
   };
 })();

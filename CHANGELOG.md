@@ -27,6 +27,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Machi Hub: a 🏙 Street / 🗾 Bird's-eye tab. Bird's-eye shows the town as a small island with a river, a park and a rail loop. Your choice is remembered.
+- Machi Hub: the Journal Line train. It gets one carriage for each day you wrote in the Daily Log this week.
 - Canvas Hub color key: board menu (⋯) → **Color key…** names what each color means on that board. A small key shows the named colors and the line types the board uses. Click a color to light up its cards. The card color menu lists colors by name. The key goes into PNG, slides, interactive HTML, Markdown, board files, duplicates and templates. The Capability Map template comes with one.
 - Canvas Hub: paste a table (Markdown, or cells copied from Excel). Each header becomes a column layer and each cell a card, with rows lined up. One undo step. Right-click → Paste outline / table…, or Ctrl+V on the canvas.
 - Canvas Hub: hover a card to light up its own lines. Other lines fade and the cards at the other end get an outline. Mouse only; nothing changes on touch or in exports.
