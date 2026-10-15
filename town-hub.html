@@ -88,7 +88,7 @@
     canvas { border: 1px solid var(--border); border-radius: var(--r-sm); display: block; }
     .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
     .legend span::before { content: "■ "; }
-    #legend-events span::before { content: ""; } /* emoji already is the icon — no color square */
+    #legend-events span::before, #legend-park span::before { content: ""; } /* emoji already is the icon — no color square */
 
     /* popover anchored next to the clicked building/car/person */
     #detail {
@@ -144,13 +144,15 @@
   <div class="content">
     <p class="intro">
       Your whole Hub as one city. Click anything.<br>
-      <strong>Buildings</strong> are tools: Hub pages (lit by real opens) and your
+      <strong>Places</strong> are your Hub pages: each one has its own landmark.
+      <strong>Trees</strong> in the Tool Park are your
       <a href="tool-portfolio.html" style="color:var(--accent)">Tool Portfolio</a>.
       <strong>Cars</strong> are projects. <strong>People</strong> walk the streets.
       The <strong>blimp</strong> carries your badges.<br>
-      Trouble shows as incidents: 🔥 a tool gone cold, 💥 a blocked project, ⚠️ an overdue one.
+      Trouble shows as incidents: 🔥 a page gone cold, 🍂 a tool tree wilting, 💥 a blocked project, ⚠️ an overdue one.
       🚑 marks a risk being mitigated. Too much trouble and a storm rolls in.<br>
-      Some buildings have a life of their own: the 📚 library, 📮 post office, 🚏 bus stop and 🎨 art studio.
+      Some places have a life of their own: the 📚 library, 📮 post office, 🚏 bus stop, 🎨 art studio and 🚒 fire station.
+      A 🎪 festival opens when you finish a project. Each season has its own festival.
       🕊 Pigeons carry your Dependency Graph links between tools.
       🚃 The Journal Line gets a carriage for each day you wrote this week.
     </p>
@@ -166,12 +168,13 @@
     <div id="view-town" class="view-panel">
       <div class="town-wrap">
         <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><canvas id="town-iso" style="display:none"></canvas><div id="detail"></div></div>
-        <div class="legend" id="legend">
-          <span>Portfolio:</span>
-          <span style="color:#5bd67a">using</span>
-          <span style="color:#5b8cff">piloting</span>
-          <span style="color:#ff9f5b">exploring</span>
-          <span style="color:#8a8f9c">retired</span>
+        <div class="legend" id="legend-park">
+          <span>Tool Park:</span>
+          <span>🌳 using</span>
+          <span>🌲 piloting</span>
+          <span>🌱 exploring</span>
+          <span>🪵 retired</span>
+          <span>🍂 wilting</span>
         </div>
         <div class="legend" id="legend-events">
           <span>🔥 dead tool</span>
@@ -180,6 +183,7 @@
           <span>💥 blocked project</span>
           <span>🚑 risk response</span>
           <span>🏛 civic landmark</span>
+          <span>🎪 project finished</span>
         </div>
       </div>
     </div>
@@ -257,7 +261,7 @@
             useCount: t.useCount || 0, mastery: t.mastery ?? 0, lastUsedAt: t.lastUsedAt,
           },
         };
-      });
+      }).map(MachiFun.treeify);
     }
 
     // ── Lens 2: Hub Pages district (buildings, lit by real page opens) ──────
@@ -462,7 +466,8 @@
         });
       }
 
-      return out;
+      // Police box, hospital, festival ground (machi-fun.js decides from data).
+      return out.concat(MachiFun.civicBuildings());
     }
 
     // Weather = how much of the visible city is in trouble right now.
@@ -516,7 +521,8 @@
       const priority = [];
       for (const e of entities) {
         if (e.kind === 'building') {
-          if (e.incident === 'fire') priority.push(`🔥 ${e.name} has gone cold — untouched 60+ days`);
+          if (e.incident === 'fire' && e.meta.look === 'tree') priority.push(`🍂 ${e.name} is wilting — untouched 60+ days`);
+          else if (e.incident === 'fire') priority.push(`🔥 ${e.name} has gone cold — untouched 60+ days`);
           else if (e.incident === 'crane') priority.push(`🏗️ ${e.name} is under heavy active development`);
         } else if (e.kind === 'vehicle') {
           if (e.incident === 'crash') priority.push(`💥 ${e.name} is blocked`);
@@ -849,6 +855,7 @@
 
       if (m.lens === 'portfolio') {
         line(detail, 'd-status', [m.status, `${m.useCount}× used`, lastTxt || 'never used'].filter(Boolean).join(' · '));
+        line(detail, 'd-note', MachiFun.treeNote(m, e.incident, e.activity));
         line(detail, 'd-note', m.note);
       } else if (m.lens === 'hub-page') {
         line(detail, 'd-status', [m.group, m.useCount ? `opened ${m.useCount}×` : null, lastTxt].filter(Boolean).join(' · '));
@@ -881,7 +888,8 @@
           : 'Empty so far — no decision has a scored outcome yet. Score one in Decision Hub to start building.');
       }
 
-      if (e.kind === 'building' || e.kind === 'vehicle') incidentLine(detail, e.incident);
+      // Trees wilt instead of burning; treeNote above already says so.
+      if ((e.kind === 'building' && m.look !== 'tree') || e.kind === 'vehicle') incidentLine(detail, e.incident);
 
       if (e.achievements && e.achievements.length && (m.lens === 'portfolio' || m.lens === 'hub-page')) {
         const ach = document.createElement('div');
@@ -998,6 +1006,7 @@
           if (!own.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
         });
         MachiFun.setMotion(!reduced);
+        MachiFun.setSeasonSource(() => (town ? town.getSeason() : 'summer'));
         window._machiTown = town; // debugging/testing handle
       }
       window._machiTown = town;

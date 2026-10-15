@@ -1,7 +1,8 @@
 /* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-engine.js (Machi Hub project).
    Edit there, then re-copy here. Do not edit this copy directly.
-   ⚠ Local addition not yet in the canonical source: setDecorator() (Thinking Hub P140).
-   Port it to Vibe_Coding/MachiHub before the next re-copy, or it will be lost. */
+   ⚠ Local additions not yet in the canonical source: setDecorator() (Thinking Hub P140)
+   and the entity flag hostDrawn (P161). Port both to Vibe_Coding/MachiHub before the next
+   re-copy, or they will be lost. */
 
 // machi-engine.js — portable core for Machi Hub.
 // Host-agnostic: knows nothing about vault / Thinking Hub / One+. Adapters live outside this file.
@@ -88,6 +89,8 @@ const MachiHub = (() => {
    * @property {Array<{id:string,label:string,icon:string}>} [achievements] Badge pixels (buildings).
    * @property {string|null} [incident] Building: 'fire' | 'crane'. Vehicle/responder: 'crash' | 'stalled'.
    *   Null (default) = no incident. Host decides what qualifies; the engine only renders it.
+   * @property {boolean} [hostDrawn]  Buildings: keep the slot + hitbox, but skip the engine's own
+   *   body/fire/smoke. The host draws it through setDecorator(). Default false.
    * @property {Object} [meta]         Host-specific passthrough. Untouched here.
    */
 
@@ -111,6 +114,7 @@ const MachiHub = (() => {
       shipped: !!partial.shipped,
       achievements: partial.achievements || [],
       incident: VALID_INCIDENTS.has(partial.incident) ? partial.incident : null,
+      hostDrawn: !!partial.hostDrawn,
       meta: partial.meta || {},
     };
   }
@@ -577,6 +581,7 @@ const MachiHub = (() => {
       // chimney smoke from busy buildings; heavier, darker smoke from fires
       if (!this._hiddenKinds.has('building')) {
         for (const b of this.hitboxes) {
+          if (b.entity.hostDrawn) continue; // the host draws its own smoke
           if (b.entity.incident === 'fire' && Math.random() < dt * 2.2 && this._smoke.length < 140) {
             this._smoke.push({ x: b.x + Math.random() * b.w, y: b.y - 1, age: 0, life: 1.2 + Math.random(), heavy: true });
           } else if (!b.entity.incident && b.entity.activity > 0.6 && Math.random() < dt * 0.5 && this._smoke.length < 140) {
@@ -890,6 +895,7 @@ const MachiHub = (() => {
       // buildings
       if (show('building')) {
         for (const b of this.hitboxes) {
+          if (b.entity.hostDrawn) continue;
           if (fantasy) this.#drawFantasyBuilding(ctx, b);
           else this.#drawBuilding(ctx, b);
         }

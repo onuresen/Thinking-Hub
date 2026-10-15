@@ -17,14 +17,36 @@ const MachiIso = (() => {
     winter: { grass: '#dfe6ee', park: '#eef3f8', leaf: '#f4f8fc', leaf2: '#c9d3de', daySky: '#c3d9e8', particle: '#ffffff' },
   };
   const CATEGORY = { assigned: '#5b8cff', personal: '#ff9f5b', shipped: '#5bd67a', queued: '#8a8f9c', default: '#7a86a3' };
-  // A few tools already have a life of their own in the street view; keep their look here.
+  // Civic landmarks keyed by entity id; every other place by meta.look (set by machi-fun.js,
+  // shared with the street view). hw = half width, h = wall height, extra = accessory.
   const LOOKS = {
-    'hub-learning-hub': { color: '#d8c9a8', roof: 'pyramid', roofColor: '#8a6f3f' },
-    'hub-capture-hub': { color: '#c8553d', roof: 'flat', sign: 'envelope' },
-    'hub-canvas-hub': { color: '#f2ece0', roof: 'flat', windows: 'rainbow' },
-    'hub-meetings-hub': { color: '#5b8cff', roof: 'flat', sign: 'busstop' },
     'civic-calibration': { color: '#b28ae8', roof: 'pyramid', roofColor: '#7a4aa8', columns: true },
     'civic-vault-gap': { signpost: true },
+  };
+  const PLACES = {
+    depot: { color: '#7a8699', h: 12, extra: 'doors' },
+    clocktower: { color: '#e8dcc0', hw: 4, h: 26, roof: 'pyramid', roofColor: '#3f6b5a', extra: 'clock' },
+    terminal: { color: '#9ec9e8', h: 10, extra: 'canopy', sign: 'busstop' },
+    post: { color: '#c8553d', sign: 'envelope' },
+    cafe: { color: '#b07a4a', h: 10, extra: 'awning' },
+    dovecote: { color: '#a89f91', hw: 4, h: 16, roof: 'pyramid', roofColor: '#7a5a3a', extra: 'pigeons' },
+    apartments: { color: '#f2c4a8', hmul: 1.2, extra: 'balconies' },
+    embassy: { color: '#efe9df', columns: true, extra: 'flags' },
+    greenhouse: { color: '#bfe6d0', h: 8, roof: 'pyramid', roofColor: '#e2f4ea', extra: 'plants', noWindows: true },
+    cityhall: { color: '#e8dcc0', columns: true, extra: 'dome' },
+    library: { color: '#d8c9a8', roof: 'pyramid', roofColor: '#8a6f3f' },
+    studio: { color: '#f2ece0', windows: 'rainbow' },
+    shrine: { color: '#8f5a3a', hw: 4, h: 7, roof: 'pyramid', roofColor: '#3a3f4a', extra: 'torii', noWindows: true },
+    firestation: { color: '#b8402e', h: 11, extra: 'firedoor' },
+    home: { color: '#f2e3c6', hw: 5, h: 7, roof: 'pyramid', roofColor: '#c8553d', extra: 'chimney' },
+    school: { color: '#f2d58a', h: 10, extra: 'belltower' },
+    hospital: { color: '#f2f4f8', extra: 'cross' },
+    koban: { color: '#e8ecf5', hw: 3, h: 6, extra: 'redlamp', noWindows: true },
+    ferris: { custom: true, hw: 7, h: 20 },
+    stadium: { custom: true, hw: 7, h: 8 },
+    market: { custom: true, hw: 6, h: 9 },
+    festival: { custom: true, hw: 7, h: 12 },
+    tree: { custom: true },
   };
   const RAINBOW = ['#ff6b6b', '#ffd24d', '#5bd67a', '#5b8cff', '#b28ae8', '#ff9fc4'];
 
@@ -286,7 +308,7 @@ const MachiIso = (() => {
       // districts cluster around anchors: Hub pages downtown, tools by the park, civic by the river
       const anchors = {
         'Hub Pages': [W / 2, Math.max(3, map.riverY / 2)],
-        Portfolio: map.park ? [map.park.x + 1, map.park.y + 1] : [W * 0.3, H * 0.3],
+        'Tool Park': map.park ? [map.park.x + 1, map.park.y + 1] : [W * 0.3, H * 0.3],
         Civic: [W * 0.7, map.riverY + 3],
       };
       const free = map.lots.filter((l) => !l.garden);
@@ -331,11 +353,12 @@ const MachiIso = (() => {
     }
 
     #buildingBox(e, x, y) {
-      const look = LOOKS[e.id] || {};
+      const look = LOOKS[e.id] || PLACES[e.meta && e.meta.look] || {};
       const tier = e.tier || 2;
-      const hw = look.signpost ? 3 : Math.min(7, 3 + tier);
-      const h = look.signpost ? 9 : (tier === 1 ? 7 : 4 + tier * 6);
-      const roof = look.signpost ? 'none' : (look.roof || (tier === 1 ? 'pyramid' : 'flat'));
+      const isTree = e.meta && e.meta.look === 'tree';
+      const hw = look.signpost ? 3 : isTree ? 2 + tier : look.hw || Math.min(7, 3 + tier);
+      const h = look.signpost ? 9 : isTree ? 6 + tier * 4 : look.h || Math.round((tier === 1 ? 7 : 4 + tier * 6) * (look.hmul || 1));
+      const roof = look.signpost || look.custom ? 'none' : (look.roof || (tier === 1 ? 'pyramid' : 'flat'));
       const roofH = roof === 'pyramid' ? hw : 0;
       const [cx, cy] = this.#P(x + 0.5, y + 0.5);
       // x/y/w/h = the click rect in buffer space (what the host anchors its popover to)
@@ -389,7 +412,7 @@ const MachiIso = (() => {
       }
       // smoke from fires
       for (const hb of this.hitboxes) {
-        if (hb.entity.incident === 'fire' && Math.random() < dt * 3) {
+        if (hb.entity.incident === 'fire' && !hb.look.custom && Math.random() < dt * 3) {
           this._smoke.push({ x: hb.cx - 2 + Math.random() * 4, y: hb.cy - hb.bodyH - 2, age: 0, life: 1.6 });
         }
       }
@@ -489,6 +512,192 @@ const MachiIso = (() => {
       return c;
     }
 
+    // A tool tree: size from tier, kind from status, blossoms when used recently,
+    // wilts (no fire) after 60+ days unused, fairy lights on winter nights.
+    #toolTree(ctx, b, night, lights) {
+      const e = b.entity, season = this._season, th = SEASONS[season];
+      const withered = e.incident === 'fire';
+      const leaf = withered ? '#8a6f3f' : th.leaf, leaf2 = withered ? '#b29245' : th.leaf2;
+      const { cx, cy } = b;
+      const kind = e.meta.tree;
+      const size = b.hw; // 3..7
+      ctx.fillStyle = 'rgba(20,16,24,0.25)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, size, size / 2, 0, 0, Math.PI * 2); ctx.fill();
+      if (kind === 'sapling') {
+        ctx.fillStyle = '#8a6f3f'; ctx.fillRect(cx + 2, cy - 6, 1, 6);
+        ctx.fillStyle = '#6b4a2a'; ctx.fillRect(cx, cy - 4, 1, 4);
+        ctx.fillStyle = leaf; ctx.fillRect(cx - 1, cy - 5, 1, 1);
+        ctx.fillStyle = leaf2; ctx.fillRect(cx + 1, cy - 6, 1, 1);
+        return;
+      }
+      const trunk = Math.max(3, Math.round(b.bodyH * 0.35));
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(cx - (size > 4 ? 1 : 0), cy - trunk, size > 4 ? 2 : 1, trunk);
+      const top = cy - b.bodyH;
+      if (kind === 'bare') {
+        for (let i = 0; i < 4; i++) {
+          const dir = i % 2 ? 1 : -1, by = cy - trunk - i * 2;
+          for (let k = 1; k <= 2 + (i % 2); k++) ctx.fillRect(cx + dir * k, by - k, 1, 1);
+        }
+        return;
+      }
+      if (kind === 'pine') {
+        this.#poly(ctx, withered ? leaf : '#2f6b3f', [[cx, top], [cx - size, cy - trunk + 1], [cx + size, cy - trunk + 1]]);
+        this.#poly(ctx, withered ? leaf2 : '#3f8a4f', [[cx, top], [cx - size / 2, cy - trunk - (b.bodyH - trunk) / 2], [cx, cy - trunk]]);
+        if (season === 'winter' && !withered) this.#poly(ctx, '#ffffff', [[cx, top], [cx - 2, top + 4], [cx + 2, top + 4]]);
+      } else {
+        const r = size, my = cy - trunk - r + 2;
+        ctx.fillStyle = leaf; ctx.beginPath(); ctx.arc(cx, my, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = leaf2; ctx.beginPath(); ctx.arc(cx - r / 3, my - r / 3, r / 2, 0, Math.PI * 2); ctx.fill();
+        if (!withered && e.activity > 0.6) {
+          const dot = season === 'summer' ? '#e34d4d' : season === 'autumn' ? '#ffd24d' : season === 'spring' ? '#ffffff' : null;
+          if (dot) for (let i = 0; i < 4; i++) { ctx.fillStyle = dot; ctx.fillRect(cx - r + 1 + Math.floor(hash01(i, strHash(e.id)) * (r * 2 - 1)), my - r + 2 + Math.floor(hash01(strHash(e.id), i) * r), 1, 1); }
+        }
+      }
+      if (withered) {
+        const t = (this._time * 0.4 + (e.id.length % 5) / 5) % 1;
+        ctx.fillStyle = leaf2; ctx.fillRect(Math.round(cx + Math.sin(t * 9) * 3), Math.round(top + t * (cy - top)), 1, 1);
+      } else if (season === 'winter' && night) {
+        for (let i = 0; i < 5; i++) {
+          if (Math.floor(this._time * 2 + i) % 3) lights.push([cx - size + 1 + ((i * 3) % (size * 2 - 1)), top + 2 + ((i * 5) % Math.max(2, b.bodyH - trunk - 2)), 1, 1, RAINBOW[(i + Math.floor(this._time)) % RAINBOW.length]]);
+        }
+      }
+    }
+
+    // Fill a w×h patch on one wall. side -1 = left wall, 1 = right wall; u runs from the
+    // outer corner toward the front corner, v is height above the ground.
+    #face(ctx, b, side, u, v, w, h, color) {
+      ctx.fillStyle = color;
+      for (let i = 0; i < w; i++) {
+        const k = u + i;
+        if (k >= b.hw) break;
+        const x = side < 0 ? b.cx - b.hw + k : b.cx + b.hw - k - 1;
+        ctx.fillRect(x, Math.round(b.cy + k / 2 - v - h), 1, h);
+      }
+    }
+
+    #customPlace(ctx, b, night, lights) {
+      const look = b.entity.meta.look, { cx, cy } = b, t = this._time;
+      if (look === 'tree') return this.#toolTree(ctx, b, night, lights);
+      if (look === 'ferris') {
+        const r = 8, wy = cy - 11;
+        ctx.fillStyle = '#8a8f9c'; ctx.fillRect(cx - 4, wy, 1, 11); ctx.fillRect(cx + 4, wy, 1, 11);
+        for (let i = 0; i < 24; i++) {
+          const a = (i / 24) * Math.PI * 2, px = Math.round(cx + Math.cos(a) * r * 0.8), py = Math.round(wy + Math.sin(a) * r);
+          if (night) lights.push([px, py, 1, 1, RAINBOW[(i + Math.floor(t * 3)) % RAINBOW.length]]);
+          else { ctx.fillStyle = '#ff9fc4'; ctx.fillRect(px, py, 1, 1); }
+        }
+        for (let i = 0; i < 6; i++) {
+          const a = t * 0.5 + (i / 6) * Math.PI * 2;
+          ctx.fillStyle = RAINBOW[i % RAINBOW.length];
+          ctx.fillRect(Math.round(cx + Math.cos(a) * r * 0.8) - 1, Math.round(wy + Math.sin(a) * r), 3, 2);
+        }
+        ctx.fillStyle = '#ffd24d'; ctx.fillRect(cx, wy, 1, 1);
+        return;
+      }
+      if (look === 'stadium') {
+        this.#box(ctx, cx, cy, b.hw, 4, '#8a8f9c');
+        const hw = b.hw - 1;
+        this.#poly(ctx, '#5f9a63', [[cx, cy - 4 - hw / 2], [cx + hw, cy - 4], [cx, cy - 4 + hw / 2], [cx - hw, cy - 4]]);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 2, cy - 4, 5, 1);
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2, jump = Math.floor(t * 4 + i) % 5 === 0 ? 1 : 0;
+          ctx.fillStyle = RAINBOW[i % RAINBOW.length];
+          ctx.fillRect(Math.round(cx + Math.cos(a) * (b.hw - 0.5)), Math.round(cy - 4 + Math.sin(a) * (b.hw / 2) - jump), 1, 1);
+        }
+        for (const lx of [cx - b.hw, cx + b.hw - 1]) {
+          ctx.fillStyle = '#6b707c'; ctx.fillRect(lx, cy - 13, 1, 10);
+          if (night) { lights.push([lx - 1, cy - 14, 3, 1, '#ffffff']); lights.push([lx - 3, cy - 13, 7, 3, 'rgba(255,255,255,0.15)']); }
+          else { ctx.fillStyle = '#c9cfdb'; ctx.fillRect(lx - 1, cy - 14, 3, 1); }
+        }
+        return;
+      }
+      if (look === 'market') {
+        [[-3, -1], [2, 0], [-1, 2]].forEach(([dx, dy], i) => {
+          const sx = cx + dx, sy = cy + dy;
+          ctx.fillStyle = '#8a6f3f'; ctx.fillRect(sx - 2, sy - 5, 1, 5); ctx.fillRect(sx + 2, sy - 5, 1, 5);
+          ctx.fillStyle = '#d8c9a8'; ctx.fillRect(sx - 2, sy - 2, 5, 1);
+          ctx.fillStyle = RAINBOW[(i * 2) % RAINBOW.length]; ctx.fillRect(sx - 3, sy - 7, 7, 2);
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 2, sy - 7, 1, 2); ctx.fillRect(sx, sy - 7, 1, 2); ctx.fillRect(sx + 2, sy - 7, 1, 2);
+        });
+        return;
+      }
+      if (look === 'festival') {
+        [[-4, -1], [3, -1], [0, 2]].forEach(([dx, dy], i) => {
+          const sx = cx + dx, sy = cy + dy, c = RAINBOW[(i * 2 + 1) % RAINBOW.length];
+          this.#poly(ctx, c, [[sx, sy - 8], [sx - 3, sy], [sx, sy + 1]]);
+          this.#poly(ctx, shade(toHex(c), -0.3), [[sx, sy - 8], [sx, sy + 1], [sx + 3, sy]]);
+          ctx.fillStyle = '#2a2f3a'; ctx.fillRect(sx, sy - 2, 1, 2);
+        });
+        for (let i = 0; i < 9; i++) {
+          const lx = cx - 7 + i * 1.75, ly = cy - 11 + Math.abs(i - 4) * 0.5;
+          const col = i % 2 ? '#ffffff' : '#e34d4d';
+          if (night) lights.push([Math.round(lx), Math.round(ly), 1, 1, col]); else { ctx.fillStyle = col; ctx.fillRect(Math.round(lx), Math.round(ly), 1, 1); }
+        }
+      }
+    }
+
+    // Small extras on top of a place's box.
+    #extras(ctx, b, top, night, lights) {
+      const x = b.look.extra, { cx, cy, hw } = b, t = this._time;
+      if (x === 'doors') {
+        this.#face(ctx, b, -1, 1, 0, 4, 5, '#2a2f3a');
+        this.#face(ctx, b, -1, 1, 1, 4, 1, '#4a5162'); this.#face(ctx, b, -1, 1, 3, 4, 1, '#4a5162');
+      } else if (x === 'clock') {
+        this.#face(ctx, b, -1, 0, b.bodyH - 6, 3, 3, '#ffffff');
+        const now = new Date();
+        ctx.fillStyle = '#2a2f3a'; ctx.fillRect(cx - hw + 1, Math.round(cy + 0.5 - (b.bodyH - 5) - (now.getMinutes() < 30 ? 1 : 0)), 1, 1);
+      } else if (x === 'canopy') {
+        this.#box(ctx, cx, top + 2, hw + 1, 1, '#5b8cff');
+      } else if (x === 'awning') {
+        for (let k = 0; k < hw; k++) this.#face(ctx, b, -1, k, 4, 1, 2, k % 2 ? '#ffffff' : '#e34d4d');
+      } else if (x === 'pigeons') {
+        for (let i = 0; i < 2; i++) { ctx.fillStyle = '#9aa0aa'; ctx.fillRect(cx - 2 + i * 3, top - b.roofH - 1 - (Math.floor(t * 2 + i) % 2), 2, 1); }
+      } else if (x === 'balconies') {
+        for (let v = 4; v < b.bodyH - 2; v += 4) { this.#face(ctx, b, -1, 0, v, hw, 1, '#ffffff'); this.#face(ctx, b, 1, 0, v, hw, 1, '#ffffff'); }
+      } else if (x === 'flags') {
+        [-3, 0, 3].forEach((dx, i) => {
+          ctx.fillStyle = '#c9cfdb'; ctx.fillRect(cx + dx, top - 5, 1, 5);
+          ctx.fillStyle = RAINBOW[(i * 2 + 1) % RAINBOW.length]; ctx.fillRect(cx + dx + 1, top - 5 + (Math.floor(t * 2 + i) % 2), 2, 2);
+        });
+      } else if (x === 'plants') {
+        for (let k = 1; k < hw; k += 2) { this.#face(ctx, b, -1, k, 1, 1, 2 + (k % 3), '#3f8a4f'); this.#face(ctx, b, 1, k, 1, 1, 1 + (k % 2), '#5bd67a'); }
+        if (night) lights.push([cx - hw + 1, top + 1, hw * 2 - 2, 2, 'rgba(255,224,122,0.3)']);
+      } else if (x === 'dome') {
+        const r = Math.max(2, Math.round(hw * 0.6));
+        ctx.fillStyle = '#ffd24d'; ctx.beginPath(); ctx.arc(cx, top, r, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#c9cfdb'; ctx.fillRect(cx, top - r - 5, 1, 5);
+        ctx.fillStyle = '#5bd67a'; ctx.fillRect(cx + 1, top - r - 5 + (Math.floor(t * 2) % 2), 3, 2);
+      } else if (x === 'torii') {
+        const fx = cx, fy = cy + hw / 2 + 2;
+        ctx.fillStyle = '#e34d4d';
+        ctx.fillRect(fx - 4, fy - 8, 1, 8); ctx.fillRect(fx + 3, fy - 8, 1, 8);
+        ctx.fillRect(fx - 5, fy - 9, 10, 1); ctx.fillRect(fx - 4, fy - 7, 8, 1);
+        if (night) lights.push([cx - 1, cy - 3, 2, 2, '#ffd98a']);
+      } else if (x === 'firedoor') {
+        this.#face(ctx, b, -1, 1, 0, 5, 6, '#2a2f3a');
+        if (!this._burning) this.#face(ctx, b, -1, 2, 1, 3, 3, '#e34d4d');
+        const alarm = this._burning && Math.floor(t * 4) % 2;
+        lights.push([cx, top - 2, 1, 2, alarm ? '#ff5b5b' : '#8f3311']);
+      } else if (x === 'chimney') {
+        ctx.fillStyle = '#8f3311'; ctx.fillRect(cx + 2, top - b.roofH + 1, 2, 4);
+        if (Math.floor(t) % 3 === 0) { ctx.fillStyle = 'rgba(200,204,216,0.6)'; ctx.fillRect(cx + 2, top - b.roofH - 2, 1, 1); }
+        ctx.fillStyle = '#ffd24d'; ctx.fillRect(cx - 2, cy + 1, 1, 1);
+      } else if (x === 'belltower') {
+        this.#box(ctx, cx, top + 1, 2, 5, '#f2d58a');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(cx - 1, top - 3, 1, 1);
+        ctx.fillStyle = '#c9cfdb'; ctx.fillRect(cx + 3, top - 8, 1, 7);
+        ctx.fillStyle = '#5b8cff'; ctx.fillRect(cx + 4, top - 8 + (Math.floor(t * 2) % 2), 2, 2);
+      } else if (x === 'cross') {
+        this.#face(ctx, b, -1, 2, b.bodyH - 6, 3, 1, '#e34d4d');
+        this.#face(ctx, b, -1, 3, b.bodyH - 7, 1, 3, '#e34d4d');
+      } else if (x === 'redlamp') {
+        lights.push([cx, top - 3, 1, 2, Math.floor(t * 1.5) % 2 ? '#ff5b5b' : '#e34d4d']);
+        const ox = cx + hw + 2, oy = cy + 2;
+        ctx.fillStyle = '#2a3f7a'; ctx.fillRect(ox, oy - 3, 1, 3);
+        ctx.fillStyle = '#e8d5c0'; ctx.fillRect(ox, oy - 4, 1, 1); ctx.fillRect(ox + 1, oy - 3 - (Math.floor(t * 2) % 2), 1, 1);
+      }
+    }
+
     #tree(ctx, sx, sy, kind, th, season) {
       ctx.fillStyle = '#6b4a2a';
       ctx.fillRect(sx - 0.5, sy - 3, 1, 3);
@@ -506,6 +715,11 @@ const MachiIso = (() => {
     #drawBuilding(ctx, b, night, lights) {
       const e = b.entity, look = b.look;
       const { cx, cy, hw } = b;
+      if (look.custom) {
+        this.#customPlace(ctx, b, night, lights);
+        if (e.incident === 'fire' && e.meta.look !== 'tree') this.#flames(cy - b.bodyH, cx, lights);
+        return;
+      }
       if (look.signpost) {
         ctx.fillStyle = '#6b707c'; ctx.fillRect(cx, cy - 9, 1, 9);
         ctx.fillStyle = '#d8c9a8'; ctx.fillRect(cx - 3, cy - 9, 7, 3);
@@ -518,7 +732,7 @@ const MachiIso = (() => {
       // windows on both faces; lit ones go to the light layer at night
       const seed = strHash(e.id);
       let wi = 0;
-      for (const side of [-1, 1]) {
+      for (const side of look.noWindows ? [] : [-1, 1]) {
         for (let dx = 2; dx <= hw - 2; dx += 3) {
           // face bottom slopes from the side corner (cy) to the front corner (cy + hw/2)
           const wx = side === -1 ? cx - hw + dx : cx + hw - dx - 1;
@@ -552,6 +766,7 @@ const MachiIso = (() => {
         this.#poly(ctx, shade(toHex(roofCol), 0.1), [[cx - hw, top], [cx, top + hw / 2], apex]);
         this.#poly(ctx, shade(toHex(roofCol), -0.2), [[cx, top + hw / 2], [cx + hw, top], apex]);
       }
+      if (look.extra) this.#extras(ctx, b, top, night, lights);
       const roofTop = top - b.roofH;
       if (e.shipped) {
         ctx.fillStyle = '#c9cfdb'; ctx.fillRect(cx, roofTop - 6, 1, 6);
@@ -562,16 +777,20 @@ const MachiIso = (() => {
         ctx.fillRect(cx - hw + 1, cy - 1, 1, 2); ctx.fillRect(cx + hw - 2, cy - 1, 1, 2);
       }
       if (e.incident === 'fire') {
-        for (let i = 0; i < 4; i++) {
-          const fx = cx - 3 + i * 2, fh = 2 + Math.floor(hash01(i, Math.floor(this._time * 8)) * 3);
-          lights.push([fx, roofTop - fh, 1, fh, i % 2 ? '#ffd24d' : '#ff6b3d']);
-        }
+        this.#flames(roofTop, cx, lights);
       } else if (e.incident === 'crane') {
         ctx.fillStyle = '#ffd24d';
         ctx.fillRect(cx + hw, roofTop - 8, 1, b.bodyH + 8);
         const swing = Math.round(Math.sin(this._time * 0.6) * 3);
         ctx.fillRect(cx + hw - 6 + swing, roofTop - 8, 9, 1);
         ctx.fillStyle = '#6b707c'; ctx.fillRect(cx + hw - 5 + swing, roofTop - 7, 1, 3);
+      }
+    }
+
+    #flames(roofTop, cx, lights) {
+      for (let i = 0; i < 4; i++) {
+        const fx = cx - 3 + i * 2, fh = 2 + Math.floor(hash01(i, Math.floor(this._time * 8)) * 3);
+        lights.push([fx, roofTop - fh, 1, fh, i % 2 ? '#ffd24d' : '#ff6b3d']);
       }
     }
 
@@ -595,6 +814,8 @@ const MachiIso = (() => {
       const ctx = this.bctx;
       const season = this.getSeason();
       const th = SEASONS[season];
+      this._season = season;
+      this._burning = this.hitboxes.some((b) => b.entity.incident === 'fire' && !b.look.custom);
       const tod = this.getTimeOfDay();
       const dayness = (Math.cos((tod - 0.5) * 2 * Math.PI) + 1) / 2;
       const night = dayness < 0.45;
@@ -615,6 +836,10 @@ const MachiIso = (() => {
       }
       const sunX = clamp01((tod - 0.2) / 0.6) * (this.width - 10) + 5;
       if (dayness > 0.05) { ctx.fillStyle = `rgba(255,230,150,${dayness.toFixed(2)})`; ctx.fillRect(Math.round(sunX), 6, 3, 3); }
+      if (season === 'autumn' && night) {
+        // tsukimi: a big full moon
+        ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(this.width - 22, 14, 5, 0, Math.PI * 2); ctx.fill();
+      }
 
       ctx.drawImage(this.#ground(season), 0, 0);
 
@@ -658,6 +883,16 @@ const MachiIso = (() => {
           const [sx, sy] = this.#P(p.x + dx + 0.5, p.y + dy + 0.5);
           items.push({ d: p.x + dx + p.y + dy + 0.5, fn: () => this.#tree(ctx, sx, sy, kind, th, season) });
         }
+        if (season === 'spring') {
+          // hanami: picnic blankets under the cherry trees
+          for (const [dx, dy] of [[0.5, 1.5], [1.5, 2.5]]) {
+            const [qx, qy] = this.#P(p.x + dx + 0.5, p.y + dy + 0.5);
+            items.push({ d: p.x + dx + p.y + dy + 0.2, fn: () => {
+              for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#ffffff' : '#e34d4d'; ctx.fillRect(qx - 3 + i * 1.5, qy - 1 + (i % 2) * 0.5, 2, 1); }
+              ctx.fillStyle = '#5b8cff'; ctx.fillRect(qx + 2, qy - 3, 1, 2); ctx.fillStyle = '#e8d5c0'; ctx.fillRect(qx + 2, qy - 4, 1, 1);
+            } });
+          }
+        }
         const [bx, by] = this.#P(p.x + 2.5, p.y + 1.5);
         items.push({ d: p.x + p.y + 3.5, fn: () => { ctx.fillStyle = '#8a6f3f'; ctx.fillRect(bx - 2, by - 2, 4, 1); ctx.fillRect(bx - 2, by - 1, 1, 1); ctx.fillRect(bx + 1, by - 1, 1, 1); } });
       }
@@ -684,6 +919,25 @@ const MachiIso = (() => {
           this._actorBoxes.push({ entity: trainEntity, x: sx - 5, y: top - 3, w: 10, h: 9 });
         } });
       }
+      // fire trucks: the fire station sends one to each burning place (max 2)
+      if (this.hitboxes.some((b) => b.entity.meta && b.entity.meta.look === 'firestation')) {
+        this.hitboxes.filter((b) => b.entity.incident === 'fire' && !b.look.custom).slice(0, 2).forEach((b) => {
+          const road = [[1, 0], [0, 1], [-1, 0], [0, -1]].map(([dx, dy]) => [b.tx + dx, b.ty + dy]).find(([x, y]) => this._isRoad(x, y));
+          if (!road) return;
+          const [sx, sy] = this.#P(road[0] + 0.5, road[1] + 0.5);
+          items.push({ d: road[0] + road[1] + 0.3, fn: () => {
+            this.#box(ctx, sx, sy, 4, 3, '#e34d4d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 3, sy - 4, 5, 1);
+            lights.push([sx, sy - 5, 1, 1, Math.floor(this._time * 4) % 2 ? '#ff5b5b' : '#5b8cff']);
+            for (let i = 0; i < 6; i++) {
+              const k = (this._time * 1.2 + i / 6) % 1;
+              const wx = sx + (b.cx - sx) * k, wy = sy - 4 + (b.cy - b.bodyH - sy + 4) * k - Math.sin(k * Math.PI) * 6;
+              lights.push([Math.round(wx), Math.round(wy), 1, 1, '#9fd0f0']);
+            }
+          } });
+        });
+      }
+
       // moving actors
       for (const e of this.entities) {
         const a = this._actors.get(e.id);
@@ -743,6 +997,11 @@ const MachiIso = (() => {
             const [sx, sy] = this.#P(x, y + 0.5);
             ctx.fillStyle = 'rgba(255,217,138,0.18)'; ctx.fillRect(sx - 3, sy - 2, 7, 4);
             ctx.fillStyle = '#ffd98a'; ctx.fillRect(sx, sy - 1, 1, 1);
+            if (season === 'summer') {
+              // matsuri: red and white lanterns at every crossing
+              ctx.fillStyle = '#e34d4d'; ctx.fillRect(sx - 3, sy - 4, 1, 2);
+              ctx.fillStyle = '#ffffff'; ctx.fillRect(sx + 3, sy - 4, 1, 2);
+            }
           }
         }
       }

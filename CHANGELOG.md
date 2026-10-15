@@ -27,6 +27,9 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Machi Hub: every Hub page has its own landmark (clock tower, café, Ferris wheel, shrine, stadium, school and more).
+- Machi Hub: Tool Portfolio tools grow as trees in the Tool Park. They blossom when used and wilt after 60 days unused.
+- Machi Hub: a police box, a hospital, a fire station that sends trucks, a festival when you finish a project, and a festival for each season.
 - Machi Hub: a 🏙 Street / 🗾 Bird's-eye tab. Bird's-eye shows the town as a small island with a river, a park and a rail loop. Your choice is remembered.
 - Machi Hub: the Journal Line train. It gets one carriage for each day you wrote in the Daily Log this week.
 - Canvas Hub color key: board menu (⋯) → **Color key…** names what each color means on that board. A small key shows the named colors and the line types the board uses. Click a color to light up its cards. The card color menu lists colors by name. The key goes into PNG, slides, interactive HTML, Markdown, board files, duplicates and templates. The Capability Map template comes with one.

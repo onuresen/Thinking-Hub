@@ -52,8 +52,8 @@ Shared modules and other files:
 | `hub-starter-data.js` | First-run sample data |
 | `hub-tutorial.js`, `hub-toast.js`, `hub-bootstrap.js` | Tour, toasts, init (call last) |
 | `enterprise-config.js` + `hub-ai.js` | Immutable AI policy + provider-neutral AI (Anthropic direct, Copilot handoff) |
-| `machi-engine.js`, `machi-achievements.js` | ⚠ STAMPED COPIES from `Vibe_Coding/MachiHub` — edit there. Local `setDecorator()` (P140) not yet upstream |
-| `machi-fun.js` | Thinking-Hub-only Machi decorations (library, post office, bus stop, studio, pigeons, Journal Line train) |
+| `machi-engine.js`, `machi-achievements.js` | ⚠ STAMPED COPIES from `Vibe_Coding/MachiHub` — edit there. Local `setDecorator()` (P140) and `hostDrawn` (P161) not yet upstream |
+| `machi-fun.js` | Thinking-Hub-only Machi life: a landmark per Hub page (`LANDMARKS` → `meta.look`), tool trees, police box/hospital/festival, seasonal festivals, pigeons, Journal Line train. Street drawing lives here |
 | `machi-iso.js` | Thinking-Hub-only Machi bird's-eye view (P160). Same methods as `MachiHub.Town`. On trial next to Street; one gets retired |
 | `sw.js` | Service worker, stale-while-revalidate. ⚠ New app files go in `PRECACHE`; bump `CACHE` for bigger changes |
 | `styles/` | `fonts.css` + extracted CSS for index, project-hub, idea-swiper, schedule, meetings-hub |
@@ -180,7 +180,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 
 ## Machi Hub
 Built by a Codex agent (history in `docs/HISTORY.md`). **For fun, not insight** (Onur, 2026-10-01): add playful, data-driven life; no stats or dashboards. Buildings burn only on evidence of neglect (real `lastUsedAt` ≥ 60 days). `machi-milestones-v1` stays out of backups.
-Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and Bird's-eye (`machi-iso.js`). New Machi features go in both until Onur retires one. The tab choice lives in `machi-milestones-v1.view`.
+Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and Bird's-eye (`machi-iso.js`). New Machi features go in both until Onur retires one. The tab choice lives in `machi-milestones-v1.view`. Places carry `meta.look`; each view draws its own version of a look.
 
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->

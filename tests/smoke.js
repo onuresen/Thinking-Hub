@@ -147,6 +147,17 @@ function appFiles(ext) {
     check('Machi engine keeps the decorator hook used by machi-fun.js',
       /setDecorator\(fn\)/.test(engine) && townHtml.includes('setDecorator(MachiFun.draw)')
       && townHtml.includes('<script src="machi-fun.js"></script>'));
+    // P161: landmarks and tool trees are host-drawn. Without the flag the engine
+    // would paint a plain block on top of every landmark.
+    check('Machi engine keeps the hostDrawn flag used for landmarks and trees',
+      /hostDrawn: !!partial\.hostDrawn/.test(engine) && /if \(b\.entity\.hostDrawn\) continue;/.test(engine));
+    const fun = fs.readFileSync(path.join(ROOT, 'machi-fun.js'), 'utf8');
+    const lmBlock = fun.slice(fun.indexOf('const LANDMARKS'), fun.indexOf('};', fun.indexOf('const LANDMARKS')));
+    const lmIds = [...lmBlock.matchAll(/'([a-z-]+)': '/g)].map((m) => m[1]).sort();
+    const pagesBlock = townHtml.slice(townHtml.indexOf('const HUB_PAGES'), townHtml.indexOf('};', townHtml.indexOf('const HUB_PAGES')));
+    const pageIds = [...pagesBlock.matchAll(/'([a-z-]+)': \[/g)].map((m) => m[1]).sort();
+    check('every Machi Hub page has its own landmark', JSON.stringify(lmIds) === JSON.stringify(pageIds),
+      'landmarks ' + lmIds.length + ' / pages ' + pageIds.length);
   }
   check('PWA icon dimensions match the manifest',
     JSON.stringify(pngDimensions('icon-192.png')) === '[192,192]' &&
@@ -631,7 +642,7 @@ function appFiles(ext) {
     await ip.goto(`${BASE}/town-hub.html`); await ip.waitForTimeout(600);
     await ip.click('#tab-iso'); await ip.waitForTimeout(600);
     const st = await ip.evaluate(() => ({
-      iso: _machiTown instanceof MachiIso.Town, buildings: _machiTown.hitboxes.length,
+      iso: _machiTown instanceof MachiIso.Town, buildings: _machiTown.hitboxes.filter((b) => b.entity.id.startsWith('hub-')).length,
       streetHidden: getComputedStyle(document.getElementById('town')).display === 'none',
     }));
     const pt = await ip.evaluate(() => {
