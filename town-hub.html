@@ -327,7 +327,7 @@
           activity: Math.min(1, open / 8), // busier project → faster car
           incident: projectIncident(p),
           meta: {
-            lens: 'project', desc: p.desc, status: p.status,
+            lens: 'project', projectId: p.id, desc: p.desc, status: p.status,
             openTasks: open, doneTasks: tasks.length - open,
             milestones: (p.milestones || []).length, members: (p.members || []).length,
           },
@@ -884,6 +884,17 @@
         const a = document.createElement('a');
         a.href = href;
         a.textContent = label;
+        // Inside the shell, ask the parent to open the tool. Plain navigation
+        // would load it inside Machi's own iframe and lose the item (a car
+        // opened Project Hub's home, not its project). itemId uses the
+        // shell's existing hub-highlight path.
+        a.addEventListener('click', (ev) => {
+          if (window.parent === window || href === '#') return;
+          ev.preventDefault();
+          const tool = href.replace(/\.html$/, '');
+          const itemId = m.lens === 'project' ? m.projectId : undefined;
+          parent.postMessage({ type: 'hub-navigate', tool, itemId }, window.location.origin);
+        });
         actions.appendChild(a);
       }
       detail.appendChild(actions);

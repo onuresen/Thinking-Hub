@@ -4,6 +4,18 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 159 — Machi: a car opens its own project~~ ✓ Done `[group: machi-hub]`
+Clicking a car's "Open in Project Hub →" opened Project Hub's home, not the project.
+The link was a plain `href`. It loaded the tool inside Machi's iframe with no item id.
+Now every Machi popover link posts `hub-navigate` to the shell. Cars pass the project id, so the shell's `hub-highlight` path selects it. Standalone Machi keeps the plain link.
+
+**Key decisions**
+- **Decision:** Reuse the shell's `hub-navigate` + `hub-highlight` path. **Why:** it already selects a project by id, and the sidebar updates too. **Alternative:** a `?project=` URL param in Project Hub — new code for the same job. **Confidence:** high.
+
+**Verified:** Playwright, shell → Machi → car popover link → Project Hub with the clicked project selected. `npm test` passes.
+
+**Files:** `town-hub.html`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 158 — Slim CLAUDE.md~~ ✓ Done `[group: declutter]`
 CLAUDE.md was ~3,100 lines, mostly finished priorities. It now holds rules, the current file map, keys and binding decisions (~230 lines). Everything else moved here unchanged.
 

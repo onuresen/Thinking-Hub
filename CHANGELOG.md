@@ -116,6 +116,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Fixed
 
+- Machi Hub: clicking a car's link now opens that project in Project Hub, not the Project Hub home.
 - Machi Hub: the Portfolio legend said adopt/trial/assess/hold, but buildings are colored by status. It now reads using/piloting/exploring/retired.
 - Machi Hub: retired Portfolio tools no longer catch fire for going unused.
 - Machi Hub: the Civic landmarks now update live when decisions or Vault Bridge change.
