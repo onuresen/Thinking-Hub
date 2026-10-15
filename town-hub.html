@@ -13,6 +13,7 @@
   <script src="machi-engine.js"></script>
   <script src="machi-achievements.js"></script>
   <script src="machi-fun.js"></script>
+  <script src="machi-iso.js"></script>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <style>
@@ -60,6 +61,13 @@
 
     .content { padding: 22px; width: 100%; margin: 0 auto; flex: 1; overflow-y: auto; }
     .intro { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 14px; max-width: 900px; }
+
+    /* Street / Bird's-eye switch. Trial: one view gets retired later. */
+    .view-tabs { display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 14px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; }
+    .view-tab { background: none; border: none; border-radius: 999px; padding: 6px 14px; cursor: pointer;
+      color: var(--text2); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+    .view-tab[aria-selected="true"] { background: var(--accent); color: var(--accent-contrast, #111); }
 
     .lens-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .lens-chip {
@@ -144,14 +152,20 @@
       🚑 marks a risk being mitigated. Too much trouble and a storm rolls in.<br>
       Some buildings have a life of their own: the 📚 library, 📮 post office, 🚏 bus stop and 🎨 art studio.
       🕊 Pigeons carry your Dependency Graph links between tools.
+      🚃 The Journal Line gets a carriage for each day you wrote this week.
     </p>
+
+    <div class="view-tabs" role="tablist" aria-label="Town view">
+      <button class="view-tab" role="tab" id="tab-street" data-view="street">🏙 Street</button>
+      <button class="view-tab" role="tab" id="tab-iso" data-view="iso">🗾 Bird's-eye</button>
+    </div>
 
     <div class="lens-bar" id="lens-bar"></div>
     <div class="env-bar" id="env-bar"></div>
 
     <div id="view-town" class="view-panel">
       <div class="town-wrap">
-        <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><div id="detail"></div></div>
+        <div class="town-scroll" id="town-scroll"><canvas id="town"></canvas><canvas id="town-iso" style="display:none"></canvas><div id="detail"></div></div>
         <div class="legend" id="legend">
           <span>Portfolio:</span>
           <span style="color:#5bd67a">using</span>
@@ -327,7 +341,7 @@
           activity: Math.min(1, open / 8), // busier project → faster car
           incident: projectIncident(p),
           meta: {
-            lens: 'project', desc: p.desc, status: p.status,
+            lens: 'project', projectId: p.id, desc: p.desc, status: p.status,
             openTasks: open, doneTasks: tasks.length - open,
             milestones: (p.milestones || []).length, members: (p.members || []).length,
           },
@@ -601,10 +615,39 @@
     const lensOn = Object.fromEntries(LENSES.map((l) => [l.id, true]));
 
     // ── Host UI ─────────────────────────────────────────────────────────────
-    const canvas = document.getElementById('town');
     const detail = document.getElementById('detail');
     const empty = document.getElementById('empty');
+    // Two views on the same entities. `town`/`canvas` always point at the active one.
+    const VIEWS = {
+      street: { canvas: document.getElementById('town'), town: null },
+      iso: { canvas: document.getElementById('town-iso'), town: null },
+    };
+    let view = (HubStorage.get('machi-milestones-v1') || {}).view === 'iso' ? 'iso' : 'street';
     let town = null;
+    let canvas = VIEWS[view].canvas;
+
+    function renderViewTabs() {
+      for (const btn of document.querySelectorAll('.view-tab')) {
+        btn.setAttribute('aria-selected', String(btn.dataset.view === view));
+      }
+    }
+
+    function switchView(next) {
+      if (next === view || !VIEWS[next]) return;
+      closeDetail();
+      if (town) town.stop();
+      VIEWS[view].canvas.style.display = 'none';
+      view = next;
+      canvas = VIEWS[view].canvas;
+      town = VIEWS[view].town;
+      // Same ephemeral key as milestones (never backed up); spread keeps the other fields.
+      HubStorage.set('machi-milestones-v1', { ...(HubStorage.get('machi-milestones-v1') || {}), view });
+      renderViewTabs();
+      rebuild();
+    }
+    for (const btn of document.querySelectorAll('.view-tab')) {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    }
 
     function renderLensBar() {
       const bar = document.getElementById('lens-bar');
@@ -775,7 +818,7 @@
       detail.style.left = '0px'; detail.style.top = '0px'; // reset before measuring
       requestAnimationFrame(() => {
         const w = detail.offsetWidth, h = detail.offsetHeight;
-        const maxX = canvas.width;
+        const maxX = canvas.offsetWidth || canvas.width;
         let left = Math.min(Math.max(anchorX - w / 2, 6), Math.max(6, maxX - w - 6));
         let top = aboveY - h - 10;
         if (top < 4) top = (box.y + box.h) * s + 10; // no room above → flip below
@@ -884,6 +927,17 @@
         const a = document.createElement('a');
         a.href = href;
         a.textContent = label;
+        // Inside the shell, ask the parent to open the tool. Plain navigation
+        // would load it inside Machi's own iframe and lose the item (a car
+        // opened Project Hub's home, not its project). itemId uses the
+        // shell's existing hub-highlight path.
+        a.addEventListener('click', (ev) => {
+          if (window.parent === window || href === '#') return;
+          ev.preventDefault();
+          const tool = href.replace(/\.html$/, '');
+          const itemId = m.lens === 'project' ? m.projectId : undefined;
+          parent.postMessage({ type: 'hub-navigate', tool, itemId }, window.location.origin);
+        });
         actions.appendChild(a);
       }
       detail.appendChild(actions);
@@ -894,11 +948,13 @@
     // Fit as many buildings per row as the container allows, so the town is
     // wide rather than tall. LAYOUT constants come from the engine.
     const SCALE = 5;
-    function colsForContainer() {
+    function availWidth() {
       // Measure .content (a stable full-width parent), NOT .town-scroll — the
       // scroller shrinks to its canvas, so measuring it would be circular.
-      const host = document.querySelector('.content');
-      const avail = ((host.clientWidth || 1000) - 44) / SCALE; // 44 ≈ content padding
+      return (document.querySelector('.content').clientWidth || 1000) - 44; // 44 ≈ content padding
+    }
+    function colsForContainer() {
+      const avail = availWidth() / SCALE;
       const { CELL_W, MARGIN_X, AVENUE_W } = MachiHub.LAYOUT;
       return Math.max(4, Math.min(16, Math.floor((avail - MARGIN_X * 2 - AVENUE_W) / CELL_W)));
     }
@@ -928,39 +984,43 @@
       renderTicker(buildTickerHeadlines(entities, weather));
       checkMilestones(entities, troubleCount(entities), fromDataChange);
 
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!town) {
-        town = new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() })
-          .setEntities(entities)
-          .setCelebration(celebrationLevel())
-          .setWeather(weather)
-          .render()
-          .setTimeOfDay(timeMode)
-          .setSeason(seasonMode)
-          .enableInteraction({ onClick: showDetail })
-          .setDecorator(MachiFun.draw);
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        MachiFun.setMotion(!reduced);
-        if (!reduced) town.start();
+        town = view === 'iso'
+          ? new MachiIso.Town(canvas, { fitWidth: availWidth() }).setDecorator(MachiFun.drawIso)
+          : new MachiHub.Town(canvas, { scale: SCALE, maxPerRow: colsForContainer() });
+        VIEWS[view].town = town;
+        town.enableInteraction({ onClick: showDetail });
         // clicking empty ground/sky dismisses the popover
+        const own = town;
         canvas.addEventListener('click', (ev) => {
-          const rect = canvas.getBoundingClientRect();
-          if (!town.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
+          const rect = own.canvas.getBoundingClientRect();
+          if (!own.boxAt(ev.clientX - rect.left, ev.clientY - rect.top)) closeDetail();
         });
+        MachiFun.setMotion(!reduced);
         window._machiTown = town; // debugging/testing handle
-      } else {
-        town.setMaxPerRow(colsForContainer())
-          .setEntities(entities)
-          .setCelebration(celebrationLevel())
-          .setWeather(weather)
-          .render();
       }
+      window._machiTown = town;
+      canvas.style.display = '';
+      if (view === 'iso') town.setFitWidth(availWidth()).setTrainCars(MachiFun.trainCars());
+      else town.setMaxPerRow(colsForContainer());
+      town.setEntities(entities)
+        .setCelebration(celebrationLevel())
+        .setWeather(weather)
+        .render()
+        .setTimeOfDay(timeMode)
+        .setSeason(seasonMode);
+      if (view === 'street') town.setDecorator(MachiFun.draw);
+      if (!reduced) town.start();
     }
 
     let resizeTimer = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const townStale = town && colsForContainer() !== town.maxPerRow;
+        const townStale = town && (view === 'iso'
+          ? Math.max(2, Math.min(5, Math.floor(availWidth() / town.width))) !== town.scale
+          : colsForContainer() !== town.maxPerRow);
         if (townStale) rebuild();
       }, 250);
     });
@@ -970,11 +1030,13 @@
     // celebrations only fire when something real actually changed.
     for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1',
                        'decision-hub-v1', 'hub-vault-bridge-v1', 'learning-hub-v1', 'capture-hub-v1',
-                       'meetings-hub-v1', 'canvas-v1', 'hub-links-v1']) {
+                       'meetings-hub-v1', 'canvas-v1', 'hub-links-v1', 'log-hub-v1']) {
       HubStorage.subscribe(key, () => rebuild(true));
     }
 
     MachiFun.setToolNames(Object.fromEntries(Object.entries(HUB_PAGES).map(([id, v]) => [id, v[0]])));
+    VIEWS.street.canvas.style.display = view === 'street' ? '' : 'none';
+    renderViewTabs();
     renderLensBar();
     renderEnvBar();
     rebuild();

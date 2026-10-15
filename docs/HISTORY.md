@@ -4,6 +4,34 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 160 — Machi: Street / Bird's-eye tab + Journal Line train~~ ✓ Done `[group: machi-hub]`
+Onur wanted a richer town, a train, and a layout that is not just rows. Unsure which style is better, he asked for both behind a tab. One gets retired later.
+- **Tab:** 🏙 Street (the old view) / 🗾 Bird's-eye. The choice is kept in `machi-milestones-v1.view`.
+- **Bird's-eye (`machi-iso.js`, new):** an isometric island. Road grid with some segments dropped, a river with bridges and boats, a park with a pond, a rail loop. Same entities as the street view. Hub pages cluster downtown, Portfolio tools near the park, civic near the river. Day/night, seasons, weather, fireworks, fires, cranes, flags, hover label, popover on click.
+- **Journal Line (both views):** a train. One carriage per day with a Daily Log entry in the last 7 days. Street view: raised track above the first row, pillars only in gaps. Click → Journal Hub.
+- Next rounds (planned): tools as trees, unique landmarks per tool, parks; then fire station, hospital, police box, school, festivals.
+
+**Key decisions**
+- **Decision:** Bird's-eye is its own Thinking-Hub file with the same public methods as `MachiHub.Town`. **Why:** the engine is a stamped copy we can't reach upstream; the host swaps views without branching everywhere. **Alternative:** add an iso mode inside `machi-engine.js` — a big fork of a stamped file. **Revisit when:** Onur retires one view; delete that file and the tab. **Confidence:** high.
+- **Decision:** Store the view in `machi-milestones-v1`, not a new key. **Why:** it is ephemeral UI state, and that key is already out of backups. **Alternative:** a new key — one more entry for the not-backed-up list. **Confidence:** med.
+- **Decision:** Journal Line carriages = Daily Log days this week. **Why:** playful and data-driven, no stats (Machi is for fun, Onur 2026-10-01). **Confidence:** med.
+
+**Verified:** Playwright: both views render; real-mouse click on a bird's-eye car opens its popover; the view survives reload; day, night, spring, winter screenshots checked. New smoke check. `npm test` passes.
+
+**Files:** `machi-iso.js` (new), `town-hub.html`, `machi-fun.js`, `sw.js` (PRECACHE + cache v36), `tests/smoke.js`, `docs/HISTORY.md`, `CHANGELOG.md`, `CLAUDE.md`
+
+### ~~Priority 159 — Machi: a car opens its own project~~ ✓ Done `[group: machi-hub]`
+Clicking a car's "Open in Project Hub →" opened Project Hub's home, not the project.
+The link was a plain `href`. It loaded the tool inside Machi's iframe with no item id.
+Now every Machi popover link posts `hub-navigate` to the shell. Cars pass the project id, so the shell's `hub-highlight` path selects it. Standalone Machi keeps the plain link.
+
+**Key decisions**
+- **Decision:** Reuse the shell's `hub-navigate` + `hub-highlight` path. **Why:** it already selects a project by id, and the sidebar updates too. **Alternative:** a `?project=` URL param in Project Hub — new code for the same job. **Confidence:** high.
+
+**Verified:** Playwright, shell → Machi → car popover link → Project Hub with the clicked project selected. `npm test` passes.
+
+**Files:** `town-hub.html`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 158 — Slim CLAUDE.md~~ ✓ Done `[group: declutter]`
 CLAUDE.md was ~3,100 lines, mostly finished priorities. It now holds rules, the current file map, keys and binding decisions (~230 lines). Everything else moved here unchanged.
 
