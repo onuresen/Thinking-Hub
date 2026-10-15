@@ -11,6 +11,8 @@
 //   Canvas Hub → an art studio. An easel per board, gallery lights per card,
 //                    bunting for lines.
 //   Dependency Graph links → pigeons carrying letters between tool buildings.
+//   Every Hub page → its own landmark (clock tower, café, shrine…); tools → trees;
+//                    police box, hospital and festival ground appear from data (P161).
 //   Journal Line   → a raised train above the town. One carriage per day you wrote
 //                    in the Daily Log this week (both the street and bird's-eye view).
 // Plus sparkles wherever you click.
@@ -44,6 +46,11 @@ const MachiFun = (() => {
       studio: { boards: [], cards: 0, lines: 0 },
       links: [],     // { id, from, to, relType, note, fromLabel, toLabel }
       journal: { week: 0 },
+      projects: { total: 0, open: 0 },
+      responders: 0,
+      festival: [],  // names of projects finished in the last 14 days
+      tags: 0,
+      burning: false,
     };
   }
 
@@ -146,6 +153,24 @@ const MachiFun = (() => {
     return { week };
   }
 
+  // Project counts, a festival for projects marked done in the last 14 days
+  // (only with a real updatedAt — unknown age never counts, P90), risks being
+  // treated (hospital), and the tag count (market stalls).
+  function readCity() {
+    const projects = arr((HubStorage.get('project-hub-v1') || {}).projects).filter(Boolean);
+    const cutoff = Date.now() - 14 * 86400000;
+    const festival = projects
+      .filter((p) => p.status === 'done' && p.updatedAt && new Date(p.updatedAt).getTime() >= cutoff)
+      .map((p) => p.name || 'Project');
+    const responders = arr((HubStorage.get('risk-hub-v1') || {}).risks)
+      .filter((r) => r && r.status === 'mitigating' && r.owner).length;
+    return {
+      projects: { total: projects.length, open: projects.filter((p) => p.status !== 'done').length },
+      responders, festival,
+      tags: arr((HubStorage.get('hub-tags-v1') || {}).tags).length,
+    };
+  }
+
   /** Re-reads Hub data. Cheap: a handful of storage reads. */
   function refresh() {
     const m = readMeetings();
@@ -157,6 +182,8 @@ const MachiFun = (() => {
       studio: readStudio(),
       links: readLinks(),
       journal: readJournal(),
+      ...readCity(),
+      burning: false,
     };
     // Inbox cleared since the last visit (or since the last refresh)? Send vans.
     const st = HubStorage.get(STATE_KEY) || {};
@@ -169,6 +196,10 @@ const MachiFun = (() => {
   /** Data-driven tweaks to a Hub-page entity before the engine lays it out. */
   function tweak(entity) {
     const appId = entity.meta && entity.meta.appId;
+    if (LANDMARKS[appId]) {
+      entity.hostDrawn = true;
+      entity.meta = { ...entity.meta, look: LANDMARKS[appId] };
+    }
     if (appId === 'learning-hub') {
       // Smallest height that fits one floor per finished item (3px floors).
       let tier = 1;
@@ -528,6 +559,507 @@ const MachiFun = (() => {
     for (const id of pigeons.keys()) if (!live.has(id)) pigeons.delete(id);
   }
 
+  // ══ Places (P161): a landmark per Hub page, trees for tools, city services ══
+  // Shared by both views: tweak()/treeify()/civicBuildings() tag entities with
+  // meta.look; the street view draws them here, machi-iso.js draws its own version.
+  const LANDMARKS = {
+    'project-hub': 'depot', 'schedule': 'clocktower', 'meetings-hub': 'terminal', 'capture-hub': 'post',
+    'journal-hub': 'cafe', 'graph-hub': 'dovecote', 'people-hub': 'apartments', 'stakeholder-hub': 'embassy',
+    'tool-portfolio': 'greenhouse', 'town-hub': 'cityhall', 'learning-hub': 'library', 'idea-swiper': 'ferris',
+    'canvas-hub': 'studio', 'decision-hub': 'shrine', 'goals-hub': 'stadium', 'risk-hub': 'firestation',
+    'achievements-hub': 'home', 'tags-hub': 'market', 'help-hub': 'school',
+  };
+  const PLACE_NOTES = {
+    depot: '🚗 Car depot · your projects start their trips here',
+    clocktower: '🕰 Clock tower · the hands show the real time',
+    terminal: '🚌 Bus terminal',
+    cafe: '☕ Café · fresh coffee for every journal day',
+    dovecote: '🕊 Dovecote · home of the carrier pigeons',
+    apartments: '🏢 Apartments · your people live here',
+    embassy: '🏛 Embassy · flags for every partner',
+    greenhouse: '🌱 Greenhouse · where tool trees start',
+    cityhall: '🏙 City hall',
+    ferris: '🎡 Amusement park · the wheel never stops',
+    shrine: '⛩ Shrine · a quiet place to decide',
+    stadium: '🏟 Stadium · cheering for your goals',
+    firestation: '🚒 Fire station · sends a truck when a building burns',
+    home: '🏠 Your home',
+    market: '🧺 Market · a stall for each tag',
+    school: '🏫 School · learn how the Hub works',
+  };
+  const TREE_KINDS = { using: 'round', piloting: 'pine', exploring: 'sapling', retired: 'bare' };
+  const LEAF = {
+    spring: ['#ff9fc4', '#ffc4dc'], summer: ['#3f8a4f', '#5bd67a'],
+    autumn: ['#e0803a', '#ffb84d'], winter: ['#c9d3de', '#f4f8fc'],
+  };
+  let seasonOf = () => 'summer';
+  const placeSmoke = [];
+  const SHORT_PLACES = new Set(['market', 'festival', 'koban', 'stadium', 'ferris', 'shrine', 'home', 'school', 'clocktower', 'dovecote']);
+
+  function setSeasonSource(fn) { if (typeof fn === 'function') seasonOf = fn; }
+
+  function lookOf(e) { return e && e.meta && e.meta.look; }
+
+  /** Tool Portfolio entity → a tree in the Tool Park. */
+  function treeify(entity) {
+    entity.hostDrawn = true;
+    entity.district = 'Tool Park';
+    entity.meta = { ...entity.meta, look: 'tree', tree: TREE_KINDS[entity.meta && entity.meta.status] || 'round' };
+    return entity;
+  }
+
+  /** City services that appear on their own, from data the Hub already has. */
+  function civicBuildings() {
+    const out = [];
+    if (data.projects.total) {
+      out.push({ id: 'fun-koban', name: 'Police box', kind: 'building', district: 'Civic', tier: 1,
+        activity: 0.5, hostDrawn: true, meta: { lens: 'fun-koban', look: 'koban' } });
+    }
+    if (data.responders) {
+      out.push({ id: 'fun-hospital', name: 'Hospital', kind: 'building', district: 'Civic', tier: 3,
+        activity: 0.7, hostDrawn: true, meta: { lens: 'fun-hospital', look: 'hospital' } });
+    }
+    if (data.festival.length) {
+      out.push({ id: 'fun-festival', name: 'Festival', kind: 'building', district: 'Civic', tier: 3,
+        activity: 1, hostDrawn: true, meta: { lens: 'fun-festival', look: 'festival' } });
+    }
+    return out;
+  }
+
+  // ── street drawing helpers ────────────────────────────────────────────────
+  function lit(api, e, i) {
+    if (api.dayness >= 0.45) return false;
+    const r = seeded(e.id + '-w' + i + '-' + Math.floor(api.time / 5 + i * 0.3));
+    return r() < 0.25 + e.activity * 0.6;
+  }
+  function windowsIn(ctx, api, e, x0, y0, x1, y1, sx = 3, sy = 3) {
+    let i = 0;
+    for (let wy = y0; wy <= y1; wy += sy) {
+      for (let wx = x0; wx <= x1; wx += sx) {
+        px(ctx, lit(api, e, i) ? '#ffe07a' : api.dayness < 0.45 ? '#10131c' : '#2a2f3a', wx, wy, 1, 1);
+        i++;
+      }
+    }
+  }
+  function shadow(ctx, b) { px(ctx, 'rgba(20,16,24,0.35)', b.x + 2, b.baseline, b.w, 2); }
+  function door(ctx, x, b, color = '#5c3d1a') { px(ctx, color, x, b.baseline - 3, 2, 3); }
+
+  // Fire, weeds and badges for host-drawn buildings (the engine skips them).
+  function drawStatus(ctx, api, b, dt) {
+    const e = b.entity;
+    if (e.staleness > 0.3 && lookOf(e) !== 'tree') {
+      const r = seeded(e.id + '-weeds');
+      for (let s = 0; s < Math.floor(e.staleness * b.w); s++) px(ctx, '#5f9a63', b.x + Math.floor(r() * b.w), b.baseline - 1, 1, 1);
+    }
+    // badges sit on the roof, so only for places that fill their slot to the top
+    if (!SHORT_PLACES.has(lookOf(e))) {
+      const badges = (e.achievements || []).filter((a) => a.id !== 'shipped').slice(0, 3);
+      badges.forEach((_, i) => px(ctx, '#ffd24d', b.x + 1 + i * 3, b.y - 3, 2, 2));
+    }
+    if (e.incident === 'fire' && lookOf(e) !== 'tree') {
+      const r = seeded(e.id + '-fire-' + Math.floor(api.time * 6));
+      const cols = ['#ffb84d', '#ff5b3d', '#ffe07a'];
+      for (let i = 0; i < Math.max(2, Math.floor(b.w / 3)); i++) {
+        if (r() < 0.7) px(ctx, cols[Math.floor(r() * 3)], b.x + 1 + i * 3, b.y - 1 - Math.floor(r() * 2), 2, 2);
+      }
+      if (motion && Math.random() < dt * 2.2 && placeSmoke.length < 80) {
+        placeSmoke.push({ x: b.x + Math.random() * b.w, y: b.y - 2, age: 0, life: 1.2 + Math.random() });
+      }
+    }
+  }
+
+  // ── street landmarks ──────────────────────────────────────────────────────
+  const PLACE_DRAW = {
+    depot(ctx, api, b) {
+      const { x, y, w, h } = b;
+      px(ctx, '#7a8699', x, y, w, h);
+      px(ctx, '#565c6b', x - 1, y, w + 2, 2);
+      windowsIn(ctx, api, b.entity, x + 1, y + 3, x + w - 2, b.baseline - 9);
+      const doors = Math.max(1, Math.floor((w - 1) / 6));
+      for (let i = 0; i < doors; i++) {
+        const dx = x + 1 + i * 6;
+        px(ctx, '#2a2f3a', dx, b.baseline - 6, 5, 6);
+        for (let ly = b.baseline - 5; ly < b.baseline; ly += 2) px(ctx, '#4a5162', dx, ly, 5, 1);
+      }
+      if (data.projects.open) { px(ctx, PAINT[data.projects.open % PAINT.length], x + 2, b.baseline - 2, 3, 2); }
+      px(ctx, '#5b8cff', x + w - 4, y + 3, 3, 3); px(ctx, '#ffffff', x + w - 3, y + 4, 1, 1);
+    },
+    clocktower(ctx, api, b) {
+      const tw = Math.min(b.w, 9), tx = b.x + Math.floor((b.w - tw) / 2);
+      px(ctx, '#e8dcc0', tx, b.y + 4, tw, b.h - 4);
+      for (let r = 0; r < 4; r++) px(ctx, '#3f6b5a', tx + 3 - r + Math.floor((tw - 7) / 2), b.y + r, 1 + r * 2, 1);
+      const cx = tx + Math.floor(tw / 2), cy = b.y + 8;
+      px(ctx, '#ffffff', cx - 2, cy - 2, 5, 5);
+      px(ctx, '#2a2f3a', cx, cy, 1, 1);
+      const now = new Date();
+      const hand = (frac, len) => { const a = frac * Math.PI * 2 - Math.PI / 2; px(ctx, '#2a2f3a', cx + Math.round(Math.cos(a) * len), cy + Math.round(Math.sin(a) * len), 1, 1); };
+      hand(now.getMinutes() / 60, 2);
+      hand((now.getHours() % 12) / 12, 1);
+      windowsIn(ctx, api, b.entity, tx + 2, cy + 5, tx + tw - 3, b.baseline - 5, 3, 4);
+      door(ctx, cx - 1, b);
+    },
+    terminal(ctx, api, b) {
+      const { x, y, w, h } = b;
+      const glass = api.dayness < 0.45 ? '#c9b46a' : '#9ec9e8';
+      px(ctx, glass, x, y + 2, w, h - 2);
+      for (let mx = x; mx < x + w; mx += 3) px(ctx, '#4a5162', mx, y + 2, 1, h - 2);
+      px(ctx, '#5b8cff', x - 1, y, w + 2, 2);
+      px(ctx, '#ffd24d', x + 1, y + 3, Math.min(5, w - 2), 1);
+      door(ctx, x + Math.floor(w / 2) - 1, b, '#2a2f3a');
+    },
+    cafe(ctx, api, b) {
+      const { x, y, w } = b;
+      px(ctx, '#b07a4a', x, y, w, b.h);
+      px(ctx, '#7a4f2a', x - 1, y, w + 2, 1);
+      windowsIn(ctx, api, b.entity, x + 2, y + 3, x + w - 3, b.baseline - 10);
+      for (let i = 0; i < w + 2; i += 2) px(ctx, (i / 2) % 2 ? '#ffffff' : '#e34d4d', x - 1 + i, b.baseline - 8, 2, 2);
+      px(ctx, '#ffe9c4', x + 1, b.baseline - 5, 3, 3);
+      px(ctx, '#ffffff', x + 2, b.baseline - 4, 1, 1);
+      if (Math.floor(api.time * 1.5) % 2) px(ctx, '#e8ecf5', x + 2, b.baseline - 7, 1, 1);
+      door(ctx, x + w - 4, b);
+      const sx = x + w + 2;
+      if (spareRight(api, b) >= 6) {
+        px(ctx, '#e34d4d', sx, b.baseline - 6, 4, 1); px(ctx, '#8a8f9c', sx + 1, b.baseline - 5, 1, 5);
+        px(ctx, '#d8c9a8', sx, b.baseline - 2, 3, 1);
+      }
+    },
+    dovecote(ctx, api, b) {
+      const tw = Math.min(b.w, 10), tx = b.x + Math.floor((b.w - tw) / 2);
+      px(ctx, '#a89f91', tx, b.y + 3, tw, b.h - 3);
+      for (let r = 0; r < 3; r++) px(ctx, '#7a5a3a', tx + 2 - r, b.y + r, tw - 4 + r * 2, 1);
+      for (let hy = b.y + 5; hy < b.baseline - 4; hy += 3) for (let hx = tx + 1; hx < tx + tw - 1; hx += 3) px(ctx, '#3a3f4a', hx, hy, 1, 1);
+      for (let i = 0; i < 2; i++) {
+        const bob = Math.floor(api.time * 2 + i) % 2;
+        px(ctx, '#9aa0aa', tx + 2 + i * 4, b.y - 1 - bob, 2, 1);
+        px(ctx, '#5b8cff', tx + 4 + i * 4, b.y - 1 - bob, 1, 1);
+      }
+      door(ctx, tx + Math.floor(tw / 2) - 1, b);
+    },
+    apartments(ctx, api, b) {
+      const { x, y, w, h } = b;
+      px(ctx, '#f2c4a8', x, y, w, h);
+      px(ctx, '#c88f72', x, y, w, 1);
+      windowsIn(ctx, api, b.entity, x + 1, y + 2, x + w - 2, b.baseline - 4, 3, 4);
+      for (let by = y + 5; by < b.baseline - 3; by += 4) {
+        px(ctx, '#ffffff', x - 1, by, w + 2, 1);
+        if ((by / 4) % 2) px(ctx, '#5bd67a', x, by - 1, 1, 1);
+      }
+      door(ctx, x + Math.floor(w / 2) - 1, b);
+    },
+    embassy(ctx, api, b) {
+      const { x, y, w, h } = b;
+      px(ctx, '#efe9df', x, y + 2, w, h - 2);
+      for (let r = 0; r < 2; r++) px(ctx, '#d8c9a8', x - 1 + r, y + r, w + 2 - r * 2, 1);
+      for (let cx = x + 1; cx < x + w - 1; cx += 2) px(ctx, '#ffffff', cx, b.baseline - 6, 1, 6);
+      windowsIn(ctx, api, b.entity, x + 2, y + 4, x + w - 3, b.baseline - 9);
+      for (let i = 0; i < 3; i++) {
+        const fx = x + 1 + Math.floor(i * (w - 3) / 2);
+        px(ctx, '#c9cfdb', fx, y - 5, 1, 5);
+        px(ctx, PAINT[(i * 2 + 1) % PAINT.length], fx + 1, y - 5 + (Math.floor(api.time * 2 + i) % 2), 2, 2);
+      }
+    },
+    greenhouse(ctx, api, b) {
+      const { x, y, w, h } = b;
+      const top = y + Math.floor(h / 3);
+      for (let r = 0; r < top - y; r++) {
+        const inset = Math.max(0, Math.round((top - y - r) * 0.8));
+        px(ctx, '#bfe6d0', x + inset, y + r, w - inset * 2, 1);
+      }
+      px(ctx, '#bfe6d0', x, top, w, b.baseline - top);
+      for (let fx = x; fx < x + w; fx += 3) px(ctx, '#e8ecf5', fx, top, 1, b.baseline - top);
+      px(ctx, '#e8ecf5', x, top, w, 1);
+      const r = seeded('greenhouse');
+      for (let i = 0; i < w; i++) px(ctx, r() < 0.5 ? '#3f8a4f' : '#5bd67a', x + i, b.baseline - 2 - Math.floor(r() * 4), 1, 2);
+      if (api.dayness < 0.45) px(ctx, 'rgba(255,224,122,0.25)', x, top, w, b.baseline - top);
+    },
+    cityhall(ctx, api, b) {
+      const { x, y, w, h } = b;
+      const dome = Math.max(2, Math.floor(w / 4));
+      px(ctx, '#e8dcc0', x, y + dome + 1, w, h - dome - 1);
+      for (let r = 0; r <= dome; r++) {
+        const half = Math.round(Math.sqrt(dome * dome - (dome - r) * (dome - r)));
+        px(ctx, '#ffd24d', x + Math.floor(w / 2) - half, y + r + 1, half * 2, 1);
+      }
+      px(ctx, '#c9cfdb', x + Math.floor(w / 2), y - 4, 1, 5);
+      px(ctx, '#5bd67a', x + Math.floor(w / 2) + 1, y - 4 + (Math.floor(api.time * 2) % 2), 3, 2);
+      for (let cx = x + 1; cx < x + w - 1; cx += 2) px(ctx, '#ffffff', cx, b.baseline - 7, 1, 7);
+      windowsIn(ctx, api, b.entity, x + 2, y + dome + 3, x + w - 3, b.baseline - 10);
+      door(ctx, x + Math.floor(w / 2) - 1, b);
+    },
+    ferris(ctx, api, b) {
+      const r = Math.max(4, Math.min(Math.floor(b.w / 2), Math.floor((b.h - 3) / 2)));
+      const cx = b.x + Math.floor(b.w / 2), cy = b.baseline - r - 3;
+      px(ctx, '#8a8f9c', cx - Math.floor(r / 2), cy + 1, 1, b.baseline - cy - 1);
+      px(ctx, '#8a8f9c', cx + Math.floor(r / 2), cy + 1, 1, b.baseline - cy - 1);
+      const night = api.dayness < 0.45;
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        px(ctx, night ? PAINT[(i + Math.floor(api.time * 3)) % PAINT.length] : '#ff9fc4', cx + Math.round(Math.cos(a) * r), cy + Math.round(Math.sin(a) * r), 1, 1);
+      }
+      const spin = motion ? api.time * 0.5 : 0;
+      for (let i = 0; i < 6; i++) {
+        const a = spin + (i / 6) * Math.PI * 2;
+        const gx = cx + Math.round(Math.cos(a) * r), gy = cy + Math.round(Math.sin(a) * r);
+        for (let k = 1; k < r; k += 2) px(ctx, '#c9cfdb', cx + Math.round(Math.cos(a) * k), cy + Math.round(Math.sin(a) * k), 1, 1);
+        px(ctx, PAINT[i % PAINT.length], gx - 1, gy, 3, 2);
+      }
+      px(ctx, '#ffd24d', cx, cy, 1, 1);
+    },
+    shrine(ctx, api, b) {
+      const { x, w } = b;
+      const hx = x + Math.floor(w * 0.4), hw = w - Math.floor(w * 0.4);
+      const hy = b.baseline - Math.min(b.h, 12);
+      px(ctx, '#8f5a3a', hx, hy + 3, hw, b.baseline - hy - 3);
+      px(ctx, '#3a3f4a', hx - 2, hy + 1, hw + 4, 2);
+      px(ctx, '#3a3f4a', hx - 2, hy, 1, 1); px(ctx, '#3a3f4a', hx + hw + 1, hy, 1, 1);
+      px(ctx, '#ffd98a', hx + Math.floor(hw / 2) - 1, b.baseline - 4, 2, 2);
+      // torii in front
+      const tx = x, th = 9;
+      px(ctx, '#e34d4d', tx, b.baseline - th + 2, 1, th - 2);
+      px(ctx, '#e34d4d', tx + 5, b.baseline - th + 2, 1, th - 2);
+      px(ctx, '#e34d4d', tx - 1, b.baseline - th, 8, 1);
+      px(ctx, '#e34d4d', tx, b.baseline - th + 2, 6, 1);
+      if (api.dayness < 0.45) px(ctx, 'rgba(255,217,138,0.3)', hx, b.baseline - 6, hw, 4);
+    },
+    stadium(ctx, api, b) {
+      const { x, w } = b;
+      const sh = Math.min(b.h, 12), sy = b.baseline - sh;
+      for (let r = 0; r < sh; r++) px(ctx, r % 3 === 0 ? '#565c6b' : '#8a8f9c', x + Math.max(0, 3 - Math.floor(r / 2)), sy + r, w - Math.max(0, 3 - Math.floor(r / 2)) * 2, 1);
+      const rand = seeded('crowd');
+      for (let r = 1; r < sh - 2; r += 3) {
+        for (let cx = x + 2; cx < x + w - 2; cx += 2) {
+          const jump = motion && Math.floor(api.time * 4 + cx / 3) % 6 === 0 ? 1 : 0;
+          px(ctx, PAINT[Math.floor(rand() * PAINT.length)], cx, sy + r - jump, 1, 1);
+        }
+      }
+      const night = api.dayness < 0.45;
+      for (const lx of [x, x + w - 1]) {
+        px(ctx, '#6b707c', lx, sy - 8, 1, 8);
+        px(ctx, night ? '#ffffff' : '#c9cfdb', lx - 1, sy - 9, 3, 1);
+        if (night) px(ctx, 'rgba(255,255,255,0.18)', lx - 3, sy - 8, 7, 5);
+      }
+      px(ctx, '#5bd67a', x + Math.floor(w / 2), sy - 3 + (Math.floor(api.time * 2) % 2), 2, 1);
+    },
+    firestation(ctx, api, b) {
+      const { x, y, w, h } = b;
+      px(ctx, '#b8402e', x, y, w, h);
+      px(ctx, '#ffffff', x, y + 2, w, 1);
+      windowsIn(ctx, api, b.entity, x + 1, y + 4, x + w - 2, b.baseline - 9);
+      const dw = Math.min(w - 2, 8), dx = x + 1;
+      px(ctx, '#2a2f3a', dx, b.baseline - 6, dw, 6);
+      if (!data.burning) { px(ctx, '#e34d4d', dx + 1, b.baseline - 4, dw - 2, 3); px(ctx, '#ffe07a', dx + 1, b.baseline - 3, 1, 1); }
+      const alarm = data.burning && Math.floor(api.time * 4) % 2;
+      px(ctx, alarm ? '#ff5b5b' : '#8f3311', x + w - 3, y - 2, 2, 2);
+    },
+    home(ctx, api, b) {
+      const { x, w } = b;
+      const wall = Math.min(b.h, 10), wy = b.baseline - wall;
+      px(ctx, '#f2e3c6', x + 1, wy, w - 2, wall);
+      const rh = Math.ceil(w / 2);
+      for (let r = 0; r < rh; r++) px(ctx, '#c8553d', x + rh - 1 - r, wy - rh + r, Math.max(1, (r + 1) * 2 - (w % 2 ? 1 : 0)), 1);
+      px(ctx, '#8f3311', x + w - 4, wy - rh, 2, 3);
+      if (Math.floor(api.time) % 3 === 0) px(ctx, 'rgba(200,204,216,0.6)', x + w - 4, wy - rh - 2, 1, 1);
+      px(ctx, '#5c3d1a', x + 2, b.baseline - 4, 2, 4);
+      px(ctx, '#ffd24d', x + 3, b.baseline - 3, 1, 1);
+      px(ctx, lit(api, b.entity, 0) ? '#ffe07a' : '#9ec9e8', x + w - 5, wy + 2, 3, 2);
+      for (let fx = x - 1; fx < x + w + 1; fx += 2) px(ctx, '#ffffff', fx, b.baseline - 2, 1, 2);
+      px(ctx, '#ff6b8b', x + w - 2, b.baseline - 1, 1, 1);
+    },
+    market(ctx, api, b) {
+      const stalls = Math.max(1, Math.min(Math.floor((b.w + 1) / 5), Math.max(1, data.tags)));
+      for (let i = 0; i < stalls; i++) {
+        const sx = b.x + i * 5;
+        const c = PAINT[(i * 2) % PAINT.length];
+        for (let k = 0; k < 4; k++) px(ctx, k % 2 ? '#ffffff' : c, sx + k, b.baseline - 8, 1, 2);
+        px(ctx, '#8a6f3f', sx, b.baseline - 6, 1, 6); px(ctx, '#8a6f3f', sx + 3, b.baseline - 6, 1, 6);
+        px(ctx, '#d8c9a8', sx, b.baseline - 3, 4, 1);
+        px(ctx, PAINT[(i + 3) % PAINT.length], sx + 1, b.baseline - 4, 1, 1);
+        px(ctx, PAINT[(i + 1) % PAINT.length], sx + 2, b.baseline - 4, 1, 1);
+      }
+    },
+    school(ctx, api, b) {
+      const { x, w } = b;
+      const bh = Math.min(b.h, 14), by = b.baseline - bh;
+      px(ctx, '#f2d58a', x, by, w, bh);
+      px(ctx, '#b29245', x - 1, by, w + 2, 1);
+      const tx = x + Math.floor(w / 2) - 2;
+      px(ctx, '#f2d58a', tx, by - 5, 4, 5);
+      px(ctx, '#b29245', tx - 1, by - 6, 6, 1);
+      px(ctx, '#ffffff', tx + 1, by - 4, 2, 2);
+      windowsIn(ctx, api, b.entity, x + 1, by + 3, x + w - 2, b.baseline - 4, 3, 4);
+      door(ctx, x + Math.floor(w / 2) - 1, b);
+      if (api.dayness >= 0.45 && motion) {
+        for (let i = 0; i < 2; i++) {
+          const kx = b.x + Math.floor((Math.sin(api.time * 0.8 + i * 2) + 1) / 2 * (w - 1));
+          px(ctx, i ? '#5b8cff' : '#ff6b6b', kx, b.baseline - 2, 1, 2);
+          px(ctx, '#e8d5c0', kx, b.baseline - 3, 1, 1);
+        }
+      }
+    },
+    hospital(ctx, api, b) {
+      const { x, y, w, h } = b;
+      px(ctx, '#f2f4f8', x, y, w, h);
+      px(ctx, '#c9cfdb', x, y, w, 1);
+      const cx = x + Math.floor(w / 2);
+      px(ctx, '#e34d4d', cx - 1, y + 2, 3, 1); px(ctx, '#e34d4d', cx, y + 1, 1, 3);
+      windowsIn(ctx, api, b.entity, x + 1, y + 6, x + w - 2, b.baseline - 5, 3, 3);
+      px(ctx, '#9ec9e8', cx - 2, b.baseline - 4, 4, 4);
+    },
+    koban(ctx, api, b) {
+      const kw = 7, kx = b.x + Math.floor((b.w - kw) / 2), kh = 8, ky = b.baseline - kh;
+      px(ctx, '#e8ecf5', kx, ky, kw, kh);
+      px(ctx, '#3a3f4a', kx - 1, ky - 1, kw + 2, 1);
+      px(ctx, Math.floor(api.time * 1.5) % 2 ? '#ff5b5b' : '#e34d4d', kx + 3, ky - 3, 1, 2);
+      if (api.dayness < 0.45) px(ctx, 'rgba(255,91,91,0.25)', kx + 2, ky - 4, 3, 3);
+      px(ctx, '#9ec9e8', kx + 1, ky + 2, 2, 2);
+      px(ctx, '#2a2f3a', kx + 4, b.baseline - 4, 2, 4);
+      const ox = kx + kw + 1;
+      px(ctx, '#2a3f7a', ox, b.baseline - 3, 1, 3);
+      px(ctx, '#e8d5c0', ox, b.baseline - 4, 1, 1);
+      px(ctx, '#2a3f7a', ox, b.baseline - 5, 1, 1);
+      px(ctx, '#e8d5c0', ox + 1, b.baseline - 3 - (Math.floor(api.time * 2) % 2), 1, 1);
+    },
+    festival(ctx, api, b) {
+      const n = Math.max(1, Math.min(3, Math.floor((b.w + 1) / 5)));
+      for (let i = 0; i < n; i++) {
+        const tx = b.x + i * 5, c = PAINT[(i * 2 + 1) % PAINT.length];
+        for (let r = 0; r < 3; r++) px(ctx, r % 2 ? '#ffffff' : c, tx + 2 - r, b.baseline - 7 + r, 1 + r * 2, 1);
+        px(ctx, c, tx, b.baseline - 4, 5, 4);
+        px(ctx, '#2a2f3a', tx + 2, b.baseline - 2, 1, 2);
+      }
+      const night = api.dayness < 0.45;
+      for (let lx = b.x - 1; lx < b.x + b.w + 1; lx += 2) {
+        px(ctx, (lx / 2) % 2 ? '#ffffff' : '#e34d4d', lx, b.baseline - 9 + ((lx / 2) % 2), 1, 1);
+        if (night) px(ctx, 'rgba(255,120,90,0.2)', lx - 1, b.baseline - 10, 3, 3);
+      }
+    },
+  };
+
+  // ── trees (Tool Park) ─────────────────────────────────────────────────────
+  function drawTree(ctx, api, b) {
+    const e = b.entity;
+    const season = seasonOf();
+    const withered = e.incident === 'fire';
+    const [leaf, leaf2] = withered ? ['#8a6f3f', '#b29245'] : LEAF[season];
+    const kind = e.meta.tree;
+    const cx = b.x + Math.floor(b.w / 2);
+    const night = api.dayness < 0.45;
+    px(ctx, 'rgba(20,16,24,0.3)', cx - 3, b.baseline, 7, 1);
+    if (kind === 'sapling') {
+      px(ctx, '#8a6f3f', cx + 2, b.baseline - 6, 1, 6);
+      px(ctx, '#6b4a2a', cx, b.baseline - 4, 1, 4);
+      px(ctx, leaf, cx - 1, b.baseline - 5, 1, 1); px(ctx, leaf2, cx + 1, b.baseline - 6, 1, 1);
+      px(ctx, '#ffffff', cx + 3, b.baseline - 6, 2, 1);
+      return;
+    }
+    const trunkH = Math.max(3, Math.floor(b.h * 0.35));
+    px(ctx, '#6b4a2a', cx - (b.w > 13 ? 1 : 0), b.baseline - trunkH, b.w > 13 ? 2 : 1, trunkH);
+    const top = b.y + 1, bottom = b.baseline - trunkH + 1;
+    if (kind === 'bare') {
+      for (let i = 0; i < 4; i++) {
+        const by = bottom - 2 - i * 2, dir = i % 2 ? 1 : -1;
+        for (let k = 1; k <= 2 + (i % 2); k++) px(ctx, '#6b4a2a', cx + dir * k, by - k, 1, 1);
+      }
+      return;
+    }
+    if (kind === 'pine') {
+      const ht = bottom - top;
+      for (let r = 0; r < ht; r++) {
+        const half = Math.max(0, Math.round((r % Math.max(3, Math.floor(ht / 3)) + r / 3) * 0.6 * (b.w / 14)));
+        px(ctx, withered ? leaf : season === 'winter' && r < 2 ? '#ffffff' : '#2f6b3f', cx - half, top + r, half * 2 + 1, 1);
+      }
+    } else {
+      const rx = Math.floor(b.w / 2), ry = Math.max(3, Math.floor((bottom - top) / 2));
+      const my = top + ry;
+      for (let dy = -ry; dy <= ry; dy++) {
+        const half = Math.round(rx * Math.sqrt(1 - (dy * dy) / (ry * ry)));
+        if (half <= 0) continue;
+        px(ctx, dy < -ry / 3 ? leaf2 : leaf, cx - half, my + dy, half * 2 + 1, 1);
+      }
+      if (!withered && e.activity > 0.6) {
+        const r = seeded(e.id + '-bloom');
+        const dot = season === 'summer' ? '#e34d4d' : season === 'autumn' ? '#ffd24d' : season === 'spring' ? '#ffffff' : null;
+        if (dot) for (let i = 0; i < 4; i++) px(ctx, dot, cx - rx + 1 + Math.floor(r() * (rx * 2 - 1)), my - ry + 2 + Math.floor(r() * ry * 1.5), 1, 1);
+      }
+    }
+    if (withered && motion) {
+      const t = (api.time * 0.4 + (e.id.length % 5) / 5) % 1;
+      px(ctx, leaf2, cx + Math.round(Math.sin(t * 9) * 3), top + Math.round(t * (b.baseline - top)), 1, 1);
+    }
+    if (season === 'winter' && night && !withered) {
+      for (let i = 0; i < 5; i++) {
+        const on = Math.floor(api.time * 2 + i) % 3;
+        if (on) px(ctx, PAINT[(i + Math.floor(api.time)) % PAINT.length], b.x + 1 + ((i * 5) % Math.max(2, b.w - 2)), top + 2 + ((i * 3) % Math.max(2, bottom - top - 2)), 1, 1);
+      }
+    }
+    if (season === 'spring' && kind === 'round' && !withered) {
+      px(ctx, '#e34d4d', cx + 2, b.baseline - 1, 2, 1); px(ctx, '#ffffff', cx + 4, b.baseline - 1, 2, 1);
+    }
+  }
+
+  // ── seasonal festivals + fire trucks (street) ─────────────────────────────
+  function drawSeason(ctx, api) {
+    const season = seasonOf();
+    const night = api.dayness < 0.45;
+    const { TOP_SKY, ROW_H, BUILD_ZONE } = api.layout;
+    if (season === 'summer') {
+      // matsuri lanterns strung along every street
+      // (only in the gaps between places, so they never cover a building)
+      for (let r = 0; r < api.grid.rows; r++) {
+        const y = TOP_SKY + r * ROW_H + BUILD_ZONE - 9;
+        const spans = api.hitboxes.filter((b) => b.row === r).map((b) => [b.x - 1, b.x + b.w + 1]);
+        for (let x = 4, i = 0; x < api.grid.width - 2; x += 7, i++) {
+          if (spans.some(([a, c]) => x >= a && x <= c)) continue;
+          px(ctx, 'rgba(200,190,170,0.3)', x - 3, y - 1, 7, 1);
+          px(ctx, i % 2 ? '#ffffff' : '#e34d4d', x, y, 1, 2);
+          if (night) px(ctx, i % 2 ? 'rgba(255,255,255,0.15)' : 'rgba(255,120,90,0.25)', x - 1, y, 3, 2);
+        }
+      }
+    } else if (season === 'autumn' && night) {
+      // tsukimi: a big full moon
+      const mx = api.grid.width - 16;
+      for (let dy = -3; dy <= 3; dy++) {
+        const half = Math.round(Math.sqrt(9 - dy * dy));
+        px(ctx, '#fff3c4', mx - half, 8 + dy, half * 2 + 1, 1);
+      }
+    }
+  }
+
+  function drawFireTrucks(ctx, api, dt) {
+    if (!api.hitboxes.some((b) => lookOf(b.entity) === 'firestation')) return;
+    api.hitboxes.filter((b) => b.entity.incident === 'fire' && lookOf(b.entity) !== 'tree').slice(0, 2).forEach((b) => {
+      const ty = roadY(api, b.row, 0);
+      const tx = b.x + Math.floor(b.w / 2) - 4;
+      px(ctx, '#e34d4d', tx, ty, 9, 3);
+      px(ctx, '#ffffff', tx + 1, ty, 6, 1);
+      px(ctx, '#10131c', tx + 1, ty + 3, 1, 1); px(ctx, '#10131c', tx + 6, ty + 3, 1, 1);
+      px(ctx, Math.floor(api.time * 4) % 2 ? '#ff5b5b' : '#5b8cff', tx + 7, ty - 1, 1, 1);
+      if (!motion) return;
+      for (let i = 0; i < 6; i++) {
+        const t = ((api.time * 1.2 + i / 6) % 1);
+        const wx = tx + 4 + (b.x + b.w / 2 - tx - 4) * t * 0.3 + Math.sin(i) * 2;
+        const wy = ty - 1 - (ty - b.y) * Math.sin(t * Math.PI) * 0.9;
+        px(ctx, '#9fd0f0', wx, wy, 1, 1);
+      }
+    });
+  }
+
+  function drawPlaces(ctx, api, dt) {
+    data.burning = api.hitboxes.some((b) => b.entity.incident === 'fire' && lookOf(b.entity) !== 'tree');
+    for (const b of api.hitboxes) {
+      const look = lookOf(b.entity);
+      if (!b.entity.hostDrawn || !look) continue;
+      if (look === 'tree') { drawTree(ctx, api, b); continue; }
+      if (PLACE_DRAW[look]) { shadow(ctx, b); PLACE_DRAW[look](ctx, api, b); }
+      drawStatus(ctx, api, b, dt);
+    }
+    for (const s of placeSmoke) {
+      s.age += dt; s.y -= 4 * dt; s.x += Math.sin(s.age * 3) * dt * 2;
+      px(ctx, `rgba(60,58,56,${(0.55 * (1 - s.age / s.life)).toFixed(2)})`, s.x, s.y, 2, 2);
+    }
+    for (let i = placeSmoke.length - 1; i >= 0; i--) if (placeSmoke[i].age >= placeSmoke[i].life) placeSmoke.splice(i, 1);
+  }
+
   // ── Journal Line (raised train) ───────────────────────────────────────────
   // Runs on a viaduct just above the first row's skyline (tallest building + flag
   // stays below it). Pillars only go down in the gaps between buildings.
@@ -599,6 +1131,9 @@ const MachiFun = (() => {
   function draw(ctx, api) {
     const dt = lastTime === null ? 0 : Math.max(0, Math.min(0.1, api.time - lastTime));
     lastTime = api.time;
+    drawSeason(ctx, api);
+    drawPlaces(ctx, api, dt);
+    drawFireTrucks(ctx, api, dt);
     const lib = boxFor(api, 'learning-hub');
     if (lib) drawLibrary(ctx, api, lib);
     const post = boxFor(api, 'capture-hub');
@@ -647,7 +1182,19 @@ const MachiFun = (() => {
       return `🚏 Bus stop · ${data.buses.length} weekly line${data.buses.length === 1 ? '' : 's'}`
         + (today ? ` · ${today} running today` : '') + (data.taxis.length ? ` · ${data.taxis.length} taxi${data.taxis.length === 1 ? '' : 's'}` : '');
     }
-    return '';
+    return PLACE_NOTES[LANDMARKS[appId]] || '';
+  }
+
+  /** One line for a tool tree's popover. */
+  function treeNote(m, incident, activity) {
+    if (incident === 'fire') return '🍂 Wilting · not used for 60+ days';
+    const base = {
+      using: '🌳 A big leafy tree · you use this tool',
+      piloting: '🌲 A young pine · piloting',
+      exploring: '🌱 A sapling · still exploring',
+      retired: '🪵 A bare tree · retired',
+    }[m.status] || '🌳 A tree in the Tool Park';
+    return base + (activity > 0.6 && m.status !== 'retired' ? ' · in bloom, used recently' : '');
   }
 
   /** {title, status, note, link:[href,label]} for a fun entity. */
@@ -661,6 +1208,19 @@ const MachiFun = (() => {
         note: [m.fromLabel || '(item)', rel, m.toLabel || '(item)'].join(' ') + (m.note ? ` — “${m.note}”` : ''),
         link: ['graph-hub.html', 'Open Dependency Graph →'],
       };
+    }
+    if (m.lens === 'fun-koban') {
+      return { title: '🚓 Police box', status: 'The officer waves at every car', note: '',
+        link: ['project-hub.html', 'Open Project Hub →'] };
+    }
+    if (m.lens === 'fun-hospital') {
+      const n = data.responders;
+      return { title: '🏥 Hospital', status: `${n} risk${n === 1 ? '' : 's'} being treated`,
+        note: 'The ambulances drive out from here.', link: ['risk-hub.html', 'Open Risk Register →'] };
+    }
+    if (m.lens === 'fun-festival') {
+      return { title: '🎪 Festival', status: 'Celebrating projects finished in the last two weeks',
+        note: data.festival.join('\n'), link: ['project-hub.html', 'Open Project Hub →'] };
     }
     if (m.lens === 'fun-train') {
       const n = data.journal.week;
@@ -706,7 +1266,7 @@ const MachiFun = (() => {
   function setMotion(on) { motion = Boolean(on); }
 
   return {
-    refresh, tweak, wantedBuildings, draw, drawIso, trainCars, sparkle, buildingNote, describe, setMotion, setToolNames,
+    refresh, tweak, treeify, civicBuildings, setSeasonSource, treeNote, wantedBuildings, draw, drawIso, trainCars, sparkle, buildingNote, describe, setMotion, setToolNames,
     _debug: () => ({ data, pigeons: pigeons.size, vehicles: vehicles.size, vans: vans.length, pendingVans }),
   };
 })();

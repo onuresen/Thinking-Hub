@@ -4,6 +4,23 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 161 — Machi: landmarks, tool trees, city services, festivals~~ ✓ Done `[group: machi-hub]`
+Onur: *"going great please start building these."* Rounds 2 and 3 of the Machi plan, in both views.
+- **Landmarks:** every Hub page has its own place. Depot, clock tower (real time), bus terminal, post office, café, dovecote, apartments, embassy, greenhouse, city hall, library, Ferris wheel, art studio, shrine, stadium, fire station, home, market, school.
+- **Tool Park:** Portfolio tools are trees. using → leafy tree, piloting → pine, exploring → sapling, retired → bare tree. Mastery sets the size. Used recently → blossoms or fruit. 60+ days unused → wilts (brown, falling leaf), no fire.
+- **City services:** police box (any project), hospital (risks being mitigated), festival ground (a project marked done in the last 14 days, with a real `updatedAt`). The fire station sends a truck to each burning place (max 2).
+- **Seasons:** spring picnic blankets, summer matsuri lanterns, autumn moon, winter tree lights.
+
+**Key decisions**
+- **Decision:** One shared `meta.look` per entity, set in `machi-fun.js`; each view draws its own version. **Why:** both views stay in step from one mapping; retiring a view deletes only its drawing. **Alternative:** a mapping per view — two lists to keep in sync. **Confidence:** high.
+- **Decision:** Second local engine addition, `hostDrawn`. **Why:** the street view must skip its plain block for landmarks and trees; overpainting would need the sky colour behind them. **Alternative:** overpaint in the decorator — fragile with day/night and seasons. **Revisit when:** next re-copy from Vibe_Coding (port it first; smoke test guards it). **Confidence:** med.
+- **Decision:** Tool trees keep `incident: 'fire'` internally but draw as wilting. **Why:** HUD, weather and ticker logic stay unchanged; only the picture and words change. **Confidence:** high.
+- **Decision:** Festival needs a real `updatedAt` on the done project. **Why:** P90 — unknown age never counts. **Confidence:** high.
+
+**Verified:** Playwright, both views, all four seasons, day and night, with every place on screen. Real-mouse clicks on the festival and a wilting tree open the right popover. Two new smoke checks (engine keeps `hostDrawn`; every Hub page has a landmark). `npm test` passes.
+
+**Files:** `machi-fun.js`, `machi-iso.js`, `machi-engine.js` (hostDrawn), `town-hub.html`, `sw.js` (cache v37), `tests/smoke.js`, `docs/HISTORY.md`, `CHANGELOG.md`, `CLAUDE.md`
+
 ### ~~Priority 160 — Machi: Street / Bird's-eye tab + Journal Line train~~ ✓ Done `[group: machi-hub]`
 Onur wanted a richer town, a train, and a layout that is not just rows. Unsure which style is better, he asked for both behind a tab. One gets retired later.
 - **Tab:** 🏙 Street (the old view) / 🗾 Bird's-eye. The choice is kept in `machi-milestones-v1.view`.
