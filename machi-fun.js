@@ -1004,15 +1004,15 @@ const MachiFun = (() => {
     const { TOP_SKY, ROW_H, BUILD_ZONE } = api.layout;
     if (season === 'summer') {
       // matsuri lanterns strung along every street
-      // (only in the gaps between places, so they never cover a building)
+      // a red and a white lantern on every street lamp
       for (let r = 0; r < api.grid.rows; r++) {
-        const y = TOP_SKY + r * ROW_H + BUILD_ZONE - 9;
-        const spans = api.hitboxes.filter((b) => b.row === r).map((b) => [b.x - 1, b.x + b.w + 1]);
-        for (let x = 4, i = 0; x < api.grid.width - 2; x += 7, i++) {
-          if (spans.some(([a, c]) => x >= a && x <= c)) continue;
-          px(ctx, 'rgba(200,190,170,0.3)', x - 3, y - 1, 7, 1);
-          px(ctx, i % 2 ? '#ffffff' : '#e34d4d', x, y, 1, 2);
-          if (night) px(ctx, i % 2 ? 'rgba(255,255,255,0.15)' : 'rgba(255,120,90,0.25)', x - 1, y, 3, 2);
+        const y = TOP_SKY + r * ROW_H + BUILD_ZONE - 6;
+        for (let c = 0; c <= api.grid.cols; c++) {
+          const lx = slotX(api, c) - 1;
+          if (lx < 2 || lx > api.grid.width - 3) continue;
+          px(ctx, '#e34d4d', lx - 2, y, 1, 2);
+          px(ctx, '#ffffff', lx + 2, y, 1, 2);
+          if (night) { px(ctx, 'rgba(255,120,90,0.25)', lx - 3, y - 1, 3, 4); px(ctx, 'rgba(255,255,255,0.15)', lx + 1, y - 1, 3, 4); }
         }
       }
     } else if (season === 'autumn' && night) {
@@ -1042,6 +1042,176 @@ const MachiFun = (() => {
         px(ctx, '#9fd0f0', wx, wy, 1, 1);
       }
     });
+  }
+
+
+  // ── Street: fill the gaps (P162) ──────────────────────────────────────────
+  // The engine gives every place a fixed slot and starts each district on a new
+  // row, so park rows looked like lone trees between lamp posts and row ends sat
+  // empty. Park rows get one continuous park; empty slots get small scenery.
+  // Scenery is decoration only: no hitbox, no data.
+  function slotX(api, c) {
+    const { MARGIN_X, CELL_W, AVENUE_W } = api.layout;
+    return MARGIN_X + c * CELL_W + (api.grid.hasAvenue && c >= api.grid.avenueAfter ? AVENUE_W : 0);
+  }
+  function slotOf(api, b) {
+    const { MARGIN_X, CELL_W, AVENUE_W } = api.layout;
+    let rel = b.x - 3 - MARGIN_X;
+    if (api.grid.hasAvenue && rel >= api.grid.avenueAfter * CELL_W + AVENUE_W) rel -= AVENUE_W;
+    return Math.round(rel / CELL_W);
+  }
+  function rowBase(api, r) { return api.layout.TOP_SKY + r * api.layout.ROW_H + api.layout.BUILD_ZONE; }
+
+  function smallTree(ctx, x, base, h, leaf, leaf2) {
+    px(ctx, '#5c3d1a', x, base - Math.ceil(h / 3), 1, Math.ceil(h / 3));
+    const r = Math.max(2, Math.floor(h / 3)), my = base - Math.ceil(h / 3) - r + 1;
+    for (let dy = -r; dy <= r; dy++) {
+      const half = Math.round(r * Math.sqrt(1 - (dy * dy) / (r * r)));
+      px(ctx, dy < 0 ? leaf2 : leaf, x - half, my + dy, half * 2 + 1, 1);
+    }
+  }
+
+  function hedge(ctx, x0, x1, base, rand, season, night) {
+    const [leaf, leaf2] = LEAF.summer; // hedges stay green; winter adds snow on top
+    for (let x = x0; x < x1; x++) {
+      const h = 2 + Math.floor(rand() * 2);
+      px(ctx, x % 5 === 0 ? leaf2 : leaf, x, base - h, 1, h);
+      if (season === 'winter') px(ctx, '#f4f8fc', x, base - h, 1, 1);
+    }
+    // spring/summer flowers, autumn fallen leaves, winter night lights
+    for (let x = x0 + 2; x < x1; x += 5 + Math.floor(rand() * 5)) {
+      const dot = season === 'autumn' ? '#e0803a'
+        : season === 'winter' ? (night ? PAINT[Math.floor(rand() * PAINT.length)] : null)
+          : PAINT[Math.floor(rand() * PAINT.length)];
+      if (dot) px(ctx, dot, x, base - 3, 1, 1);
+    }
+  }
+
+  function drawParkRows(ctx, api) {
+    const season = seasonOf(), night = api.dayness < 0.45;
+    const rows = new Map();
+    for (const b of api.hitboxes) {
+      if (lookOf(b.entity) !== 'tree') continue;
+      const c = slotOf(api, b);
+      const set = rows.get(b.row) || new Set();
+      set.add(c); rows.set(b.row, set);
+    }
+    for (const [r, cols] of rows) {
+      const base = rowBase(api, r);
+      const rand = seeded('park-row-' + r);
+      const [leaf, leaf2] = season === 'autumn' ? ['#b8662e', '#e0803a'] : season === 'winter' ? ['#8aa0a8', '#c9d3de'] : ['#3f7a4a', '#4f9a5a'];
+      for (const c of cols) {
+        const x0 = slotX(api, c) - 2, x1 = x0 + api.layout.CELL_W + 2;
+        // small trees at the slot edges only, so the tool tree in the middle stays clear
+        for (const ex of [x0 + 3, x0 + api.layout.CELL_W - 1]) {
+          if (rand() < 0.3) continue;
+          const h = 6 + Math.floor(rand() * 4);
+          if (rand() < 0.35) {
+            for (let r = 0; r < h - 2; r++) px(ctx, '#2f6b3f', ex - Math.floor(r / 3), base - h + r, 1 + Math.floor(r / 3) * 2, 1);
+            px(ctx, '#5c3d1a', ex, base - 2, 1, 2);
+          } else smallTree(ctx, ex, base - 1, h, leaf, leaf2);
+        }
+        hedge(ctx, x0, x1, base, rand, season, night);
+      }
+    }
+  }
+
+  const FILLERS_TOWN = ['houses', 'vending', 'playground', 'garden', 'parking', 'pond'];
+  const FILLERS_PARK = ['grove', 'pond', 'garden'];
+
+  function drawFiller(ctx, api, kind, x, base, seedKey) {
+    const rand = seeded('filler-' + seedKey);
+    const night = api.dayness < 0.45, season = seasonOf(), t = api.time;
+    const W = api.layout.CELL_W;
+    if (kind === 'houses') {
+      for (let i = 0; i < 2; i++) {
+        const hx = x + 2 + i * 12, hw = 9, hh = 6 + Math.floor(rand() * 4);
+        const wall = ['#f2e3c6', '#e8dcc0', '#d8e4f0', '#f2d5c4'][Math.floor(rand() * 4)];
+        const roof = ['#3a4a6a', '#6b3a3a', '#3f5a4a', '#5c432a'][Math.floor(rand() * 4)];
+        px(ctx, wall, hx, base - hh, hw, hh);
+        for (let r = 0; r < 3; r++) px(ctx, roof, hx - 1 + r, base - hh - 3 + r, hw + 2 - r * 2, 1);
+        px(ctx, roof, hx - 1, base - hh, hw + 2, 1);
+        const lit = night && rand() < 0.7;
+        px(ctx, lit ? '#ffe07a' : '#9ec9e8', hx + 1, base - hh + 2, 2, 2);
+        px(ctx, '#5c3d1a', hx + hw - 3, base - 3, 2, 3);
+        if (season === 'winter') px(ctx, '#ffffff', hx, base - hh - 3, hw, 1);
+      }
+      if (rand() < 0.5) px(ctx, '#ff9f5b', x + 13, base - 2 - (Math.floor(t) % 2 ? 0 : 0), 2, 1); // a sleeping cat
+    } else if (kind === 'vending') {
+      for (let i = 0; i < 2; i++) {
+        const vx = x + 4 + i * 5;
+        px(ctx, i ? '#e34d4d' : '#5b8cff', vx, base - 9, 4, 9);
+        px(ctx, night ? '#fff3c4' : '#e8ecf5', vx + 1, base - 8, 2, 4);
+        if (night) px(ctx, 'rgba(255,243,196,0.2)', vx - 1, base - 9, 6, 10);
+      }
+      px(ctx, '#8a6f3f', x + 15, base - 3, 6, 1); px(ctx, '#8a6f3f', x + 15, base - 2, 1, 2); px(ctx, '#8a6f3f', x + 20, base - 2, 1, 2);
+      px(ctx, '#565c6b', x + 22, base - 3, 3, 1); px(ctx, '#2a2f3a', x + 21, base - 2, 2, 2); px(ctx, '#2a2f3a', x + 24, base - 2, 2, 2);
+    } else if (kind === 'playground') {
+      px(ctx, '#e34d4d', x + 3, base - 8, 1, 8); px(ctx, '#e34d4d', x + 3, base - 8, 4, 1);
+      for (let k = 0; k < 6; k++) px(ctx, '#ffd24d', x + 4 + k, base - 7 + k, 1, 1);
+      px(ctx, '#8a8f9c', x + 13, base - 9, 1, 9); px(ctx, '#8a8f9c', x + 21, base - 9, 1, 9); px(ctx, '#8a8f9c', x + 13, base - 9, 9, 1);
+      const sw = motion ? Math.round(Math.sin(t * 2) * 2) : 0;
+      px(ctx, '#5c3d1a', x + 16 + sw, base - 3, 3, 1);
+      if (!night) { px(ctx, '#5b8cff', x + 17 + sw, base - 5, 1, 2); px(ctx, '#e8d5c0', x + 17 + sw, base - 6, 1, 1); }
+      px(ctx, '#d8c9a8', x + 1, base - 1, W - 4, 1);
+    } else if (kind === 'garden') {
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) {
+        const col = season === 'winter' ? '#c9d3de' : season === 'autumn' ? '#e0803a' : k % 2 ? '#5bd67a' : '#3f8a4f';
+        px(ctx, col, x + 3 + k * 3, base - 2 - r * 2, 2, 1);
+      }
+      px(ctx, '#8a6f3f', x + 22, base - 8, 1, 8); px(ctx, '#8a6f3f', x + 20, base - 6, 5, 1);
+      px(ctx, '#e8d5c0', x + 21, base - 10, 3, 2); px(ctx, '#ffd24d', x + 20, base - 11, 5, 1);
+    } else if (kind === 'parking') {
+      px(ctx, '#3a3f4a', x + 1, base - 1, W - 2, 1);
+      for (let i = 0; i < 3; i++) {
+        const cx = x + 2 + i * 8;
+        px(ctx, '#c9cfdb', cx - 1, base - 4, 1, 3);
+        if (rand() < 0.8) {
+          const col = PAINT[Math.floor(rand() * PAINT.length)];
+          px(ctx, col, cx, base - 3, 6, 2); px(ctx, col, cx + 1, base - 4, 4, 1);
+          px(ctx, '#10131c', cx + 1, base - 1, 1, 1); px(ctx, '#10131c', cx + 4, base - 1, 1, 1);
+        }
+      }
+    } else if (kind === 'pond') {
+      const water = season === 'winter' ? '#c9e0f0' : '#4a8fc9';
+      for (let r = 0; r < 3; r++) px(ctx, water, x + 3 + (2 - r), base - 1 - r, W - 6 - (2 - r) * 2, 1);
+      if (season !== 'winter') {
+        const dx = motion ? Math.round((Math.sin(t * 0.4) + 1) / 2 * (W - 12)) : 4;
+        px(ctx, '#ffffff', x + 5 + dx, base - 3, 2, 1); px(ctx, '#ffd24d', x + 7 + dx, base - 3, 1, 1);
+        px(ctx, '#9fd0f0', x + 6 + ((Math.floor(t * 2) * 3) % (W - 10)), base - 2, 2, 1);
+      }
+      for (const rx of [x + 2, x + W - 4]) { px(ctx, '#4f7a3a', rx, base - 5, 1, 4); px(ctx, '#8a6f3f', rx, base - 6, 1, 1); }
+    } else if (kind === 'grove') {
+      const [leaf, leaf2] = season === 'autumn' ? ['#b8662e', '#e0803a'] : season === 'winter' ? ['#8aa0a8', '#c9d3de'] : ['#3f7a4a', '#4f9a5a'];
+      for (let k = 0; k < 3; k++) smallTree(ctx, x + 4 + k * 8 + Math.floor(rand() * 2), base - 1, 9 + Math.floor(rand() * 7), leaf, leaf2);
+      px(ctx, '#8a6f3f', x + 8, base - 3, 6, 1); px(ctx, '#8a6f3f', x + 8, base - 2, 1, 2); px(ctx, '#8a6f3f', x + 13, base - 2, 1, 2);
+    }
+  }
+
+  function drawFillers(ctx, api) {
+    const used = new Set();
+    const parkRow = new Map();
+    for (const b of api.hitboxes) {
+      used.add(b.row + ':' + slotOf(api, b));
+      const tree = lookOf(b.entity) === 'tree';
+      parkRow.set(b.row, (parkRow.get(b.row) ?? true) && tree);
+    }
+    for (let r = 0; r < api.grid.rows; r++) {
+      const base = rowBase(api, r);
+      const park = parkRow.get(r) === true;
+      let prev = null; // no two of the same scenery side by side
+      for (let c = 0; c < api.grid.cols; c++) {
+        if (used.has(r + ':' + c)) continue;
+        const rand = seeded('slot-' + r + '-' + c);
+        const list = park ? FILLERS_PARK : FILLERS_TOWN;
+        let kind = list[Math.floor(rand() * list.length)];
+        if (kind === prev) kind = list[(list.indexOf(kind) + 1 + Math.floor(rand() * (list.length - 1))) % list.length];
+        prev = kind;
+        const x = slotX(api, c);
+        if (park) hedge(ctx, x - 2, x + api.layout.CELL_W, base, rand, seasonOf(), api.dayness < 0.45);
+        drawFiller(ctx, api, kind, x, base, r + '-' + c);
+      }
+    }
   }
 
   function drawPlaces(ctx, api, dt) {
@@ -1132,6 +1302,8 @@ const MachiFun = (() => {
     const dt = lastTime === null ? 0 : Math.max(0, Math.min(0.1, api.time - lastTime));
     lastTime = api.time;
     drawSeason(ctx, api);
+    drawFillers(ctx, api);
+    drawParkRows(ctx, api);
     drawPlaces(ctx, api, dt);
     drawFireTrucks(ctx, api, dt);
     const lib = boxFor(api, 'learning-hub');
