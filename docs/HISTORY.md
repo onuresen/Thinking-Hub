@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 162 — Machi street: fill the empty town~~ ✓ Done `[group: machi-hub]`
+Onur (screenshots): *"top screen is rich but lights and trees are acting standalone and unnecessarily wide but empty town."* The engine gives each place a fixed 26px slot with a lamp post, and starts each district on a new row. Tool Park rows read as lone trees between lamps; row ends sat empty.
+- **Park rows:** one continuous park. A hedge with flowers (autumn: fallen leaves, winter: snow and night lights) runs under the tool trees. Small trees and pines sit at the slot edges, so the tool tree in the middle stays clear.
+- **Empty slots:** filled with scenery. Town rows: houses, vending machines, playground, garden, parking, pond. Park rows: grove with bench, pond, garden. No two of the same side by side.
+- **Summer lanterns** now hang on the street lamps instead of a string across the row.
+
+**Key decisions**
+- **Decision:** Scenery is decoration only: no hitbox, no data. **Why:** Machi is for fun (Onur 2026-10-01); a click target with nothing behind it would be noise. **Confidence:** high.
+- **Decision:** Fix it in `machi-fun.js`, not the engine layout. **Why:** the engine is a stamped copy; slot and row sizes stay as they are. **Alternative:** pack rows tighter in the engine — a third local fork. **Revisit when:** Street is chosen over Bird's-eye and the engine is re-copied. **Confidence:** med.
+
+**Verified:** Playwright with 38 tools, all 19 pages and the civic row, in autumn night, summer day and summer night. `npm test` passes.
+
+**Files:** `machi-fun.js`, `sw.js` (cache v38), `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 161 — Machi: landmarks, tool trees, city services, festivals~~ ✓ Done `[group: machi-hub]`
 Onur: *"going great please start building these."* Rounds 2 and 3 of the Machi plan, in both views.
 - **Landmarks:** every Hub page has its own place. Depot, clock tower (real time), bus terminal, post office, café, dovecote, apartments, embassy, greenhouse, city hall, library, Ferris wheel, art studio, shrine, stadium, fire station, home, market, school.

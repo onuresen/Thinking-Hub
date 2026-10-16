@@ -27,6 +27,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Machi Hub (street view): the Tool Park reads as one park with hedges and small trees, and empty spots fill with houses, vending machines, playgrounds, gardens and ponds.
 - Machi Hub: every Hub page has its own landmark (clock tower, café, Ferris wheel, shrine, stadium, school and more).
 - Machi Hub: Tool Portfolio tools grow as trees in the Tool Park. They blossom when used and wilt after 60 days unused.
 - Machi Hub: a police box, a hospital, a fire station that sends trucks, a festival when you finish a project, and a festival for each season.
