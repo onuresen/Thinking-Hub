@@ -1,7 +1,7 @@
-/* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-engine.js (Machi Hub project).
+/* STAMPED COPY — canonical source: personal-lab/MachiHub/machi-engine.js (Machi Hub project).
    Edit there, then re-copy here. Do not edit this copy directly.
    ⚠ Local additions not yet in the canonical source: setDecorator() (Thinking Hub P140)
-   and the entity flag hostDrawn (P161). Port both to Vibe_Coding/MachiHub before the next
+   and the entity flag hostDrawn (P161). Port both to personal-lab/MachiHub before the next
    re-copy, or they will be lost. */
 
 // machi-engine.js — portable core for Machi Hub.

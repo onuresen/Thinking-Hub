@@ -1,4 +1,4 @@
-/* STAMPED COPY — canonical source: Vibe_Coding/MachiHub/machi-achievements.js (Machi Hub project).
+/* STAMPED COPY — canonical source: personal-lab/MachiHub/machi-achievements.js (Machi Hub project).
    Edit there, then re-copy here. Do not edit this copy directly. */
 // machi-achievements.js — rule engine that derives achievements[] on MachiEntity objects.
 // Decoupled from the renderer: machi-engine.js just draws whatever achievements it finds on an
