@@ -44,7 +44,7 @@ Onur (2026-10-21): *"Please bring any lost info and start with group A."*
 - **Change file** (`hub-changes.js`, new): only the changes, each aimed at an item by id. Ops: `add`, `set`, `unset`, `remove`.
 - **Status first:** each change is checked against live data before anything is written. New, Changed since, Already in, Already there, Not found.
 - **Review modal:** changes grouped by tool. New ones are ticked. "Changed since" shows the current value and stays unticked. Apply takes a snapshot first.
-- **Two ways in:** a Home card for files in the vault's `hub-changes/` folder (Vault Bridge reads it; folder in Settings → Integrations), or Settings → Data → Apply a change file.
+- **Two ways in:** a Home card for files in the vault's `hub-changes/` folder (Vault Bridge reads it; folder in Settings → Integrations), or Settings → Data → Apply changes.
 - **Record:** applied or dismissed files go in `hub-vault-bridge-v1.changeSets` (backed up), so the card does not offer them again. Applying twice is harmless.
 - **Vault side:** `scripts/hub_changes.py` in esen-vault builds a file (diff two exports, or a Builder) and checks it against an export.
 
