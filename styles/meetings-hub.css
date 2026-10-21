@@ -59,6 +59,7 @@
     .mr-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .mr-action-count { font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700; background: var(--accent-dim); color: var(--accent); font-family: var(--font-mono); }
     .mr-link-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--surface2); color: var(--text3); font-family: var(--font-mono); }
+    .mr-dup-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--surface2); color: var(--accent-super); }
     .proj-badge { font-size: 10px; color: var(--text3); }
 
     /* Templates panel */

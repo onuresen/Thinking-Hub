@@ -14,8 +14,8 @@ Sidebar tools (19, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | File | Role |
 |------|------|
 | `project-hub.html` | Projects + tasks. Views: Overview, Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
-| `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings |
-| `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import, linked vault note review |
+| `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings; a click opens the meeting panel (P164) |
+| `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import (project guess, P164), linked vault note review |
 | `capture-hub.html` | Brain-dump inbox with routing to other tools. Also the PWA share target |
 | `journal-hub.html` | Tabs: Daily Log (`log-hub-v1`), Weekly Review (`review-hub-v1`), Time Journal (`focus-hub-v1`) |
 | `graph-hub.html` | Dependency graph (vis-network): critical path, reasoning/impact trace, shortest path, suggested links, tag nodes |

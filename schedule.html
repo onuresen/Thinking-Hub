@@ -162,6 +162,19 @@
     </div>
   </div>
 
+  <!-- ══ Meeting panel (P164): look at a meeting without leaving Schedule ══ -->
+  <div class="sch-drawer" id="sch-meeting-drawer" role="dialog" aria-labelledby="mp-title">
+    <div class="sch-drawer-header">
+      <span class="sch-drawer-title" id="mp-title">Meeting</span>
+      <button class="sch-close-btn" onclick="closeMeetingPanel()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="sch-drawer-body" id="mp-body"></div>
+    <div class="sch-drawer-footer">
+      <button class="sch-save-btn" onclick="saveMeetingPanel()">Save</button>
+      <button class="sch-secondary-btn" onclick="openMeetingInHub()">Open in Meeting Hub</button>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="sch-toast" id="sch-toast"></div>
 
@@ -539,7 +552,7 @@
     function meetingPillHtml(m) {
       const icon = m.recurring ? '🔁' : '▣';
       return `<span class="cal-pill meeting"
-        onclick="event.stopPropagation(); parent.postMessage({type:'hub-navigate',tool:'meetings-hub',itemId:'${m.id}'}, window.location.origin||'*')"
+        onclick="event.stopPropagation(); openMeetingPanel('${m.id}', '${m.date}')"
         title="${esc(m.title || 'Meeting')}">${icon} ${esc(m.title || 'Meeting')}</span>`;
     }
 
@@ -913,7 +926,7 @@
 
       if (!drag.moved) {
         if (drag.type === 'meeting') {
-          parent.postMessage({ type: 'hub-navigate', tool: 'meetings-hub', itemId: drag.id }, window.location.origin || '*');
+          openMeetingPanel(drag.id, drag.origIso);
         } else {
           selectAndEdit(drag.id);
         }
@@ -1310,6 +1323,7 @@
     }
 
     function openDrawer(id, prefillDate, prefillTime) {
+      closeMeetingPanel();
       ui.drawerItemId = id;
       const item = id ? state.items.find(it => it.id === id) : null;
 
@@ -1413,7 +1427,9 @@
     // ═══════════════════════════════════════════════════════════════
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (document.getElementById('sch-drawer').classList.contains('open')) {
+        if (document.getElementById('sch-meeting-drawer').classList.contains('open')) {
+          closeMeetingPanel();
+        } else if (document.getElementById('sch-drawer').classList.contains('open')) {
           closeDrawer();
         } else {
           try { window.parent.postMessage({ type: 'hub-home' }, window.location.origin || '*'); } catch { }
@@ -1462,6 +1478,85 @@
       });
 
       if (changed) { saveState(); render(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Meeting panel (P164)
+    // Clicking a meeting used to jump to Meeting Hub, and back again for the
+    // next one: Schedule ⇄ Meetings was the most common move in the hub. The
+    // panel shows the meeting here; Meeting Hub stays one click away.
+    // ═══════════════════════════════════════════════════════════════
+    let _meetingPanel = null; // { id, date }
+
+    function _readMeetings() {
+      try { return JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { return {}; }
+    }
+
+    function openMeetingPanel(id, date) {
+      const data = _readMeetings();
+      const m = (data.meetings || []).find(x => x.id === id);
+      if (!m) return;
+      closeDrawer();
+      _meetingPanel = { id, date: date || m.date };
+      const occ = m.recurring ? ((m.occurrenceDates || []).find(o => o.date === date) || {}) : m;
+      const log = m.recurring ? ((m.log || []).find(l => l.date === date) || {}) : m;
+      const when = [date || m.date, occ.time, occ.durationMins ? occ.durationMins + ' min' : '']
+        .filter(Boolean).join(' · ');
+      const notes = String(log.notes || '').trim();
+      const actions = (log.actionItems || []).filter(a => !a.done);
+      const projects = HubData.getProjects().slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      document.getElementById('mp-title').textContent = (m.recurring ? '🔁 ' : '▣ ') + (m.title || 'Meeting');
+      document.getElementById('mp-body').innerHTML = `
+        <div class="sch-field"><div class="mp-when">${esc(when)}</div></div>
+        <div class="sch-field">
+          <label class="sch-label" for="mp-project">Project</label>
+          <select class="sch-input" id="mp-project">
+            <option value="">— none —</option>
+            ${projects.map(p => `<option value="${esc(p.id)}"${p.id === m.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="sch-field">
+          <label class="sch-label" for="mp-outcome">Desired outcome</label>
+          <input class="sch-input" id="mp-outcome" type="text" value="${esc(m.desiredOutcome || '')}" placeholder="What should this meeting decide or produce?" />
+        </div>
+        ${m.obsidianNote ? `<div class="sch-field"><label class="sch-label">Vault note</label><div class="mp-note-path">⟡ ${esc(m.obsidianNote)}</div></div>` : ''}
+        ${actions.length ? `<div class="sch-field"><label class="sch-label">Open actions</label>
+          ${actions.map(a => `<div class="mp-action">○ ${esc(a.text || '')}</div>`).join('')}</div>` : ''}
+        <div class="sch-field">
+          <label class="sch-label">Notes</label>
+          <div class="mp-notes">${notes ? esc(notes.length > 600 ? notes.slice(0, 599) + '…' : notes) : '<span class="mp-empty">No notes yet.</span>'}</div>
+        </div>`;
+      document.getElementById('sch-meeting-drawer').classList.add('open');
+    }
+
+    function closeMeetingPanel() {
+      const d = document.getElementById('sch-meeting-drawer');
+      if (d) d.classList.remove('open');
+      _meetingPanel = null;
+    }
+
+    function saveMeetingPanel() {
+      if (!_meetingPanel) return;
+      const data = _readMeetings();
+      const m = (data.meetings || []).find(x => x.id === _meetingPanel.id);
+      if (!m) { closeMeetingPanel(); return; }
+      const sel = document.getElementById('mp-project');
+      m.projectId = sel.value || null;
+      m.projectName = sel.value ? sel.options[sel.selectedIndex].text : null;
+      m.desiredOutcome = document.getElementById('mp-outcome').value.trim();
+      if (typeof HubUtils !== 'undefined' && HubUtils.stampUpdate) HubUtils.stampUpdate(m);
+      HubStorage.set('meetings-hub-v1', data);
+      closeMeetingPanel();
+      showToast('Meeting saved');
+      render();
+    }
+
+    function openMeetingInHub() {
+      if (!_meetingPanel) return;
+      const id = _meetingPanel.id;
+      closeMeetingPanel();
+      parent.postMessage({ type: 'hub-navigate', tool: 'meetings-hub', itemId: id }, window.location.origin || '*');
     }
 
     // ═══════════════════════════════════════════════════════════════

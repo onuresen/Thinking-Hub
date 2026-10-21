@@ -4,6 +4,25 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 164 — Meetings land in the right place~~ ✓ Done `[group: meetings]`
+Group B of the 10-20 usage review. Schedule ⇄ Meetings was the most common move in the hub. 12 of 14 meetings imported since 10-13 had no project. 49 of 81 meetings had only a "🕐 … UTC" line as notes.
+- **Project on import:** an imported meeting takes the project of the latest earlier meeting with the same title ("第7回" and "#6" ignored). Else a project whose name appears in the title (IS06, ONES, AKEBONO). One clear match, or nothing. Done projects are skipped.
+- **No time line in notes:** ICS import no longer writes "🕐 … UTC". The time has its own field.
+- **Length fix:** a meeting crossing 09:00 JST (00:00 UTC) kept no length. Now the end wraps to the next day.
+- **Duplicate hint:** same day, same title, same time (or one has none) shows "⧉ duplicate?" in the list.
+- **Schedule meeting panel:** clicking a meeting opens a side panel: time, project, desired outcome, vault note, open actions, notes. Save edits project and outcome. "Open in Meeting Hub" for the rest.
+- Old data is cleaned by a change file in the vault, not by the app.
+
+**Key decisions**
+- **Decision:** Title memory first, project-name match second, and only one clear match. **Why:** on Onur's data it filled the right two and left the rest empty. A wrong project is worse than none. **Alternative:** fuzzy title matching — IS04 and IS06 titles differ by one digit. **Confidence:** high.
+- **Decision:** Name tokens keep CJK attached ("ADSC勉強会"). **Why:** splitting off "ADSC" sent the IS06 建具 hearing to the study group project. **Confidence:** high.
+- **Decision:** Existing time lines are removed by a vault change file, not on load. **Why:** an in-app cleanup would turn the restore file's note changes into conflicts. **Confidence:** high.
+- **Decision:** The duplicate hint is computed at render. Nothing is stored or merged. **Why:** Onur decides which copy stays. **Confidence:** med.
+
+**Verified:** `npm test` passes. flows.js flow 4 (ICS import in Tokyo time: title memory, code match, no match, no UTC line, 08:35–09:00 = 25 min, duplicate chip) and flow 5 (meeting panel, real-mouse Save, no navigation). The guess run on Onur's real meetings: 2 right, 0 wrong.
+
+**Files:** `meetings-hub.html`, `schedule.html`, `styles/meetings-hub.css`, `styles/schedule.css`, `sw.js` (cache v40), `tests/flows.js`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 163 — Change files: a pass lands on top of live data~~ ✓ Done `[group: vault-bridge]`
 Every Claude pass was a full-backup round trip: export → pass → Import Backup, which replaces everything. Nine passes ran in October.
 The 10-19 improvement pass never reached the app (149 changes). Edits made after an export were lost on import.

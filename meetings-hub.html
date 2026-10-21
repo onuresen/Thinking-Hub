@@ -498,6 +498,16 @@
       return;
     }
 
+    // Same day, same title, same time (or one has no time): likely imported twice,
+    // e.g. an .ics copy next to a hand-made one (P164). A hint only.
+    const dupKey = m => m.recurring || !m.date ? '' : m.date + '|' + String(m.title || '').toLowerCase().replace(/[^\p{L}]/gu, '');
+    const dupGroups = new Map();
+    data.meetings.filter(m => !m.archived).forEach(m => {
+      const k = dupKey(m);
+      if (k) { if (!dupGroups.has(k)) dupGroups.set(k, []); dupGroups.get(k).push(m); }
+    });
+    const isDup = m => (dupGroups.get(dupKey(m)) || []).some(o => o !== m && (!o.time || !m.time || o.time === m.time));
+
     list.innerHTML = items.map(m => {
       const typeInfo = MEETING_TYPES[m.type] || MEETING_TYPES.custom;
       const openActions = countOpenActions(m);
@@ -512,6 +522,7 @@
           ${m.projectName ? `<span class="proj-badge">📁 ${esc(m.projectName)}</span>` : ''}
           ${openActions ? `<span class="mr-action-count">${openActions} action${openActions !== 1 ? 's' : ''}</span>` : ''}
           ${linkCount ? `<span class="mr-link-badge">🔗 ${linkCount}</span>` : ''}
+          ${isDup(m) ? `<span class="mr-dup-badge" title="Another meeting on this day has the same title">⧉ duplicate?</span>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1010,7 +1021,9 @@
   function icsTimeDiffMinutes(startTime, endTime) {
     const [sh, sm] = startTime.split(':').map(Number);
     const [eh, em] = endTime.split(':').map(Number);
-    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    let diff = (eh * 60 + em) - (sh * 60 + sm);
+    // 08:30–09:30 in Tokyo is 23:30–00:30 UTC: the end is on the next day (P164).
+    if (diff < 0) diff += 1440;
     return diff > 0 ? diff : null;
   }
 
@@ -1243,12 +1256,12 @@
     });
 
     Promise.all(files.map(readFile)).then(results => {
-      let totalAdded = 0, totalSkipped = 0, failedFiles = 0;
+      let totalAdded = 0, totalSkipped = 0, totalGuessed = 0, failedFiles = 0;
       results.forEach(({ name, text, error }) => {
         if (error || text == null) { failedFiles++; console.error(`Failed to read ${name}`); return; }
         try {
-          const { added, skipped } = importICSText(text, opts);
-          totalAdded += added; totalSkipped += skipped;
+          const { added, skipped, guessed } = importICSText(text, opts);
+          totalAdded += added; totalSkipped += skipped; totalGuessed += guessed;
         } catch (err) {
           console.error(`Failed to import ${name}`, err);
           failedFiles++;
@@ -1260,6 +1273,7 @@
 
       const parts = [];
       if (totalAdded > 0) parts.push(`Imported ${totalAdded} meeting${totalAdded === 1 ? '' : 's'}`);
+      if (totalGuessed > 0) parts.push(`${totalGuessed} got a project from past meetings`);
       if (totalSkipped > 0) parts.push(`${totalSkipped} already imported`);
       if (failedFiles > 0) parts.push(`${failedFiles} file${failedFiles === 1 ? '' : 's'} failed`);
       if (!parts.length) parts.push('No upcoming meetings found (checks 30 days back to 90 days ahead)');
@@ -1275,16 +1289,14 @@
     let time = '', durationMins = null;
     let occDate = dateStr;
     if (ev.dtstart.time) {
-      let timeStr = ev.dtstart.time;
-      if (ev.dtend && ev.dtend.time) timeStr += '–' + ev.dtend.time;
+      // The time lives in its own field. It is no longer copied into notes as a
+      // "🕐 … UTC" line, which was the only "note" on most imported meetings (P164).
       if (ev.dtstart.utc) {
         const local = icsUtcToLocal(dateStr, ev.dtstart.time);
         time = local.time;
         occDate = local.date;
-        notesParts.push(`🕐 ${timeStr} UTC`);
       } else {
         time = ev.dtstart.time;
-        notesParts.push(`🕐 ${timeStr}`);
       }
       if (ev.dtend && ev.dtend.time) durationMins = icsTimeDiffMinutes(ev.dtstart.time, ev.dtend.time);
     }
@@ -1293,7 +1305,62 @@
     return { date: occDate, time, durationMins, notes: notesParts.join('\n') };
   }
 
-  // Parses and imports events from one .ics file's text; returns {added, skipped}.
+  // ── Project guess for imported meetings (P164) ──────────────────────────────
+  // ICS meetings arrive without a project. Reuse the project of the latest
+  // earlier meeting with the same title; else a project whose name appears in
+  // the title (IS06, ONES, AKEBONO). One clear match, or nothing.
+
+  // Same series, different number: "第7回ADSC勉強会【15F東A-1】" → "adsc勉強会".
+  // Other digits stay, so IS04 and IS06 meetings never share a key.
+  function meetingTitleKey(t) {
+    return String(t || '')
+      .replace(/第\s*\d+\s*回/g, '').replace(/[#＃]\s*\d+/g, '').replace(/【[^】]*】/g, '')
+      .replace(/[\s_\-–—・.,:：()（）\[\]「」]/g, '').toLowerCase();
+  }
+
+  const PROJECT_NAME_STOP = new Set(['project', 'program', 'programme', 'department', 'pilot', 'the', 'and',
+    'study', 'sessions', 'map', 'lab', 'hub', 'system', 'tool', 'tools', 'team', 'plan', 'planning']);
+
+  function makeProjectGuesser() {
+    let projects = [];
+    try { projects = HubData.getProjects().filter(p => p.status !== 'done'); } catch { }
+    const byId = new Map(projects.map(p => [p.id, p]));
+
+    const memory = new Map();   // title key → { pid, date } of the latest meeting with a project
+    data.meetings.forEach(m => {
+      if (!m.projectId || !byId.has(m.projectId)) return;
+      const k = meetingTitleKey(m.title);
+      const prev = k && memory.get(k);
+      if (k && (!prev || (m.date || '') > prev.date)) memory.set(k, { pid: m.projectId, date: m.date || '' });
+    });
+
+    const owners = new Map();   // name token → project ids carrying it
+    projects.forEach(p => {
+      String(p.name || '').split(/[\s()（）/／・,、:：|]+/).forEach(raw => {
+        const t = raw.trim().toLowerCase();
+        if (t.length < 3 || PROJECT_NAME_STOP.has(t)) return;
+        if (!owners.has(t)) owners.set(t, new Set());
+        owners.get(t).add(p.id);
+      });
+    });
+
+    return (title) => {
+      const k = meetingTitleKey(title);
+      if (k && memory.has(k)) return byId.get(memory.get(k).pid);
+      const low = String(title || '').toLowerCase();
+      const hits = new Set();
+      owners.forEach((ids, tok) => {
+        if (ids.size !== 1) return;                       // "Autodesk" names four projects: no signal
+        const i = low.indexOf(tok);
+        if (i === -1) return;
+        if (/^[a-z0-9]/.test(tok) && i > 0 && /[a-z0-9]/.test(low[i - 1])) return;   // inside a longer word
+        hits.add([...ids][0]);
+      });
+      return hits.size === 1 ? byId.get([...hits][0]) : null;
+    };
+  }
+
+  // Parses and imports events from one .ics file's text; returns {added, skipped, guessed}.
   // Does not save/render/toast — callers batch those across multiple files.
   // Recurring events (RRULE + UID) are consolidated into one series meeting record
   // with one occurrence/log entry per date, instead of a flat record per week.
@@ -1308,7 +1375,8 @@
 
     const existingKeys = new Set(data.meetings.filter(m => !m.recurring).map(m => m.icsKey).filter(Boolean));
     const seriesByUid = new Map(data.meetings.filter(m => m.recurring && m.icsUid).map(m => [m.icsUid, m]));
-    let added = 0, skipped = 0;
+    const guessProject = makeProjectGuesser();
+    let added = 0, skipped = 0, guessed = 0;
 
     events.forEach(ev => {
       if (!ev.dtstart || (ev.status || '') === 'CANCELLED') return;
@@ -1321,13 +1389,15 @@
           if (existingKeys.has(key)) { skipped++; return; }
           const occ = buildIcsOccurrence(ev, dateStr, opts);
           const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
+          const proj = guessProject(ev.summary);
+          if (proj) guessed++;
           const m = normalizeMeeting({
             id: uid(),
             title: ev.summary || 'Imported meeting',
             date: occ.date, time: occ.time, durationMins: occ.durationMins,
             type: guessMeetingType(ev.summary), desiredOutcome: '',
             attendees: attendeesList.map(a => a.name).join(', '), attendeesList,
-            projectId: null, projectName: null,
+            projectId: proj ? proj.id : null, projectName: proj ? proj.name : null,
             agenda: '', notes: occ.notes,
             actionItems: [], decisions: [], scheduleEventId: null,
             createdAt: new Date().toISOString(),
@@ -1345,6 +1415,8 @@
       let series = seriesByUid.get(ev.uid);
       if (!series) {
         const absorbed = absorbLegacyOccurrences(ev.uid);
+        const proj = (absorbed && absorbed.seed.projectId) ? null : guessProject(ev.summary);
+        if (proj) guessed++;
         const attendeesList = opts.attendees ? (ev.attendees || []).map(name => ({ name, role: 'contributor' })) : [];
         series = normalizeMeeting({
           id: absorbed ? absorbed.seed.id : uid(),
@@ -1354,8 +1426,8 @@
           type: (absorbed && absorbed.seed.type) || guessMeetingType(ev.summary),
           desiredOutcome: (absorbed && absorbed.seed.desiredOutcome) || '',
           attendees: attendeesList.map(a => a.name).join(', '), attendeesList,
-          projectId: (absorbed && absorbed.seed.projectId) || null,
-          projectName: (absorbed && absorbed.seed.projectName) || null,
+          projectId: (absorbed && absorbed.seed.projectId) || (proj && proj.id) || null,
+          projectName: (absorbed && absorbed.seed.projectName) || (proj && proj.name) || null,
           agenda: (absorbed && absorbed.seed.agenda) || '', notes: '',
           actionItems: [], decisions: [], scheduleEventId: null,
           createdAt: (absorbed && absorbed.seed.createdAt) || new Date().toISOString(),
@@ -1385,7 +1457,7 @@
       syncSeriesAnchor(series);
     });
 
-    return { added, skipped };
+    return { added, skipped, guessed };
   }
 
   // ── Mobile sidebar ────────────────────────────────────────────────────────────

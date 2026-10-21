@@ -17,6 +17,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Meeting Hub .ics import no longer writes a "🕐 … UTC" line into notes, and a meeting that crosses 09:00 in Tokyo keeps its length.
 - Canvas Hub: all exports are in one **Export ▾** menu (PNG, slides, interactive HTML, Markdown, Obsidian Canvas, board file). The board menu (⋯) is shorter. "Send lines" and "Pull lines" are one **Sync lines with Dependency Graph**.
 - Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.
 
@@ -27,6 +28,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Schedule: clicking a meeting opens a side panel (time, project, desired outcome, vault note, open actions, notes) instead of jumping to Meeting Hub.
+- Meeting Hub: imported meetings take the project of earlier meetings with the same title, or of a project named in the title. The list flags a likely duplicate.
 - Change files: a pass can arrive as a small file of changes instead of a full backup. Home shows files waiting in your vault's `hub-changes/` folder. Settings → Data → **Apply a change file** opens one by hand. Each change is listed with its status (New, Changed since, Already in…). Apply adds the ticked ones on top of your data after a snapshot, so your own edits since the export stay.
 - Machi Hub (street view): the Tool Park reads as one park with hedges and small trees, and empty spots fill with houses, vending machines, playgrounds, gardens and ponds.
 - Machi Hub: every Hub page has its own landmark (clock tower, café, Ferris wheel, shrine, stadium, school and more).

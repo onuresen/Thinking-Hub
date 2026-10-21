@@ -211,6 +211,104 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 4: ICS import lands meetings in the right place (P164) ──
+  {
+    // The bugs this covers only show in Tokyo time (UTC+9), so run there.
+    const tokyo = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'Asia/Tokyo' });
+    const page = await tokyo.newPage();
+    await page.goto(`${BASE}/meetings-hub.html`, { waitUntil: 'load' });
+    // Dates relative to today so the import window (−30 / +90 days) keeps them.
+    const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // An ICS UTC stamp for a Tokyo (UTC+9) wall-clock time on a given day.
+    const jst = (d, h, m) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), h - 9, m))
+      .toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const D1 = day(3), D2 = day(4);
+    const ev = (uid, title, d, h1, m1, h2, m2) =>
+      `BEGIN:VEVENT\r\nUID:${uid}\r\nSUMMARY:${title}\r\nDTSTART:${jst(d, h1, m1)}\r\nDTEND:${jst(d, h2, m2)}\r\nEND:VEVENT\r\n`;
+    const ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\n'
+      + ev('u-bucho', '戦略企画部会', D1, 9, 0, 10, 0)
+      + ev('u-is06', '大林組様_IS06定例MTG', D1, 16, 0, 17, 0)
+      + ev('u-early', '研開打合せ', D1, 8, 35, 9, 0)
+      + ev('u-ak', 'AKEBONO2026_最終プレゼン', D2, 13, 0, 18, 0)
+      + 'END:VCALENDAR\r\n';
+
+    const r = await page.evaluate(({ ics, d2 }) => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'p-sp', name: 'Strategic Planning Department', status: 'maintenance', tasks: [] },
+        { id: 'p-is04', name: 'Autodesk IS04', status: 'done', tasks: [] },
+        { id: 'p-is06', name: 'Autodesk IS06', status: 'active', tasks: [] },
+        { id: 'p-ak', name: 'Akebono', status: 'active', tasks: [] },
+      ] });
+      data.meetings = [
+        { id: 'm-old', title: '戦略企画部会', date: '2026-09-29', projectId: 'p-sp', projectName: 'Strategic Planning Department' },
+        { id: 'm-hand', title: 'AKEBONO 最終プレゼン', date: d2, time: '13:00', projectId: 'p-ak', projectName: 'Akebono' },
+      ].map(normalizeMeeting);
+      const res = importICSText(ics, { attendees: true, location: true, description: true });
+      renderList();
+      const by = (t) => data.meetings.find((m) => m.title === t);
+      const dupRows = [...document.querySelectorAll('.meeting-row')]
+        .filter((row) => row.querySelector('.mr-dup-badge')).map((row) => row.querySelector('.mr-title').textContent);
+      return {
+        res, bucho: by('戦略企画部会' ) && data.meetings.filter((m) => m.title === '戦略企画部会').map((m) => m.projectId),
+        is06: by('大林組様_IS06定例MTG').projectId, early: by('研開打合せ'), ak: by('AKEBONO2026_最終プレゼン').projectId,
+        utcNotes: data.meetings.filter((m) => /UTC/.test(m.notes || '')).length, dupRows,
+      };
+    }, { ics, d2: ymd(D2) });
+    check('flow4: a known title reuses its last project', r.bucho.every((p) => p === 'p-sp'), JSON.stringify(r.bucho));
+    check('flow4: a project code in the title finds its project', r.is06 === 'p-is06' && r.ak === 'p-ak', `${r.is06} ${r.ak}`);
+    check('flow4: no match → no project', r.early.projectId === null);
+    check('flow4: import counts the guesses', r.res.guessed === 3, JSON.stringify(r.res));
+    check('flow4: no "🕐 … UTC" line in notes', r.utcNotes === 0);
+    check('flow4: 08:35–09:00 JST (crosses UTC midnight) keeps its 25 min', r.early.durationMins === 25 && r.early.time === '08:35',
+      `${r.early.time} ${r.early.durationMins}`);
+    check('flow4: same day + same title is flagged as a possible duplicate', r.dupRows.length === 2, r.dupRows.join(' | '));
+    await tokyo.close();
+  }
+
+  // ── Flow 5: Schedule opens a meeting in its own panel (P164) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/schedule.html`, { waitUntil: 'load' });
+    await page.evaluate((today) => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [{ id: 'p1', name: 'Alpha', status: 'active', tasks: [] }] });
+      HubStorage.set('meetings-hub-v1', { templates: [], meetings: [
+        { id: 'mt1', title: 'Weekly sync', date: today, time: '10:00', durationMins: 30, projectId: null, notes: 'Agenda here',
+          actionItems: [{ id: 'a1', text: 'Send the deck', done: false }], createdAt: '2026-10-01T00:00:00.000Z' },
+      ] });
+    }, today);
+    await page.reload({ waitUntil: 'load' });
+    const navs = [];
+    await page.exposeFunction('__nav', (t) => navs.push(t));
+    await page.evaluate(() => { window.parent.postMessage = (msg) => window.__nav(msg.type); });
+    const pillCalls = await page.evaluate(() => {
+      const html = meetingPillHtml({ id: 'mt1', date: '2026-10-21', title: 'Weekly sync' });
+      return /openMeetingPanel\('mt1', '2026-10-21'\)/.test(html) && !/hub-navigate/.test(html);
+    });
+    check('flow5: a meeting pill opens the panel, not Meeting Hub', pillCalls);
+    await page.evaluate((today) => openMeetingPanel('mt1', today), today);
+    const shown = await page.evaluate(() => ({
+      open: document.getElementById('sch-meeting-drawer').classList.contains('open'),
+      text: document.getElementById('mp-body').textContent.replace(/\s+/g, ' '),
+    }));
+    check('flow5: the panel shows time, notes and open actions',
+      shown.open && /10:00/.test(shown.text) && /Agenda here/.test(shown.text) && /Send the deck/.test(shown.text), shown.text.slice(0, 120));
+    await page.selectOption('#mp-project', 'p1');
+    await page.fill('#mp-outcome', 'Agree the plan');
+    await page.waitForTimeout(250);   // drawer slide-in
+    const box = await page.evaluate(() => {
+      const r = document.querySelector('#sch-meeting-drawer .sch-save-btn').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await page.mouse.move(box.x, box.y); await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    const saved = await page.evaluate(() => HubStorage.get('meetings-hub-v1').meetings[0]);
+    check('flow5: Save writes project and outcome to the meeting',
+      saved.projectId === 'p1' && saved.projectName === 'Alpha' && saved.desiredOutcome === 'Agree the plan'
+      && saved.updatedAt > '2026-10-01', JSON.stringify({ p: saved.projectId, o: saved.desiredOutcome }));
+    check('flow5: saving does not leave Schedule', !navs.includes('hub-navigate'), navs.join(','));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);
