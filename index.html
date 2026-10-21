@@ -335,8 +335,9 @@
         <div class="sfield-hint" style="margin-top:6px">Import replaces everything. To bring in a Claude pass, use a change file.</div>
 
         <div style="margin-top:10px">
-          <button class="data-btn secondary" style="width:100%" onclick="triggerApplyChanges()">⇣ Apply a change file (adds to your data, shows each change first)</button>
+          <button class="data-btn secondary" style="width:100%" onclick="triggerApplyChanges()" title="Adds to your data. Shows each change first.">⇣ Apply changes</button>
           <input type="file" id="changes-file" style="display:none" accept=".json" onchange="handleChangesFile(event)">
+          <div class="sfield-hint" style="margin-top:6px">Files in your vault's change folder show up on Home by themselves.</div>
         </div>
 
         <div style="margin-top:10px">

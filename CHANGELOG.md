@@ -32,7 +32,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - Canvas Hub: ⋯ → **Shelve board** hides a board from the main list without deleting it. Shelved boards sit under "Shelved" in the board list; ⋯ → Bring board back returns one.
 - Schedule: clicking a meeting opens a side panel (time, project, desired outcome, vault note, open actions, notes) instead of jumping to Meeting Hub.
 - Meeting Hub: imported meetings take the project of earlier meetings with the same title, or of a project named in the title. The list flags a likely duplicate.
-- Change files: a pass can arrive as a small file of changes instead of a full backup. Home shows files waiting in your vault's `hub-changes/` folder. Settings → Data → **Apply a change file** opens one by hand. Each change is listed with its status (New, Changed since, Already in…). Apply adds the ticked ones on top of your data after a snapshot, so your own edits since the export stay.
+- Change files: a pass can arrive as a small file of changes instead of a full backup. Home shows files waiting in your vault's `hub-changes/` folder. Settings → Data → **Apply changes** opens one by hand. Each change is listed with its status (New, Changed since, Already in…). Apply adds the ticked ones on top of your data after a snapshot, so your own edits since the export stay.
 - Machi Hub (street view): the Tool Park reads as one park with hedges and small trees, and empty spots fill with houses, vending machines, playgrounds, gardens and ponds.
 - Machi Hub: every Hub page has its own landmark (clock tower, café, Ferris wheel, shrine, stadium, school and more).
 - Machi Hub: Tool Portfolio tools grow as trees in the Tool Park. They blossom when used and wilt after 60 days unused.
