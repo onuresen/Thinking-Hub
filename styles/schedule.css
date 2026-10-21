@@ -1025,6 +1025,26 @@
       color: #f44;
     }
 
+    /* Meeting panel (P164) */
+    .sch-secondary-btn {
+      padding: 10px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text2);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .sch-secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .mp-when { font-family: var(--font-mono); font-size: 12px; color: var(--text2); }
+    .mp-note-path { font-family: var(--font-mono); font-size: 11px; color: var(--text3); overflow-wrap: anywhere; }
+    .mp-action { font-size: 12px; color: var(--text2); padding: 2px 0; }
+    .mp-notes { font-size: 12px; color: var(--text2); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .mp-empty { color: var(--text3); }
+
     /* ── Toast ─────────────────────────────────────────────────── */
     .sch-toast {
       position: fixed;

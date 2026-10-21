@@ -14,8 +14,8 @@ Sidebar tools (19, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | File | Role |
 |------|------|
 | `project-hub.html` | Projects + tasks. Views: Overview, Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
-| `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings |
-| `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import, linked vault note review |
+| `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings; a click opens the meeting panel (P164) |
+| `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import (project guess, P164), linked vault note review |
 | `capture-hub.html` | Brain-dump inbox with routing to other tools. Also the PWA share target |
 | `journal-hub.html` | Tabs: Daily Log (`log-hub-v1`), Weekly Review (`review-hub-v1`), Time Journal (`focus-hub-v1`) |
 | `graph-hub.html` | Dependency graph (vis-network): critical path, reasoning/impact trace, shortest path, suggested links, tag nodes |
@@ -46,7 +46,8 @@ Shared modules and other files:
 | `hub-tags.js` | Tag registry + `TAG_SOURCES` (every tool with `tags`) + `attachTagInput` chip input |
 | `hub-search.js` | Cmd+K search + quick actions (`task:`, `capture:`, `decide:`, `focus`) |
 | `hub-obsidian.js` | Vault index for note autocomplete |
-| `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue |
+| `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue, change-folder listing (P163) |
+| `hub-changes.js` | Change files (P163): status + apply of a pass on top of live data. No DOM; the review modal is in `index.html` |
 | `hub-vault-notes.js` | Linked-note review dialog (P138) for Project Hub + Meeting Hub |
 | `hub-snapshots.js` | Daily IndexedDB snapshots of all localStorage + restore |
 | `hub-starter-data.js` | First-run sample data |
@@ -66,7 +67,7 @@ Shared modules and other files:
 Deleted tools (code in git history, data handling in `docs/HISTORY.md`): KMQT Board, Scrum Board, War Room, Reflection Board, Argument Hub, Frameworks, Blocked Depth, standalone Daily Log / Weekly Review / Time Journal / Retro / Assumptions / Priority Matrix pages, Priority Matrix view, Local MCP Sync.
 
 ## Script load order (required)
-`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-vault-bridge.js` (index.html, project-hub, meetings-hub) → `hub-vault-notes.js` (project-hub, meetings-hub) → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
+`hub-storage.js` → `hub-utils.js` → `hub-starter-data.js` (index.html only) → `hub-obsidian.js` → `hub-vault-bridge.js` (index.html, project-hub, meetings-hub) → `hub-changes.js` (index.html only) → `hub-vault-notes.js` (project-hub, meetings-hub) → `hub-tags.js` (tools with tag inputs + `tags-hub.html`) → `hub-links.js` → `hub-search.js` → `hub-toast.js` → `hub-bootstrap.js` → `enterprise-config.js` → `hub-ai.js` (last two on index.html + tools with a manual AI feature)
 
 ## CSS token conventions
 All color, font, radius via CSS variables from `theme.css`. Never hardcode hex values — use:
@@ -87,7 +88,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 
 ## localStorage keys (source of truth)
-Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports, so it must be backed up).
+Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up).
 
 Not backed up (ephemeral UI state): `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `hub-resurface-v1`, `hub-last-backup-v1`, `hub-briefing-v1`, `ai-drawer-pos-v1`, `machi-milestones-v1`.
 
@@ -163,6 +164,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Lean (P152–P157, Onur 2026-10-06):** keep code and flows lean. Prefer removing a surface over adding one. Keep the AI layer and Journal/Schedule hubs for now.
 - **Delete the code, keep the data** for one release, then retire the keys with a snapshot (P157 pattern).
 - **Propose, never auto-import** anything parsed from vault prose (P104, P138).
+- **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py` and put them in the vault's `hub-changes/`. Status logic lives in `hub-changes.js` and that script; change both together.
 - **Missing timestamp = unknown age, never stale** (P90).
 - **One CSP for every page** (P93). Favicon egress only in the three opted-in pages.
 - **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).

@@ -129,6 +129,56 @@ title: ${D_OLD}
 `,
 };
 
+// ── change files (P163) ──────────────────────────────────────────────────────
+// Seeded right before the change-file checks; ids are what the files aim at.
+const CH_SEED = {
+  'project-hub-v1': {
+    members: [], concepts: [], groupOrder: [],
+    projects: [{ id: 'p1', name: 'Alpha', status: 'active', group: 'Build', createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z', tasks: [{ id: 't1', title: 'First', status: 'todo', done: false }] }],
+  },
+  'meetings-hub-v1': {
+    templates: [],
+    meetings: [
+      { id: 'm1', title: 'Weekly', date: '2026-10-19', projectId: null, notes: 'edited by user', createdAt: '2026-10-01T00:00:00.000Z' },
+      { id: 'm2', title: 'Weekly copy', date: '2026-10-19', projectId: null, notes: '' },
+    ],
+  },
+  'stakeholder-hub-v1': { stakeholders: [], orgOrder: [] },
+};
+
+const CH_A = {
+  format: 'thinking-hub-changes', version: 1, id: 'test-a', title: 'Pass A',
+  createdAt: '2026-10-21T01:00:00.000Z', source: 'work/notes/pass-a.md', note: 'Fixture.',
+  changes: [
+    /* 0 new      */ { op: 'set', key: 'project-hub-v1', path: ['projects', { id: 'p1' }], field: 'status', from: 'active', to: 'done', label: 'Alpha · status → done' },
+    /* 1 new      */ { op: 'add', key: 'project-hub-v1', path: ['projects', { id: 'p1' }, 'tasks'], value: { id: 't2', title: 'Second', status: 'todo', done: false }, label: 'Alpha · new task' },
+    /* 2 done     */ { op: 'add', key: 'project-hub-v1', path: ['projects', { id: 'p1' }, 'tasks'], value: { id: 't1', title: 'First', status: 'todo', done: false }, label: 'Alpha · same task' },
+    /* 3 new      */ { op: 'set', key: 'meetings-hub-v1', path: ['meetings', { id: 'm1' }], field: 'projectId', from: '', to: 'p1', label: 'Weekly · project' },
+    /* 4 conflict */ { op: 'set', key: 'meetings-hub-v1', path: ['meetings', { id: 'm1' }], field: 'notes', from: 'old', to: 'from the pass', label: 'Weekly · notes' },
+    /* 5 new      */ { op: 'remove', key: 'meetings-hub-v1', path: ['meetings', { id: 'm2' }], expect: { title: 'Weekly copy' }, label: 'remove duplicate' },
+    /* 6 new      */ { op: 'add', key: 'meetings-hub-v1', path: ['meetings', { id: 'm1' }, 'actionItems'], value: { id: 'a1', text: 'Send the deck' }, label: 'Weekly · new action' },
+    /* 7 missing  */ { op: 'set', key: 'project-hub-v1', path: ['projects', { id: 'gone' }], field: 'status', to: 'done', label: 'deleted project' },
+    /* 8 new      */ { op: 'add', key: 'stakeholder-hub-v1', path: ['stakeholders'], value: { id: 's1', name: 'Person', org: 'Org' }, label: 'new stakeholder' },
+    /* 9 new      */ { op: 'add', key: 'project-hub-v1', path: ['projects'], value: { id: 'p2', name: 'Beta', status: 'active', tasks: [] }, label: 'new project' },
+    /* 10 new     */ { op: 'add', key: 'project-hub-v1', path: ['projects', { id: 'p2' }, 'tasks'], value: { id: 't3', title: 'Beta task' }, label: 'Beta · new task' },
+  ],
+};
+const CH_A_STATUS = ['new', 'new', 'done', 'new', 'conflict', 'new', 'new', 'missing', 'new', 'new', 'new'];
+
+const CH_B = {
+  format: 'thinking-hub-changes', version: 1, id: 'test-b', title: 'Pass B',
+  createdAt: '2026-10-21T02:00:00.000Z', source: '',
+  changes: [{ op: 'set', key: 'project-hub-v1', path: ['projects', { id: 'p1' }], field: 'group', to: 'Personal', label: 'Alpha · group' }],
+};
+
+const CHANGE_FILES = {
+  'b-later.json': JSON.stringify(CH_B),
+  'a-first.json': JSON.stringify(CH_A),
+  'broken.json': '{ not json',
+  'other.json': JSON.stringify({ hello: 'not a change file' }),
+};
+
 (async () => {
   const { server, port } = await startServer();
   const browser = await chromium.launch({
@@ -143,8 +193,9 @@ title: ${D_OLD}
     if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text());
   });
 
-  // Fake vault: <root>/daily/<year>/*.md — mirrors a real Obsidian layout.
-  await page.addInitScript(({ notes }) => {
+  // Fake vault: <root>/daily/<year>/*.md — mirrors a real Obsidian layout —
+  // plus <root>/hub-changes/*.json for change files (P163).
+  await page.addInitScript(({ notes, changeFiles }) => {
     const fileHandle = (name, text) => ({
       kind: 'file', name, getFile: async () => ({ text: async () => text }),
     });
@@ -167,8 +218,9 @@ title: ${D_OLD}
     });
     const year = dirHandle('2026', notes, {});
     const daily = dirHandle('daily', {}, { 2026: year });
-    window.showDirectoryPicker = async () => dirHandle('vault', { 'README.md': '# vault' }, { daily });
-  }, { notes: NOTES });
+    const changes = dirHandle('hub-changes', changeFiles, {});
+    window.showDirectoryPicker = async () => dirHandle('vault', { 'README.md': '# vault' }, { daily, 'hub-changes': changes });
+  }, { notes: NOTES, changeFiles: CHANGE_FILES });
 
   await page.goto(`http://localhost:${port}/index.html`, { waitUntil: 'networkidle' });
 
@@ -278,6 +330,113 @@ title: ${D_OLD}
   await page.evaluate((d) => HubVaultBridge.dismissDay(d), D_RECENT);
   check('dismissDay drops that day from the gap list',
     !(await page.evaluate(() => HubVaultBridge.getState().unrecordedDays)).includes(D_RECENT));
+
+  // ── change files (P163) ───────────────────────────────────────────────────
+  // A fresh browser shows the first-run welcome above every modal; a returning
+  // user never sees it. Close it so the real-mouse clicks below hit the modal.
+  await page.evaluate((seed) => {
+    for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem('tutorial-seen-v1', 'true');
+    document.getElementById('welcome-overlay').style.display = 'none';
+  }, CH_SEED);
+
+  const val = await page.evaluate((a) => ({
+    good: HubChanges.validate(a),
+    badKey: HubChanges.validate({ ...a, changes: [{ op: 'set', key: 'hub-settings-v1', path: [], field: 'x', to: 1 }] }),
+    proto: HubChanges.validate({ ...a, changes: [{ op: 'set', key: 'project-hub-v1', path: ['__proto__'], field: 'x', to: 1 }] }),
+    format: HubChanges.validate({ ...a, format: 'nope' }),
+  }), CH_A);
+  check('a well-formed change file validates', val.good.ok, val.good.errors);
+  check('settings, prototype paths and foreign files are refused',
+    !val.badKey.ok && !val.proto.ok && !val.format.ok);
+
+  const statuses = await page.evaluate((doc) =>
+    HubChanges.plan(doc, (k) => HubStorage.get(k)).rows.map((r) => r.status), CH_A);
+  check('each change gets the right status against live data',
+    JSON.stringify(statuses) === JSON.stringify(CH_A_STATUS), statuses);
+
+  const scanned = await page.evaluate(async () => {
+    await scanChangeFiles();
+    return _chFiles.map((f) => ({ file: f.file, id: f.doc && f.doc.id, errors: f.errors.length }));
+  });
+  check('the folder scan finds change files, oldest first, and skips other JSON',
+    scanned.length === 3 && scanned[0].id === 'test-a' && scanned[1].id === 'test-b'
+    && !scanned.some((f) => f.file === 'other.json'), scanned);
+  check('a broken file is listed, not ignored', scanned.some((f) => f.file === 'broken.json' && f.errors > 0));
+
+  await page.evaluate(() => buildTodayView());
+  const chCard = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('#today-view .stat-card')]
+      .find((el) => el.textContent.includes('Change files'));
+    return c ? c.textContent.replace(/\s+/g, ' ').trim() : null;
+  });
+  check('Today shows the waiting change files', !!chCard && /2 waiting/.test(chCard), chCard);
+
+  // Two waiting → the list first, then file A.
+  await page.evaluate(() => openChangeFiles());
+  await page.waitForFunction(() => document.querySelectorAll('#changes-body .ch-file').length === 3);
+  await page.evaluate(() => chOpenListed(0));
+  await page.waitForSelector('#changes-body .ch-row');
+  await page.waitForTimeout(300);   // .ui-modal's 0.18s open transition moves every row
+  const applyText = () => page.evaluate(() => document.getElementById('ch-apply-btn').textContent.trim());
+  check('only new changes are ticked by default', (await applyText()) === 'Apply 8 changes', await applyText());
+  check('changes that cannot apply are shown but not tickable',
+    await page.evaluate(() => document.querySelectorAll('#changes-body .ch-row.ch-muted input:disabled').length) === 2);
+
+  // Real mouse timing (CLAUDE.md), not page.click().
+  const box = await page.evaluate(() => {
+    const row = [...document.querySelectorAll('#changes-body .ch-row')].find((r) => r.textContent.includes('Weekly · notes'));
+    row.scrollIntoView({ block: 'center' });   // the list scrolls; a user scrolls to it first
+    const r = row.querySelector('input').getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  const realClick = async ({ x, y }) => {
+    await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+  };
+  await realClick(box);
+  check('ticking a "changed since" row adds it', (await applyText()) === 'Apply 9 changes', await applyText());
+  await realClick(box);
+  check('unticking removes it again', (await applyText()) === 'Apply 8 changes', await applyText());
+
+  await page.evaluate(() => Promise.all([chApply(), chApply()]));   // a double click
+  await page.waitForFunction(() => !document.getElementById('changes-overlay').classList.contains('is-open'));
+  const after = await page.evaluate(() => ({
+    ph: HubStorage.get('project-hub-v1'), mh: HubStorage.get('meetings-hub-v1'),
+    sh: HubStorage.get('stakeholder-hub-v1'), rec: HubVaultBridge.getState().changeSets['test-a'],
+  }));
+  const p1 = after.ph.projects.find((p) => p.id === 'p1');
+  const m1 = after.mh.meetings.find((m) => m.id === 'm1');
+  check('apply writes the ticked changes',
+    p1.status === 'done' && p1.tasks.some((t) => t.id === 't2') && m1.projectId === 'p1'
+    && !after.mh.meetings.some((m) => m.id === 'm2') && after.sh.stakeholders.some((s) => s.id === 's1'));
+  check('an unticked "changed since" field keeps the user\'s edit', m1.notes === 'edited by user', m1.notes);
+  check('an add into a missing list creates it', Array.isArray(m1.actionItems) && m1.actionItems.length === 1);
+  check('a change can build on an earlier one in the same file',
+    after.ph.projects.some((p) => p.id === 'p2' && p.tasks.some((t) => t.id === 't3')));
+  check('edited records get a fresh updatedAt, createdAt untouched (P90)',
+    p1.updatedAt > '2026-01-01T00:00:00.000Z' && p1.createdAt === '2026-01-01T00:00:00.000Z');
+  check('the file is recorded as applied', after.rec && after.rec.status === 'applied' && after.rec.applied === 8, after.rec);
+  const snaps = await page.evaluate(async () => (await HubSnapshots.list()).map((s) => s.label));
+  check('a safety snapshot is taken before applying', snaps.includes('pre-changes'), snaps);
+  const again = await page.evaluate((doc) => HubChanges.plan(doc, (k) => HubStorage.get(k)).counts, CH_A);
+  check('applying is idempotent: nothing is new the second time', again.new === 0, again);
+
+  // One file left → it opens straight away. Dismiss it.
+  page.once('dialog', (d) => d.accept());
+  await page.evaluate(() => openChangeFiles());
+  await page.waitForSelector('#changes-body .ch-row');
+  await page.evaluate(() => chDismiss());
+  await page.waitForFunction(() => !document.getElementById('changes-overlay').classList.contains('is-open'));
+  const recB = await page.evaluate(() => HubVaultBridge.getState().changeSets['test-b']);
+  const groupB = await page.evaluate(() => HubStorage.get('project-hub-v1').projects.find((p) => p.id === 'p1').group);
+  check('dismiss records the file without applying it', recB && recB.status === 'dismissed' && groupB === 'Build', { recB, groupB });
+  await page.evaluate(() => buildTodayView());
+  check('reviewed files leave Today', await page.evaluate(() =>
+    ![...document.querySelectorAll('#today-view .stat-card')].some((el) => el.textContent.includes('Change files'))));
+  check('vault bridge state keeps its other fields after a change-set write', await page.evaluate(() => {
+    const s = HubVaultBridge.getState();
+    return Object.keys(s.seen).length === 2 && s.dailyFolder === 'daily' && s.changesFolder === 'hub-changes';
+  }));
 
   // ── persistence layer ─────────────────────────────────────────────────────
   const idb = await page.evaluate(async () => {

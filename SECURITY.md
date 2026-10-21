@@ -59,6 +59,10 @@ coordinated privately until a fix or safe disclosure plan is ready.
   analytics endpoint.
 - Full Backups are generated locally as JSON downloads. Current exports remove
   the Anthropic API key and the locally generated Obsidian index.
+- Change files are read locally (file picker or the connected vault folder) and
+  applied only after review, with a local snapshot first. Treat them like
+  backups: apply only files you or your own tools wrote. They cannot touch
+  settings (where the API key lives) or the activity log.
 
 Browser storage is not encryption. Any person, extension, script, or process
 that can access the same browser profile and origin may be able to read it.

@@ -4,6 +4,47 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 164 — Meetings land in the right place~~ ✓ Done `[group: meetings]`
+Group B of the 10-20 usage review. Schedule ⇄ Meetings was the most common move in the hub. 12 of 14 meetings imported since 10-13 had no project. 49 of 81 meetings had only a "🕐 … UTC" line as notes.
+- **Project on import:** an imported meeting takes the project of the latest earlier meeting with the same title ("第7回" and "#6" ignored). Else a project whose name appears in the title (IS06, ONES, AKEBONO). One clear match, or nothing. Done projects are skipped.
+- **No time line in notes:** ICS import no longer writes "🕐 … UTC". The time has its own field.
+- **Length fix:** a meeting crossing 09:00 JST (00:00 UTC) kept no length. Now the end wraps to the next day.
+- **Duplicate hint:** same day, same title, same time (or one has none) shows "⧉ duplicate?" in the list.
+- **Schedule meeting panel:** clicking a meeting opens a side panel: time, project, desired outcome, vault note, open actions, notes. Save edits project and outcome. "Open in Meeting Hub" for the rest.
+- Old data is cleaned by a change file in the vault, not by the app.
+
+**Key decisions**
+- **Decision:** Title memory first, project-name match second, and only one clear match. **Why:** on Onur's data it filled the right two and left the rest empty. A wrong project is worse than none. **Alternative:** fuzzy title matching — IS04 and IS06 titles differ by one digit. **Confidence:** high.
+- **Decision:** Name tokens keep CJK attached ("ADSC勉強会"). **Why:** splitting off "ADSC" sent the IS06 建具 hearing to the study group project. **Confidence:** high.
+- **Decision:** Existing time lines are removed by a vault change file, not on load. **Why:** an in-app cleanup would turn the restore file's note changes into conflicts. **Confidence:** high.
+- **Decision:** The duplicate hint is computed at render. Nothing is stored or merged. **Why:** Onur decides which copy stays. **Confidence:** med.
+
+**Verified:** `npm test` passes. flows.js flow 4 (ICS import in Tokyo time: title memory, code match, no match, no UTC line, 08:35–09:00 = 25 min, duplicate chip) and flow 5 (meeting panel, real-mouse Save, no navigation). The guess run on Onur's real meetings: 2 right, 0 wrong.
+
+**Files:** `meetings-hub.html`, `schedule.html`, `styles/meetings-hub.css`, `styles/schedule.css`, `sw.js` (cache v40), `tests/flows.js`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
+### ~~Priority 163 — Change files: a pass lands on top of live data~~ ✓ Done `[group: vault-bridge]`
+Every Claude pass was a full-backup round trip: export → pass → Import Backup, which replaces everything. Nine passes ran in October.
+The 10-19 improvement pass never reached the app (149 changes). Edits made after an export were lost on import.
+Onur (2026-10-21): *"Please bring any lost info and start with group A."*
+- **Change file** (`hub-changes.js`, new): only the changes, each aimed at an item by id. Ops: `add`, `set`, `unset`, `remove`.
+- **Status first:** each change is checked against live data before anything is written. New, Changed since, Already in, Already there, Not found.
+- **Review modal:** changes grouped by tool. New ones are ticked. "Changed since" shows the current value and stays unticked. Apply takes a snapshot first.
+- **Two ways in:** a Home card for files in the vault's `hub-changes/` folder (Vault Bridge reads it; folder in Settings → Integrations), or Settings → Data → Apply a change file.
+- **Record:** applied or dismissed files go in `hub-vault-bridge-v1.changeSets` (backed up), so the card does not offer them again. Applying twice is harmless.
+- **Vault side:** `scripts/hub_changes.py` in esen-vault builds a file (diff two exports, or a Builder) and checks it against an export.
+
+**Key decisions**
+- **Decision:** Passes ship as change files. Import Backup stays for restore only. **Why:** an overwrite loses anything edited after the export, and a pass never imported is lost silently. Changes aimed by id can be reviewed, applied late, or applied twice. **Alternative:** merge whole backups on import — it cannot tell a deletion from "not there yet". **Confidence:** high.
+- **Decision:** `null`, `""`, `[]` and a missing field are the same "empty" when a change is checked. **Why:** ICS import writes null, forms write '', old records lack the field. Telling them apart flagged 18 real changes as conflicts on the first real file. **Confidence:** high.
+- **Decision:** An applied change bumps `updatedAt` only on records that already carry a timestamp (P90). **Why:** canvas cards and key results never had one and should not grow one. **Confidence:** med.
+- **Decision:** Applied files are recorded in `hub-vault-bridge-v1`, not a new key. **Why:** that key is already backed up and is the vault's own state. **Alternative:** `hub-changes-v1` — one more key for SCOPE_KEYS, EXPORT_KEY_LABELS and the round-trip test. **Confidence:** high.
+- **Decision:** Same trust as a Full Backup. Canvas HTML in a change file is not cleaned (a backup import does not clean it either). **Why:** files come from your own vault and passes; the preview shows every change and a snapshot is taken. **Revisit when:** change files come from other people. **Confidence:** med.
+
+**Verified:** `npm test` passes. vault-bridge.js has 21 new checks: statuses, the empty rule, folder scan, Today card, real-mouse ticking, a double click, apply, snapshot, idempotency, dismiss. Real data: the 10-20 export plus the 10-19 restore file (149 changes) and the business-card file (22) through the UI. Same result as the Python tool. All 149 read "Already in" afterwards. Ten tools open with no errors.
+
+**Files:** `hub-changes.js` (new), `hub-vault-bridge.js`, `index.html`, `styles/index.css`, `sw.js` (PRECACHE + cache v39), `tests/vault-bridge.js`, `README.md`, `SECURITY.md`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 162 — Machi street: fill the empty town~~ ✓ Done `[group: machi-hub]`
 Onur (screenshots): *"top screen is rich but lights and trees are acting standalone and unnecessarily wide but empty town."* The engine gives each place a fixed 26px slot with a lamp post, and starts each district on a new row. Tool Park rows read as lone trees between lamps; row ends sat empty.
 - **Park rows:** one continuous park. A hedge with flowers (autumn: fallen leaves, winter: snow and night lights) runs under the tool trees. Small trees and pines sit at the slot edges, so the tool tree in the middle stays clear.

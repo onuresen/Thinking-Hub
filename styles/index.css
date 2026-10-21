@@ -1809,3 +1809,142 @@
     min-width: 0;
   }
 }
+
+/* =========================================================================
+   CHANGE FILES — review modal (P163)
+   One row per change with a status chip. Only "new" and "changed since"
+   rows can be ticked; the rest are greyed so the list still shows them.
+   ========================================================================= */
+
+.ch-head {
+  margin-bottom: 12px;
+}
+
+.ch-file-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.ch-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text3);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.ch-note {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.ch-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+
+.ch-chip {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 2px 7px;
+  border-radius: var(--r-chip);
+  background: var(--surface3);
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.ch-chip-new {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.ch-chip-conflict {
+  color: var(--accent-super);
+}
+
+.ch-group {
+  border-top: 1px solid var(--surface3);
+  padding: 6px 0;
+}
+
+.ch-group > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  padding: 4px 0;
+}
+
+.ch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 4px 4px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.ch-row.ch-muted {
+  color: var(--text3);
+  cursor: default;
+}
+
+.ch-row input {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ch-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ch-now {
+  font-size: 11px;
+  color: var(--accent-super);
+  padding: 0 0 4px 28px;
+}
+
+.ch-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface3);
+}
+
+.ch-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.ch-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--surface3);
+}
+
+@media (max-width: 640px) {
+  .ch-label {
+    white-space: normal;
+  }
+}
