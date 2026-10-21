@@ -4,6 +4,28 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 163 — Change files: a pass lands on top of live data~~ ✓ Done `[group: vault-bridge]`
+Every Claude pass was a full-backup round trip: export → pass → Import Backup, which replaces everything. Nine passes ran in October.
+The 10-19 improvement pass never reached the app (149 changes). Edits made after an export were lost on import.
+Onur (2026-10-21): *"Please bring any lost info and start with group A."*
+- **Change file** (`hub-changes.js`, new): only the changes, each aimed at an item by id. Ops: `add`, `set`, `unset`, `remove`.
+- **Status first:** each change is checked against live data before anything is written. New, Changed since, Already in, Already there, Not found.
+- **Review modal:** changes grouped by tool. New ones are ticked. "Changed since" shows the current value and stays unticked. Apply takes a snapshot first.
+- **Two ways in:** a Home card for files in the vault's `hub-changes/` folder (Vault Bridge reads it; folder in Settings → Integrations), or Settings → Data → Apply a change file.
+- **Record:** applied or dismissed files go in `hub-vault-bridge-v1.changeSets` (backed up), so the card does not offer them again. Applying twice is harmless.
+- **Vault side:** `scripts/hub_changes.py` in esen-vault builds a file (diff two exports, or a Builder) and checks it against an export.
+
+**Key decisions**
+- **Decision:** Passes ship as change files. Import Backup stays for restore only. **Why:** an overwrite loses anything edited after the export, and a pass never imported is lost silently. Changes aimed by id can be reviewed, applied late, or applied twice. **Alternative:** merge whole backups on import — it cannot tell a deletion from "not there yet". **Confidence:** high.
+- **Decision:** `null`, `""`, `[]` and a missing field are the same "empty" when a change is checked. **Why:** ICS import writes null, forms write '', old records lack the field. Telling them apart flagged 18 real changes as conflicts on the first real file. **Confidence:** high.
+- **Decision:** An applied change bumps `updatedAt` only on records that already carry a timestamp (P90). **Why:** canvas cards and key results never had one and should not grow one. **Confidence:** med.
+- **Decision:** Applied files are recorded in `hub-vault-bridge-v1`, not a new key. **Why:** that key is already backed up and is the vault's own state. **Alternative:** `hub-changes-v1` — one more key for SCOPE_KEYS, EXPORT_KEY_LABELS and the round-trip test. **Confidence:** high.
+- **Decision:** Same trust as a Full Backup. Canvas HTML in a change file is not cleaned (a backup import does not clean it either). **Why:** files come from your own vault and passes; the preview shows every change and a snapshot is taken. **Revisit when:** change files come from other people. **Confidence:** med.
+
+**Verified:** `npm test` passes. vault-bridge.js has 21 new checks: statuses, the empty rule, folder scan, Today card, real-mouse ticking, a double click, apply, snapshot, idempotency, dismiss. Real data: the 10-20 export plus the 10-19 restore file (149 changes) and the business-card file (22) through the UI. Same result as the Python tool. All 149 read "Already in" afterwards. Ten tools open with no errors.
+
+**Files:** `hub-changes.js` (new), `hub-vault-bridge.js`, `index.html`, `styles/index.css`, `sw.js` (PRECACHE + cache v39), `tests/vault-bridge.js`, `README.md`, `SECURITY.md`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 162 — Machi street: fill the empty town~~ ✓ Done `[group: machi-hub]`
 Onur (screenshots): *"top screen is rich but lights and trees are acting standalone and unnecessarily wide but empty town."* The engine gives each place a fixed 26px slot with a lamp post, and starts each district on a new row. Tool Park rows read as lone trees between lamps; row ends sat empty.
 - **Park rows:** one continuous park. A hedge with flowers (autumn: fallen leaves, winter: snow and night lights) runs under the tool trees. Small trees and pines sit at the slot edges, so the tool tree in the middle stays clear.

@@ -15,6 +15,8 @@
  *   2. Deep scan (on demand)   — read those notes and extract decision blocks
  *      written in the canonical schema (Decision / Why / Alternative /
  *      Revisit when / Confidence), offered as a review queue.
+ *   3. Change files (P163)     — list the vault's change folder for
+ *      hub-changes.js, and remember which files were applied or dismissed.
  *
  * Nothing is ever imported automatically. Every extracted decision is
  * proposed and must be accepted — same discipline the manual reconciliation
@@ -36,6 +38,9 @@
  *   HubVaultBridge.ignore(proposal)     — never propose this block again
  *   HubVaultBridge.dismissDay(date)     — stop reporting one unrecorded day
  *   HubVaultBridge.getState()           — raw hub-vault-bridge-v1 record
+ *   HubVaultBridge.listFolder(rel)      — [{name, kind}] of one vault folder, or null
+ *   HubVaultBridge.readFile(rel)        — text of any vault file, or null
+ *   HubVaultBridge.markChangeSet(id, r) — record a change file as applied/dismissed
  */
 
 window.HubVaultBridge = (() => {
@@ -61,17 +66,26 @@ window.HubVaultBridge = (() => {
 
   // ── state ───────────────────────────────────────────────────────────────────
 
+  // Where Claude's change files land in the vault (P163). Vault-relative.
+  const CHANGES_FOLDER = 'hub-changes';
+
   function getState() {
     const s = HubStorage.get(KEY);
     if (!s || typeof s !== 'object' || Array.isArray(s)) {
-      return { dailyFolder: 'daily', lastScanAt: '', unrecordedDays: [], seen: {}, dismissedDays: {} };
+      return { dailyFolder: 'daily', lastScanAt: '', unrecordedDays: [], seen: {}, dismissedDays: {},
+        changesFolder: CHANGES_FOLDER, changeSets: {} };
     }
+    const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
     return {
       dailyFolder: s.dailyFolder || 'daily',
       lastScanAt: s.lastScanAt || '',
       unrecordedDays: Array.isArray(s.unrecordedDays) ? s.unrecordedDays : [],
-      seen: (s.seen && typeof s.seen === 'object') ? s.seen : {},
-      dismissedDays: (s.dismissedDays && typeof s.dismissedDays === 'object') ? s.dismissedDays : {},
+      seen: obj(s.seen),
+      dismissedDays: obj(s.dismissedDays),
+      // ''/undefined → default; the field is only written by setChangesFolder
+      changesFolder: typeof s.changesFolder === 'string' && s.changesFolder ? s.changesFolder : CHANGES_FOLDER,
+      // id → { status: 'applied'|'dismissed', at, title, applied, skipped }
+      changeSets: obj(s.changeSets),
     };
   }
 
@@ -778,11 +792,42 @@ window.HubVaultBridge = (() => {
     _setState({ dailyFolder: String(folder || '').replace(/^\/+|\/+$/g, '') });
   }
 
+  // ── change files (P163) — read side only; hub-changes.js does the rest ──────
+
+  function setChangesFolder(folder) {
+    _setState({ changesFolder: String(folder || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') });
+  }
+
+  /** Entries of one vault folder: [{name, kind}], or null if it does not exist. */
+  async function listFolder(rel) {
+    if (!_handle || _needsPermission) return null;
+    let dir = _handle;
+    for (const part of String(rel || '').split('/').filter(Boolean)) {
+      try { dir = await dir.getDirectoryHandle(part); } catch { return null; }
+    }
+    const out = [];
+    for await (const [name, entry] of dir.entries()) {
+      if (!name.startsWith('.')) out.push({ name, kind: entry.kind });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async function readFile(rel) {
+    if (!_handle || _needsPermission) return null;
+    return _readNote(String(rel || '').replace(/\\/g, '/'));
+  }
+
+  function markChangeSet(id, rec) {
+    const st = getState();
+    _setState({ changeSets: { ...st.changeSets, [id]: { ...rec, at: new Date().toISOString() } } });
+  }
+
   return {
     isSupported, init, connect, reconnect, status, getState,
     scanDays, scanDecisions, accept, ignore, dismissDay, setDailyFolder,
     readNote, listNotes, normNotePath, parseChecklist, parseMeetingNote,
     itemKey, markSeen, isSeen, normTitle: _normTitle,
+    setChangesFolder, listFolder, readFile, markChangeSet,
     parseNote, // exported for tests
   };
 })();
