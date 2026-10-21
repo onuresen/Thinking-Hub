@@ -1279,6 +1279,7 @@
   <!-- Board menu (P130): duplicate / export / import one board -->
   <div class="quick-menu" id="board-menu">
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); duplicateBoard()"><span>⧉</span><span>Duplicate board</span></button>
+    <button class="qm-item" id="bm-shelve" onmousedown="event.stopPropagation(); closeBoardMenu(); toggleShelveBoard()"><span>⇩</span><span id="bm-shelve-label">Shelve board</span></button>
     <div class="qm-sep"></div>
     <button class="qm-item" onmousedown="event.stopPropagation(); closeBoardMenu(); syncBoardWithGraph()"><span>⛓</span><span>Sync lines with Dependency Graph</span></button>
     <div class="qm-sep"></div>
@@ -1806,9 +1807,29 @@
     function renderBoardBar() {
       const sel = document.getElementById('board-select');
       if (!sel) return;
-      sel.innerHTML = fullState.boards.map(b =>
-        `<option value="${b.id}"${b.id === db.id ? ' selected' : ''}>${HubUtils.esc(b.name)} (${(b.nodes || []).length})</option>`
-      ).join('');
+      const opt = b => `<option value="${b.id}"${b.id === db.id ? ' selected' : ''}>${HubUtils.esc(b.name)} (${(b.nodes || []).length})</option>`;
+      const shelved = fullState.boards.filter(b => b.shelved);
+      sel.innerHTML = fullState.boards.filter(b => !b.shelved).map(opt).join('')
+        + (shelved.length ? `<optgroup label="Shelved">${shelved.map(opt).join('')}</optgroup>` : '');
+    }
+
+    // P165: shelve instead of delete. A shelved board leaves the main list but
+    // keeps every card, line and view, and stays in backups. One pick in the
+    // "Shelved" group opens it; ⋯ → Bring board back returns it.
+    function toggleShelveBoard() {
+      if (db.shelved) {
+        delete db.shelved;
+        pulseSave(); renderBoardBar();
+        if (window.showToast) showToast('Board back in the list');
+        return;
+      }
+      const others = fullState.boards.filter(b => b !== db && !b.shelved);
+      if (!others.length) { alert('This is your only board in the list. Create or bring back another one first.'); return; }
+      db.shelved = true;
+      const name = db.name;
+      switchBoard(others[0].id);
+      renderBoardBar();
+      if (window.showToast) showToast(`"${name}" shelved. Find it under Shelved in the board list.`);
     }
 
     function switchBoard(id) {
@@ -1843,11 +1864,13 @@
         alert('This is your only board — create another one before deleting this one.');
         return;
       }
-      if (!confirm(`Delete board "${db.name}"? This removes all its notes and connections and cannot be undone.`)) return;
+      if (!confirm(`Delete board "${db.name}"? This removes all its notes and connections and cannot be undone.\n\nTo only hide it, use ⋯ → Shelve board.`)) return;
       const idx = fullState.boards.findIndex(b => b.id === db.id);
       delete historyByBoard[db.id];
       fullState.boards.splice(idx, 1);
-      const next = fullState.boards[Math.max(0, idx - 1)];
+      // Land on a board that is in the list, not a shelved one (P165).
+      const next = fullState.boards.slice(0, idx).reverse().find(b => !b.shelved)
+        || fullState.boards.find(b => !b.shelved) || fullState.boards[Math.max(0, idx - 1)];
       fullState.activeBoardId = next.id;
       db = next;
       if (!db.edges) db.edges = [];
@@ -3172,6 +3195,7 @@
       const menu = document.getElementById('board-menu');
       if (menu.style.display === 'flex') { closeBoardMenu(); return; }
       document.getElementById('bm-rebuild').style.display = db.systemMap ? '' : 'none';
+      document.getElementById('bm-shelve-label').textContent = db.shelved ? 'Bring board back' : 'Shelve board';
       const r = document.getElementById('board-menu-btn').getBoundingClientRect();
       menu.style.left = r.left + 'px';
       menu.style.top = (r.bottom + 6) + 'px';

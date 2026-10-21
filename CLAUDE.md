@@ -13,7 +13,7 @@ Sidebar tools (19, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 
 | File | Role |
 |------|------|
-| `project-hub.html` | Projects + tasks. Views: Overview, Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
+| `project-hub.html` | Projects + tasks. Views: Overview (cards show the Next line, P165), Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
 | `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings; a click opens the meeting panel (P164) |
 | `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import (project guess, P164), linked vault note review |
 | `capture-hub.html` | Brain-dump inbox with routing to other tools. Also the PWA share target |
@@ -172,7 +172,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Test UI with real mouse timing** (`mouse.down` → 80 ms → `mouse.up`), not `page.click()`. Six Canvas Connect bugs hid behind synthetic clicks (P113–P124).
 
 ## Canvas Hub (most-edited file)
-- `canvas-v1 = { boards: [{ id, name, nodes, edges, lanes, views, colorKey, panX, panY, zoom }], activeBoardId, templates, snapToGrid, dimParked }`. `db` is a live reference to the active board.
+- `canvas-v1 = { boards: [{ id, name, nodes, edges, lanes, views, colorKey, panX, panY, zoom, shelved? }], activeBoardId, templates, snapToGrid, dimParked }`. Shelved boards (P165) sit in a "Shelved" optgroup. `db` is a live reference to the active board.
 - Node kinds: note, rd, frame, and live cards (`LINKED` table: project, goal, tool, task, decision, risk, meeting, stakeholder) with `link: {tool, id, label}`. Status is read fresh at render; only the link is stored.
 - Edges: `{from, to, relType: relates|blocks|depends-on, label}`. Frames are nodes. Layers (`lanes`) are visual guides, never containers.
 - Menus: right-click via `gateMenu()`; popovers close on capture-phase `mousedown`. Every content change is one undo step (`pushHistory`).
