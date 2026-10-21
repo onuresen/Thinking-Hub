@@ -1018,6 +1018,20 @@
         });
       });
 
+      // P165: next meeting per project — work here is paced by meetings, not due dates.
+      const nextMeeting = {};
+      const today = HubUtils.todayLocal();
+      ((HubStorage.get('meetings-hub-v1') || {}).meetings || []).forEach(m => {
+        if (!m || !m.projectId || m.archived) return;
+        const occs = m.recurring ? (m.occurrenceDates || []) : [m];
+        occs.forEach(o => {
+          if (!o.date || o.date < today) return;
+          const cur = nextMeeting[m.projectId];
+          const key = o.date + ' ' + (o.time || '');
+          if (!cur || key < cur.key) nextMeeting[m.projectId] = { key, date: o.date, title: m.title || 'Meeting' };
+        });
+      });
+
       renderOrder.forEach(([groupName, projects]) => {
         if (groupName) {
           const accentColor = projects[0]?.color || 'var(--accent)';
@@ -1077,6 +1091,13 @@
             return `<div class="avatar" style="background:${bg};color:${fg};width:22px;height:22px;font-size:8.5px">${initials(m.name)}</div>`;
           }).join('');
 
+          const doing = proj.tasks.filter(t => t.status === 'inprogress' && !t.done && !t.archived);
+          const nm = nextMeeting[proj.id];
+          const nextHtml = (doing.length || nm) ? `<div class="project-next">
+            ${doing.length ? `<div class="pn-row" title="In progress">▶ ${HubUtils.esc(doing[0].title)}${doing.length > 1 ? ` <span class="pn-more">+${doing.length - 1}</span>` : ''}</div>` : ''}
+            ${nm ? `<div class="pn-row" title="Next meeting">▣ ${formatDate(nm.date)} · ${HubUtils.esc(nm.title)}</div>` : ''}
+          </div>` : '';
+
           const groupTagHtml = `<span class="proj-group-tag${proj.group ? ' has-group' : ''}" data-proj-id="${proj.id}" title="Click to set group">${proj.group ? HubUtils.esc(proj.group) : '＋ group'}</span>`;
 
           card.innerHTML = `
@@ -1090,6 +1111,7 @@
           <div class="progress-label"><span>Progress</span><span>${prog}%</span></div>
           <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
         </div>
+        ${nextHtml}
         <div class="project-meta">
           <div class="avatar-stack">${avatars}</div>
           <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>

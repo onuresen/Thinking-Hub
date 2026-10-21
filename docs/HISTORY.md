@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 165 — Show what's next; shelve a board~~ ✓ Done `[group: project-hub]`
+Group C of the 10-20 usage review. Onur's work is paced by meetings, not due dates: 87 of 100 open tasks have no date. He was reviewing 11 canvas boards to delete some, and delete can't be undone.
+- **Project Hub "Next" line:** each Overview card shows the task in progress (▶, "+N" if more) and the project's next meeting (▣ date · title), from today on, including series dates. Nothing in motion → no line.
+- **Canvas "Shelve board":** board menu (⋯) → Shelve board. The board leaves the main list and shows under "Shelved" at the bottom of the board select. ⋯ → Bring board back returns it. The delete confirm points to it.
+
+**Key decisions**
+- **Decision:** The Next line reads tasks and meetings the hub already has. No "next action" field. **Why:** in-progress tasks and project-linked meetings already say what moves; P164 makes the meeting links reliable. **Alternative:** a pinned next-action field per project — one more thing to keep up to date. **Confidence:** high.
+- **Decision:** Shelved boards stay one pick away in an optgroup, not hidden. **Why:** a board you can't find is as good as deleted. **Confidence:** med.
+- **Decision:** `shelved` is a flag on the board in `canvas-v1`. **Why:** backups and duplicates carry it with no new key; a duplicate starts unshelved. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 6 (Next line: in-progress only, not archived; next upcoming meeting only) and flow 7 (shelve, list, land on a listed board, bring back). Real data: the line shows on 9 projects, no page errors.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `canvas-hub.html`, `sw.js` (cache v41), `tests/flows.js`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 164 — Meetings land in the right place~~ ✓ Done `[group: meetings]`
 Group B of the 10-20 usage review. Schedule ⇄ Meetings was the most common move in the hub. 12 of 14 meetings imported since 10-13 had no project. 49 of 81 meetings had only a "🕐 … UTC" line as notes.
 - **Project on import:** an imported meeting takes the project of the latest earlier meeting with the same title ("第7回" and "#6" ignored). Else a project whose name appears in the title (IS06, ONES, AKEBONO). One clear match, or nothing. Done projects are skipped.

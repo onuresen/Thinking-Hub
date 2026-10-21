@@ -309,6 +309,65 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 6: Project Hub shows what moves next (P165) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const later = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    await page.evaluate(({ soon, past, far }) => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'pa', name: 'Alpha', status: 'active', color: '#888', members: [], goals: [], milestones: [], tasks: [
+          { id: 't1', title: 'Write the draft', status: 'inprogress', done: false },
+          { id: 't2', title: 'Old work', status: 'inprogress', done: false, archived: true },
+          { id: 't3', title: 'Later', status: 'todo', done: false }] },
+        { id: 'pb', name: 'Beta', status: 'active', color: '#888', members: [], goals: [], milestones: [], tasks: [] },
+      ] });
+      HubStorage.set('meetings-hub-v1', { templates: [], meetings: [
+        { id: 'm1', title: 'Past review', date: past, projectId: 'pa' },
+        { id: 'm2', title: 'Far review', date: far, projectId: 'pa' },
+        { id: 'm3', title: 'Bucho review', date: soon, time: '10:00', projectId: 'pa' },
+      ] });
+    }, { soon: later(2), past: later(-3), far: later(20) });
+    await page.reload({ waitUntil: 'load' });
+    const cards = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.project-card')].map((c) =>
+      [c.querySelector('.project-name').textContent, (c.querySelector('.project-next') || {}).textContent || ''])));
+    const a = (cards.Alpha || '').replace(/\s+/g, ' ');
+    check('flow6: the card shows the task in progress (not archived ones)', /▶ Write the draft/.test(a) && !/Old work|\+1/.test(a), a);
+    check('flow6: the card shows the next upcoming meeting, not past or later ones',
+      /▣ .* · Bucho review/.test(a) && !/Past review|Far review/.test(a), a);
+    check('flow6: a project with nothing in motion shows no Next line', cards.Beta === '', JSON.stringify(cards.Beta));
+    await page.close();
+  }
+
+  // ── Flow 7: Canvas Hub shelves a board instead of deleting it (P165) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/canvas-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const b = (id, name) => ({ id, name, nodes: [{ id: id + 'n', x: 0, y: 0, text: 'card', color: 'yellow' }], edges: [], lanes: [], views: [], panX: 0, panY: 0, zoom: 1 });
+      HubStorage.set('canvas-v1', { boards: [b('b1', 'Keep'), b('b2', 'Old map')], activeBoardId: 'b2' });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.evaluate(() => toggleShelveBoard());
+    await page.waitForTimeout(700);   // pulseSave debounce
+    const r = await page.evaluate(() => ({
+      stored: HubStorage.get('canvas-v1'),
+      main: [...document.querySelectorAll('#board-select > option')].map((o) => o.textContent),
+      shelved: [...document.querySelectorAll('#board-select optgroup[label="Shelved"] option')].map((o) => o.textContent),
+      active: db.id,
+    }));
+    const old = r.stored.boards.find((b) => b.id === 'b2');
+    check('flow7: a shelved board keeps its cards and is saved as shelved', old.shelved === true && old.nodes.length === 1);
+    check('flow7: it leaves the main list and shows under "Shelved"',
+      r.main.every((t) => !/Old map/.test(t)) && r.shelved.some((t) => /Old map/.test(t)), JSON.stringify(r));
+    check('flow7: the canvas moves to a board still in the list', r.active === 'b1');
+    await page.evaluate(() => { switchBoard('b2'); toggleShelveBoard(); });
+    await page.waitForTimeout(700);
+    const back = await page.evaluate(() => HubStorage.get('canvas-v1').boards.find((b) => b.id === 'b2'));
+    check('flow7: "Bring board back" returns it to the list', !back.shelved);
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);
