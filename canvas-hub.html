@@ -3044,9 +3044,7 @@
 
     // Plain-text lines of a note, keeping its line breaks.
     function noteLines(n) {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = (n.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n');
-      return (tmp.textContent || '').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+      return inertText((n.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n')).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
     }
 
     // P134: create a real task / decision / risk from a note, then turn the
@@ -3474,6 +3472,29 @@
     // Board files can come from anyone. Keep only simple text formatting;
     // drop every attribute, script, style and unknown tag.
     const SAFE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'DIV', 'P', 'SPAN', 'UL', 'OL', 'LI']);
+    // Card text can arrive from a change file, an import or a paste. It is
+    // cleaned every time it is drawn, not only on import: the page allows
+    // inline scripts, so raw HTML could run code. Memoized — boards redraw often.
+    const _safeHtml = new Map();
+    function safeNodeHtml(html) {
+      const key = String(html || '');
+      if (!key) return '';
+      let out = _safeHtml.get(key);
+      if (out === undefined) {
+        if (_safeHtml.size > 4000) _safeHtml.clear();
+        out = sanitizeNodeHtml(key);
+        _safeHtml.set(key, out);
+      }
+      return out;
+    }
+
+    // Text of an HTML string, read in a detached document: nothing loads or runs.
+    function inertText(html) {
+      const doc = new DOMParser().parseFromString(`<div>${String(html || '')}</div>`, 'text/html');
+      doc.querySelectorAll('script, style').forEach(el => el.remove());
+      return doc.body.textContent || '';
+    }
+
     function sanitizeNodeHtml(html) {
       const doc = new DOMParser().parseFromString(`<div>${String(html || '')}</div>`, 'text/html');
       const clean = el => {
@@ -4532,9 +4553,7 @@
 
     function nodeLabel(n) {
       if (n.link && n.link.label) return n.link.label;
-      const tmp = document.createElement('div');
-      tmp.innerHTML = (n.text || '').replace(/<br\s*\/?>/gi, ' · ');
-      return (tmp.textContent || '').trim() || '(empty note)';
+      return inertText((n.text || '').replace(/<br\s*\/?>/gi, ' · ')).trim() || '(empty note)';
     }
 
     function focusSet() {
@@ -4799,7 +4818,7 @@
       const sel = document.createElement('select');
       sel.className = 'nk-select';
       sel.innerHTML = `<option value="">${KIND_PICK_LABEL[node.kind] || '— pick —'}</option>` +
-        items.map(it => `<option value="${it.id}"${node.link && node.link.id === it.id ? ' selected' : ''}>${HubUtils.esc(it.label)}</option>`).join('');
+        items.map(it => `<option value="${HubUtils.esc(it.id)}"${node.link && node.link.id === it.id ? ' selected' : ''}>${HubUtils.esc(it.label)}</option>`).join('');
       // Only swallow the click when NOT in Connect mode — otherwise a click
       // here (which covers most of a linked node's surface) never reaches
       // the outer node handler and Connect mode silently does nothing.
@@ -4913,7 +4932,7 @@
         body = document.createElement('div');
         body.className = 'node-body';
         body.contentEditable = true;
-        body.innerHTML = node.text || '';
+        body.innerHTML = safeNodeHtml(node.text);
         body.addEventListener('input', () => { node.text = body.innerHTML; pulseSave(); textEditDirty = true; });
         // One history entry per edit *session* (focus → blur), not per
         // keystroke — captured at focus time, only committed on blur if the
@@ -5388,13 +5407,22 @@
         if (shape) n.text = mermaidText(shape) || key;
         return key;
       };
+      // A class named after a card color ("red" or "c-red") paints the card, so a
+      // Mermaid draft can follow the board's color key. Other classes are ignored.
+      const paint = (key, cls) => {
+        const id = /^c-/.test(cls) ? cls : 'c-' + cls;
+        const n = nodes.get(key);
+        if (n && KNOWN_COLORS.has(id)) n.color = id;
+      };
       const readGroup = str => {
         const keys = [];
         for (;;) {
           const m = NODE.exec(str);
           if (!m) break;
           keys.push(touch(m[1], m[2]));
-          str = str.slice(m[0].length).replace(/^:::[\w-]+/, '');
+          str = str.slice(m[0].length);
+          const cls = /^:::([\w-]+)/.exec(str);
+          if (cls) { paint(m[1], cls[1]); str = str.slice(cls[0].length); }
           const amp = /^\s*&\s*/.exec(str);
           if (!amp) break;
           str = str.slice(amp[0].length);
@@ -5414,6 +5442,8 @@
           return;
         }
         if (/^end$/i.test(line)) { groupStack.pop(); return; }
+        const cl = /^class\s+(.+?)\s+([\w-]+)$/i.exec(line);
+        if (cl) { cl[1].split(',').forEach(k => paint(k.trim(), cl[2])); return; }
         if (/^(classDef|class|style|linkStyle|click|direction)\b/i.test(line)) return;
         let { keys: prev, rest } = readGroup(line);
         while (prev.length) {
@@ -5565,7 +5595,7 @@
         idOf.set(it.key, id);
         let html = markdownToHtml(it.text);
         if (it.bold) html = '<b>' + html + '</b>';
-        db.nodes.push({ id, x: 0, y: 0, text: html, color: 'c-gray' });
+        db.nodes.push({ id, x: 0, y: 0, text: html, color: it.color || 'c-gray' });
       });
       const edges = [];
       r.edges.forEach(e => {

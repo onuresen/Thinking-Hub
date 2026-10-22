@@ -368,6 +368,99 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 8: a milestone can be marked reached ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'pa', name: 'Alpha', status: 'active', color: '#888', members: [], goals: [], tasks: [],
+          milestones: [{ id: 'ms1', name: 'Pilot <b>signed</b>', date: '2026-01-10' }] },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.evaluate(() => { setView('milestones'); openEditMilestone('ms1', 'pa'); });
+    await page.waitForTimeout(300);   // modal transition
+    await page.check('#ms-done');
+    const box = await page.locator('#modal-milestone .btn-primary').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    await page.waitForTimeout(200);
+    const r = await page.evaluate(() => ({
+      ms: HubStorage.get('project-hub-v1').projects[0].milestones[0],
+      text: document.querySelector('#main-content').innerText,
+      html: document.querySelector('.milestone-name').innerHTML,
+    }));
+    check('flow8: "Reached" saves done and a completion time', r.ms.done === true && !!r.ms.completedAt, r.ms);
+    check('flow8: a reached milestone shows ✓ Reached, not overdue', /✓ Reached/.test(r.text) && !/overdue/.test(r.text), r.text.slice(0, 200));
+    check('flow8: the milestone name is escaped', r.html.includes('&lt;b&gt;'), r.html);
+    await page.evaluate(() => openEditMilestone('ms1', 'pa'));
+    await page.waitForTimeout(300);
+    await page.uncheck('#ms-done');
+    await page.evaluate(() => saveMilestone());
+    const back = await page.evaluate(() => HubStorage.get('project-hub-v1').projects[0].milestones[0]);
+    check('flow8: unticking clears it again', back.done === false && back.completedAt === '', back);
+    await page.close();
+  }
+
+  // ── Flow 9: Canvas cleans card text when it draws it ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/canvas-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const bad = 'hello <b>bold</b><img src="x" onerror="window.__pwned=1"><script>window.__pwned=2<\/script>';
+      HubStorage.set('canvas-v1', { activeBoardId: 'b1', boards: [{ id: 'b1', name: 'B', edges: [], lanes: [], views: [],
+        panX: 0, panY: 0, zoom: 1, nodes: [{ id: 'n1', x: 0, y: 0, w: 260, text: bad, color: 'c-gray' }] }] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => ({
+      pwned: window.__pwned,
+      html: document.querySelector('.node-body').innerHTML,
+      label: nodeLabel(db.nodes[0]),
+      lines: noteLines(db.nodes[0]),
+    }));
+    check('flow9: card text from storage runs no code', r.pwned === undefined, r);
+    check('flow9: allowed formatting stays, the rest goes', /<b>bold<\/b>/.test(r.html) && !/img|script/i.test(r.html), r.html);
+    check('flow9: labels and outlines read text without loading it', r.label === 'hello bold' && r.pwned === undefined, r.label);
+    await page.close();
+  }
+
+  // ── Flow 10: a Mermaid draft (e.g. from Copilot) lands as colored cards ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/canvas-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('canvas-v1', { activeBoardId: 'b1', boards: [{ id: 'b1', name: 'B', nodes: [], edges: [], lanes: [], views: [], panX: 0, panY: 0, zoom: 1 }] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.evaluate(() => openOutlineModal(''));
+    await page.waitForTimeout(300);
+    await page.fill('#om-text', [
+      'flowchart LR',
+      '  subgraph IS06 follow-up',
+      '    A[Ask the steel team]:::yellow -->|blocks| B[Decide the door ID rule]',
+      '  end',
+      '  B --> C[Collation pilot]',
+      '  class C green',
+      '  D[Plain card]:::nosuchcolor',
+    ].join('\n'));
+    const box = await page.locator('#om-create').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => {
+      const by = t => db.nodes.find(n => (n.text || '').includes(t));
+      return { a: by('steel').color, c: by('Collation').color, d: by('Plain').color,
+        frame: db.nodes.some(n => n.kind === 'frame' && /IS06/.test(n.text)),
+        rel: db.edges.map(e => e.relType).sort().join(',') };
+    });
+    check('flow10: ":::yellow" and "class C green" color the cards', r.a === 'c-yellow' && r.c === 'c-green', r);
+    check('flow10: an unknown class leaves the card gray', r.d === 'c-gray', r.d);
+    check('flow10: subgraph → frame, "blocks" → a blocks line', r.frame && r.rel === 'blocks,relates', r);
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

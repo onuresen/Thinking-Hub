@@ -222,7 +222,7 @@
       const tasks = p.tasks || [];
       if (tasks.some((t) => t.status === 'blocked')) return 'crash';
       const overdueTask = tasks.some((t) => !t.done && isOverdue(t.due));
-      const overdueMilestone = (p.milestones || []).some((m) => isOverdue(m.date));
+      const overdueMilestone = (p.milestones || []).some((m) => !m.done && isOverdue(m.date));
       return (overdueTask || overdueMilestone) ? 'stalled' : null;
     }
     const INCIDENT_LABELS = {

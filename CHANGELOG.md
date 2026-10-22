@@ -5,6 +5,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Security
+
+- Canvas cleans card text every time it draws it, not only on board import. Text that reached storage another way could otherwise run code.
+
 ### Removed
 
 - Canvas PNG export no longer falls back to a visible-area capture on browsers that block full export (Safari). Use Chrome or Edge. The bundled html2canvas library is gone.
@@ -17,6 +21,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Canvas: pasted Mermaid can color cards. `A[Text]:::red` or `class A,B green` uses the card colors; other classes are ignored.
+- Project Hub: a milestone can be marked **Reached** in its editor. It then shows "✓ Reached" with the date instead of an overdue warning. Schedule and the One-Pager show milestone names and dates correctly.
 - Meeting Hub .ics import no longer writes a "🕐 … UTC" line into notes, and a meeting that crosses 09:00 in Tokyo keeps its length.
 - Canvas Hub: all exports are in one **Export ▾** menu (PNG, slides, interactive HTML, Markdown, Obsidian Canvas, board file). The board menu (⋯) is shorter. "Send lines" and "Pull lines" are one **Sync lines with Dependency Graph**.
 - Phones: Dependency Graph and Machi Hub fit the screen (graph button bar scrolls sideways). Decision, Goals and Risk toolbars wrap, and the Project Hub detail panel fills the screen, so no button is cut off.

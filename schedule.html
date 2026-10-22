@@ -1162,7 +1162,7 @@
               <div class="mrow mrow-item${ms.done ? ' is-done' : ''}">
                 <div class="mrow-label">
                   <span class="ms-icon" style="color:${color}">◆</span>
-                  <span class="item-label-text">${esc(ms.title || 'Milestone')}</span>
+                  <span class="item-label-text">${esc(ms.name || ms.title || 'Milestone')}</span>
                   <span class="item-due-badge${ms.date < TODAY && !ms.done ? ' overdue' : ''}">${fmtDate(ms.date)}</span>
                 </div>
                 <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:28px">

@@ -4,6 +4,34 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 167 — Canvas cleans card text; Mermaid colors~~ ✓ Done `[group: canvas]`
+Copilot now works with Canvas through text, not coordinates (esen-vault `hub-changes/COPILOT.md` § Canvas). Two things had to change first.
+- **Card text is cleaned when drawn.** It was cleaned only on board import. Text from a change file or storage went into the page as-is, and the page allows inline scripts. Now every draw goes through the same allowlist (memoized). Labels and outlines read text in a detached document, so nothing loads.
+- **Mermaid colors.** In Paste outline / Mermaid, a class named after a card color paints the card: `A[Text]:::red` or `class A,B green`. Unknown classes are ignored. So a Copilot draft can follow the board's color key; subgraphs were already frames.
+- Live-card picker escapes item ids.
+
+**Key decisions**
+- **Decision:** clean on draw, not only on import. **Why:** cards reach storage three ways (import, paste, change file); only one was guarded. **Alternative:** clean in the change-file engine — misses storage written any other way. **Confidence:** high.
+- **Decision:** Copilot adds to Canvas as Mermaid text you paste, never as positions in a change file. **Why:** Copilot can't see the board; Canvas already lays out pasted Mermaid. **Alternative:** document node shapes for change files. **Revisit when:** Copilot can render the board. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 9 (stored `<img onerror>` / `<script>` run nothing; `<b>` stays; labels clean) fails on the old code and passes now. Flow 10 (`:::yellow`, `class C green`, unknown class, subgraph → frame, `blocks` line). Real 10-22 data: five boards render, no card uses tags outside the allowlist.
+
+**Files:** `canvas-hub.html`, `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
+### ~~Priority 166 — A milestone can be reached~~ ✓ Done `[group: project-hub]`
+Copilot now maintains goals and milestones through change files (esen-vault `hub-changes/COPILOT.md`). It asked how to record a reached milestone. There was no way: a milestone showed only linked-task progress, and a past date read "⚠ overdue" forever.
+- **Reached:** the milestone editor has a "Reached" checkbox. It stores `done` and `completedAt` (first time ticked; unticking clears both). The card shows "✓ Reached <date>" instead of the overdue warning.
+- Schedule already drew `done` milestones as done; it now shows the milestone name (it read a `title` field milestones don't have). The One-Pager read `title`/`due` too; now `name`/`date`. Machi no longer counts a reached milestone as stalled.
+- Milestone names are escaped on the cards.
+
+**Key decisions**
+- **Decision:** a milestone is reached by a tick, not by its tasks reaching 100%. **Why:** a milestone is evidence or a change of state ("pilot signed"). Many have no linked tasks. **Alternative:** derive it from linked tasks — a milestone with no tasks could never be reached. **Confidence:** high.
+- **Decision:** reuse the task fields `done` + `completedAt`. **Why:** Schedule and the One-Pager already filter on `done`; one meaning across records. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 8 (tick → saved with a time, ✓ Reached shown, no overdue, name escaped; untick clears).
+
+**Files:** `project-hub.html`, `schedule.html`, `town-hub.html`, `sw.js` (cache v42), `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 165 — Show what's next; shelve a board~~ ✓ Done `[group: project-hub]`
 Group C of the 10-20 usage review. Onur's work is paced by meetings, not due dates: 87 of 100 open tasks have no date. He was reviewing 11 canvas boards to delete some, and delete can't be undone.
 - **Project Hub "Next" line:** each Overview card shows the task in progress (▶, "+N" if more) and the project's next meeting (▣ date · title), from today on, including series dates. Nothing in motion → no line.
