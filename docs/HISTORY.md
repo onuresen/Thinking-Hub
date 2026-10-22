@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 166 — A milestone can be reached~~ ✓ Done `[group: project-hub]`
+Copilot now maintains goals and milestones through change files (esen-vault `hub-changes/COPILOT.md`). It asked how to record a reached milestone. There was no way: a milestone showed only linked-task progress, and a past date read "⚠ overdue" forever.
+- **Reached:** the milestone editor has a "Reached" checkbox. It stores `done` and `completedAt` (first time ticked; unticking clears both). The card shows "✓ Reached <date>" instead of the overdue warning.
+- Schedule already drew `done` milestones as done; it now shows the milestone name (it read a `title` field milestones don't have). The One-Pager read `title`/`due` too; now `name`/`date`. Machi no longer counts a reached milestone as stalled.
+- Milestone names are escaped on the cards.
+
+**Key decisions**
+- **Decision:** a milestone is reached by a tick, not by its tasks reaching 100%. **Why:** a milestone is evidence or a change of state ("pilot signed"). Many have no linked tasks. **Alternative:** derive it from linked tasks — a milestone with no tasks could never be reached. **Confidence:** high.
+- **Decision:** reuse the task fields `done` + `completedAt`. **Why:** Schedule and the One-Pager already filter on `done`; one meaning across records. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 8 (tick → saved with a time, ✓ Reached shown, no overdue, name escaped; untick clears).
+
+**Files:** `project-hub.html`, `schedule.html`, `town-hub.html`, `sw.js` (cache v42), `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 165 — Show what's next; shelve a board~~ ✓ Done `[group: project-hub]`
 Group C of the 10-20 usage review. Onur's work is paced by meetings, not due dates: 87 of 100 open tasks have no date. He was reviewing 11 canvas boards to delete some, and delete can't be undone.
 - **Project Hub "Next" line:** each Overview card shows the task in progress (▶, "+N" if more) and the project's next meeting (▣ date · title), from today on, including series dates. Nothing in motion → no line.

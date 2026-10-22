@@ -287,6 +287,10 @@
         <label class="form-label">Target Date</label>
         <input class="form-input" type="date" id="ms-date">
       </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px">
+        <input type="checkbox" id="ms-done">
+        <span class="form-label" style="margin:0">Reached</span>
+      </label>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('modal-milestone')">Cancel</button>
         <button class="btn btn-primary" onclick="saveMilestone()">Add Milestone</button>
@@ -567,8 +571,8 @@
       // Open milestones
       const ms = (proj.milestones || []).filter(m => !m.done);
       section('Milestones', ms.length,
-        ms.map(m => `<div class="op-row"><span class="op-row-main">${esc(m.title || m.name || 'Milestone')}</span>${m.due ? `<span class="op-row-sub">${m.due}</span>` : ''}</div>`),
-        ms.map(m => `- ${m.title || m.name || 'Milestone'}${m.due ? ` — ${m.due}` : ''}`));
+        ms.map(m => `<div class="op-row"><span class="op-row-main">${esc(m.name || 'Milestone')}</span>${m.date ? `<span class="op-row-sub">${m.date}</span>` : ''}</div>`),
+        ms.map(m => `- ${m.name || 'Milestone'}${m.date ? ` — ${m.date}` : ''}`));
 
       // Goals / OKRs
       const objs = ((HubStorage.get('goals-hub-v1') || {}).quarters || []).flatMap(q => q.objectives || []).filter(o => o.projectId === pid);
@@ -1708,9 +1712,9 @@
           const pct = msTasks.length ? Math.round((doneCount / msTasks.length) * 100) : 0;
           wrap.innerHTML += `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-          <div class="milestone-header"><div class="milestone-dot" style="background:${proj.color}"></div><div class="milestone-name">${ms.name}</div><div class="milestone-date">${formatDate(ms.date)}</div></div>
+          <div class="milestone-header"><div class="milestone-dot" style="background:${proj.color}"></div><div class="milestone-name">${HubUtils.esc(ms.name)}</div><div class="milestone-date">${formatDate(ms.date)}</div></div>
           <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${proj.color}"></div></div>
-          <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
+          ${milestoneStats(ms, doneCount, msTasks.length, pct)}
         </div>`;
         });
       });
@@ -1977,13 +1981,13 @@
         <div class="milestone-header" style="display:flex;align-items:center;gap:6px">
           <span class="ph-drag-handle">⠿</span>
           <div class="milestone-dot" style="background:${proj.color}"></div>
-          <div class="milestone-name" style="flex:1">${ms.name}</div>
+          <div class="milestone-name" style="flex:1">${HubUtils.esc(ms.name)}</div>
           <div class="milestone-date">${formatDate(ms.date)}</div>
           <button class="task-action-btn edit" title="Edit milestone" style="margin-left:4px" onclick="openEditMilestone('${ms.id}','${projId}')">✎</button>
           <button class="task-action-btn del" title="Delete milestone" onclick="deleteMilestone('${ms.id}','${projId}')">✕</button>
         </div>
         <div class="milestone-progress"><div class="milestone-progress-fill" style="width:${pct}%;background:${proj.color}"></div></div>
-        <div class="milestone-stats"><span class="milestone-stat">${doneCount}/${msTasks.length} tasks · ${pct}%</span>${isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : ''}</div>
+        ${milestoneStats(ms, doneCount, msTasks.length, pct)}
         ${msTasks.map(t => taskHTML({ ...t, projectId: projId })).join('')}
       `;
           body.appendChild(el);
@@ -2427,6 +2431,7 @@
       _editingMsId = null; _editingMsProjId = null;
       document.getElementById('ms-name').value = '';
       document.getElementById('ms-date').value = '';
+      document.getElementById('ms-done').checked = false;
       document.querySelector('#modal-milestone .modal-title').textContent = 'New Milestone';
       document.querySelector('#modal-milestone .modal-sub').textContent = 'Define a key milestone for this project';
       document.querySelector('#modal-milestone .btn-primary').textContent = 'Add Milestone';
@@ -2439,6 +2444,7 @@
       _editingMsId = msId; _editingMsProjId = projId;
       document.getElementById('ms-name').value = ms.name;
       document.getElementById('ms-date').value = ms.date;
+      document.getElementById('ms-done').checked = !!ms.done;
       document.querySelector('#modal-milestone .modal-title').textContent = 'Edit Milestone';
       document.querySelector('#modal-milestone .modal-sub').textContent = 'Update this milestone';
       document.querySelector('#modal-milestone .btn-primary').textContent = 'Save Changes';
@@ -2452,14 +2458,30 @@
       touchProject(projId);
       if (_editingMsId) {
         const ms = proj.milestones.find(m => m.id === _editingMsId);
-        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; HubUtils.stampUpdate(ms); }
+        if (ms) { ms.name = name; ms.date = document.getElementById('ms-date').value; setMilestoneDone(ms); HubUtils.stampUpdate(ms); }
         _editingMsId = null; _editingMsProjId = null;
         saveState(); closeModal('modal-milestone'); showToast('Milestone updated');
       } else {
-        proj.milestones.push(HubUtils.stampUpdate({ id: uid(), name, date: document.getElementById('ms-date').value }));
+        proj.milestones.push(HubUtils.stampUpdate(setMilestoneDone({ id: uid(), name, date: document.getElementById('ms-date').value })));
         saveState(); closeModal('modal-milestone'); showToast('Milestone added');
       }
       renderContent(); if (state.selectedProject) renderPanel(projId);
+    }
+
+    // A milestone is reached when its evidence exists, not when its tasks are ticked.
+    // completedAt keeps the first day it was marked; unticking clears it.
+    function setMilestoneDone(ms) {
+      const done = document.getElementById('ms-done').checked;
+      ms.done = done;
+      ms.completedAt = done ? (ms.completedAt || new Date().toISOString()) : '';
+      return ms;
+    }
+
+    function milestoneStats(ms, doneCount, total, pct) {
+      const reached = ms.done
+        ? `<span class="milestone-stat" style="color:var(--accent-like)">✓ Reached${ms.completedAt ? ' ' + formatDate(ms.completedAt) : ''}</span>`
+        : (isOverdue(ms.date) && pct < 100 ? '<span class="milestone-stat" style="color:var(--accent3)">⚠ overdue</span>' : '');
+      return `<div class="milestone-stats"><span class="milestone-stat">${doneCount}/${total} tasks · ${pct}%</span>${reached}</div>`;
     }
 
     function deleteMilestone(msId, projId) {

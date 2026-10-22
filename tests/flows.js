@@ -368,6 +368,41 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 8: a milestone can be marked reached ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'pa', name: 'Alpha', status: 'active', color: '#888', members: [], goals: [], tasks: [],
+          milestones: [{ id: 'ms1', name: 'Pilot <b>signed</b>', date: '2026-01-10' }] },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.evaluate(() => { setView('milestones'); openEditMilestone('ms1', 'pa'); });
+    await page.waitForTimeout(300);   // modal transition
+    await page.check('#ms-done');
+    const box = await page.locator('#modal-milestone .btn-primary').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    await page.waitForTimeout(200);
+    const r = await page.evaluate(() => ({
+      ms: HubStorage.get('project-hub-v1').projects[0].milestones[0],
+      text: document.querySelector('#main-content').innerText,
+      html: document.querySelector('.milestone-name').innerHTML,
+    }));
+    check('flow8: "Reached" saves done and a completion time', r.ms.done === true && !!r.ms.completedAt, r.ms);
+    check('flow8: a reached milestone shows ✓ Reached, not overdue', /✓ Reached/.test(r.text) && !/overdue/.test(r.text), r.text.slice(0, 200));
+    check('flow8: the milestone name is escaped', r.html.includes('&lt;b&gt;'), r.html);
+    await page.evaluate(() => openEditMilestone('ms1', 'pa'));
+    await page.waitForTimeout(300);
+    await page.uncheck('#ms-done');
+    await page.evaluate(() => saveMilestone());
+    const back = await page.evaluate(() => HubStorage.get('project-hub-v1').projects[0].milestones[0]);
+    check('flow8: unticking clears it again', back.done === false && back.completedAt === '', back);
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);
