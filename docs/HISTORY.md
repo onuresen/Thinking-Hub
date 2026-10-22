@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 167 — Canvas cleans card text; Mermaid colors~~ ✓ Done `[group: canvas]`
+Copilot now works with Canvas through text, not coordinates (esen-vault `hub-changes/COPILOT.md` § Canvas). Two things had to change first.
+- **Card text is cleaned when drawn.** It was cleaned only on board import. Text from a change file or storage went into the page as-is, and the page allows inline scripts. Now every draw goes through the same allowlist (memoized). Labels and outlines read text in a detached document, so nothing loads.
+- **Mermaid colors.** In Paste outline / Mermaid, a class named after a card color paints the card: `A[Text]:::red` or `class A,B green`. Unknown classes are ignored. So a Copilot draft can follow the board's color key; subgraphs were already frames.
+- Live-card picker escapes item ids.
+
+**Key decisions**
+- **Decision:** clean on draw, not only on import. **Why:** cards reach storage three ways (import, paste, change file); only one was guarded. **Alternative:** clean in the change-file engine — misses storage written any other way. **Confidence:** high.
+- **Decision:** Copilot adds to Canvas as Mermaid text you paste, never as positions in a change file. **Why:** Copilot can't see the board; Canvas already lays out pasted Mermaid. **Alternative:** document node shapes for change files. **Revisit when:** Copilot can render the board. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 9 (stored `<img onerror>` / `<script>` run nothing; `<b>` stays; labels clean) fails on the old code and passes now. Flow 10 (`:::yellow`, `class C green`, unknown class, subgraph → frame, `blocks` line). Real 10-22 data: five boards render, no card uses tags outside the allowlist.
+
+**Files:** `canvas-hub.html`, `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 166 — A milestone can be reached~~ ✓ Done `[group: project-hub]`
 Copilot now maintains goals and milestones through change files (esen-vault `hub-changes/COPILOT.md`). It asked how to record a reached milestone. There was no way: a milestone showed only linked-task progress, and a past date read "⚠ overdue" forever.
 - **Reached:** the milestone editor has a "Reached" checkbox. It stores `done` and `completedAt` (first time ticked; unticking clears both). The card shows "✓ Reached <date>" instead of the overdue warning.
