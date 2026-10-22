@@ -4,6 +4,24 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 168 — Encrypted export for GitHub~~ ✓ Done `[group: data]`
+GitHub is the only path between the work PC and Claude. Backups hold third-party contact data. They must not sit on GitHub as plain JSON again (esen-vault `meta/Security-Cleanup-2026-10-21.md`).
+- **Settings → Data → 🔒 Export encrypted (for GitHub).** A small dialog asks for a passphrase twice (12+ characters). The file is `thinking-hub-backup-YYYY-MM-DD.enc.json`.
+- Envelope: `{ format: "thinking-hub-encrypted", v: 1, kdf: "PBKDF2-SHA256", iterations: 600000, cipher: "AES-GCM-256", salt, iv, ciphertext }`, base64. The ciphertext ends with the 16-byte GCM tag.
+- The plain text is exactly the Full Backup export text. esen-vault `scripts/hub_changes.py decrypt` gets it back byte for byte.
+- Import Backup and the verifier refuse the encrypted file with a clear message.
+- The plain Export, Import, AI Context and change files are unchanged.
+
+**Key decisions**
+- **Decision:** a new button, not an option on the existing export. **Why:** the plain export feeds Copilot and must stay one click. **Alternative:** an "encrypt" checkbox — easy to forget either way. **Confidence:** high.
+- **Decision:** Web Crypto only, inline in `index.html`. **Why:** zero dependencies (P93); no new file for `PRECACHE`. **Alternative:** a `hub-crypto.js` module — only one caller. **Revisit when:** a second feature encrypts. **Confidence:** med.
+- **Decision:** the hub cannot import the encrypted file. **Why:** it is a transport format for GitHub. Restore stays the plain Full Backup. **Alternative:** decrypt on import — more surface for no use today. **Revisit when:** Onur needs to restore from GitHub. **Confidence:** med.
+- **Decision:** passphrase lives only in two password inputs, cleared on close. **Why:** a stored passphrase next to the data protects nothing. **Confidence:** high.
+
+**Verified:** `npm test` passes. flows.js flow 2b: real dialog, short and mismatched passphrases refused, download decrypted with Node Web Crypto equals the plain export byte for byte (clock frozen), wrong passphrase fails, passphrase not in storage. The same browser file decrypted with `hub_changes.py decrypt` is byte-equal too.
+
+**Files:** `index.html`, `sw.js` (cache v43), `tests/flows.js`, `SECURITY.md`, `PRIVACY.md`, `docs/HISTORY.md`, `CHANGELOG.md`, `CLAUDE.md`
+
 ### ~~Priority 167 — Canvas cleans card text; Mermaid colors~~ ✓ Done `[group: canvas]`
 Copilot now works with Canvas through text, not coordinates (esen-vault `hub-changes/COPILOT.md` § Canvas). Two things had to change first.
 - **Card text is cleaned when drawn.** It was cleaned only on board import. Text from a change file or storage went into the page as-is, and the page allows inline scripts. Now every draw goes through the same allowlist (memoized). Labels and outlines read text in a detached document, so nothing loads.

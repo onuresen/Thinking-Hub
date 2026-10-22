@@ -332,6 +332,8 @@
           <button class="data-btn secondary" onclick="triggerImport()">Import Backup</button>
         </div>
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
+        <button class="data-btn secondary" style="width:100%;margin-top:8px" onclick="openEncryptedExport()"
+          title="Full Backup, locked with a passphrase. For the GitHub upload only.">🔒 Export encrypted (for GitHub)</button>
         <div class="sfield-hint" style="margin-top:6px">Import replaces everything. To bring in a Claude pass, use a change file.</div>
 
         <div style="margin-top:10px">
@@ -380,6 +382,29 @@
           style="margin-left:auto;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
       </div>
       <div id="vault-review-body" style="overflow-y:auto;flex:1;min-height:0"></div>
+    </div>
+  </div>
+
+  <!-- ── Encrypted export (P168) ── -->
+  <div id="enc-export-overlay" class="ui-modal-overlay" role="dialog" aria-modal="true" aria-hidden="true"
+    aria-labelledby="enc-export-title" onclick="if(event.target===this) closeEncryptedExport()">
+    <div class="ui-modal" style="max-width:420px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div id="enc-export-title" style="font-family:var(--font-display);font-size:19px;font-weight:600;color:var(--text)">
+          🔒 Export encrypted</div>
+        <button onclick="closeEncryptedExport()" aria-label="Close"
+          style="margin-left:auto;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+      </div>
+      <div class="sfield-hint" style="margin-bottom:10px">Full Backup, locked with a passphrase. Push it to <code>hub-inbox</code>.
+        The hub does not keep the passphrase. Without it the file cannot be opened.</div>
+      <form onsubmit="event.preventDefault(); runEncryptedExport()">
+        <label class="label" for="enc-pass">Passphrase (12+ characters)</label>
+        <input class="input" type="password" id="enc-pass" autocomplete="new-password" spellcheck="false" style="width:100%;margin-bottom:8px">
+        <label class="label" for="enc-pass2">Again</label>
+        <input class="input" type="password" id="enc-pass2" autocomplete="new-password" spellcheck="false" style="width:100%">
+        <div id="enc-export-msg" class="sfield-hint" style="min-height:16px;margin-top:6px;color:var(--accent-nope)"></div>
+        <button type="submit" id="enc-export-go" class="btn btn-primary" style="width:100%;margin-top:6px">Export .enc.json</button>
+      </form>
     </div>
   </div>
 
@@ -761,6 +786,8 @@
         if (vr && vr.classList.contains('is-open')) { closeVaultReview(); return; }
         const co = document.getElementById('changes-overlay');
         if (co && co.classList.contains('is-open')) { closeChangeFiles(); return; }
+        const eo = document.getElementById('enc-export-overlay');
+        if (eo && eo.classList.contains('is-open')) { closeEncryptedExport(); return; }
         if (document.getElementById('data-modal').style.display === 'flex') { closeDataModal(); return; }
         if (activeAppId && document.activeElement.tagName !== 'INPUT') goHome();
       }
@@ -3126,6 +3153,84 @@
       showToast(`Exported — ${labels[scope]}`, 'success');
     }
 
+    // ── Encrypted export (P168) ──
+    // Same text as the Full Backup export, sealed with AES-GCM-256. Key from the
+    // passphrase via PBKDF2-SHA256. Decrypt: esen-vault `scripts/hub_changes.py decrypt`.
+    // The passphrase lives only in the two inputs and is cleared on close.
+    const ENC_FORMAT = 'thinking-hub-encrypted';
+    const ENC_ITERATIONS = 600000;
+    let _encUntrap = null;
+
+    function openEncryptedExport() {
+      const overlay = document.getElementById('enc-export-overlay');
+      document.getElementById('enc-export-msg').textContent = '';
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      if (typeof HubUtils !== 'undefined' && HubUtils.trapFocus) _encUntrap = HubUtils.trapFocus(overlay);
+      document.getElementById('enc-pass').focus();
+    }
+
+    function closeEncryptedExport() {
+      const overlay = document.getElementById('enc-export-overlay');
+      document.getElementById('enc-pass').value = '';
+      document.getElementById('enc-pass2').value = '';
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+      if (_encUntrap) { _encUntrap(); _encUntrap = null; }
+    }
+
+    function _b64(bytes) {
+      let s = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return btoa(s);
+    }
+
+    async function encryptBackupText(text, passphrase) {
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const base = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ENC_ITERATIONS },
+        base, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text)));
+      return {
+        format: ENC_FORMAT, v: 1, kdf: 'PBKDF2-SHA256', iterations: ENC_ITERATIONS, cipher: 'AES-GCM-256',
+        salt: _b64(salt), iv: _b64(iv), ciphertext: _b64(ct),
+      };
+    }
+
+    async function runEncryptedExport() {
+      const msg = document.getElementById('enc-export-msg');
+      const p1 = document.getElementById('enc-pass').value;
+      const p2 = document.getElementById('enc-pass2').value;
+      if (!(window.crypto && crypto.subtle)) { msg.textContent = 'This browser cannot encrypt here (needs https or localhost).'; return; }
+      if (p1.length < 12) { msg.textContent = 'Use at least 12 characters.'; return; }
+      if (p1 !== p2) { msg.textContent = 'The two entries do not match.'; return; }
+      const go = document.getElementById('enc-export-go');
+      go.disabled = true;
+      msg.textContent = '';
+      try {
+        const text = JSON.stringify(buildExportPayload('full', SCOPE_KEYS.full), null, 2);
+        const envelope = await encryptBackupText(text, p1);
+        const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `thinking-hub-backup-${HubUtils.todayLocal()}.enc.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        closeEncryptedExport();
+        showToast('Exported — encrypted Full Backup', 'success');
+      } catch (e) {
+        msg.textContent = 'Encryption failed: ' + (e && e.message || e);
+      } finally {
+        go.disabled = false;
+      }
+    }
+
     function triggerImport() {
       document.getElementById('import-file').click();
     }
@@ -3138,6 +3243,11 @@
       reader.onload = (ev) => {
         try {
           const parsed = JSON.parse(ev.target.result);
+
+          if (parsed && parsed.format === ENC_FORMAT) {
+            showToast('This file is encrypted. It is for GitHub only, not for import', 'error');
+            return;
+          }
 
           // AI Context and Current Tool exports are not full backups
           if (parsed.version === 2 && (parsed.scope === 'curated' || parsed.scope === 'current')) {
@@ -3235,6 +3345,7 @@
         let parsed;
         try { parsed = JSON.parse(ev.target.result); }
         catch (err) { show('❌ <b>Not valid JSON</b> — this file cannot be imported.<br><span style="color:var(--text3)">' + HubUtils.esc(err.message) + '</span>'); return; }
+        if (parsed && parsed.format === ENC_FORMAT) { show('🔒 <b>Encrypted backup</b> — for GitHub only. It cannot be imported.'); return; }
 
         const lines = [];
         const kb = (file.size / 1024).toFixed(0);

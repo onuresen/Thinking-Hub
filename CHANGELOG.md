@@ -5,6 +5,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Added
+
+- Settings → Data → "Export encrypted (for GitHub)". A Full Backup locked with a passphrase (AES-GCM-256, PBKDF2-SHA256, 600,000 iterations). The passphrase is never stored. The plain exports do not change.
+
 ### Security
 
 - Canvas cleans card text every time it draws it, not only on board import. Text that reached storage another way could otherwise run code.

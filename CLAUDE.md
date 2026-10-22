@@ -37,7 +37,7 @@ Shared modules and other files:
 
 | File | Role |
 |------|------|
-| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings (AI, Obsidian/Vault Bridge, snapshots, backup), Cmd+K |
+| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings (AI, Obsidian/Vault Bridge, snapshots, backup, encrypted export P168), Cmd+K |
 | `theme.css` | **Only** global CSS — every tool uses its tokens. Dark + light + ink themes |
 | `hub-storage.js` | `get/set/subscribe` + quota guard. Loads first |
 | `hub-utils.js` | `esc`, `trapFocus`, timestamp helpers (P90), local-day helpers (P126), AI visibility pref (P109) |
@@ -165,6 +165,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Delete the code, keep the data** for one release, then retire the keys with a snapshot (P157 pattern).
 - **Propose, never auto-import** anything parsed from vault prose (P104, P138).
 - **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py` and put them in the vault's `hub-changes/`. Status logic lives in `hub-changes.js` and that script; change both together.
+- **Backups go to GitHub only encrypted (P168).** "Export encrypted (for GitHub)" → esen-vault branch `hub-inbox` → `hub_changes.py decrypt` into the scratchpad. The envelope format lives in `index.html` and that script; change both together.
 - **Missing timestamp = unknown age, never stale** (P90).
 - **One CSP for every page** (P93). Favicon egress only in the three opted-in pages.
 - **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).
