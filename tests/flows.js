@@ -522,6 +522,32 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 11: many boards fold into one chip (P172) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const card = (pid, i) => ({ id: 'n' + i, x: 0, y: 0, text: '', link: { tool: 'project-hub', id: pid, label: pid } });
+      const boards = Array.from({ length: 9 }, (_, i) => ({ id: 'b' + i, name: 'Board ' + i, nodes: [card('pBig', i)].concat(i < 2 ? [card('pSmall', 100 + i)] : []) }));
+      boards[0].nodes.push(card('pBig', 50));   // same board twice counts once
+      HubStorage.set('canvas-v1', { boards, activeBoardId: 'b0' });
+      const big = HubLinks.canvasPlacementsEl('project-hub', 'pBig');
+      const small = HubLinks.canvasPlacementsEl('project-hub', 'pSmall');
+      document.body.appendChild(big);
+      const shownBefore = [...big.querySelectorAll('button.hl-board-chip')].filter(b => b.checkVisibility()).length;
+      big.open = true;
+      const shownAfter = [...big.querySelectorAll('button.hl-board-chip')].filter(b => b.checkVisibility()).length;
+      return { bigTag: big.tagName, label: big.querySelector('summary').textContent, shownBefore, shownAfter,
+        smallTag: small.tagName, smallChips: small.querySelectorAll('.hl-board-chip').length,
+        none: HubLinks.canvasPlacementsEl('project-hub', 'nope') };
+    });
+    check('flow11: 9 boards fold into one "On 9 boards" chip', r.bigTag === 'DETAILS' && r.label === '▦ On 9 boards', r);
+    check('flow11: folded board chips are hidden until opened', r.shownBefore === 0 && r.shownAfter === 9, JSON.stringify(r));
+    check('flow11: two boards still show inline', r.smallTag === 'DIV' && r.smallChips === 2, r);
+    check('flow11: no boards → nothing', r.none === null);
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);
