@@ -34,7 +34,6 @@
  *   HubChanges.validate(doc)              — { ok, errors }
  *   HubChanges.plan(doc, read)            — rows with a status each, in file order
  *   HubChanges.apply(doc, picked, read)   — { values, applied, skipped }; caller writes values
- *   HubChanges.scanVault()                — change files in the vault folder (needs HubVaultBridge)
  *   HubChanges.toolLabel(key)             — "Projects", "Meetings", …
  */
 
@@ -293,33 +292,5 @@ window.HubChanges = (() => {
     return { values, applied, skipped };
   }
 
-  // ── change files in the vault ───────────────────────────────────────────────
-
-  /**
-   * Every *.json change file in the vault's change folder:
-   * [{ file, doc, errors }], oldest first (a later file may build on an
-   * earlier one). Not a change file → skipped silently; broken → listed with
-   * its errors so a bad file is visible rather than ignored.
-   */
-  async function scanVault() {
-    if (typeof HubVaultBridge === 'undefined' || !HubVaultBridge.status().connected) return [];
-    const folder = HubVaultBridge.getState().changesFolder;
-    const entries = await HubVaultBridge.listFolder(folder);
-    if (!entries) return [];
-    const out = [];
-    for (const e of entries) {
-      if (e.kind !== 'file' || !/\.json$/i.test(e.name)) continue;
-      const text = await HubVaultBridge.readFile((folder ? folder + '/' : '') + e.name);
-      if (text == null) continue;
-      let doc;
-      try { doc = JSON.parse(text); } catch { out.push({ file: e.name, doc: null, errors: ['Not valid JSON.'] }); continue; }
-      if (!doc || doc.format !== FORMAT) continue;
-      const v = validate(doc);
-      out.push({ file: e.name, doc, errors: v.errors });
-    }
-    return out.sort((a, b) => String((a.doc && a.doc.createdAt) || a.file)
-      .localeCompare(String((b.doc && b.doc.createdAt) || b.file)));
-  }
-
-  return { FORMAT, validate, plan, apply, status, scanVault, toolLabel, isEmpty, same };
+  return { FORMAT, validate, plan, apply, status, toolLabel, isEmpty, same };
 })();

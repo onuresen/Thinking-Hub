@@ -180,6 +180,67 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 2b: encrypted export (P168) ──
+  // Real button + modal + download. Decrypts with Node's Web Crypto and checks the
+  // plain text equals the plain Full Backup export byte for byte (clock frozen so
+  // exportedAt matches). A wrong passphrase must fail. esen-vault hub_changes.py
+  // `decrypt` reads the same envelope.
+  {
+    const page = await ctx.newPage();
+    await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'));
+    await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('people-hub-v1', { members: [{ id: 'm1', name: 'Test Person', email: 'test@example.com' }] });
+    });
+    const grab = async (fn) => {
+      const [dl] = await Promise.all([page.waitForEvent('download'), fn()]);
+      return { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
+    };
+    const plain = await grab(() => page.evaluate(() => {
+      document.querySelector('input[name="export-scope"][value="full"]').checked = true;
+      exportHubData();
+    }));
+    const pass = 'correct horse battery staple';
+    await page.evaluate(() => openEncryptedExport());
+    await page.fill('#enc-pass', 'short');
+    await page.fill('#enc-pass2', 'short');
+    await page.click('#enc-export-go');
+    const shortMsg = await page.textContent('#enc-export-msg');
+    await page.fill('#enc-pass', pass);
+    await page.fill('#enc-pass2', pass + 'x');
+    await page.click('#enc-export-go');
+    const mismatchMsg = await page.textContent('#enc-export-msg');
+    await page.fill('#enc-pass2', pass);
+    const enc = await grab(() => page.click('#enc-export-go'));
+    const passCleared = await page.evaluate(() => document.getElementById('enc-pass').value === '' &&
+      !Object.values(localStorage).some(v => v.includes('correct horse')));
+    const env = JSON.parse(enc.bytes.toString('utf8'));
+    const { subtle } = require('crypto').webcrypto;
+    const decrypt = async (p) => {
+      const base = await subtle.importKey('raw', Buffer.from(p), 'PBKDF2', false, ['deriveKey']);
+      const key = await subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: Buffer.from(env.salt, 'base64'), iterations: env.iterations },
+        base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      return Buffer.from(await subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(env.iv, 'base64') }, key, Buffer.from(env.ciphertext, 'base64')));
+    };
+    const out = await decrypt(pass);
+    let wrongFailed = false;
+    try { await decrypt(pass + '!'); } catch { wrongFailed = true; }
+    check('flow2b: short passphrase refused', /12/.test(shortMsg));
+    check('flow2b: mismatched passphrase refused', /match/.test(mismatchMsg));
+    check('flow2b: file name', /^thinking-hub-backup-\d{4}-\d\d-\d\d\.enc\.json$/.test(enc.name), enc.name);
+    check('flow2b: envelope fields', env.format === 'thinking-hub-encrypted' && env.v === 1 && env.kdf === 'PBKDF2-SHA256' &&
+      env.iterations >= 600000 && Buffer.from(env.salt, 'base64').length === 16 && Buffer.from(env.iv, 'base64').length === 12);
+    check('flow2b: no plain data in the envelope', !enc.bytes.toString('utf8').includes('test@example.com'));
+    check('flow2b: decrypted == plain export, byte for byte', out.equals(plain.bytes), `${out.length} vs ${plain.bytes.length}`);
+    check('flow2b: wrong passphrase fails', wrongFailed);
+    check('flow2b: passphrase not kept', passCleared);
+    if (process.env.ENC_FIXTURE_DIR) {
+      fs.writeFileSync(path.join(process.env.ENC_FIXTURE_DIR, 'plain.json'), plain.bytes);
+      fs.writeFileSync(path.join(process.env.ENC_FIXTURE_DIR, 'export.enc.json'), enc.bytes);
+    }
+    await page.close();
+  }
+
   // ── Flow 3: link + graph ──
   {
     const page = await ctx.newPage();

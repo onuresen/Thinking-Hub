@@ -193,8 +193,8 @@ const CHANGE_FILES = {
     if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text());
   });
 
-  // Fake vault: <root>/daily/<year>/*.md — mirrors a real Obsidian layout —
-  // plus <root>/hub-changes/*.json for change files (P163).
+  // Fake vault: <root>/daily/<year>/*.md — mirrors a real Obsidian layout.
+  // A hub-changes/ folder with files stays in it: since P169 nothing may read it.
   await page.addInitScript(({ notes, changeFiles }) => {
     const fileHandle = (name, text) => ({
       kind: 'file', name, getFile: async () => ({ text: async () => text }),
@@ -355,29 +355,22 @@ const CHANGE_FILES = {
   check('each change gets the right status against live data',
     JSON.stringify(statuses) === JSON.stringify(CH_A_STATUS), statuses);
 
-  const scanned = await page.evaluate(async () => {
-    await scanChangeFiles();
-    return _chFiles.map((f) => ({ file: f.file, id: f.doc && f.doc.id, errors: f.errors.length }));
-  });
-  check('the folder scan finds change files, oldest first, and skips other JSON',
-    scanned.length === 3 && scanned[0].id === 'test-a' && scanned[1].id === 'test-b'
-    && !scanned.some((f) => f.file === 'other.json'), scanned);
-  check('a broken file is listed, not ignored', scanned.some((f) => f.file === 'broken.json' && f.errors > 0));
-
+  // P169: no Home card, even with change files sitting in the vault folder.
   await page.evaluate(() => buildTodayView());
-  const chCard = await page.evaluate(() => {
-    const c = [...document.querySelectorAll('#today-view .stat-card')]
-      .find((el) => el.textContent.includes('Change files'));
-    return c ? c.textContent.replace(/\s+/g, ' ').trim() : null;
-  });
-  check('Today shows the waiting change files', !!chCard && /2 waiting/.test(chCard), chCard);
+  check('Home shows no change-files card', await page.evaluate(() =>
+    ![...document.querySelectorAll('#today-view .stat-card')].some((el) => el.textContent.includes('Change files'))));
+  check('the vault folder scan is gone', await page.evaluate(() =>
+    typeof HubChanges.scanVault === 'undefined' && typeof HubVaultBridge.listFolder === 'undefined'
+    && typeof scanChangeFiles === 'undefined'));
 
-  // Two waiting → the list first, then file A.
-  await page.evaluate(() => openChangeFiles());
-  await page.waitForFunction(() => document.querySelectorAll('#changes-body .ch-file').length === 3);
-  await page.evaluate(() => chOpenListed(0));
-  await page.waitForSelector('#changes-body .ch-row');
-  await page.waitForTimeout(300);   // .ui-modal's 0.18s open transition moves every row
+  // Settings → Data → Apply changes: pick the file by hand.
+  const pickChanges = async (name, doc) => {
+    await page.evaluate(() => openDataModal('data'));
+    await page.setInputFiles('#changes-file', { name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
+    await page.waitForSelector('#changes-body .ch-row');
+    await page.waitForTimeout(300);   // .ui-modal's 0.18s open transition moves every row
+  };
+  await pickChanges('a-first.json', CH_A);
   const applyText = () => page.evaluate(() => document.getElementById('ch-apply-btn').textContent.trim());
   check('only new changes are ticked by default', (await applyText()) === 'Apply 8 changes', await applyText());
   check('changes that cannot apply are shown but not tickable',
@@ -421,21 +414,21 @@ const CHANGE_FILES = {
   const again = await page.evaluate((doc) => HubChanges.plan(doc, (k) => HubStorage.get(k)).counts, CH_A);
   check('applying is idempotent: nothing is new the second time', again.new === 0, again);
 
-  // One file left → it opens straight away. Dismiss it.
-  page.once('dialog', (d) => d.accept());
-  await page.evaluate(() => openChangeFiles());
-  await page.waitForSelector('#changes-body .ch-row');
-  await page.evaluate(() => chDismiss());
+  // Picking an applied file again: all "Already in", nothing to apply.
+  await pickChanges('a-first.json', CH_A);
+  check('an applied file picked again has nothing to apply', (await applyText()) === 'Nothing to apply', await applyText());
+  check('it says when it was applied', await page.evaluate(() => /Applied on/.test(document.getElementById('changes-body').textContent)));
+  await page.evaluate(() => closeChangeFiles());
+
+  // A second file, applied by hand.
+  await pickChanges('b-later.json', CH_B);
+  await page.evaluate(() => chApply());
   await page.waitForFunction(() => !document.getElementById('changes-overlay').classList.contains('is-open'));
-  const recB = await page.evaluate(() => HubVaultBridge.getState().changeSets['test-b']);
   const groupB = await page.evaluate(() => HubStorage.get('project-hub-v1').projects.find((p) => p.id === 'p1').group);
-  check('dismiss records the file without applying it', recB && recB.status === 'dismissed' && groupB === 'Build', { recB, groupB });
-  await page.evaluate(() => buildTodayView());
-  check('reviewed files leave Today', await page.evaluate(() =>
-    ![...document.querySelectorAll('#today-view .stat-card')].some((el) => el.textContent.includes('Change files'))));
+  check('a second picked file applies', groupB === 'Personal', groupB);
   check('vault bridge state keeps its other fields after a change-set write', await page.evaluate(() => {
     const s = HubVaultBridge.getState();
-    return Object.keys(s.seen).length === 2 && s.dailyFolder === 'daily' && s.changesFolder === 'hub-changes';
+    return Object.keys(s.seen).length === 2 && s.dailyFolder === 'daily' && s.changeSets['test-b'].status === 'applied';
   }));
 
   // ── persistence layer ─────────────────────────────────────────────────────

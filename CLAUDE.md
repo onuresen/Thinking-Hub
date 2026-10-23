@@ -37,7 +37,7 @@ Shared modules and other files:
 
 | File | Role |
 |------|------|
-| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings (AI, Obsidian/Vault Bridge, snapshots, backup), Cmd+K |
+| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings (AI, Obsidian/Vault Bridge, snapshots, backup, encrypted export P168), Cmd+K |
 | `theme.css` | **Only** global CSS — every tool uses its tokens. Dark + light + ink themes |
 | `hub-storage.js` | `get/set/subscribe` + quota guard. Loads first |
 | `hub-utils.js` | `esc`, `trapFocus`, timestamp helpers (P90), local-day helpers (P126), AI visibility pref (P109) |
@@ -46,8 +46,8 @@ Shared modules and other files:
 | `hub-tags.js` | Tag registry + `TAG_SOURCES` (every tool with `tags`) + `attachTagInput` chip input |
 | `hub-search.js` | Cmd+K search + quick actions (`task:`, `capture:`, `decide:`, `focus`) |
 | `hub-obsidian.js` | Vault index for note autocomplete |
-| `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue, change-folder listing (P163) |
-| `hub-changes.js` | Change files (P163): status + apply of a pass on top of live data. No DOM; the review modal is in `index.html` |
+| `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue, applied change-file record (`changeSets`) |
+| `hub-changes.js` | Change files (P163): status + apply of a pass on top of live data. No DOM; the review modal is in `index.html`. Opened only from Settings → Data → Apply changes (P169) |
 | `hub-vault-notes.js` | Linked-note review dialog (P138) for Project Hub + Meeting Hub |
 | `hub-snapshots.js` | Daily IndexedDB snapshots of all localStorage + restore |
 | `hub-starter-data.js` | First-run sample data |
@@ -164,7 +164,8 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Lean (P152–P157, Onur 2026-10-06):** keep code and flows lean. Prefer removing a surface over adding one. Keep the AI layer and Journal/Schedule hubs for now.
 - **Delete the code, keep the data** for one release, then retire the keys with a snapshot (P157 pattern).
 - **Propose, never auto-import** anything parsed from vault prose (P104, P138).
-- **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py` and put them in the vault's `hub-changes/`. Status logic lives in `hub-changes.js` and that script; change both together.
+- **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py`. They live in the private repo `esen-inbox`; Onur applies them by hand (Settings → Data → Apply changes). No Home card, no folder scan (P169). Status logic lives in `hub-changes.js` and that script; change both together.
+- **Backups go to GitHub only encrypted (P168).** "Export encrypted (for GitHub)" → private repo `esen-inbox` → `hub_changes.py decrypt` into the scratchpad. The envelope format lives in `index.html` and that script; change both together.
 - **Missing timestamp = unknown age, never stale** (P90).
 - **One CSP for every page** (P93). Favicon egress only in the three opted-in pages.
 - **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).

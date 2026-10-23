@@ -9,6 +9,11 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Use the Chrome that ships on GitHub's Ubuntu runner. Downloading
+    # Playwright's Chromium (+ apt packages) was the slow, flaky step.
+    env:
+      PW_CHROMIUM: /usr/bin/google-chrome
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
 
@@ -22,9 +27,8 @@ jobs:
         working-directory: tests
         run: npm ci
 
-      - name: Install Chromium
-        working-directory: tests
-        run: npx playwright install --with-deps chromium
+      - name: Show Chrome version
+        run: '"$PW_CHROMIUM" --version'
 
       - name: Run smoke suite
         working-directory: tests
