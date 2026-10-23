@@ -4,6 +4,18 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 172 — Fold "On boards" when there are many~~ ✓ Done `[group: canvas]`
+A project on 9 boards filled half the project panel with board chips, one per line. Tasks were pushed below the fold.
+- More than two boards → one chip, "▦ On 9 boards ▾". Click to open the list; hover shows the names. One or two boards stay inline as before.
+- Shared code (`HubLinks.canvasPlacementsEl`), so Tool Portfolio folds too. A board with the same item twice counts once.
+
+**Key decisions**
+- **Decision:** fold in place with `<details>`, not a new "Boards" tab. **Why:** one line, no new surface (Lean rule), works in both callers. **Alternative:** a Boards tab next to Tasks — one more tab for a list opened rarely. **Confidence:** med.
+
+**Verified:** `npm test` passes. flows.js flow 11 (9 boards → one chip, hidden until opened; 2 boards inline; none → nothing). Screenshot of the project panel: closed is one line.
+
+**Files:** `hub-links.js`, `sw.js` (cache v47), `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 171 — Export first in Settings → Data~~ ✓ Done `[group: data]`
 Onur exports almost every day and uses Local Snapshots only in an emergency. Snapshots sat above Export.
 - Order now: storage meter → Export scope, Export, Import, Export encrypted, Apply changes, Verify → Local Snapshots → Danger Zone.

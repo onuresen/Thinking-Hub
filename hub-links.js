@@ -292,28 +292,45 @@ window.HubLinks = (() => {
   }
 
   // Small "On boards: A · B" row. Click a board to open that card on the
-  // Canvas. Returns null when the item is on no board.
+  // Canvas. Returns null when the item is on no board. More than two boards
+  // fold into one "▦ On N boards" chip, so a busy project keeps its space
+  // for tasks (P172).
+  const BOARDS_INLINE_MAX = 2;
+
   function canvasPlacementsEl(toolId, itemId) {
-    const list = canvasPlacements(toolId, itemId);
-    if (!list.length) return null;
-    const wrap = document.createElement('div');
-    wrap.className = 'hl-boards';
-    const lbl = document.createElement('span');
-    lbl.className = 'hl-boards-label';
-    lbl.textContent = 'On boards:';
-    wrap.appendChild(lbl);
     const seen = new Set();
-    list.forEach(p => {
-      if (seen.has(p.boardId)) return;
-      seen.add(p.boardId);
+    const list = canvasPlacements(toolId, itemId).filter(p => !seen.has(p.boardId) && seen.add(p.boardId));
+    if (!list.length) return null;
+    const chips = list.map(p => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'hl-board-chip';
       btn.textContent = '▦ ' + p.boardName;
       btn.title = 'Open this card on the Canvas';
       btn.onclick = e => { e.stopPropagation(); navigateTo('canvas-hub', p.nodeId); };
-      wrap.appendChild(btn);
+      return btn;
     });
+    if (list.length > BOARDS_INLINE_MAX) {
+      const fold = document.createElement('details');
+      fold.className = 'hl-boards-fold';
+      const sum = document.createElement('summary');
+      sum.className = 'hl-board-chip';
+      sum.textContent = `▦ On ${list.length} boards`;
+      sum.title = list.map(p => p.boardName).join('\n');
+      fold.appendChild(sum);
+      const row = document.createElement('div');
+      row.className = 'hl-boards';
+      chips.forEach(c => row.appendChild(c));
+      fold.appendChild(row);
+      return fold;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'hl-boards';
+    const lbl = document.createElement('span');
+    lbl.className = 'hl-boards-label';
+    lbl.textContent = 'On boards:';
+    wrap.appendChild(lbl);
+    chips.forEach(c => wrap.appendChild(c));
     return wrap;
   }
 
@@ -357,6 +374,11 @@ window.HubLinks = (() => {
         cursor: pointer;
       }
       .hl-board-chip:hover { border-color: var(--accent); color: var(--text); }
+      .hl-boards-fold { margin-top: 6px; font-size: 11px; }
+      .hl-boards-fold > summary { display: inline-block; list-style: none; }
+      .hl-boards-fold > summary::-webkit-details-marker { display: none; }
+      .hl-boards-fold > summary::after { content: ' ▾'; color: var(--text3); }
+      .hl-boards-fold[open] > summary::after { content: ' ▴'; }
       .hl-btn {
         display: inline-flex;
         align-items: center;
