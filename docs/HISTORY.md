@@ -4,6 +4,17 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 173 — Settings in three tabs~~ ✓ Done `[group: data]`
+Follows P171. Onur wants the tab he uses daily first.
+- **Export & Import** (opens by default): export size, Export scope, Export, Import, Export encrypted, Apply changes, Verify, last backup / restore.
+- **Integrations**: unchanged.
+- **Snapshots & Reset**: storage meter, Local Snapshots, Health Check, Danger Zone.
+- "Last full backup: never — export one below" now says "above".
+
+**Verified:** `npm test` passes. Screenshots of all three tabs, opened with the real gear button and real mouse clicks; no page errors.
+
+**Files:** `index.html`, `sw.js` (cache v48), `docs/HISTORY.md`, `CHANGELOG.md`, `CLAUDE.md`
+
 ### ~~Priority 172 — Fold "On boards" when there are many~~ ✓ Done `[group: canvas]`
 A project on 9 boards filled half the project panel with board chips, one per line. Tasks were pushed below the fold.
 - More than two boards → one chip, "▦ On 9 boards ▾". Click to open the list; hover shows the names. One or two boards stay inline as before.

@@ -8,7 +8,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 ### Changed
 
 - Project panel and Tool Portfolio: more than two Canvas boards fold into one "▦ On N boards" chip. Click it to see them.
-- Settings → Data: Local Snapshots moved below Export, Import and Apply changes. Daily actions come first.
+- Settings has three tabs: **Export & Import** (opens first), **Integrations**, **Snapshots & Reset**. Daily actions come first; storage, snapshots and the reset live in the last tab.
 
 - "Export encrypted" button and its dialog no longer mention GitHub or a branch. The file is for any place you want to keep it safe.
 
