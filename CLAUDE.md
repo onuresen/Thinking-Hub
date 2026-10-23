@@ -167,7 +167,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py`. They live in the private repo `esen-inbox`; Onur applies them by hand (Settings → Data → Apply changes). No Home card, no folder scan (P169). Status logic lives in `hub-changes.js` and that script; change both together.
 - **Backups go to GitHub only encrypted (P168).** "Export encrypted" → private repo `esen-inbox` → `hub_changes.py decrypt` into the scratchpad. The envelope format lives in `index.html` and that script; change both together.
 - **UI text says what a feature does, not Onur's routine (P170).** No repo, branch or service names, no "for X" purpose labels. His workflow belongs in the vault, not the app.
-- **Feedback loop:** Onur's corrections live in esen-vault `meta/Feedback-Loop.md`. Read it when the vault is attached; add an entry when he corrects you.
+- **Feedback loop:** Onur's corrections live in esen-vault `meta/Feedback-Loop.md` § Register, each with a strength (Rule / Default / One-off / Signal). Follow Rules; apply Defaults quietly and break them when they don't fit. A choice for one project is not a preference. Add an entry when he corrects you.
 - **Missing timestamp = unknown age, never stale** (P90).
 - **One CSP for every page** (P93). Favicon egress only in the three opted-in pages.
 - **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).
