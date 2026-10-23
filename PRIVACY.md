@@ -89,9 +89,8 @@ not control those terms.
   browser-default location.
 - Current exports remove `hub-settings-v1.anthropicKey`, `obsidianIndex`, and
   `obsidianIndexedAt`.
-- "Export encrypted (for GitHub)" makes the same Full Backup, encrypted in the
-  browser with a passphrase the hub does not keep. Use it for any upload to a
-  code host. The plain exports are unchanged.
+- "Export encrypted" makes the same Full Backup, encrypted in the browser with
+  a passphrase the hub does not keep. The plain exports are unchanged.
 - Backups created before 2026-06-17 may contain an Anthropic API key and should
   be inspected before sharing.
 - The read-only backup verifier parses the selected file locally and does not

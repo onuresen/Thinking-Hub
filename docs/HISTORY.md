@@ -4,6 +4,16 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 170 — Neutral wording for Export encrypted~~ ✓ Done `[group: data]`
+P168 put our own routine into the UI: "(for GitHub)", "Push it to hub-inbox", "for GitHub only". Onur: GitHub is how he uses it, not a rule for everyone.
+- Button: **🔒 Export encrypted**. Dialog, import toast and verifier text say what the file is, not where to put it.
+- SECURITY.md, PRIVACY.md and CHANGELOG follow.
+
+**Key decisions**
+- **Decision:** UI text describes what a feature does, never Onur's own workflow (repo names, branches, services). **Why:** the app is general; a personal routine in the UI reads as a rule for every user and goes stale when the routine changes (hub-inbox was gone a day later). **Alternative:** keep the hint — wrong for anyone else, and already wrong for Onur. **Confidence:** high.
+
+**Files:** `index.html`, `sw.js` (cache v45), `SECURITY.md`, `PRIVACY.md`, `CHANGELOG.md`, `CLAUDE.md`, `docs/HISTORY.md`
+
 ### ~~Priority 169 — No Home card for change files~~ ✓ Done `[group: data]`
 Change files no longer live in the vault. Raw files, backups and change files moved to a separate private repo, `esen-inbox`. Onur applies change files by hand.
 - Removed: the Home "Change files" card, the vault folder scan (`HubChanges.scanVault`, `HubVaultBridge.listFolder` / `readFile` / `setChangesFolder`), the "Change files folder" field in Settings, and the file list in the review dialog.
