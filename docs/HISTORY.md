@@ -4,6 +4,21 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 169 — No Home card for change files~~ ✓ Done `[group: data]`
+Change files no longer live in the vault. Raw files, backups and change files moved to a separate private repo, `esen-inbox`. Onur applies change files by hand.
+- Removed: the Home "Change files" card, the vault folder scan (`HubChanges.scanVault`, `HubVaultBridge.listFolder` / `readFile` / `setChangesFolder`), the "Change files folder" field in Settings, and the file list in the review dialog.
+- Removed: "Dismiss file". It only hid a file from the Home queue.
+- Kept: Settings → Data → Apply changes. Same review: status per change, untick, snapshot, apply. `changeSets` still records applied files, so a file picked again says "Applied on …".
+- Kept: the change file format and status logic in `hub-changes.js`.
+
+**Key decisions**
+- **Decision:** remove the folder scan, not just the card. **Why:** nothing else read the folder. Dead code invites a second path. **Alternative:** keep the scan for a future folder. **Revisit when:** the hub can read `esen-inbox` locally and Onur wants a queue again. **Confidence:** high.
+- **Decision:** remove "Dismiss file". **Why:** without a queue it had no effect. **Alternative:** keep it — a button that does nothing visible. **Confidence:** med.
+
+**Verified:** `npm test` passes. vault-bridge.js: Home shows no card even with files in the vault's `hub-changes/`; the scan functions are gone; a file picked through Settings → Data shows the right statuses, applies, takes a `pre-changes` snapshot, and reads "Nothing to apply" when picked again. No page or console errors.
+
+**Files:** `index.html`, `hub-changes.js`, `hub-vault-bridge.js`, `styles/index.css`, `sw.js` (cache v44), `tests/vault-bridge.js`, `README.md`, `SECURITY.md`, `CLAUDE.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 168 — Encrypted export for GitHub~~ ✓ Done `[group: data]`
 GitHub is the only path between the work PC and Claude. Backups hold third-party contact data. They must not sit on GitHub as plain JSON again (esen-vault `meta/Security-Cleanup-2026-10-21.md`).
 - **Settings → Data → 🔒 Export encrypted (for GitHub).** A small dialog asks for a passphrase twice (12+ characters). The file is `thinking-hub-backup-YYYY-MM-DD.enc.json`.

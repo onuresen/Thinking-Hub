@@ -63,7 +63,7 @@ coordinated privately until a fix or safe disclosure plan is ready.
   AES-GCM-256 (Web Crypto). The key comes from a passphrase via PBKDF2-SHA256,
   600,000 iterations, random 16-byte salt, 12-byte IV. The passphrase is typed
   at export time and never stored. The hub cannot import this file.
-- Change files are read locally (file picker or the connected vault folder) and
+- Change files are read locally (file picker in Settings → Data) and
   applied only after review, with a local snapshot first. Treat them like
   backups: apply only files you or your own tools wrote. They cannot touch
   settings (where the API key lives) or the activity log.

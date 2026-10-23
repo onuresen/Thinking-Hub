@@ -133,7 +133,7 @@ Items across supported tools (projects, decisions, canvas nodes, meetings, risks
 `hub-search.js` indexes all tools' localStorage data and surfaces results in a fuzzy command palette. Selecting a result navigates to the tool and highlights the item.
 
 ### Obsidian vault integration
-`hub-obsidian.js` uses the browser's File System Access API (`showDirectoryPicker()`) to read your vault folder directly — no backend, no Obsidian running. It indexes note titles, frontmatter, and tags for autocomplete. The optional **Vault Bridge** stays read-only: it turns vault signals into reviewable Hub proposals, and nothing changes until you explicitly accept an item. It also lists **change files** in the vault's `hub-changes/` folder: small JSON files of changes aimed at items by id, applied on top of your data after you review each one.
+`hub-obsidian.js` uses the browser's File System Access API (`showDirectoryPicker()`) to read your vault folder directly — no backend, no Obsidian running. It indexes note titles, frontmatter, and tags for autocomplete. The optional **Vault Bridge** stays read-only: it turns vault signals into reviewable Hub proposals, and nothing changes until you explicitly accept an item. **Change files** are small JSON files of changes aimed at items by id. Apply a change file from Settings → Data → Apply changes. You review each change first.
 
 ### Scoped data export
 Three export scopes from the ⚙️ Data & Backup modal:

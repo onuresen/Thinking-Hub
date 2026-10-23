@@ -1918,21 +1918,6 @@
   padding: 0 0 4px 28px;
 }
 
-.ch-file {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--surface3);
-}
-
-.ch-empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 13px;
-}
-
 .ch-foot {
   display: flex;
   align-items: center;

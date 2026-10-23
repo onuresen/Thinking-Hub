@@ -5,6 +5,10 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Removed
+
+- Home: the "Change files" card and the scan of the vault's `hub-changes/` folder. Settings → Integrations loses the change files folder field. Apply a change file from Settings → Data → Apply changes.
+
 ### Added
 
 - Settings → Data → "Export encrypted (for GitHub)". A Full Backup locked with a passphrase (AES-GCM-256, PBKDF2-SHA256, 600,000 iterations). The passphrase is never stored. The plain exports do not change.

@@ -259,12 +259,6 @@
                 style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-mono);outline:none">
               <div class="sfield-hint">Relative to the vault root. Year sub-folders are followed automatically.</div>
             </div>
-            <div style="margin-bottom:8px">
-              <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Change files folder</div>
-              <input type="text" id="vb-changes-folder" placeholder="hub-changes" oninput="vbSaveChangesFolder(this.value)"
-                style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-mono);outline:none">
-              <div class="sfield-hint">New change files here show up on Home for review.</div>
-            </div>
             <div id="vb-status" class="sfield-hint"></div>
           </div>
         </div>
@@ -339,7 +333,7 @@
         <div style="margin-top:10px">
           <button class="data-btn secondary" style="width:100%" onclick="triggerApplyChanges()" title="Adds to your data. Shows each change first.">⇣ Apply changes</button>
           <input type="file" id="changes-file" style="display:none" accept=".json" onchange="handleChangesFile(event)">
-          <div class="sfield-hint" style="margin-top:6px">Files in your vault's change folder show up on Home by themselves.</div>
+          <div class="sfield-hint" style="margin-top:6px">Apply a change file from here. You see each change first.</div>
         </div>
 
         <div style="margin-top:10px">
@@ -1459,7 +1453,6 @@
           <div class="stat-card-footer"><span></span><span>Reconnect vault →</span></div>`;
         card.addEventListener('click', async () => {
           const ok = await HubVaultBridge.reconnect();
-          if (ok) await scanChangeFiles();   // most days this is how change files become visible
           showToast(ok ? 'Vault reconnected' : 'Vault access not granted', ok ? 'success' : 'error');
           buildTodayView();
         });
@@ -1639,12 +1632,10 @@
     }
 
     // ── Change files (P163) ─────────────────────────────────────────────────────
-    // A Claude pass ships as a change file: only the changes, each aimed at an
-    // item by id. It is applied on top of live data after review, so edits made
-    // since the export survive and a pass can't silently go missing.
+    // A pass ships as a change file: only the changes, each aimed at an item
+    // by id. Onur picks it in Settings → Data → Apply changes. It is applied on
+    // top of live data after review, so edits made since the export survive.
 
-    let _chFiles = [];        // from the vault folder: [{ file, doc, errors }]
-    let _chScanned = false;   // like the Vault Bridge card: no card before this session's scan
     let _chOpen = null;       // { doc, file, plan, picked: Set<index> }
     let _chUntrap = null;
 
@@ -1655,16 +1646,6 @@
 
     function _chRecord(id) {
       return (HubVaultBridge.getState().changeSets || {})[id] || null;
-    }
-
-    function _chWaiting() {
-      return _chFiles.filter(f => f.doc && !f.errors.length && !_chRecord(f.doc.id));
-    }
-
-    async function scanChangeFiles() {
-      try { _chFiles = await HubChanges.scanVault(); }
-      catch (e) { console.warn('[Changes] scan:', e); _chFiles = []; }
-      _chScanned = true;
     }
 
     function _chShort(v) {
@@ -1680,35 +1661,6 @@
       if (!iso) return '';
       const d = new Date(iso);
       return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    }
-
-    function buildChangesCard(waiting) {
-      const card = document.createElement('div');
-      card.className = 'stat-card';
-      card.style.borderColor = 'color-mix(in srgb, var(--accent2) 40%, var(--border))';
-      const rows = waiting.slice(0, 4).map(f => `<div class="stat-item">
-          <div class="stat-item-dot" style="background:var(--accent2)"></div>
-          <div class="stat-item-text">${_esc(f.doc.title || f.file)}</div>
-          <div class="stat-item-meta">${f.doc.changes.length}</div>
-        </div>`).join('');
-      card.innerHTML = `
-        <div class="stat-card-header">
-          <span class="stat-card-icon">⇣</span>
-          <span class="stat-card-title">Change files</span>
-          <span class="stat-count">${waiting.length} waiting</span>
-        </div>
-        <div class="stat-card-body">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;line-height:1.5">
-            From your vault. Nothing changes until you review and apply.
-          </div>
-          ${rows}
-        </div>
-        <div class="stat-card-footer">
-          <span>${waiting.length > 4 ? `+${waiting.length - 4} more` : ''}</span>
-          <span>Review →</span>
-        </div>`;
-      card.addEventListener('click', () => openChangeFiles());
-      return card;
     }
 
     function _chShow() {
@@ -1727,52 +1679,6 @@
       if (_chUntrap) { _chUntrap(); _chUntrap = null; }
       _chOpen = null;
       buildTodayView();
-    }
-
-    async function openChangeFiles() {
-      await scanChangeFiles();   // fresh read: a file pulled since load is included
-      const waiting = _chWaiting();
-      if (waiting.length === 1) { openChangeFile(waiting[0].doc, waiting[0].file); return; }
-      _chOpen = null;
-      _chShow();
-      renderChangeList();
-    }
-
-    function renderChangeList() {
-      const body = document.getElementById('changes-body');
-      const foot = document.getElementById('changes-foot');
-      if (!body) return;
-      foot.innerHTML = '';
-      if (!_chFiles.length) {
-        const folder = HubVaultBridge.getState().changesFolder;
-        body.innerHTML = `<div class="ch-empty">No change files in <code>${_esc(folder)}/</code> of your vault.</div>`;
-        return;
-      }
-      const waiting = _chWaiting();
-      const row = (f, i) => {
-        const rec = f.doc ? _chRecord(f.doc.id) : null;
-        const state = f.errors.length ? `<span class="ch-chip ch-chip-conflict">Broken</span>`
-          : rec ? `<span class="ch-chip">${rec.status === 'dismissed' ? 'Dismissed' : 'Applied'} ${_esc(_chDay(rec.at))}</span>`
-            : `<span class="ch-chip ch-chip-new">Waiting</span>`;
-        return `<div class="ch-file">
-          <div style="flex:1;min-width:0">
-            <div class="ch-file-title">${_esc((f.doc && f.doc.title) || f.file)}</div>
-            <div class="ch-meta">${_esc(f.file)}${f.doc && Array.isArray(f.doc.changes) ? ' · ' + f.doc.changes.length + ' changes' : ''}${f.errors.length ? ' · ' + _esc(f.errors[0]) : ''}</div>
-          </div>
-          ${state}
-          ${f.errors.length ? '' : `<button class="btn ${rec ? 'btn-ghost' : 'btn-primary'}" style="font-size:12px" onclick="chOpenListed(${i})">${rec ? 'Review again' : 'Review'}</button>`}
-        </div>`;
-      };
-      body.innerHTML = `
-        <div class="sfield-hint" style="margin-bottom:10px">
-          ${waiting.length ? `${waiting.length} waiting. Apply older files first; a later one may build on them.` : 'Nothing waiting.'}
-        </div>
-        ${_chFiles.map(row).join('')}`;
-    }
-
-    function chOpenListed(i) {
-      const f = _chFiles[i];
-      if (f && f.doc) openChangeFile(f.doc, f.file);
     }
 
     function openChangeFile(doc, file) {
@@ -1842,21 +1748,12 @@
       const foot = document.getElementById('changes-foot');
       if (!foot || !_chOpen) return;
       const n = _chOpen.picked.size;
-      const listBtn = _chFiles.length > 1
-        ? `<button class="btn btn-ghost" style="font-size:12px" onclick="chBackToList()">← All files</button>` : '';
       foot.innerHTML = `<div class="ch-foot">
-          ${listBtn}
-          <button class="btn btn-ghost" style="font-size:12px" onclick="chDismiss()" title="Mark as reviewed without applying">Dismiss file</button>
           <span style="flex:1"></span>
           <button class="btn btn-ghost" style="font-size:12px" onclick="closeChangeFiles()">Cancel</button>
           <button class="btn btn-primary" style="font-size:12px" id="ch-apply-btn" onclick="chApply()" ${n ? '' : 'disabled'}>
             ${n ? `Apply ${n} change${n !== 1 ? 's' : ''}` : 'Nothing to apply'}</button>
         </div>`;
-    }
-
-    function chBackToList() {
-      _chOpen = null;
-      renderChangeList();
     }
 
     function chToggle(i, on) {
@@ -1898,7 +1795,7 @@
         // picked changes really landed before calling the file applied.
         const left = HubChanges.plan(doc, read).rows.filter(r => picked.has(r.index) && r.status === 'new').length;
         if (left) {
-          showToast(`${left} change${left !== 1 ? 's' : ''} did not save — storage may be full. The file stays waiting.`, 'error');
+          showToast(`${left} change${left !== 1 ? 's' : ''} did not save. Storage may be full.`, 'error');
         } else {
           HubVaultBridge.markChangeSet(doc.id, {
             status: 'applied', title: doc.title || '', file, applied: res.applied, skipped: res.skipped,
@@ -1913,16 +1810,7 @@
       }
     }
 
-    function chDismiss() {
-      if (!_chOpen) return;
-      const { doc, file } = _chOpen;
-      if (!confirm('Dismiss this change file? Nothing is applied. You can still open it later from the list.')) return;
-      HubVaultBridge.markChangeSet(doc.id, { status: 'dismissed', title: doc.title || '', file });
-      showToast('Change file dismissed');
-      closeChangeFiles();
-    }
-
-    // Settings → Data: apply a change file picked by hand (no vault needed).
+    // Settings → Data: apply a change file picked by hand.
     function triggerApplyChanges() {
       document.getElementById('changes-file').click();
     }
@@ -2070,9 +1958,8 @@
 
       const resurface = buildResurfaceItems();
       const vaultGap = _vaultBridgeSummary();
-      const changesWaiting = _chScanned ? _chWaiting() : [];
       const hasContent = sections.some(s => s.items.length > 0) || resurface.length
-        || thisWeekRocks.length || vaultGap.show || changesWaiting.length;
+        || thisWeekRocks.length || vaultGap.show;
       if (!hasContent) {
         container.innerHTML = `<div class="today-all-clear">
           <div class="today-all-clear-icon">✓</div>
@@ -2095,9 +1982,6 @@
       }
 
       if (resurface.length) grid.appendChild(buildResurfaceCard(resurface));
-
-      // P163 — change files waiting in the vault
-      if (changesWaiting.length) grid.appendChild(buildChangesCard(changesWaiting));
 
       // P104 — Vault Bridge: days the vault recorded and the hub did not
       if (vaultGap.show) grid.appendChild(buildVaultBridgeCard(vaultGap));
@@ -2456,7 +2340,6 @@
 
     async function vbConnect() {
       const ok = await HubVaultBridge.connect();
-      if (ok) await scanChangeFiles();
       showToast(ok ? 'Vault connected' : 'No vault folder selected', ok ? 'success' : 'error');
       updateVaultBridgeUI();
       buildTodayView();
@@ -2470,22 +2353,14 @@
       } else {
         await HubVaultBridge.scanDays();
       }
-      await scanChangeFiles();
       const n = (HubVaultBridge.getState().unrecordedDays || []).length;
-      const c = _chWaiting().length;
-      const parts = [n ? `${n} unrecorded day${n !== 1 ? 's' : ''} found` : 'Hub is up to date with your vault'];
-      if (c) parts.push(`${c} change file${c !== 1 ? 's' : ''} waiting`);
-      showToast(parts.join(' · '), 'success');
+      showToast(n ? `${n} unrecorded day${n !== 1 ? 's' : ''} found` : 'Hub is up to date with your vault', 'success');
       updateVaultBridgeUI();
       buildTodayView();
     }
 
     function vbSaveFolder(v) {
       HubVaultBridge.setDailyFolder(v);
-    }
-
-    function vbSaveChangesFolder(v) {
-      HubVaultBridge.setChangesFolder(v);
     }
 
     function updateVaultBridgeUI() {
@@ -2500,8 +2375,6 @@
       const scanBtn = document.getElementById('vb-scan-btn');
       const folderInput = document.getElementById('vb-daily-folder');
       if (folderInput && document.activeElement !== folderInput) folderInput.value = st.dailyFolder || '';
-      const changesInput = document.getElementById('vb-changes-folder');
-      if (changesInput && document.activeElement !== changesInput) changesInput.value = HubVaultBridge.getState().changesFolder;
 
       if (scanBtn) scanBtn.style.display = st.hasStoredHandle ? '' : 'none';
       if (connectBtn) connectBtn.textContent = st.hasStoredHandle ? '📁 Change Vault' : '📁 Connect Vault';
@@ -2796,7 +2669,6 @@
         await HubVaultBridge.init();
       } catch (e) { console.warn('[VaultBridge] init:', e); }
       _vaultBridgeScannedThisSession = true;
-      await scanChangeFiles();
       if (document.getElementById('today-view')) buildTodayView();
     }, 3000);
 
