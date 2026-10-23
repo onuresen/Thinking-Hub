@@ -59,7 +59,7 @@ coordinated privately until a fix or safe disclosure plan is ready.
   analytics endpoint.
 - Full Backups are generated locally as JSON downloads. Current exports remove
   the Anthropic API key and the locally generated Obsidian index.
-- "Export encrypted (for GitHub)" writes the same Full Backup sealed with
+- "Export encrypted" writes the same Full Backup sealed with
   AES-GCM-256 (Web Crypto). The key comes from a passphrase via PBKDF2-SHA256,
   600,000 iterations, random 16-byte salt, 12-byte IV. The passphrase is typed
   at export time and never stored. The hub cannot import this file.
