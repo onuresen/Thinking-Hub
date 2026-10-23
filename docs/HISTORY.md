@@ -4,6 +4,13 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 171 — Export first in Settings → Data~~ ✓ Done `[group: data]`
+Onur exports almost every day and uses Local Snapshots only in an emergency. Snapshots sat above Export.
+- Order now: storage meter → Export scope, Export, Import, Export encrypted, Apply changes, Verify → Local Snapshots → Danger Zone.
+- The import hint said "To bring in a Claude pass…". Now: "To add changes on top, use Apply changes." (P170 rule.)
+
+**Files:** `index.html`, `sw.js` (cache v46), `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 170 — Neutral wording for Export encrypted~~ ✓ Done `[group: data]`
 P168 put our own routine into the UI: "(for GitHub)", "Push it to hub-inbox", "for GitHub only". Onur: GitHub is how he uses it, not a rule for everyone.
 - Button: **🔒 Export encrypted**. Dialog, import toast and verifier text say what the file is, not where to put it.
