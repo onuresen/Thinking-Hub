@@ -283,18 +283,6 @@
           <div class="sfield-hint" id="last-restore-line" style="margin-top:2px">Last restored: never</div>
         </div>
 
-        <!-- Local snapshots (IndexedDB) + health check -->
-        <div id="snapshots-section" style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
-          <div class="sfield-group-title">🕒 Local Snapshots</div>
-          <div class="sfield-hint" style="margin-bottom:8px">Automatic daily snapshots of all data, stored in this browser (IndexedDB) — nothing leaves your machine. Restore rolls everything back to that moment.</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <button class="btn btn-ghost" onclick="takeSnapshotNow()" style="font-size:12px">📸 Take snapshot now</button>
-            <button class="btn btn-ghost" onclick="runHealthCheck()" style="font-size:12px">🩺 Health Check</button>
-          </div>
-          <div id="health-results" style="display:none;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;line-height:1.6"></div>
-          <div id="snapshot-list" style="max-height:180px;overflow-y:auto"></div>
-        </div>
-
         <!-- Export -->
         <div class="export-scope-label">Export scope</div>
         <div class="export-scope-options">
@@ -328,7 +316,7 @@
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="handleImportFile(event)">
         <button class="data-btn secondary" style="width:100%;margin-top:8px" onclick="openEncryptedExport()"
           title="Full Backup, locked with a passphrase.">🔒 Export encrypted</button>
-        <div class="sfield-hint" style="margin-top:6px">Import replaces everything. To bring in a Claude pass, use a change file.</div>
+        <div class="sfield-hint" style="margin-top:6px">Import replaces everything. To add changes on top, use Apply changes.</div>
 
         <div style="margin-top:10px">
           <button class="data-btn secondary" style="width:100%" onclick="triggerApplyChanges()" title="Adds to your data. Shows each change first.">⇣ Apply changes</button>
@@ -340,6 +328,18 @@
           <button class="data-btn secondary" style="width:100%" onclick="triggerVerifyBackup()">🔍 Verify a backup file (read-only, changes nothing)</button>
           <input type="file" id="verify-file" style="display:none" accept=".json" onchange="verifyBackupFile(event)">
           <div id="verify-results" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);font-size:12px;line-height:1.6;color:var(--text2)"></div>
+        </div>
+
+        <!-- Local snapshots (IndexedDB) + health check -->
+        <div id="snapshots-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="sfield-group-title">🕒 Local Snapshots</div>
+          <div class="sfield-hint" style="margin-bottom:8px">Automatic daily snapshots of all data, stored in this browser (IndexedDB) — nothing leaves your machine. Restore rolls everything back to that moment.</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <button class="btn btn-ghost" onclick="takeSnapshotNow()" style="font-size:12px">📸 Take snapshot now</button>
+            <button class="btn btn-ghost" onclick="runHealthCheck()" style="font-size:12px">🩺 Health Check</button>
+          </div>
+          <div id="health-results" style="display:none;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;line-height:1.6"></div>
+          <div id="snapshot-list" style="max-height:180px;overflow-y:auto"></div>
         </div>
 
         <!-- Danger Zone -->
