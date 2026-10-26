@@ -37,7 +37,7 @@ Shared modules and other files:
 
 | File | Role |
 |------|------|
-| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings (AI, Obsidian/Vault Bridge, snapshots, backup, encrypted export P168), Cmd+K |
+| `index.html` | Shell: sidebar, home (Today · Overview), iframe router, Settings in 3 tabs (P173): Export & Import (default) · Integrations (AI, Obsidian/Vault Bridge) · Snapshots & Reset, Cmd+K |
 | `theme.css` | **Only** global CSS — every tool uses its tokens. Dark + light + ink themes |
 | `hub-storage.js` | `get/set/subscribe` + quota guard. Loads first |
 | `hub-utils.js` | `esc`, `trapFocus`, timestamp helpers (P90), local-day helpers (P126), AI visibility pref (P109) |

@@ -174,13 +174,14 @@
 
       <!-- Tabs -->
       <div class="settings-tabs">
-        <button class="settings-tab active" id="stab-integrations"
+        <button class="settings-tab active" id="stab-data" onclick="switchSettingsTab('data')">Export &amp; Import</button>
+        <button class="settings-tab" id="stab-integrations"
           onclick="switchSettingsTab('integrations')">Integrations</button>
-        <button class="settings-tab" id="stab-data" onclick="switchSettingsTab('data')">Data &amp; Backup</button>
+        <button class="settings-tab" id="stab-recovery" onclick="switchSettingsTab('recovery')">Snapshots &amp; Reset</button>
       </div>
 
       <!-- ── Integrations pane ── -->
-      <div class="settings-pane active" id="spane-integrations">
+      <div class="settings-pane" id="spane-integrations">
 
         <!-- AI Assistant -->
         <div class="sfield-group ai-surface ai-settings-group">
@@ -266,22 +267,9 @@
       </div><!-- /integrations pane -->
 
       <!-- ── Data & Backup pane ── -->
-      <div class="settings-pane" id="spane-data">
+      <div class="settings-pane active" id="spane-data">
 
         <div class="data-size" id="data-size-str" style="margin-bottom:10px">0 KB in local storage</div>
-
-        <!-- Storage usage meter + backup freshness -->
-        <div id="storage-usage-wrap" style="margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
-            <span>Browser storage used (~5 MB limit)</span>
-            <span id="storage-usage-label">—</span>
-          </div>
-          <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
-            <div id="storage-usage-bar" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width .3s"></div>
-          </div>
-          <div class="sfield-hint" id="last-backup-line" style="margin-top:6px">Last full backup: never</div>
-          <div class="sfield-hint" id="last-restore-line" style="margin-top:2px">Last restored: never</div>
-        </div>
 
         <!-- Export -->
         <div class="export-scope-label">Export scope</div>
@@ -330,8 +318,30 @@
           <div id="verify-results" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);font-size:12px;line-height:1.6;color:var(--text2)"></div>
         </div>
 
+        <!-- Backup freshness -->
+        <div style="margin-top:14px">
+          <div class="sfield-hint" id="last-backup-line" style="margin-top:0">Last full backup: never</div>
+          <div class="sfield-hint" id="last-restore-line" style="margin-top:2px">Last restored: never</div>
+        </div>
+
+      </div><!-- /data pane -->
+
+      <!-- ── Snapshots & Reset pane ── -->
+      <div class="settings-pane" id="spane-recovery">
+
+        <!-- Storage usage meter -->
+        <div id="storage-usage-wrap" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
+            <span>Browser storage used (~5 MB limit)</span>
+            <span id="storage-usage-label">—</span>
+          </div>
+          <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+            <div id="storage-usage-bar" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width .3s"></div>
+          </div>
+        </div>
+
         <!-- Local snapshots (IndexedDB) + health check -->
-        <div id="snapshots-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div id="snapshots-section">
           <div class="sfield-group-title">🕒 Local Snapshots</div>
           <div class="sfield-hint" style="margin-bottom:8px">Automatic daily snapshots of all data, stored in this browser (IndexedDB) — nothing leaves your machine. Restore rolls everything back to that moment.</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
@@ -357,7 +367,7 @@
           </div>
         </div>
 
-      </div><!-- /data pane -->
+      </div><!-- /recovery pane -->
 
       <div class="data-modal-footer">
         <button class="close-modal-btn" onclick="closeDataModal()">Close</button>
@@ -2424,7 +2434,8 @@
       document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
       document.getElementById('stab-' + tab).classList.add('active');
       document.getElementById('spane-' + tab).classList.add('active');
-      if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); renderSnapshotList(); }
+      if (tab === 'data') { updateExportSizeEstimate(); updateStorageUsageUI(); }
+      if (tab === 'recovery') { updateStorageUsageUI(); renderSnapshotList(); }
       // Sync independently of HubAI: _refreshAiProviderUI returns early when the
       // AI module is absent, and the checkbox has to work in that case too.
       if (tab === 'integrations') _syncAiVisibleToggle();
@@ -2629,7 +2640,7 @@
           const days = Math.floor((Date.now() - new Date(rec.at).getTime()) / 86400000);
           line.textContent = `Last full backup: ${days === 0 ? 'today' : days + 'd ago'} (${HubUtils.isoToLocalDay(rec.at)})`;
         } else {
-          line.textContent = 'Last full backup: never — export one below';
+          line.textContent = 'Last full backup: never — export one above';
         }
       }
       const restoreLine = document.getElementById('last-restore-line');
@@ -2827,7 +2838,7 @@
         currentApp ? currentApp.label : 'Home (no data)';
 
       // Switch to requested tab or default
-      switchSettingsTab(tab || 'integrations');
+      switchSettingsTab(tab || 'data');
     }
 
     function closeDataModal() {
