@@ -173,6 +173,18 @@ function appFiles(ext) {
   check('every app page declares Content Security Policy', missingCsp.length === 0,
     missingCsp.length ? 'missing: ' + missingCsp.join(', ') : pages.length + ' pages');
   check('all app pages share one CSP contract', new Set(cspValues).size === 1);
+  {
+    // P174: the CSP may frame one extra origin, Signals Hub on this computer.
+    // Only signals-hub.html frames it, and that page stays self-contained
+    // (no hub script, no storage key) so it can be removed without side effects.
+    const frameSrc = (cspValues[0].match(/frame-src ([^;]+)/) || [])[1] || '';
+    check('CSP frames only self and Signals Hub on this computer', frameSrc.trim() === "'self' http://127.0.0.1:8770", frameSrc);
+    const sig = fs.readFileSync(path.join(ROOT, 'signals-hub.html'), 'utf8');
+    const framers = pages.filter((f) => f !== 'signals-hub.html' && fs.readFileSync(path.join(ROOT, f), 'utf8').includes('127.0.0.1:8770"'));
+    check('only signals-hub.html frames Signals Hub', framers.length === 0, framers.join(', '));
+    check('signals-hub.html loads no hub script and no storage key',
+      !/<script src=/.test(sig) && !/HubStorage|localStorage\.setItem/.test(sig));
+  }
 
   const runtimeFiles = [
     ...pages,

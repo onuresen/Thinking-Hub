@@ -5,6 +5,14 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ## [Unreleased]
 
+### Added
+
+- Signals Hub in the sidebar (Strategy & Decisions). It shows Signals Hub running on this computer (`127.0.0.1:8770`) inside the hub and follows the hub theme. When it is not running, the tool says so, with **Try again**.
+
+### Security
+
+- The Content Security Policy now allows one more frame source on every page: `http://127.0.0.1:8770`, this computer only. Only the Signals Hub tool uses it. No hub data is sent to it.
+
 ### Changed
 
 - Project panel and Tool Portfolio: more than two Canvas boards fold into one "▦ On N boards" chip. Click it to see them.

@@ -4,6 +4,22 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 174 — Signals Hub inside the hub~~ ✓ Done `[group: integrations]`
+Onur (2026-11-02): he can't judge Signals Hub until it lives in the hub. Bring it in now and adjust it here.
+- New sidebar tool **Signals Hub** (Strategy & Decisions, 📡). `signals-hub.html` frames Signals Hub running on this computer at `http://127.0.0.1:8770` (personal-lab `Signals-Hub`, its own Python server and SQLite).
+- Signals Hub sends `signals-ready` when it loads. No answer in 4 s → "Signals Hub is not running" with **Try again** and **Open in a new tab**. UI text names no launcher or service (P170).
+- The page passes the hub theme to the frame (`hub-theme`, only to that origin). Inside the hub, Signals Hub hides its own logo and theme button.
+- Machi Hub: the tool gets the dovecote (carrier pigeons bring messages); no new drawing.
+
+**Key decisions**
+- **Decision:** frame the local app now; Signals Hub keeps its engine and data. **Why:** it needs a local server (feeds, SQLite, exchange with Claude), which the hub must not have (P84). Framing it lets Onur use it in the hub today. **Alternative:** rebuild it as a native hub tool — weeks of work before he can judge it. **Revisit when:** a part of Signals Hub is used daily and should live in hub data. **Confidence:** med.
+- **Decision:** portable. One self-contained page (no hub script, no storage key, no backup change) and five registrations, listed in the file header. **Why:** Onur may decide to remove it. **Confidence:** high.
+- **Decision:** the CSP adds `http://127.0.0.1:8770` to `frame-src` on every page (one CSP, P93). Loopback only, frames only: no `connect-src` change, nothing leaves the computer. Smoke-tested, and only `signals-hub.html` may frame it.
+
+**Verified:** smoke (all pass, 3 new checks) and vault-bridge pass; flows has one failure (flow6, meeting dates) that also fails on `main` without this change. In a browser: the hub at a local address opened the tool, Signals Hub showed with the hub sidebar, switching the hub to light switched Signals Hub too, and with Signals Hub stopped the page said "not running".
+
+**Files:** `signals-hub.html` (new), `index.html` (APPS), `town-hub.html` (HUB_PAGES), `machi-fun.js` (LANDMARKS), `sw.js` (PRECACHE, cache v49), CSP `frame-src` on every page, `tests/smoke.js`, `PRIVACY.md`, `CHANGELOG.md`, `CLAUDE.md`, `docs/HISTORY.md`
+
 ### ~~Priority 173 — Settings in three tabs~~ ✓ Done `[group: data]`
 Follows P171. Onur wants the tab he uses daily first.
 - **Export & Import** (opens by default): export size, Export scope, Export, Import, Export encrypted, Apply changes, Verify, last backup / restore.
