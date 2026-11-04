@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self' http://127.0.0.1:8770; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signals Hub</title>
+  <link rel="stylesheet" href="styles/fonts.css">
+  <link rel="stylesheet" href="theme.css">
+  <!--
+    Signals Hub inside Thinking Hub (P174).
+
+    Signals Hub runs on this computer (its own local server, its own data). This
+    page only shows it in the hub frame and passes the hub theme to it. It loads
+    no hub script, reads and writes no hub storage key, and sends nothing
+    anywhere: the frame points at this computer only (127.0.0.1).
+
+    To remove it, delete this file and its five registrations:
+      index.html APPS · town-hub.html HUB_PAGES · machi-fun.js LANDMARKS ·
+      sw.js PRECACHE · the 127.0.0.1:8770 entry in frame-src of every page's CSP.
+  -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    #signals-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+    #signals-frame.waiting { visibility: hidden; position: absolute; }
+    .offline { display: none; height: 100%; align-items: center; justify-content: center; padding: 24px; }
+    .offline.show { display: flex; }
+    .offline .card { max-width: 460px; text-align: center; }
+    .offline h1 { margin: 0 0 8px; font: 600 20px/1.25 var(--font-display); }
+    .offline p { margin: 0 0 14px; color: var(--text2); font-size: 13px; line-height: 1.55; }
+    .offline code { font-family: var(--font-mono); font-size: 12px; color: var(--text); background: var(--surface2); border-radius: var(--r-sm); padding: 1px 6px; }
+    .offline .actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .offline .hint { margin: 14px 0 0; color: var(--text3); font-size: 11.5px; }
+    .loading[hidden] { display: none; }
+    .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loading">Opening Signals Hub…</div>
+  <iframe id="signals-frame" class="waiting" title="Signals Hub" referrerpolicy="no-referrer"></iframe>
+  <div class="offline" id="offline" role="status">
+    <div class="card">
+      <h1>Signals Hub is not running</h1>
+      <p>Signals Hub runs on this computer. Start it, then try again.</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="retry" type="button">Try again</button>
+        <a class="btn btn-ghost" id="open-tab" href="http://127.0.0.1:8770/" target="_blank" rel="noopener noreferrer">Open in a new tab</a>
+      </div>
+      <p class="hint">It must use address 127.0.0.1:8770.</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    'use strict';
+    // The one address this page may show. It must match frame-src in the CSP.
+    const ORIGIN = 'http://127.0.0.1:8770';
+    const frame = document.getElementById('signals-frame');
+    const offline = document.getElementById('offline');
+    const loading = document.getElementById('loading');
+    let ready = false;
+    let timer = null;
+
+    const currentTheme = () => document.documentElement.getAttribute('data-theme')
+      || (() => { try { return localStorage.getItem('th-theme'); } catch { return null; } })()
+      || 'dark';
+
+    function sendTheme() {
+      if (!ready || !frame.contentWindow) return;
+      frame.contentWindow.postMessage({ type: 'hub-theme', theme: currentTheme() }, ORIGIN);
+    }
+
+    function showOffline() {
+      if (ready) return;
+      loading.hidden = true;
+      frame.classList.add('waiting');
+      offline.classList.add('show');
+    }
+
+    function load() {
+      ready = false;
+      offline.classList.remove('show');
+      loading.hidden = false;
+      frame.classList.add('waiting');
+      clearTimeout(timer);
+      // Signals Hub says "signals-ready" when it has loaded. No answer means it is not running.
+      timer = setTimeout(showOffline, 4000);
+      frame.src = `${ORIGIN}/?embed=hub&t=${Date.now()}`;
+    }
+
+    window.addEventListener('message', event => {
+      // From Signals Hub: only its own frame, only from its address.
+      if (event.source === frame.contentWindow && event.origin === ORIGIN && event.data?.type === 'signals-ready') {
+        ready = true;
+        clearTimeout(timer);
+        loading.hidden = true;
+        offline.classList.remove('show');
+        frame.classList.remove('waiting');
+        sendTheme();
+        return;
+      }
+      // From the hub shell: the theme changed.
+      if (event.source === window.parent && event.data?.type === 'hub-theme') {
+        if (event.data.theme) document.documentElement.setAttribute('data-theme', event.data.theme);
+        sendTheme();
+      }
+    });
+    // The shell also sets data-theme on this page directly.
+    new MutationObserver(sendTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    document.getElementById('retry').addEventListener('click', load);
+    load();
+  })();
+  </script>
+</body>
+</html>

@@ -566,7 +566,7 @@ const MachiFun = (() => {
     'project-hub': 'depot', 'schedule': 'clocktower', 'meetings-hub': 'terminal', 'capture-hub': 'post',
     'journal-hub': 'cafe', 'graph-hub': 'dovecote', 'people-hub': 'apartments', 'stakeholder-hub': 'embassy',
     'tool-portfolio': 'greenhouse', 'town-hub': 'cityhall', 'learning-hub': 'library', 'idea-swiper': 'ferris',
-    'canvas-hub': 'studio', 'decision-hub': 'shrine', 'goals-hub': 'stadium', 'risk-hub': 'firestation',
+    'canvas-hub': 'studio', 'decision-hub': 'shrine', 'goals-hub': 'stadium', 'risk-hub': 'firestation', 'signals-hub': 'dovecote',
     'achievements-hub': 'home', 'tags-hub': 'market', 'help-hub': 'school',
   };
   const PLACE_NOTES = {
