@@ -2,114 +2,599 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self' http://127.0.0.1:8770; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Signals Hub</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <!--
-    Signals Hub inside Thinking Hub (P174).
+    Signals Hub (P175). A hub tool of its own: it reads the files Claude's
+    morning run writes (readings and news) and keeps Onur's taps.
 
-    Signals Hub runs on this computer (its own local server, its own data). This
-    page only shows it in the hub frame and passes the hub theme to it. It loads
-    no hub script, reads and writes no hub storage key, and sends nothing
-    anywhere: the frame points at this computer only (127.0.0.1).
-
-    To remove it, delete this file and its five registrations:
-      index.html APPS · town-hub.html HUB_PAGES · machi-fun.js LANDMARKS ·
-      sw.js PRECACHE · the 127.0.0.1:8770 entry in frame-src of every page's CSP.
+    Data in: a linked folder (read on every open, like the vault folder) or
+    files imported by hand. Data out: a taps file written into the linked
+    folder (state/hub-state.json), or saved by hand, and the full backup
+    (`signals-hub-v1`). The page sends nothing anywhere and needs no server.
   -->
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
-    #signals-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
-    #signals-frame.waiting { visibility: hidden; position: absolute; }
-    .offline { display: none; height: 100%; align-items: center; justify-content: center; padding: 24px; }
-    .offline.show { display: flex; }
-    .offline .card { max-width: 460px; text-align: center; }
-    .offline h1 { margin: 0 0 8px; font: 600 20px/1.25 var(--font-display); }
-    .offline p { margin: 0 0 14px; color: var(--text2); font-size: 13px; line-height: 1.55; }
-    .offline code { font-family: var(--font-mono); font-size: 12px; color: var(--text); background: var(--surface2); border-radius: var(--r-sm); padding: 1px 6px; }
-    .offline .actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-    .offline .hint { margin: 14px 0 0; color: var(--text3); font-size: 11.5px; }
-    .loading[hidden] { display: none; }
-    .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 12px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    .topbar {
+      min-height: 54px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+    }
+    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; margin-right: 8px; }
+    .topbar-spacer { flex: 1; }
+    .tab {
+      padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font: 500 12px var(--font-body); cursor: pointer;
+    }
+    .tab.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .status { font-size: 11.5px; color: var(--text3); }
+    .status.warn { color: var(--accent-super); }
+    .tb-btn { font-size: 12px; padding: 6px 12px; }
+
+    main { flex: 1; overflow-y: auto; padding: 22px 20px 60px; }
+    .wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+    .ui-section-header { margin-bottom: 10px; }
+
+    .lead { font: 600 19px/1.35 var(--font-display); }
+    .plan { color: var(--text2); font-size: 13.5px; line-height: 1.55; margin-top: 8px; }
+    .meta { color: var(--text3); font-size: 11.5px; margin-top: 6px; }
+    .meta select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); font: 11.5px var(--font-body); padding: 2px 6px; }
+
+    .card { padding: 14px 16px; }
+    .card + .card { margin-top: 10px; }
+    .card h3 { font: 600 14.5px/1.35 var(--font-body); }
+    .card p { font-size: 13px; line-height: 1.55; color: var(--text2); margin-top: 6px; }
+    .card p b { color: var(--text); font-weight: 600; }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .tag { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--text2); }
+    .tag.kind { background: var(--accent-dim); color: var(--text); }
+    .tag.late { background: var(--accent-glow); color: var(--text); }
+    .srcs { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+    .srcs a, .news a { color: var(--text2); font-size: 12px; text-decoration: none; }
+    .srcs a:hover, .news a:hover { color: var(--accent); text-decoration: underline; }
+    .srcs .src-meta { color: var(--text3); }
+
+    .taps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+    .tap, .chip {
+      padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font: 500 12px var(--font-body); cursor: pointer;
+    }
+    .tap:hover, .chip:hover { border-color: var(--accent); color: var(--text); }
+    .tap.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .chip { font-size: 11px; padding: 3px 9px; }
+    .chip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .draft { margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface2); font-size: 12.5px; line-height: 1.5; color: var(--text2); white-space: pre-wrap; }
+
+    .verdict { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); }
+    .verdict.nudge { color: var(--accent-super); }
+    .verdict.drop { color: var(--accent-nope); }
+
+    .news-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .news-tools select, .news-tools input[type="search"] {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font: 12px var(--font-body); padding: 5px 8px;
+    }
+    .news { display: flex; flex-direction: column; }
+    .news-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .news-row .body { flex: 1; min-width: 0; }
+    .news-row .title { font-size: 13px; color: var(--text); }
+    .news-row .sub { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
+    .news-row.hidden-item { opacity: .45; }
+    .news-row .acts { display: flex; gap: 4px; flex-shrink: 0; }
+
+    .help { font-size: 12.5px; color: var(--text2); line-height: 1.6; }
+    .help li { margin-left: 18px; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="loading" id="loading">Opening Signals Hub…</div>
-  <iframe id="signals-frame" class="waiting" title="Signals Hub" referrerpolicy="no-referrer"></iframe>
-  <div class="offline" id="offline" role="status">
-    <div class="card">
-      <h1>Signals Hub is not running</h1>
-      <p>Signals Hub runs on this computer. Start it, then try again.</p>
-      <div class="actions">
-        <button class="btn btn-primary" id="retry" type="button">Try again</button>
-        <a class="btn btn-ghost" id="open-tab" href="http://127.0.0.1:8770/" target="_blank" rel="noopener noreferrer">Open in a new tab</a>
-      </div>
-      <p class="hint">It must use address 127.0.0.1:8770.</p>
-    </div>
+  <div class="topbar">
+    <div class="logo-mark" aria-hidden="true">📡</div>
+    <div class="logo-text">Signals Hub</div>
+    <button class="tab on" id="tab-reading" type="button">Reading</button>
+    <button class="tab" id="tab-news" type="button">News</button>
+    <div class="topbar-spacer"></div>
+    <span class="status" id="status" role="status"></span>
+    <button class="btn btn-ghost tb-btn" id="btn-folder" type="button">Link folder</button>
+    <button class="btn btn-ghost tb-btn" id="btn-import" type="button">Import files</button>
+    <button class="btn btn-ghost tb-btn" id="btn-save" type="button">Save taps file</button>
+    <input type="file" id="file-input" accept=".json" multiple class="hidden">
   </div>
+  <main>
+    <div class="wrap" id="view-reading"></div>
+    <div class="wrap hidden" id="view-news"></div>
+  </main>
   <script>
   (() => {
     'use strict';
-    // The one address this page may show. It must match frame-src in the CSP.
-    const ORIGIN = 'http://127.0.0.1:8770';
-    const frame = document.getElementById('signals-frame');
-    const offline = document.getElementById('offline');
-    const loading = document.getElementById('loading');
-    let ready = false;
-    let timer = null;
+    const KEY = 'signals-hub-v1';
+    const esc = (s) => HubUtils.esc(s == null ? '' : String(s));
+    const NO_REASONS = ['Not my field', 'Too early', 'Already doing it', 'Too big for now'];
+    const KEEP_READINGS = 8;
+    const NEWS_DAYS = 30;
+    const NEWS_MAX = 500;
+    const KIND_NAMES = { build: 'Build', 'reach-out': 'Reach out', test: 'Test', watch: 'Watch' };
 
-    const currentTheme = () => document.documentElement.getAttribute('data-theme')
-      || (() => { try { return localStorage.getItem('th-theme'); } catch { return null; } })()
-      || 'dark';
-
-    function sendTheme() {
-      if (!ready || !frame.contentWindow) return;
-      frame.contentWindow.postMessage({ type: 'hub-theme', theme: currentTheme() }, ORIGIN);
-    }
-
-    function showOffline() {
-      if (ready) return;
-      loading.hidden = true;
-      frame.classList.add('waiting');
-      offline.classList.add('show');
-    }
+    let data = load();
+    let folder = null;          // the signals-hub folder inside the linked folder
+    let linkHandle = null;      // what Onur picked
+    let needsPermission = false;
+    let shownIndex = 0;
 
     function load() {
-      ready = false;
-      offline.classList.remove('show');
-      loading.hidden = false;
-      frame.classList.add('waiting');
-      clearTimeout(timer);
-      // Signals Hub says "signals-ready" when it has loaded. No answer means it is not running.
-      timer = setTimeout(showOffline, 4000);
-      frame.src = `${ORIGIN}/?embed=hub&t=${Date.now()}`;
+      const d = HubStorage.get(KEY) || {};
+      return {
+        readings: Array.isArray(d.readings) ? d.readings : [],
+        news: Array.isArray(d.news) ? d.news : [],
+        newsFiles: d.newsFiles && typeof d.newsFiles === 'object' ? d.newsFiles : {},
+        reactions: Array.isArray(d.reactions) ? d.reactions : [],
+        items: d.items && typeof d.items === 'object' ? d.items : {},
+        updatedAt: d.updatedAt || '',
+      };
+    }
+    function save(changedTaps) {
+      if (changedTaps) data.updatedAt = new Date().toISOString();
+      HubStorage.set(KEY, data);
     }
 
-    window.addEventListener('message', event => {
-      // From Signals Hub: only its own frame, only from its address.
-      if (event.source === frame.contentWindow && event.origin === ORIGIN && event.data?.type === 'signals-ready') {
-        ready = true;
-        clearTimeout(timer);
-        loading.hidden = true;
-        offline.classList.remove('show');
-        frame.classList.remove('waiting');
-        sendTheme();
+    // ── Reading files ────────────────────────────────────────────────────
+    // A review cites ids from its request. Keep only the sources it cites,
+    // so the hub holds a few KB per reading, not the whole request.
+    function addReading(review, request) {
+      if (!review || review.schema !== 'signals-hub-review-v1' || !review.requestId) return false;
+      if (data.readings.some((r) => r.requestId === review.requestId)) return false;
+      const known = {};
+      ((request && request.evidence) || []).forEach((doc) => { known[doc.id] = doc; });
+      (review.newEvidence || []).forEach((doc) => {
+        if (String(doc.id || '').startsWith('web:') && /^https?:\/\//.test(doc.url || '')) known[doc.id] = doc;
+      });
+      const docs = {};
+      let missing = 0;
+      const keep = (ids) => (ids || []).filter((id) => {
+        if (known[id]) {
+          const d = known[id];
+          docs[id] = { title: d.title || '', url: d.url || '', source: d.source || '', date: d.date || '' };
+          return true;
+        }
+        missing += 1;
+        return false;
+      });
+      const insights = (review.insights || []).map((x) => ({ ...x, citations: keep(x.citations) }));
+      const directions = (review.directions || []).map((x) => ({ ...x, citations: keep(x.citations) }));
+      data.readings.push({
+        requestId: review.requestId, reviewer: review.reviewer || '', createdAt: (request && request.createdAt) || '',
+        importedAt: new Date().toISOString(), weekPlan: review.weekPlan || '', followUps: review.followUps || [],
+        insights, directions, docs, missing, hasRequest: !!request,
+      });
+      data.readings.sort((a, b) => (b.createdAt || b.requestId).localeCompare(a.createdAt || a.requestId));
+      data.readings = data.readings.slice(0, KEEP_READINGS);
+      return true;
+    }
+
+    function addNews(news, name) {
+      if (!news || news.schema !== 'signals-hub-news-v1') return 0;
+      if (name && data.newsFiles[name] === news.createdAt) return 0;
+      const seen = new Set(data.news.map((n) => n.url));
+      let added = 0;
+      (news.items || []).forEach((item) => {
+        if (!item.url || !item.title || seen.has(item.url)) return;
+        seen.add(item.url);
+        data.news.push({ title: item.title, url: item.url, source: item.sourceName || '',
+          date: (item.publishedAt || news.createdAt || '').slice(0, 10), summary: String(item.summary || '').slice(0, 300) });
+        added += 1;
+      });
+      if (name) data.newsFiles[name] = news.createdAt;
+      const oldest = HubUtils.localYmd(new Date(Date.now() - NEWS_DAYS * 86400000));
+      data.news = data.news.filter((n) => !n.date || n.date >= oldest || data.items[n.url]);
+      data.news.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      data.news = data.news.slice(0, NEWS_MAX);
+      return added;
+    }
+
+    // ── Taps ─────────────────────────────────────────────────────────────
+    function latestTap(requestId, index) {
+      for (let i = data.reactions.length - 1; i >= 0; i -= 1) {
+        const r = data.reactions[i];
+        if (r.requestId === requestId && r.index === index) return r;
+      }
+      return null;
+    }
+    function tap(requestId, index, reaction, reason) {
+      const reading = data.readings.find((r) => r.requestId === requestId);
+      const move = reading && reading.directions[index];
+      if (!move) return;
+      data.reactions.push({ requestId, index, title: move.title, reaction, reason: reason || '', at: new Date().toISOString() });
+      save(true);
+      render();
+      writeState();
+    }
+    function mark(url, state) {
+      const item = data.news.find((n) => n.url === url);
+      const current = data.items[url] && data.items[url].state;
+      const next = current === state ? 'new' : state;
+      data.items[url] = { state: next, title: item ? item.title : '', source: item ? item.source : '', at: new Date().toISOString() };
+      save(true);
+      renderNews();
+      writeState();
+    }
+    // Taps made in the separate Signals Hub app carry over once, so a move
+    // tapped there shows as tapped here. A tap made here always wins.
+    function adoptPcState(pc) {
+      if (!pc || pc.schema !== 'signals-hub-pc-state-v1') return 0;
+      const byReview = {};
+      (pc.reviews || []).forEach((r) => { if (r.requestId) byReview[r.id] = r.requestId; });
+      let added = 0;
+      (pc.reactions || []).forEach((r) => {
+        const requestId = byReview[r.reviewId];
+        if (!requestId || latestTap(requestId, r.index)) return;
+        data.reactions.push({ requestId, index: r.index, title: r.title, reaction: r.reaction, reason: r.reason || '', at: r.at || '' });
+        added += 1;
+      });
+      (pc.items || []).forEach((item) => {
+        if (item.url && !data.items[item.url] && item.state && item.state !== 'new') {
+          data.items[item.url] = { state: item.state, title: item.title || '', source: item.sourceName || '', at: '' };
+        }
+      });
+      if (added) data.reactions.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      return added;
+    }
+
+    function stateFile() {
+      return {
+        schema: 'signals-hub-hub-state-v1', updatedAt: data.updatedAt,
+        reactions: data.reactions,
+        items: Object.entries(data.items).map(([url, v]) => ({ url, title: v.title, sourceName: v.source, state: v.state, at: v.at })),
+      };
+    }
+
+    // ── Linked folder (like the vault folder) ────────────────────────────
+    const DB = 'thinking-hub-signals', STORE = 'handles', HANDLE = 'inbox';
+    function idb(mode, fn) {
+      return new Promise((resolve) => {
+        let req;
+        try { req = indexedDB.open(DB, 1); } catch { resolve(null); return; }
+        req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE); };
+        req.onerror = () => resolve(null);
+        req.onsuccess = () => {
+          const db = req.result;
+          try {
+            const tx = db.transaction(STORE, mode);
+            const r = fn(tx.objectStore(STORE));
+            tx.oncomplete = () => { db.close(); resolve(r && 'result' in r ? r.result : null); };
+            tx.onerror = () => { db.close(); resolve(null); };
+          } catch { db.close(); resolve(null); }
+        };
+      });
+    }
+    const supported = () => typeof window.showDirectoryPicker === 'function';
+    async function child(dir, name) { try { return await dir.getDirectoryHandle(name); } catch { return null; } }
+    async function resolveFolder(handle) {
+      const inner = await child(handle, 'signals-hub');
+      if (inner) return inner;
+      if (await child(handle, 'reviews') || await child(handle, 'news')) return handle;
+      return null;
+    }
+    async function readJson(fileHandle) {
+      try { return JSON.parse(await (await fileHandle.getFile()).text()); } catch { return null; }
+    }
+    async function jsonFiles(dir) {
+      const out = [];
+      if (!dir) return out;
+      for await (const [name, h] of dir.entries()) if (h.kind === 'file' && name.endsWith('.json')) out.push([name, h]);
+      return out.sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    async function useHandle(handle, ask) {
+      let perm = 'prompt';
+      try { perm = await handle.queryPermission({ mode: 'readwrite' }); } catch { }
+      if (perm !== 'granted' && ask) {
+        try { perm = await handle.requestPermission({ mode: 'readwrite' }); } catch { }
+      }
+      linkHandle = handle;
+      if (perm !== 'granted') { needsPermission = true; folder = null; renderStatus(); return false; }
+      needsPermission = false;
+      folder = await resolveFolder(handle);
+      if (!folder) { renderStatus('This folder has no Signals Hub files. Pick the folder that holds them.', true); return false; }
+      await scanFolder();
+      return true;
+    }
+
+    async function linkFolder() {
+      if (!supported()) { showToast('This browser cannot link a folder. Use Import files.', 'error'); return; }
+      if (linkHandle && needsPermission) { await useHandle(linkHandle, true); return; }
+      try {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'thinking-hub-signals' });
+        await idb('readwrite', (s) => s.put(handle, HANDLE));
+        await useHandle(handle, true);
+      } catch (e) { if (e.name !== 'AbortError') showToast('Could not link the folder.', 'error'); }
+    }
+
+    async function scanFolder() {
+      if (!folder) return;
+      let readings = 0, news = 0;
+      const reviews = await child(folder, 'reviews');
+      const requests = await child(folder, 'requests');
+      for (const [, h] of await jsonFiles(reviews)) {
+        const review = await readJson(h);
+        if (!review || data.readings.some((r) => r.requestId === review.requestId)) continue;
+        let request = null;
+        if (requests && review.requestId && !/[\\/]|\.\./.test(review.requestId)) {
+          try { request = await readJson(await requests.getFileHandle(review.requestId + '.json')); } catch { }
+        }
+        if (addReading(review, request)) readings += 1;
+      }
+      for (const [name, h] of await jsonFiles(await child(folder, 'news'))) {
+        news += addNews(await readJson(h), name);
+      }
+      const stateDir = await child(folder, 'state');
+      if (stateDir) {
+        try { adoptPcState(await readJson(await stateDir.getFileHandle('pc-state.json'))); } catch { }
+      }
+      save(false);
+      if (readings) shownIndex = 0;
+      render();
+      renderStatus(readings || news
+        ? `${readings ? readings + ' new reading' + (readings > 1 ? 's' : '') : ''}${readings && news ? ', ' : ''}${news ? news + ' new items' : ''}`
+        : 'Up to date');
+    }
+
+    async function writeState() {
+      if (!folder) { renderStatus('Taps saved here. Save the taps file to send them.', true); return; }
+      try {
+        const dir = await folder.getDirectoryHandle('state', { create: true });
+        const fh = await dir.getFileHandle('hub-state.json', { create: true });
+        const w = await fh.createWritable();
+        await w.write(JSON.stringify(stateFile(), null, 2));
+        await w.close();
+        renderStatus('Taps saved in the linked folder');
+      } catch { renderStatus('Could not write to the folder. Save the taps file instead.', true); }
+    }
+
+    function saveTapsFile() {
+      const blob = new Blob([JSON.stringify(stateFile(), null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'hub-state.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      showToast('Saved hub-state.json. Put it in the state folder.');
+    }
+
+    async function importFiles(files) {
+      const parsed = [];
+      for (const file of files) {
+        try { parsed.push([file.name, JSON.parse(await file.text())]); } catch { }
+      }
+      const requests = {};
+      parsed.forEach(([, d]) => { if (d && d.schema === 'signals-hub-review-request-v1') requests[d.id] = d; });
+      let readings = 0, news = 0, other = 0;
+      parsed.forEach(([name, d]) => {
+        if (d && d.schema === 'signals-hub-review-v1') readings += addReading(d, requests[d.requestId]) ? 1 : 0;
+        else if (d && d.schema === 'signals-hub-news-v1') news += addNews(d, name);
+        else if (d && d.schema === 'signals-hub-pc-state-v1') adoptPcState(d);
+        else if (!(d && d.schema === 'signals-hub-review-request-v1')) other += 1;
+      });
+      save(false);
+      if (readings) shownIndex = 0;
+      render();
+      showToast(`${readings} reading${readings === 1 ? '' : 's'}, ${news} news items${other ? `, ${other} files skipped` : ''}`);
+      return { readings, news, other };
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────
+    function renderStatus(text, warn) {
+      const el = document.getElementById('status');
+      const btn = document.getElementById('btn-folder');
+      if (needsPermission) { el.textContent = 'Click Reconnect to read the folder'; el.className = 'status warn'; btn.textContent = 'Reconnect'; return; }
+      btn.textContent = folder ? 'Check folder' : 'Link folder';
+      el.textContent = text || (folder ? 'Folder linked' : '');
+      el.className = 'status' + (warn ? ' warn' : '');
+    }
+
+    function sources(reading, ids) {
+      const rows = (ids || []).map((id) => reading.docs[id]).filter(Boolean);
+      if (!rows.length) return '';
+      return `<div class="srcs">${rows.map((d) => `<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(d.title)} <span class="src-meta">· ${esc(d.source)}${d.date ? ' · ' + esc(d.date) : ''}</span></a>`).join('')}</div>`;
+    }
+
+    function kindOf(move) {
+      if (move.kind) return move.kind;
+      const m = /\((build|reach-out|test|watch)\b/.exec(move.title || '');
+      return m ? m[1] : '';
+    }
+    function byOf(move) {
+      if (move.by) return move.by;
+      const m = /(?:by|again) (\d{4}-\d{2}-\d{2})\)/.exec(move.title || '');
+      return m ? m[1] : '';
+    }
+
+    function moveCard(reading, move, index) {
+      const t = latestTap(reading.requestId, index);
+      const now = t ? t.reaction : '';
+      const kind = kindOf(move), by = byOf(move), late = by && now === 'follow' && by < HubUtils.todayLocal();
+      const btn = (r, label) => `<button class="tap${now === r ? ' on' : ''}" type="button" data-tap="${r}" data-i="${index}">${label}</button>`;
+      const reasons = now === 'no'
+        ? NO_REASONS.map((x) => `<button class="chip${t.reason === x ? ' on' : ''}" type="button" data-tap="no" data-reason="${esc(x)}" data-i="${index}">${esc(x)}</button>`).join('') : '';
+      return `<div class="card">
+        <h3>${esc(move.title)}</h3>
+        <div class="tags">${kind ? `<span class="tag kind">${esc(KIND_NAMES[kind] || kind)}</span>` : ''}${by ? `<span class="tag${late ? ' late' : ''}">${late ? 'Past its date · ' : ''}${esc(by)}</span>` : ''}${move.area ? `<span class="tag">${esc(move.area)}</span>` : ''}</div>
+        ${move.whyNow ? `<p><b>Why now.</b> ${esc(move.whyNow)}</p>` : ''}
+        ${move.deliverable ? `<p><b>What.</b> ${esc(move.deliverable)}</p>` : ''}
+        ${move.contact ? `<p><b>Who.</b> ${esc(move.contact)}</p>` : ''}
+        ${move.firstStep ? `<p><b>First step.</b> ${esc(move.firstStep)}</p>` : ''}
+        ${move.draft ? `<div class="draft">${esc(move.draft)}</div><div class="taps"><button class="chip" type="button" data-copy="${index}">Copy draft</button></div>` : ''}
+        ${move.wouldChangeMind ? `<p><b>Would change the call.</b> ${esc(move.wouldChangeMind)}</p>` : ''}
+        ${sources(reading, move.citations)}
+        <div class="taps">${btn('follow', 'Follow')}${btn('later', 'Later')}${btn('no', 'Not for me')}${reasons}</div>
+      </div>`;
+    }
+
+    function openMoves(reading) {
+      const verdicts = {};
+      (reading.followUps || []).forEach((f) => { verdicts[f.directionId] = f; });
+      const rows = [];
+      data.readings.forEach((r) => {
+        if (r.requestId === reading.requestId) return;
+        r.directions.forEach((move, i) => {
+          const t = latestTap(r.requestId, i);
+          if (!t || t.reaction !== 'follow') return;
+          rows.push({ move, by: byOf(move), follow: verdicts[`signals-${r.requestId}-${i}`] });
+        });
+      });
+      if (!rows.length) return '';
+      const today = HubUtils.todayLocal();
+      return '<div>' + section('Still open') + rows.map(({ move, by, follow }) => `<div class="card">
+        ${follow ? `<div class="verdict ${esc(follow.verdict)}">${esc({ keep: 'Keep', nudge: 'Nudge', drop: 'Drop?' }[follow.verdict] || follow.verdict)}</div>` : ''}
+        <h3>${esc(move.title)}</h3>
+        ${by ? `<div class="tags"><span class="tag${by < today ? ' late' : ''}">${by < today ? 'Past its date · ' : ''}${esc(by)}</span></div>` : ''}
+        ${follow && follow.note ? `<p>${esc(follow.note)}</p>` : ''}
+      </div>`).join('') + '</div>';
+    }
+
+    const section = (title) => `<div class="ui-section-header"><span class="ui-section-title">${esc(title)}</span><span class="ui-section-line"></span></div>`;
+
+    function renderReading() {
+      const view = document.getElementById('view-reading');
+      if (!data.readings.length) {
+        view.innerHTML = `<div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading yet</div>
+          <div class="e-sub">Link the folder that holds the Signals Hub files, or import a reading file.</div></div>
+          <div class="card help"><ol>
+            <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. The hub reads new readings and news each time you open this page.</li>
+            <li><b>Import files</b>: pick a reading file and its request file, or a news file.</li>
+            <li>Tap each move. Your taps go into the linked folder (<code>state/hub-state.json</code>) and into the full backup.</li>
+          </ol></div>`;
         return;
       }
-      // From the hub shell: the theme changed.
-      if (event.source === window.parent && event.data?.type === 'hub-theme') {
-        if (event.data.theme) document.documentElement.setAttribute('data-theme', event.data.theme);
-        sendTheme();
-      }
-    });
-    // The shell also sets data-theme on this page directly.
-    new MutationObserver(sendTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      shownIndex = Math.min(shownIndex, data.readings.length - 1);
+      const reading = data.readings[shownIndex];
+      const lead = reading.insights[0];
+      const day = (r) => (r.createdAt ? HubUtils.isoToLocalDay(r.createdAt) : r.requestId.slice(4, 14));
+      const picker = data.readings.length > 1
+        ? `<select id="pick-reading" aria-label="Reading">${data.readings.map((r, i) => `<option value="${i}"${i === shownIndex ? ' selected' : ''}>${esc(day(r))}</option>`).join('')}</select>`
+        : esc(day(reading));
+      view.innerHTML = `
+        <div>
+          <div class="lead">${esc(lead ? lead.headline : 'A reading without insights')}</div>
+          ${reading.weekPlan ? `<div class="plan"><b>This week.</b> ${esc(reading.weekPlan)}</div>` : ''}
+          <div class="meta">Reading ${picker} · ${esc(reading.reviewer)}${reading.missing ? ` · ${reading.missing} citation${reading.missing > 1 ? 's' : ''} without a known source left out` : ''}${reading.hasRequest ? '' : ' · its request file was not found, so sources are missing'}</div>
+        </div>
+        ${openMoves(reading)}
+        <div>${section('Moves')}${reading.directions.length ? reading.directions.map((m, i) => moveCard(reading, m, i)).join('') : '<div class="card"><p>No moves this time.</p></div>'}</div>
+        <div>${section('What Claude sees')}${reading.insights.map((x) => `<div class="card">
+          <h3>${esc(x.headline)}</h3>
+          ${x.summary ? `<p>${esc(x.summary)}</p>` : ''}
+          ${x.comparison ? `<p><b>How sources compare.</b> ${esc(x.comparison)}</p>` : ''}
+          ${x.counterpoint ? `<p><b>Counterpoint.</b> ${esc(x.counterpoint)}</p>` : ''}
+          ${x.firstStep ? `<p><b>First step.</b> ${esc(x.firstStep)}</p>` : ''}
+          ${x.confidence ? `<div class="tags"><span class="tag">Evidence: ${esc(x.confidence)}</span></div>` : ''}
+          ${sources(reading, x.citations)}
+        </div>`).join('')}</div>`;
+      const pick = document.getElementById('pick-reading');
+      if (pick) pick.onchange = () => { shownIndex = Number(pick.value); renderReading(); };
+      view.querySelectorAll('[data-tap]').forEach((b) => {
+        b.onclick = () => tap(reading.requestId, Number(b.dataset.i), b.dataset.tap, b.dataset.reason || '');
+      });
+      view.querySelectorAll('[data-copy]').forEach((b) => {
+        b.onclick = async () => {
+          try { await navigator.clipboard.writeText(reading.directions[Number(b.dataset.copy)].draft || ''); showToast('Draft copied. Edit and send it yourself.'); }
+          catch { showToast('Could not copy.', 'error'); }
+        };
+      });
+    }
 
-    document.getElementById('retry').addEventListener('click', load);
-    load();
+    const newsFilter = { source: '', text: '', show: 'all' };
+    function renderNews() {
+      const view = document.getElementById('view-news');
+      if (!data.news.length) {
+        view.innerHTML = `<div class="empty-state"><span class="e-icon">📰</span><div class="e-title">No news yet</div><div class="e-sub">News arrives with the linked folder or an imported news file.</div></div>`;
+        return;
+      }
+      const sourcesList = [...new Set(data.news.map((n) => n.source).filter(Boolean))].sort();
+      const text = newsFilter.text.toLowerCase();
+      const rows = data.news.filter((n) => {
+        const st = (data.items[n.url] || {}).state || 'new';
+        if (newsFilter.show === 'kept' && st !== 'kept') return false;
+        if (newsFilter.show === 'all' && st === 'dismissed') return false;
+        if (newsFilter.source && n.source !== newsFilter.source) return false;
+        return !text || (n.title + ' ' + n.summary).toLowerCase().includes(text);
+      }).slice(0, 200);
+      view.innerHTML = `
+        <div class="news-tools">
+          <input type="search" id="news-text" placeholder="Search" value="${esc(newsFilter.text)}" aria-label="Search news">
+          <select id="news-source" aria-label="Source"><option value="">All sources</option>${sourcesList.map((s) => `<option${s === newsFilter.source ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
+          <select id="news-show" aria-label="Show">
+            <option value="all"${newsFilter.show === 'all' ? ' selected' : ''}>Without hidden</option>
+            <option value="kept"${newsFilter.show === 'kept' ? ' selected' : ''}>Kept only</option>
+            <option value="every"${newsFilter.show === 'every' ? ' selected' : ''}>Everything</option>
+          </select>
+          <span class="status">${rows.length} shown</span>
+        </div>
+        <div class="news">${rows.map((n) => {
+          const st = (data.items[n.url] || {}).state || 'new';
+          return `<div class="news-row${st === 'dismissed' ? ' hidden-item' : ''}">
+            <div class="body"><a class="title" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>
+              <div class="sub">${esc(n.source)}${n.date ? ' · ' + esc(n.date) : ''}</div></div>
+            <div class="acts">
+              <button class="chip${st === 'kept' ? ' on' : ''}" type="button" data-mark="kept" data-url="${esc(n.url)}" title="Keep: Claude reads it first">★ Keep</button>
+              <button class="chip${st === 'counter-signal' ? ' on' : ''}" type="button" data-mark="counter-signal" data-url="${esc(n.url)}" title="Counter: evidence against a trend">⇄</button>
+              <button class="chip${st === 'dismissed' ? ' on' : ''}" type="button" data-mark="dismissed" data-url="${esc(n.url)}" title="Hide: Claude skips it">✕</button>
+            </div></div>`;
+        }).join('')}</div>`;
+      const textEl = document.getElementById('news-text');
+      textEl.oninput = () => {
+        newsFilter.text = textEl.value;
+        const pos = textEl.selectionStart;
+        renderNews();
+        const again = document.getElementById('news-text');
+        again.focus();
+        again.setSelectionRange(pos, pos);
+      };
+      document.getElementById('news-source').onchange = (e) => { newsFilter.source = e.target.value; renderNews(); };
+      document.getElementById('news-show').onchange = (e) => { newsFilter.show = e.target.value; renderNews(); };
+      view.querySelectorAll('[data-mark]').forEach((b) => { b.onclick = () => mark(b.dataset.url, b.dataset.mark); });
+    }
+
+    function render() { renderReading(); renderNews(); }
+
+    function showTab(name) {
+      document.getElementById('tab-reading').classList.toggle('on', name === 'reading');
+      document.getElementById('tab-news').classList.toggle('on', name === 'news');
+      document.getElementById('view-reading').classList.toggle('hidden', name !== 'reading');
+      document.getElementById('view-news').classList.toggle('hidden', name !== 'news');
+    }
+
+    document.getElementById('tab-reading').onclick = () => showTab('reading');
+    document.getElementById('tab-news').onclick = () => showTab('news');
+    document.getElementById('btn-folder').onclick = () => (folder ? scanFolder() : linkFolder());
+    document.getElementById('btn-import').onclick = () => document.getElementById('file-input').click();
+    document.getElementById('btn-save').onclick = saveTapsFile;
+    document.getElementById('file-input').onchange = (e) => { importFiles([...e.target.files]); e.target.value = ''; };
+
+    // For tests and the shell; no storage beyond signals-hub-v1.
+    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, render, get data() { return data; } };
+
+    render();
+    renderStatus();
+    if (supported()) {
+      idb('readonly', (s) => s.get(HANDLE)).then((handle) => { if (handle) useHandle(handle, false); });
+    } else {
+      document.getElementById('btn-folder').classList.add('hidden');
+    }
+    HubBootstrap.start('signals-hub');
   })();
   </script>
 </body>

@@ -7,11 +7,11 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
-- Signals Hub in the sidebar (Strategy & Decisions). It shows Signals Hub running on this computer (`127.0.0.1:8770`) inside the hub and follows the hub theme. When it is not running, the tool says so, with **Try again**.
+- Signals Hub in the sidebar (Strategy & Decisions). It reads readings and news from a linked folder or imported files, and keeps your Follow / Later / Not for me taps and Keep / Hide marks. It needs no other app. Taps go into the linked folder and the full backup.
 
 ### Security
 
-- The Content Security Policy now allows one more frame source on every page: `http://127.0.0.1:8770`, this computer only. Only the Signals Hub tool uses it. No hub data is sent to it.
+- The Content Security Policy is unchanged: Signals Hub reads files only and sends nothing.
 
 ### Changed
 

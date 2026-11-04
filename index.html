@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self' http://127.0.0.1:8770; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thinking Hub — Personal Workspace for Projects, Decisions & Risk</title>
   <meta name="description"
@@ -451,7 +451,7 @@
       { id: 'decision-hub', label: 'Decision Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
       { id: 'goals-hub', label: 'Goals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
       { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
-      { id: 'signals-hub', label: 'Signals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '📡', file: 'signals-hub.html', desc: 'See what is changing outside, follow proposed moves and prove them — runs on this computer' },
+      { id: 'signals-hub', label: 'Signals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '📡', file: 'signals-hub.html', desc: 'Read what is changing outside and tap the moves Claude proposes' },
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
       { id: 'tags-hub', label: 'Tags', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏷', file: 'tags-hub.html', desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere' },
@@ -2876,6 +2876,7 @@
       'capture-hub-v1': 'capture_inbox',
       'people-hub-v1': 'people',
       'hub-vault-bridge-v1': 'vault_bridge',
+      'signals-hub-v1': 'signals_hub',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -2896,6 +2897,7 @@
       'tags-hub.html': ['hub-tags-v1'],
       'capture-hub.html': ['capture-hub-v1'],
       'people-hub.html': ['people-hub-v1'],
+      'signals-hub.html': ['signals-hub-v1'],
     };
 
     // Storage keys included in each scope
@@ -2915,7 +2917,7 @@
         'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
         'tool-portfolio-v1', 'hub-tags-v1', 'capture-hub-v1', 'people-hub-v1',
-        'hub-vault-bridge-v1',
+        'hub-vault-bridge-v1', 'signals-hub-v1',
       ],
     };
     // P157: keys of deleted tools. Dropped from this browser once (after a

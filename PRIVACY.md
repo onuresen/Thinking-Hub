@@ -35,7 +35,6 @@ exports and imports a Full Backup.
 | `www.google.com` (favicon service) | A tool in Tool Portfolio, a stakeholder in Stakeholder Map, or a linked Tool node on Canvas Hub, has a URL set | The hostname of that URL, requested as an `<img>` to fetch its favicon | No — falls back to the local emoji/initials icon if blocked or unset |
 | `t0`–`t3`.`gstatic.com` | Same request as above — Google redirects the favicon endpoint to a per-domain static shard | The same hostname, carried in the redirect URL | No — same fallback applies |
 | User-entered URLs | User follows a saved resource link | Normal browser navigation metadata to that destination | No |
-| `127.0.0.1:8770` (this computer) | User opens the Signals Hub tool | A frame request to the user's own Signals Hub, running locally; nothing leaves the computer. The tool page sends the hub theme name (`dark`, `light` or `ink`) to that frame, nothing else | No — the tool shows "not running" if it is absent |
 
 The Open Graph and Twitter preview URLs in `index.html` may be fetched by
 social/link-preview crawlers when a public deployment URL is shared. They are
