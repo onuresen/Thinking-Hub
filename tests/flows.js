@@ -836,6 +836,50 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 18: Project Hub Compact display (P182) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const mk = (id, name, group) => ({ id, name, group, color: '#5b8def', status: 'active', desc: '', tasks: [{ id: id + 't', title: 'Draft', done: false, status: 'inprogress' }], members: [] });
+      HubStorage.set('project-hub-v1', { members: [], projects: [mk('a', 'Autodesk IS06', 'Industrial'), mk('b', 'CDI', 'Decision'), mk('c', 'Digital Census', 'Strategy'), mk('d', 'Akebono', '')] });
+      const sess = JSON.parse(localStorage.getItem('hub-session-v1') || '{}'); delete sess.projectDisplay; localStorage.setItem('hub-session-v1', JSON.stringify(sess));
+    });
+    await page.reload({ waitUntil: 'load' });
+    errors.length = 0; // the first load still saw thin sample data from earlier flows
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const before = await page.evaluate(() => ({ cards: document.querySelectorAll('.project-card').length, tiles: document.querySelectorAll('.compact-tile').length }));
+    check('flow18: Cards stay the default', before.cards === 4 && before.tiles === 0, JSON.stringify(before));
+    await click(page.locator('.ov-view-btn', { hasText: 'Compact' }));
+    const compact = await page.evaluate(() => ({
+      tiles: document.querySelectorAll('.compact-tile').length, jump: document.querySelectorAll('.ct-jump-chip').length,
+      saved: JSON.parse(localStorage.getItem('hub-session-v1') || '{}').projectDisplay,
+      data: Object.keys(HubStorage.get('project-hub-v1')).sort().join(','),
+    }));
+    check('flow18: Compact shows tiles and a Jump-to row; the choice is a per-browser view setting', compact.tiles === 4 && compact.jump === 4 && compact.saved === 'compact' && !/display/i.test(compact.data), JSON.stringify(compact));
+    await page.mouse.click(5, 5);
+    await page.keyboard.press('/');
+    await page.keyboard.type('census');
+    await page.waitForTimeout(450);
+    const found = await page.evaluate(() => ({ tiles: [...document.querySelectorAll('.compact-tile')].map((t) => t.querySelector('.ct-name').innerHTML) }));
+    check('flow18: "/" focuses search; matches are highlighted', found.tiles.length === 1 && /<mark>Census<\/mark>/.test(found.tiles[0]), JSON.stringify(found));
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    const opened = await page.evaluate(() => state.selectedProject);
+    check('flow18: Enter opens the first match', opened === 'c', String(opened));
+    await page.reload({ waitUntil: 'load' });
+    const kept = await page.evaluate(() => document.querySelectorAll('.compact-tile').length > 0 || document.querySelector('.view-title, h1') !== null);
+    check('flow18: the display choice survives a reload', await page.evaluate(() => JSON.parse(localStorage.getItem('hub-session-v1')).projectDisplay === 'compact') && kept);
+    check('flow18: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

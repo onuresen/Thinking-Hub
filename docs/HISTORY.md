@@ -4,6 +4,21 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 182 — Project Hub: Compact display~~ ✓ Done `[group: projects]`
+Onur (2026-11-05): he likes the cards, but with 46 projects one is hard to find. Wanted a second, slightly minimalist style that helps search — "not a boring flat list". Cards stay the default.
+- **▦ Cards / ▤ Compact** switch in the Overview filter bar. The choice is a per-browser view setting (`hub-session-v1.projectDisplay`), never project data.
+- **Compact tiles**, about four times as many per screen, in the same groups: the project color as a side bar, name, a small progress ring, status, open-task count, a risk badge, and the next thing (task in progress or next meeting). Done projects fade. Hover shows the description. Drag to reorder still works.
+- **Jump to** row with one chip per group (color, count) that scrolls to it.
+- **Search** (both styles): `/` focuses it, Enter opens the first match, Esc clears it. It now matches the group name too. Compact highlights the match in the name, or shows the matching part of the description.
+
+**Key decisions**
+- **Decision:** tiles in groups with a ring and a "next" line, not a table. **Why:** Onur asked for search help without a flat list; tiles keep the card's color and status at a glance. **Confidence:** med.
+- **Decision:** the display choice lives in `hub-session-v1`. **Why:** a view setting must not show up in backups or change files. **Confidence:** high.
+
+**Verified:** new flow18 (Cards default; real-mouse switch; Jump to; `/`, typing, highlight; Enter opens the match; choice survives reload) passes; smoke passes; flow6 fails as on `main`. Screenshots dark and light with 39 sample projects in 6 groups.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `tests/flows.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 181 — One place to write: Home box and `log:`~~ ✓ Done `[group: capture]`
 Onur (2026-11-05) had used neither Capture nor Journal much and asked about merging them. Decided: link, don't merge; give one easy place to write instead.
 - **Home writing box** under the greeting: type and press Enter. **Capture** (default) puts the line in the Capture Inbox; **Today's journal** adds "• HH:MM text" to today's Daily Log.
