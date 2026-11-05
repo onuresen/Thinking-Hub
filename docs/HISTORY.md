@@ -4,6 +4,21 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 178 — Capture is a buffer (Group 1)~~ ✓ Done `[group: capture]`
+From Copilot's Capture suggestion and the 2026-11-05 plan with Onur (vault `Roadmap.md` § Capture Hub as a buffer). Capture now, sort later.
+- **Parse & Route → Process.** Process saves every line to the Inbox with its label. "Send All" is gone; nothing is written to other tools.
+- Categories are labels, not destinations: the category menu no longer names a tool.
+- Capture never creates a project: the "📥 Capture" project code is removed. An existing one stays for Onur to clean up.
+- From the Inbox, one click still sends a question, decision, risk or learning to its tool. Tasks have no send button until Promote (Group 2) can pick an existing project.
+- Help Hub card rewritten to match.
+
+**Key decisions**
+- **Decision:** keep the per-card send for non-task kinds now; tasks wait for Promote. **Why:** a deliberate one-card click is fine; only tasks needed a project and so made the junk project. **Alternative:** remove all sending until Group 2. Rejected: a week without any way out of the Inbox. **Confidence:** med.
+
+**Verified:** new flow14 (real mouse: Process, Save to Inbox; no other key changes; no Capture project; task has no send button) passes; smoke passes; flow6 fails as on `main`.
+
+**Files:** `capture-hub.html`, `help-hub.html`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 177 — Signals Hub: your own signals (Mine)~~ ✓ Done `[group: integrations]`
 From Copilot's 2026-10-28 Signals Hub idea, reviewed with Onur 2026-11-05. He chose (1) own signals with a life cycle and (2) convergence counted from links; (3) "Act turns into real work" waits.
 - New place **Mine**: a short form (what you notice, where, why it may matter), lanes 👀 Watching · 🌱 Emerging · 🔥 Act, and Converted / Faded / All views. Stored in `signals-hub-v1.signals` with the P90 timestamps and `stateAt`.

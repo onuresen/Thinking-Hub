@@ -17,6 +17,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Capture: **Process** replaces Parse & Route. Every line goes to the Inbox with its label; nothing is sent to other tools, and Capture no longer creates a "📥 Capture" project. From the Inbox you can still send a question, decision, risk or learning on, one card at a time.
 - Project panel and Tool Portfolio: more than two Canvas boards fold into one "▦ On N boards" chip. Click it to see them.
 - Settings has three tabs: **Export & Import** (opens first), **Integrations**, **Snapshots & Reset**. Daily actions come first; storage, snapshots and the reset live in the last tab.
 

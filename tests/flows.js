@@ -641,6 +641,47 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 14: Capture is a buffer (P178) ──
+  // Process saves every line to the Inbox and writes nothing elsewhere.
+  // Capture never creates a project; tasks have no send button.
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    const before = await page.evaluate(() => {
+      HubStorage.set('capture-hub-v1', { inbox: [] });
+      HubStorage.set('project-hub-v1', { projects: [{ id: 'p1', name: 'CDI', tasks: [] }] });
+      HubStorage.set('decision-hub-v1', []);
+      return { projects: JSON.stringify(HubStorage.get('project-hub-v1')), decisions: JSON.stringify(HubStorage.get('decision-hub-v1')) };
+    });
+    await page.reload({ waitUntil: 'load' });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    await page.fill('#dump-area', 'Update Digital Census with the feedback\nShould we hire a contractor?\nDecided to use Postgres');
+    await page.dispatchEvent('#dump-area', 'input');
+    const label = await page.textContent('#btn-parse');
+    await click(page.locator('#btn-parse'));
+    await click(page.locator('#btn-save-inbox'));
+    await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({
+      inbox: (HubStorage.get('capture-hub-v1').inbox || []).map((i) => i.cat).sort(),
+      projects: JSON.stringify(HubStorage.get('project-hub-v1')), decisions: JSON.stringify(HubStorage.get('decision-hub-v1')),
+      taskButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Task/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
+      questionButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Question/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
+      sendAll: typeof window.sendAll,
+    }));
+    check('flow14: the button says Process', /Process/.test(label) && !/Route/.test(label), label);
+    check('flow14: Process saves every line to the Inbox', JSON.stringify(r.inbox) === JSON.stringify(['decision', 'question', 'task']), JSON.stringify(r.inbox));
+    check('flow14: nothing is written to other tools; no Capture project', r.projects === before.projects && r.decisions === before.decisions && r.sendAll === 'undefined', r.projects);
+    check('flow14: tasks have no send button; questions keep theirs', r.taskButtons[0] === 0 && r.questionButtons[0] === 1, JSON.stringify(r));
+    check('flow14: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

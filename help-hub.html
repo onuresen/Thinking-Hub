@@ -217,12 +217,12 @@ const TOOLS = [
   {
     id: 'capture-hub', label: 'Capture Hub', icon: '⊞', group: 'Daily Work', wg: 'Daily Work',
     file: 'capture-hub.html',
-    desc: 'Brain dump everything at once — one line per thought, auto-sorted to the right tool.',
+    desc: 'Brain dump everything at once — one line per thought, saved to an Inbox to sort later.',
     frameworks: ['GTD'],
     fwIds: ['GTD'],
-    whenToUse: 'When your head is full and you want zero friction getting it out — before a meeting, at the start of the day, or after a flood of ideas. Type fast, don\'t stop to categorize; let the classifier do that.',
-    features: ['Free-text dump area — one thought per line, no forms', 'Auto-classifies each line as task / decision / risk / question / event / idea / learning / note', 'Live per-line type gutter so you can sanity-check before sending', 'One click routes every line to its matching tool (Project Hub, Decision Hub, Risk Register, Schedule, Idea Swiper, Learning Hub, Journal Hub)', 'Nothing is lost to a "where did I write that down" search later'],
-    sample: 'Monday morning brain dump: "fix the broken CI pipeline", "decided to use Postgres over Mongo", "risk: vendor contract expires in March", "should we hire a contractor?", "meeting with finance Thursday 2pm", "idea: what if onboarding was a checklist?". One parse pass classifies all six lines correctly — task, decision, risk, question, event, idea — and routes each to its tool with one click.'
+    whenToUse: 'When your head is full and you want zero friction getting it out — before a meeting, at the start of the day, or after a flood of ideas. Type fast, don\'t stop to decide where it belongs. Capture now, sort later.',
+    features: ['Free-text dump area — one thought per line, no forms', 'Auto-classifies each line as task / decision / risk / question / event / idea / learning / note', 'Live per-line type gutter', 'Process saves every line to the Inbox with its label; nothing is written to other tools', 'From the Inbox, one click sends a question, decision, risk or learning to its tool when you are ready', 'Capture never creates a project'],
+    sample: 'Monday morning brain dump: "fix the broken CI pipeline", "decided to use Postgres over Mongo", "risk: vendor contract expires in March", "should we hire a contractor?", "meeting with finance Thursday 2pm", "idea: what if onboarding was a checklist?". One Process pass labels all six lines — task, decision, risk, question, event, idea — and saves them to the Inbox. Later you send the decision and the risk on, and keep the rest.'
   },
   {
     id: 'project-hub', label: 'Project Hub', icon: '◈', group: 'Daily Work', wg: 'Daily Work',
