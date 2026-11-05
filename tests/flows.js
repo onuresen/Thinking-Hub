@@ -745,6 +745,54 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 16: read-only project hints and nicknames (P180) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const now = new Date().toISOString();
+      HubStorage.set('project-hub-v1', { projects: [
+        { id: 'p1', name: 'Digital Census', status: 'active', tasks: [] },
+        { id: 'p2', name: 'CDI (Construction Decision Intelligence)', status: 'active', tasks: [] },
+        { id: 'p3', name: 'bSI Tokyo 2026', status: 'active', tasks: [] },
+        { id: 'p4', name: 'Akebono', status: 'active', tasks: [] },
+        { id: 'p5', name: 'ONES', status: 'active', tasks: [] },
+      ] });
+      HubStorage.set('capture-hub-v1', { inbox: [
+        { id: 'i1', text: 'Update Digital Census with 部会 feedback', cat: 'task', capturedAt: now },
+        { id: 'i2', text: 'continue work on the summit report', cat: 'task', capturedAt: now },
+        { id: 'i3', text: 'Town Reboot slides for Friday', cat: 'task', capturedAt: now },
+        { id: 'i4', text: 'the cdi of things and ONESIE jokes', cat: 'note', capturedAt: now },
+        { id: 'i5', text: 'Talk on construction decision intelligence', cat: 'note', capturedAt: now },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const before = await page.evaluate(() => JSON.stringify(HubStorage.get('project-hub-v1')));
+    await click(page.locator('.nick-btn'));
+    await page.fill('#nick-p3', 'bSI, summit');
+    await page.fill('#nick-p4', 'Town Reboot、タウンリブート');
+    await click(page.locator('#nick-save'));
+    await page.waitForTimeout(100);
+    const hints = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.ic-card')].map((c) => [c.dataset.id, (c.querySelector('.ic-likely b') || {}).textContent || ''])));
+    check('flow16: project names give hints; short names match whole words only', hints.i1 === 'Digital Census' && hints.i5 === 'CDI (Construction Decision Intelligence)' && hints.i4 === '', JSON.stringify(hints));
+    check('flow16: nicknames saved in the editor give hints', hints.i2 === 'bSI Tokyo 2026' && hints.i3 === 'Akebono', JSON.stringify(hints));
+    await click(page.locator('.ic-card[data-id="i3"] .ic-act', { hasText: 'Promote' }));
+    const first = await page.evaluate(() => { const o = document.querySelector('.pm-opt'); return { text: o.textContent, likely: o.classList.contains('likely') }; });
+    await page.keyboard.press('Escape');
+    const r = await page.evaluate(() => ({ projects: JSON.stringify(HubStorage.get('project-hub-v1')), nick: HubStorage.get('capture-hub-v1').nicknames }));
+    check('flow16: Promote lists the likely project first', first.likely && /Akebono/.test(first.text), JSON.stringify(first));
+    check('flow16: hints write nothing; nicknames are stored in Capture', r.projects === before && JSON.stringify(r.nick.p4) === JSON.stringify(['Town Reboot', 'タウンリブート']), JSON.stringify(r.nick));
+    check('flow16: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

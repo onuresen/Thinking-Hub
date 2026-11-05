@@ -448,6 +448,27 @@
     .pm-opt small { color: var(--text3); margin-left: auto; font-size: 0.68rem; }
     .pm-none { font-size: 0.75rem; color: var(--text3); padding: 0.3rem 0.55rem; }
 
+    /* Project hints + nicknames (P180) */
+    .ic-likely { display: block; margin-top: 3px; font-size: 0.7rem; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ic-meta-row { flex-wrap: wrap; }
+    .ic-life, .ic-time { white-space: nowrap; }
+    .ic-likely b { color: var(--text2); font-weight: 600; }
+    .pm-opt.likely { background: var(--accent-dim); }
+    .nick-btn { margin-left: auto; background: none; border: none; color: var(--text3); font-size: 0.7rem; cursor: pointer; font-family: var(--font-body); }
+    .nick-btn:hover { color: var(--accent); }
+    .nick-modal { max-width: 560px; max-height: 80vh; display: flex; flex-direction: column; gap: 12px; }
+    .nick-modal h2 { font: 600 1.05rem var(--font-display); }
+    .nick-modal p { font-size: 0.8rem; color: var(--text2); line-height: 1.5; }
+    .nick-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+    .nick-row { display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; }
+    .nick-row label { font-size: 0.8rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nick-row input {
+      background: var(--surface); border: 1px solid var(--border1); border-radius: var(--r-sm);
+      color: var(--text); font: 0.8rem var(--font-body); padding: 6px 9px; width: 100%;
+    }
+    .nick-row input:focus { outline: none; border-color: var(--accent); }
+    .nick-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
     /* ── Empty states ────────────────────────────────────────────────── */
     .cap-empty {
       flex: 1; display: flex; flex-direction: column;
@@ -543,6 +564,7 @@
     <div class="col-head">
       <span class="col-label">Inbox</span>
       <span class="inbox-badge" id="inbox-badge"></span>
+      <button class="nick-btn" type="button" onclick="openNicknames()" title="Short names that point to a project">Project nicknames</button>
     </div>
 
     <div class="qc-area">
@@ -559,6 +581,18 @@
     <div class="inbox-list" id="inbox-list"></div>
   </div>
 
+</div>
+
+<div class="ui-modal-overlay" id="nick-overlay" aria-hidden="true">
+  <div class="ui-modal nick-modal" role="dialog" aria-modal="true" aria-labelledby="nick-title">
+    <h2 id="nick-title">Project nicknames</h2>
+    <p>Words that point to a project, comma-separated. A capture that uses one shows "Likely: project". It is only a hint: nothing is written until you Promote. Project names count already.</p>
+    <div class="nick-list" id="nick-list"></div>
+    <div class="nick-actions">
+      <button class="btn btn-ghost" type="button" onclick="closeNicknames()">Cancel</button>
+      <button class="btn btn-primary" type="button" id="nick-save" onclick="saveNicknames()">Save</button>
+    </div>
+  </div>
 </div>
 
 <script src="hub-storage.js"></script>
@@ -939,6 +973,82 @@ function markDone(itemId) {
   renderInbox();
 }
 
+// ── Project hints (P180) ────────────────────────────────────────────────
+// Read-only. A project's name, the parts of "Name (Long name)", and Onur's
+// nicknames (capture-hub-v1.nicknames: { projectId: ["bSI", "summit"] }).
+// One short or capitalised word ("CDI", "ONES") must match exactly, as a whole
+// word; longer names ignore case. Japanese has no spaces: a plain contains.
+function projectTerms(project, nicknames) {
+  const name = String(project.name || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  const terms = [name];
+  const m = /^(.*?)\s*\((.+)\)\s*$/.exec(name);
+  if (m) terms.push(m[1], m[2]);
+  (nicknames[project.id] || []).forEach(n => terms.push(n));
+  return [...new Set(terms.map(t => String(t).trim()).filter(t => t.length >= 2))];
+}
+function termHit(term, text) {
+  if (/[\u3040-\u30ff\u3400-\u9fff]/.test(term)) return text.includes(term);
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const caseSensitive = !/\s/.test(term) && (term.length <= 4 || /[A-Z].*[A-Z]/.test(term));
+  return new RegExp('(^|[^\\p{L}\\p{N}])' + esc + '($|[^\\p{L}\\p{N}])', caseSensitive ? 'u' : 'iu').test(text);
+}
+let _hintCache = null;
+function likelyProjects(text) {
+  if (!_hintCache) {
+    const nick = capData().nicknames || {};
+    _hintCache = activeProjects().map(p => ({ p, terms: projectTerms(p, nick) }));
+  }
+  const hits = [];
+  _hintCache.forEach(({ p, terms }) => {
+    const best = terms.filter(t => termHit(t, text)).sort((a, b) => b.length - a.length)[0];
+    if (best) hits.push({ project: p, term: best });
+  });
+  return hits.sort((a, b) => b.term.length - a.term.length).slice(0, 2);
+}
+
+function openNicknames() {
+  const nick = capData().nicknames || {};
+  const list = document.getElementById('nick-list');
+  const projects = activeProjects();
+  list.innerHTML = projects.length ? projects.map(p => `
+    <div class="nick-row"><label for="nick-${HubUtils.esc(p.id)}" title="${HubUtils.esc(p.name)}">${HubUtils.esc(p.name || 'Untitled project')}</label>
+    <input id="nick-${HubUtils.esc(p.id)}" data-project="${HubUtils.esc(p.id)}" value="${HubUtils.esc((nick[p.id] || []).join(', '))}" placeholder="e.g. short name, old name, 略称"></div>`).join('')
+    : '<p>No active project yet.</p>';
+  const ov = document.getElementById('nick-overlay');
+  ov.classList.add('is-open');
+  ov.setAttribute('aria-hidden', 'false');
+  window._nickUntrap = HubUtils.trapFocus ? HubUtils.trapFocus(ov) : null;
+  const first = list.querySelector('input');
+  if (first) first.focus();
+}
+function closeNicknames() {
+  const ov = document.getElementById('nick-overlay');
+  ov.classList.remove('is-open');
+  ov.setAttribute('aria-hidden', 'true');
+  if (window._nickUntrap) { window._nickUntrap(); window._nickUntrap = null; }
+}
+function saveNicknames() {
+  const raw = capData();
+  const nick = {};
+  document.querySelectorAll('#nick-list input[data-project]').forEach(inp => {
+    const words = inp.value.split(/[,、]/).map(w => w.trim()).filter(w => w.length >= 2);
+    if (words.length) nick[inp.dataset.project] = [...new Set(words)];
+  });
+  raw.nicknames = nick;
+  capSave(raw);
+  _hintCache = null;
+  closeNicknames();
+  renderInbox();
+  if (window.showToast) showToast('Nicknames saved', 'success');
+}
+document.getElementById('nick-overlay').addEventListener('mousedown', e => { if (e.target.id === 'nick-overlay') closeNicknames(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('nick-overlay').classList.contains('is-open')) closeNicknames();
+  closePromote();
+});
+HubStorage.subscribe && HubStorage.subscribe('project-hub-v1', () => { _hintCache = null; });
+
 // ── Promote (P179) ──────────────────────────────────────────────────────
 // The only way a thought leaves Capture for another tool. Only to things
 // that exist; a task needs an existing project. Capture never creates one.
@@ -957,15 +1067,16 @@ function openPromote(itemId, btn) {
   const raw = capData();
   const item = raw.inbox.find(it => it.id === itemId);
   if (!item) return;
-  const projects = activeProjects();
+  const likely = likelyProjects(item.text).map(h => h.project.id);
+  const projects = activeProjects().sort((a, b) => (likely.includes(b.id) ? 1 : 0) - (likely.includes(a.id) ? 1 : 0));
   const opt = (target, icon, label, hint) =>
-    `<div class="pm-opt" role="menuitem" tabindex="0" data-target="${HubUtils.esc(target)}">${icon} ${HubUtils.esc(label)}${hint ? `<small>${HubUtils.esc(hint)}</small>` : ''}</div>`;
+    `<div class="pm-opt${likely.includes(target.slice(8)) && target.startsWith('project:') ? ' likely' : ''}" role="menuitem" tabindex="0" data-target="${HubUtils.esc(target)}">${icon} ${HubUtils.esc(label)}${hint ? `<small>${HubUtils.esc(hint)}</small>` : ''}</div>`;
   const menu = document.createElement('div');
   menu.className = 'pm-menu';
   menu.setAttribute('role', 'menu');
   menu.innerHTML = `
     <div class="pm-head">Task in a project</div>
-    ${projects.length ? projects.slice(0, 30).map(p => opt('project:' + p.id, '✓', p.name || 'Untitled project', '')).join('') : '<div class="pm-none">No active project. Keep it here until one fits.</div>'}
+    ${projects.length ? projects.slice(0, 30).map(p => opt('project:' + p.id, '✓', p.name || 'Untitled project', likely.includes(p.id) ? 'likely' : '')).join('') : '<div class="pm-none">No active project. Keep it here until one fits.</div>'}
     <div class="pm-head">Somewhere else</div>
     ${opt('signal', '📡', 'Signal', 'Signals Hub · Mine')}
     ${opt('decision', '⚖', item.cat === 'question' ? 'Open question' : 'Decision', 'Decision Hub')}
@@ -1098,6 +1209,7 @@ function inboxCard(item) {
         <button class="ic-life${item.life ? '' : ' suggested'}" type="button" title="${item.life ? 'Lifespan' : 'Suggested lifespan'} — click to change" onclick="setLife('${item.id}')">${LIFE[life].icon} ${LIFE[life].label}</button>
         <span class="ic-time">${relativeTime(item.capturedAt)}</span>
       </div>
+      ${(() => { const h = likelyProjects(item.text); return h.length ? `<span class="ic-likely" title="A hint from the project name or a nickname. Nothing is written until you Promote.">Likely: <b>${h.map(x => HubUtils.esc(x.project.name)).join(', ')}</b></span>` : ''; })()}
     </div>
     <div class="ic-actions">
       <button class="ic-act" type="button" title="Dealt with: clear it" onclick="markDone('${item.id}')">✓ Done</button>

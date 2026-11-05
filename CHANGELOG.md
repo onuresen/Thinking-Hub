@@ -17,6 +17,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Capture: a card may show "Likely: project" from project names and your **Project nicknames** (editable in the Inbox). The likely project comes first in Promote. A hint never changes anything.
 - Capture Inbox: each thought gets a lifespan (⚡ Quick, ◆ Develop, ○ Reference; suggested, change with a click) and **Done · Keep · Promote**. Promote moves it to a task in an existing project, a Signal, a decision, a risk, a learning or today's journal. The Daily Log shows what the day's captures became; the Weekly Review shows what is still waiting.
 - Capture: **Process** replaces Parse & Route. Every line goes to the Inbox with its label; nothing is sent to other tools, and Capture no longer creates a "📥 Capture" project. From the Inbox you can still send a question, decision, risk or learning on, one card at a time.
 - Project panel and Tool Portfolio: more than two Canvas boards fold into one "▦ On N boards" chip. Click it to see them.

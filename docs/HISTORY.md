@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 180 — Capture: read-only project hints and nicknames (Group 3)~~ ✓ Done `[group: capture]`
+Follows P179. Last group of the Capture plan (vault `Roadmap.md`).
+- Each Inbox card may show **"Likely: Digital Census"**. It comes from project names (and both parts of "CDI (Construction Decision Intelligence)") and from **Project nicknames**.
+- **Project nicknames** (button in the Inbox head): one line per active project, comma-separated words, Japanese too (、 works). Stored in `capture-hub-v1.nicknames` (backed up with Capture).
+- Matching: a short or capitalised single word ("CDI", "ONES", "bSI") matches only as a whole word with the same case; longer names ignore case; Japanese matches as plain text.
+- The likely project comes first in **Promote**, marked "likely". A hint never writes anything.
+
+**Key decisions**
+- **Decision:** nicknames live in Capture, edited there. **Why:** only Capture uses them; no new key, no new tool. **Alternative:** a field on each project in Project Hub. Rejected for now: touches the biggest tool for a hint. **Revisit when:** another tool needs project nicknames. **Confidence:** med.
+
+**Verified:** new flow16 (nickname editor with real typing, hints for names and nicknames, "cdi"/"ONESIE" do not match, likely first in Promote, nothing written) passes; smoke passes; flow6 fails as on `main`.
+
+**Files:** `capture-hub.html`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 179 — Capture Inbox: lifespan, Done · Keep · Promote, Journal links (Group 2)~~ ✓ Done `[group: capture]`
 Follows P178. Plan in vault `Roadmap.md` § Capture Hub as a buffer; Capture ↔ Journal: link, don't merge (Onur 2026-11-05).
 - **Lifespan** per Inbox item: ⚡ Quick, ◆ Develop, ○ Reference. A rule suggests one (dashed chip); a click cycles it and stores it. Old items get a suggestion too, nothing is rewritten. Filter chips per lifespan.
