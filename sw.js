@@ -14,7 +14,7 @@
  * NOTE: when a new file is added to the app, add it to PRECACHE below.
  */
 
-const CACHE = 'thinking-hub-v51';
+const CACHE = 'thinking-hub-v52';
 
 const PRECACHE = [
   './index.html',
@@ -105,7 +105,11 @@ const PRECACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
+    // cache: 'reload' skips the browser's HTTP cache, so a new version never
+    // precaches an older copy of a file (P182: new page + old stylesheet).
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -150,7 +154,9 @@ async function staleWhileRevalidate(event, req) {
       cached = await cache.match(url.pathname + 'index.html', { ignoreSearch: true });
     }
   }
-  const update = fetch(req)
+  // 'no-cache' asks the server whether the file changed instead of taking the
+  // browser's HTTP-cached copy, so the refresh really brings the new file.
+  const update = fetch(req, { cache: 'no-cache' })
     .then((res) => {
       if (res && res.ok) {
         // store under the search-stripped URL so ?v= busters hit one entry
