@@ -73,11 +73,11 @@ window.HubSearch = (() => {
     return results;
   }
 
-  // Quick actions: `task: …`, `capture: …`, `decide: …`, or bare `focus`.
+  // Quick actions: `task: …`, `capture: …`, `log: …`, `decide: …`, or bare `focus`.
   // Parsed first and shown as a distinct row above search results.
   function parseAction(query) {
     const q = (query || '').trim();
-    const m = q.match(/^(task|capture|decide)\s*:\s*(.+)$/i);
+    const m = q.match(/^(task|capture|decide|log)\s*:\s*(.+)$/i);
     if (m) return { type: m[1].toLowerCase(), text: m[2].trim() };
     if (/^focus\s*:?\s*$/i.test(q)) return { type: 'focus', text: '' };
     return null;
@@ -89,6 +89,7 @@ window.HubSearch = (() => {
       case 'task': return { icon: '✓', label: `New task: “${t}”`, sub: '→ Capture Hub' };
       case 'capture': return { icon: '⊕', label: `Capture: “${t}”`, sub: '→ Capture Hub' };
       case 'decide': return { icon: '⊖', label: `Log decision: “${t}”`, sub: '→ Decision Hub' };
+      case 'log': return { icon: '📓', label: `Today's journal: “${t}”`, sub: '→ Daily Log' };
       case 'focus': return { icon: '◷', label: 'Open Journal', sub: '→ Journal Hub' };
       default: return { icon: '›', label: t, sub: '' };
     }
@@ -105,7 +106,7 @@ window.HubSearch = (() => {
 
     if (!_results.length) {
       list.innerHTML = !query
-        ? '<div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>'
+        ? '<div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>log:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>'
         : '<div class="hs-empty">No results found for "' + _esc(query) + '"</div>';
       return;
     }
@@ -203,16 +204,11 @@ window.HubSearch = (() => {
     const toast = (m) => { if (typeof window.showToast === 'function') window.showToast(m); };
     try {
       if (action.type === 'task' || action.type === 'capture') {
-        const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
-        if (!Array.isArray(raw.inbox)) raw.inbox = [];
-        raw.inbox.unshift({
-          id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-          text: action.text,
-          cat: action.type === 'task' ? 'task' : null,
-          capturedAt: ts,
-        });
-        HubStorage.set('capture-hub-v1', raw);
-        toast('Captured — route it in Capture Hub');
+        writeCapture(action.text, action.type === 'task' ? 'task' : null);
+        toast('Captured — sort it later in Capture');
+      } else if (action.type === 'log') {
+        writeLog(action.text);
+        toast("Added to today's journal");
       } else if (action.type === 'decide') {
         const decisions = HubStorage.get('decision-hub-v1') || [];
         const arr = Array.isArray(decisions) ? decisions : [];
@@ -229,6 +225,32 @@ window.HubSearch = (() => {
     }
   }
 
+  // One place to write (P181): Cmd+K and the Home box share these.
+  // A capture lands in the Capture Inbox; Capture labels it when it opens.
+  function writeCapture(text, cat) {
+    text = String(text || '').trim();
+    if (!text) return false;
+    const raw = HubStorage.get('capture-hub-v1') || {};
+    if (!Array.isArray(raw.inbox)) raw.inbox = [];
+    raw.inbox.unshift({ id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), text, cat: cat || null, capturedAt: new Date().toISOString() });
+    HubStorage.set('capture-hub-v1', raw);
+    return true;
+  }
+  // Same line format as Capture's "Promote → Today's journal".
+  function writeLog(text) {
+    text = String(text || '').trim();
+    if (!text) return false;
+    const lh = HubStorage.get('log-hub-v1') || {};
+    if (!lh.entries) lh.entries = {};
+    const day = HubUtils.todayLocal();
+    const e = lh.entries[day] || (lh.entries[day] = { mood: 0, text: '' });
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    e.text = (e.text ? e.text.replace(/\s+$/, '') + '\n' : '') + `• ${time} ${text}`;
+    e.updatedAt = new Date().toISOString();
+    HubStorage.set('log-hub-v1', lh);
+    return true;
+  }
+
   const _esc = typeof HubUtils !== 'undefined' ? HubUtils.esc
     : str => (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -243,7 +265,7 @@ window.HubSearch = (() => {
           <input type="text" id="hub-search-input" placeholder="Search Thinking Hub... (Cmd+K)" autocomplete="off" spellcheck="false">
         </div>
         <div id="hub-search-list">
-          <div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>
+          <div class="hs-empty">Type to search — or run a quick action:<br><b>task:</b> …&nbsp;&nbsp;<b>capture:</b> …&nbsp;&nbsp;<b>log:</b> …&nbsp;&nbsp;<b>decide:</b> …&nbsp;&nbsp;<b>focus</b></div>
         </div>
         <div class="hs-footer">
           Navigate with <span>↑</span> <span>↓</span> and press <span>Enter</span> to select
@@ -334,5 +356,5 @@ window.HubSearch = (() => {
     document.head.appendChild(style);
   }
 
-  return { init, openSearch, closeSearch, search: doSearch };
+  return { init, openSearch, closeSearch, search: doSearch, writeCapture, writeLog };
 })();

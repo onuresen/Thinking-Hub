@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 181 — One place to write: Home box and `log:`~~ ✓ Done `[group: capture]`
+Onur (2026-11-05) had used neither Capture nor Journal much and asked about merging them. Decided: link, don't merge; give one easy place to write instead.
+- **Home writing box** under the greeting: type and press Enter. **Capture** (default) puts the line in the Capture Inbox; **Today's journal** adds "• HH:MM text" to today's Daily Log.
+- **Cmd+K `log: …`** does the same as the journal option. Help text lists it.
+- `HubSearch.writeCapture` / `writeLog` are the one writer for both. Capture labels a line that arrives without one when it opens.
+- `sw.js` cache v51 (P176–P181 changed several app files).
+
+**Key decisions**
+- **Decision:** a box on Home, not a merged Capture + Journal tool. **Why:** Onur wants one easy place to write; a merge would mix a buffer (should empty) with a record (should grow). **Alternative:** merge the tools; rejected as forced. **Confidence:** med.
+
+**Verified:** new flow17 (real typing: Home box to Capture, switch to journal, `log:` in Cmd+K; Capture labels the line) passes; smoke passes; flow6 fails as on `main`.
+
+**Files:** `index.html`, `styles/index.css`, `hub-search.js`, `capture-hub.html`, `sw.js`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 180 — Capture: read-only project hints and nicknames (Group 3)~~ ✓ Done `[group: capture]`
 Follows P179. Last group of the Capture plan (vault `Roadmap.md`).
 - Each Inbox card may show **"Likely: Digital Census"**. It comes from project names (and both parts of "CDI (Construction Decision Intelligence)") and from **Project nicknames**.

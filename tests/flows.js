@@ -793,6 +793,49 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 17: one place to write (P181) ──
+  // The Home box sends a line to Capture or to today's journal; `log:` in
+  // Cmd+K does the same as the journal option; Capture labels the line.
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('capture-hub-v1', { inbox: [] });
+      HubStorage.set('log-hub-v1', { entries: {} });
+      if (typeof switchDashView === 'function') switchDashView('today');
+      if (typeof closeApp === 'function') closeApp();
+    });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    await click(page.locator('#home-write-text'));
+    await page.keyboard.type('Follow up Bay Area Council');
+    await page.keyboard.press('Enter');
+    await click(page.locator('.hw-opt[data-to="log"]'));
+    await page.keyboard.type('Good talk on IDS today');
+    await page.keyboard.press('Enter');
+    await page.evaluate(() => HubSearch.openSearch());
+    await page.fill('#hub-search-input', 'log: Shipped the Capture plan');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({
+      inbox: (HubStorage.get('capture-hub-v1').inbox || []).map((i) => i.text),
+      log: ((HubStorage.get('log-hub-v1').entries || {})[HubUtils.todayLocal()] || {}).text || '',
+      box: document.getElementById('home-write-text').value,
+    }));
+    check('flow17: the Home box captures by default', JSON.stringify(r.inbox) === JSON.stringify(['Follow up Bay Area Council']), JSON.stringify(r.inbox));
+    check('flow17: the journal option and log: add timed lines to today', /^• \d\d:\d\d Good talk on IDS today\n• \d\d:\d\d Shipped the Capture plan$/.test(r.log) && r.box === '', r.log);
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    const label = await page.evaluate(() => document.querySelector('.ic-card .ic-cat-label').textContent);
+    check('flow17: Capture labels a line that came from Home', label === 'Task', label);
+    check('flow17: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

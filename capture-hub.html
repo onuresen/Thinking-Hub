@@ -927,6 +927,8 @@ function capData() {
   const raw = HubStorage.get('capture-hub-v1') || {};
   if (!Array.isArray(raw.inbox)) raw.inbox = [];
   if (!Array.isArray(raw.log)) raw.log = [];
+  // Lines from Home or Cmd+K arrive without a label; give them one here.
+  raw.inbox.forEach(it => { if (!it.cat) it.cat = classify(it.text || '') || 'note'; });
   return raw;
 }
 function capSave(raw) {

@@ -118,6 +118,15 @@
         <h1 class="home-greeting" id="greeting">Good morning.</h1>
         <div class="home-sub" style="margin-bottom:16px">What are we working on?</div>
 
+        <!-- P181: one place to write. Capture (sort later) or today's journal. -->
+        <form class="home-write" id="home-write" autocomplete="off">
+          <input id="home-write-text" type="text" placeholder="Something on your mind? Type it and press Enter." aria-label="Write a thought">
+          <div class="hw-to" role="group" aria-label="Where it goes">
+            <button type="button" class="hw-opt on" data-to="capture" title="Into the Capture Inbox, to sort later">Capture</button>
+            <button type="button" class="hw-opt" data-to="log" title="Into today's Daily Log">Today's journal</button>
+          </div>
+        </form>
+
         <div class="dash-tabs">
           <button class="dash-tab" id="dash-tab-today" onclick="switchDashView('today')">Today</button>
           <button class="dash-tab" id="dash-tab-overview" onclick="switchDashView('overview')">Overview</button>
@@ -2233,6 +2242,32 @@
       container.innerHTML = pulseHTML;
     }
     function pulseNav(tool, id) { _pendingHighlight = id || null; openApp(tool); }
+
+    // ── Home writing box (P181) ─────────────────────────────────────────
+    // One place to write without choosing a tool first. Capture is the
+    // default; "Today's journal" adds a timed line to the Daily Log.
+    (function homeWrite() {
+      const form = document.getElementById('home-write');
+      if (!form) return;
+      let to = 'capture';
+      form.querySelectorAll('.hw-opt').forEach((b) => {
+        b.addEventListener('click', () => {
+          to = b.dataset.to;
+          form.querySelectorAll('.hw-opt').forEach((x) => x.classList.toggle('on', x === b));
+          document.getElementById('home-write-text').focus();
+        });
+      });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('home-write-text');
+        const text = input.value.trim();
+        if (!text || typeof HubSearch === 'undefined') return;
+        const ok = to === 'log' ? HubSearch.writeLog(text) : HubSearch.writeCapture(text);
+        if (!ok) return;
+        input.value = '';
+        if (typeof showToast === 'function') showToast(to === 'log' ? "Added to today's journal" : 'Captured — sort it later in Capture');
+      });
+    })();
 
     function switchDashView(v) {
       if (v !== 'today') v = 'overview'; // old saved 'exec' / 'analytics' land on Overview
