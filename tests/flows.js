@@ -670,15 +670,78 @@ function startServer() {
     const r = await page.evaluate(() => ({
       inbox: (HubStorage.get('capture-hub-v1').inbox || []).map((i) => i.cat).sort(),
       projects: JSON.stringify(HubStorage.get('project-hub-v1')), decisions: JSON.stringify(HubStorage.get('decision-hub-v1')),
-      taskButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Task/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
-      questionButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Question/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
+      oldSend: document.querySelectorAll('.ic-route-btn').length,
+      promote: [...document.querySelectorAll('.ic-card')].map((c) => [...c.querySelectorAll('.ic-act')].some((x) => /Promote/.test(x.textContent))),
       sendAll: typeof window.sendAll,
     }));
     check('flow14: the button says Process', /Process/.test(label) && !/Route/.test(label), label);
     check('flow14: Process saves every line to the Inbox', JSON.stringify(r.inbox) === JSON.stringify(['decision', 'question', 'task']), JSON.stringify(r.inbox));
     check('flow14: nothing is written to other tools; no Capture project', r.projects === before.projects && r.decisions === before.decisions && r.sendAll === 'undefined', r.projects);
-    check('flow14: tasks have no send button; questions keep theirs', r.taskButtons[0] === 0 && r.questionButtons[0] === 1, JSON.stringify(r));
+    check('flow14: no direct send buttons; every card has Promote (P179)', r.oldSend === 0 && r.promote.length === 3 && r.promote.every(Boolean), JSON.stringify(r));
     check('flow14: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 15: Inbox lifespan, Done · Keep · Promote, Journal links (P179) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const now = new Date().toISOString();
+      HubStorage.set('project-hub-v1', { projects: [{ id: 'p1', name: 'CDI', status: 'active', tasks: [] }, { id: 'p2', name: 'Old', status: 'done', tasks: [] }] });
+      HubStorage.set('signals-hub-v1', { signals: [] });
+      HubStorage.set('log-hub-v1', { entries: {} });
+      HubStorage.set('capture-hub-v1', { inbox: [
+        { id: 'c1', text: 'Update Digital Census with the feedback', cat: 'task', capturedAt: now },
+        { id: 'c2', text: 'Geometry generation readiness as its own theme', cat: 'idea', capturedAt: now },
+        { id: 'c3', text: 'Bay Area Council follow-up', cat: 'task', capturedAt: now },
+        { id: 'c4', text: 'Good talk on IDS today', cat: 'note', capturedAt: now },
+        { id: 'c5', text: 'Read the KIR paper', cat: 'learning', capturedAt: now },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const card = (id) => page.locator(`.ic-card[data-id="${id}"]`);
+    const sugg = await page.evaluate(() => [...document.querySelectorAll('.ic-card')].map((c) => [c.dataset.id, c.querySelector('.ic-life').textContent.trim(), c.querySelector('.ic-life').classList.contains('suggested')]));
+    check('flow15: every item gets a suggested lifespan', sugg.every(([, , s]) => s) && sugg.find(([id]) => id === 'c1')[1].includes('Quick') && sugg.find(([id]) => id === 'c2')[1].includes('Develop'), JSON.stringify(sugg));
+    await click(card('c4').locator('.ic-life'));
+    await click(card('c3').locator('.ic-act', { hasText: 'Done' }));
+    await click(card('c5').locator('.ic-act', { hasText: 'Keep' }));
+    await click(card('c1').locator('.ic-act', { hasText: 'Promote' }));
+    const projectsInMenu = await page.evaluate(() => [...document.querySelectorAll('.pm-opt')].map((o) => o.textContent.trim()));
+    await click(page.locator('.pm-opt', { hasText: 'CDI' }));
+    await click(card('c2').locator('.ic-act', { hasText: 'Promote' }));
+    await click(page.locator('.pm-opt', { hasText: 'Signal' }));
+    await click(card('c4').locator('.ic-act', { hasText: 'Promote' }));
+    await click(page.locator('.pm-opt', { hasText: "Today's journal" }));
+    const r = await page.evaluate(() => {
+      const cap = HubStorage.get('capture-hub-v1');
+      const today = HubUtils.todayLocal();
+      return {
+        inbox: cap.inbox.map((i) => [i.id, !!i.keptAt]), log: cap.log.map((l) => [l.id, l.outcome, l.to]),
+        tasks: HubStorage.get('project-hub-v1').projects[0].tasks.map((t) => [t.title, !!t.createdAt]),
+        projects: HubStorage.get('project-hub-v1').projects.length,
+        signal: (HubStorage.get('signals-hub-v1').signals[0] || {}).title,
+        journal: ((HubStorage.get('log-hub-v1').entries || {})[today] || {}).text || '',
+        badge: document.getElementById('inbox-badge').textContent, keptHead: !!document.querySelector('.ic-kept-head'),
+      };
+    });
+    check('flow15: Promote lists only active projects, no new project is made', projectsInMenu.some((x) => x.startsWith('✓ CDI')) && !projectsInMenu.some((x) => x.includes('Old')) && r.projects === 2, JSON.stringify(projectsInMenu));
+    check('flow15: Promote to a project adds a stamped task there', JSON.stringify(r.tasks) === JSON.stringify([['Update Digital Census with the feedback', true]]), JSON.stringify(r.tasks));
+    check('flow15: Promote to Signal and to the journal', r.signal === 'Geometry generation readiness as its own theme' && /^• \d\d:\d\d Good talk on IDS today$/.test(r.journal), r.journal);
+    check('flow15: Done and Keep; the badge counts only waiting items', JSON.stringify(r.inbox) === JSON.stringify([['c5', true]]) && r.badge === '' && r.keptHead, JSON.stringify(r));
+    check('flow15: the log records where each thought went', r.log.length === 4 && r.log.some(([id, o]) => id === 'c3' && o === 'done') && r.log.some(([id, , to]) => id === 'c1' && to === 'CDI · task'), JSON.stringify(r.log));
+    await page.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });
+    await page.waitForTimeout(300);
+    const j = await page.evaluate(() => { const el = document.getElementById('lh-captures'); return { hidden: el.hidden, text: el.textContent }; });
+    check('flow15: the Daily Log shows what the day\'s captures became', !j.hidden && /5 captured/.test(j.text) && /1 done/.test(j.text) && /3 moved into the hub/.test(j.text) && /1 still in Capture/.test(j.text), j.text.replace(/\s+/g, ' ').slice(0, 200));
+    check('flow15: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
 

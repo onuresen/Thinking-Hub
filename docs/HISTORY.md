@@ -4,6 +4,23 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 179 — Capture Inbox: lifespan, Done · Keep · Promote, Journal links (Group 2)~~ ✓ Done `[group: capture]`
+Follows P178. Plan in vault `Roadmap.md` § Capture Hub as a buffer; Capture ↔ Journal: link, don't merge (Onur 2026-11-05).
+- **Lifespan** per Inbox item: ⚡ Quick, ◆ Develop, ○ Reference. A rule suggests one (dashed chip); a click cycles it and stores it. Old items get a suggestion too, nothing is rewritten. Filter chips per lifespan.
+- **Done** clears an item. **Keep** holds it on purpose under "Kept"; the badge counts only waiting items.
+- **Promote ▾** is the only way out of Capture: a task in an existing active project (never a new project), a Signal (Signals Hub Mine), a decision or open question, a risk, a learning, or today's Daily Log (`• HH:MM text`). The old per-card send buttons are gone.
+- `capture-hub-v1.log` records where each thought went (done / promoted, to what), last 500.
+- **Journal Hub (read-only):** the Daily Log shows "Captured this day" (5 captured · 1 done · 2 moved into the hub · 2 still in Capture, with a list); the Weekly Review shows what is still in Capture from that week. Both open Capture.
+
+**Key decisions**
+- **Decision:** the lifespan suggestion is computed, not stored. **Why:** old items get it without a migration; a stored value always means Onur chose it. **Confidence:** high.
+- **Decision:** the journal only reads Capture. **Why:** link, don't merge; one owner per record. **Confidence:** high.
+- **Decision:** "Idea" is not a Promote target. **Why:** the hub has no idea store besides Idea Swiper's swipe history; a developing idea is a Signal. **Revisit when:** Onur misses it.
+
+**Verified:** new flow15 (real mouse: suggested lifespans, change, Done, Keep, Promote to a project, to Signal and to the journal; no new project; the Daily Log panel) passes; flow14 updated; smoke passes; flow6 fails as on `main`.
+
+**Files:** `capture-hub.html`, `journal-hub.html`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 178 — Capture is a buffer (Group 1)~~ ✓ Done `[group: capture]`
 From Copilot's Capture suggestion and the 2026-11-05 plan with Onur (vault `Roadmap.md` § Capture Hub as a buffer). Capture now, sort later.
 - **Parse & Route → Process.** Process saves every line to the Inbox with its label. "Send All" is gone; nothing is written to other tools.
