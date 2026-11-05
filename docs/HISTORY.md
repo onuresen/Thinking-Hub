@@ -4,6 +4,22 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 177 — Signals Hub: your own signals (Mine)~~ ✓ Done `[group: integrations]`
+From Copilot's 2026-10-28 Signals Hub idea, reviewed with Onur 2026-11-05. He chose (1) own signals with a life cycle and (2) convergence counted from links; (3) "Act turns into real work" waits.
+- New place **Mine**: a short form (what you notice, where, why it may matter), lanes 👀 Watching · 🌱 Emerging · 🔥 Act, and Converted / Faded / All views. Stored in `signals-hub-v1.signals` with the P90 timestamps and `stateAt`.
+- Convergence: links come from `hub-links-v1` (the hub's own link picker, both directions). The card counts them per kind ("2 project items · 1 meeting") and adds Claude's notes ("1 reading supports it"). No manual score.
+- A hint suggests the next stage when several independent things point at a signal. Only Onur moves it.
+- `signals-hub` is now a HubLinks target: `TOOL_NAMES`, `resolveItems`, Cmd+K search, Health Check. A jump to a signal opens Mine.
+- Claude reads active signals: the taps file carries them; the morning run lists them as `yourSignals`; a reading may return `signalNotes` (supports / contradicts / new-angle, with sources). They show on the signal, in a "Your signals" panel on the Radar and in the Brief.
+
+**Key decisions**
+- **Decision:** signals live in Signals Hub, links in the hub's link store. **Why:** no duplicate project lists (Copilot's rule); any tool can link to a signal. **Alternative:** a separate Signals tool. Rejected: one more sidebar entry (lean). **Confidence:** med.
+- **Decision:** stage changes are only by hand; the page only hints. **Why:** propose, never auto-apply (P104). **Confidence:** high.
+
+**Verified:** new flow13 (real mouse: add, link through the picker, move to Emerging; taps file and resolver see it) passes; smoke and vault-bridge pass; flow6 fails as on `main`. Screenshots dark and light with real readings and sample signals.
+
+**Files:** `signals-hub.html`, `hub-links.js`, `hub-search.js`, `index.html` (Health Check tools), `tests/flows.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 176 — Signals Hub redesign: Radar, Library, Brief~~ ✓ Done `[group: integrations]`
 Onur (2026-11-05): the P175 page is "too minimalist compared to standalone Signals Hub. UI is bad as well."
 - Same three places as the app, in the hub's own tokens: **Radar** (week headline, this week's plan, a radar of the reading with your projects on the ring, insights placed by evidence, moves and new directions; project pulse; still-open moves; moves with Follow / Later / Not for me; on the horizon; feed pulse; what Claude sees), **Library** (rail: search, 7/30/all days, group by date / Claude's themes / project / source, show filters, sources with counts; cards say which insight or move used them; Keep / Counter / Hide), **Brief** (one page: what changed with numbered sources, your calls, projects touched, horizon; print, copy, Markdown).

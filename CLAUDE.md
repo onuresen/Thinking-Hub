@@ -29,7 +29,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
 | `goals-hub.html` | OKRs by quarter |
 | `risk-hub.html` | Risk register + heat map |
-| `signals-hub.html` | Signals Hub (P175): reads Claude's morning readings and news from a linked folder (like the vault folder) or imported files; Follow / Later / Not for me taps and Keep / Hide marks. Writes taps to `state/hub-state.json` in the linked folder. No server, no fetch |
+| `signals-hub.html` | Signals Hub (P175–P177): Radar, Library, Brief from Claude's morning readings and news (linked folder like the vault folder, or imported files), and **Mine**: Onur's own signals (Watching → Emerging → Act → Converted / Faded), linked to hub items via HubLinks (`signals-hub` is a link target). Writes taps and active signals to `state/hub-state.json` in the linked folder. No server, no fetch |
 | `achievements-hub.html` | Profile (identity) + achievements |
 | `tags-hub.html` | Central tag registry: rename, merge, delete everywhere |
 | `help-hub.html` | Help & Guide: tool cards, framework reference, workflows |

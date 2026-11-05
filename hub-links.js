@@ -34,6 +34,7 @@ window.HubLinks = (() => {
     'stakeholder-hub': 'Stakeholders',
     'tool-portfolio': 'Tool Portfolio',
     'tags-hub': 'Tags',
+    'signals-hub': 'Signals Hub',
   };
 
   let _currentTool = null;
@@ -249,6 +250,13 @@ window.HubLinks = (() => {
             subtitle: `${mins}m${s.completed ? ' ✓' : ''}`
           };
         });
+      }
+
+      if (toolId === 'signals-hub') {
+        // Onur's own signals (P177): observations he watches, not tasks.
+        const data = HubStorage.get('signals-hub-v1');
+        if (!data || !Array.isArray(data.signals)) return [];
+        return data.signals.map(s => ({ id: s.id, label: s.title || '(untitled signal)', subtitle: 'Signal · ' + (s.state || 'watching') }));
       }
 
       if (toolId === 'tags-hub') {
