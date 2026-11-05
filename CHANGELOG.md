@@ -7,6 +7,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Signals Hub has three places: **Radar** (the week, a radar of the reading, project and feed pulse, moves to tap), **Library** (everything collected, with filters and grouping) and **Brief** (one page to print or copy).
 - Signals Hub in the sidebar (Strategy & Decisions). It reads readings and news from a linked folder or imported files, and keeps your Follow / Later / Not for me taps and Keep / Hide marks. It needs no other app. Taps go into the linked folder and the full backup.
 
 ### Security

@@ -572,10 +572,14 @@ function startServer() {
     });
     check('flow12: reading and news imported from files', imported.readings === 1 && imported.news === 1, JSON.stringify(imported));
     const shown = await page.evaluate(() => ({
-      lead: document.querySelector('.lead').textContent, sources: document.querySelectorAll('.srcs a').length,
-      missing: /1 citation without a known source/.test(document.querySelector('.meta').textContent),
+      lead: document.querySelector('#place-radar .hero h1').textContent, sources: document.querySelectorAll('#place-radar .srcs a').length,
+      missing: /1 citation without a known source/.test(document.querySelector('#place-radar .side').textContent),
+      radar: document.querySelectorAll('#place-radar svg .ins').length + document.querySelectorAll('#place-radar svg .new').length,
+      library: document.querySelectorAll('#place-library .item').length,
+      brief: /Your calls/.test(document.querySelector('#place-brief .paper').textContent),
     }));
     check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources === 3 && shown.missing, JSON.stringify(shown));
+    check('flow12: radar, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief, JSON.stringify(shown));
     const follow = page.locator('[data-tap="follow"]').first();
     const box = await follow.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
