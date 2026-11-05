@@ -4,6 +4,12 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Test fix — flow6 failed from 2026-10-26 (frozen clock leaked)~~ ✓ Done `[group: tests]`
+CI had been red on every run since 2026-10-26, always one check: flow6 ("next upcoming meeting").
+- **Cause:** flow2b freezes the clock at 2026-10-22 to compare export files byte for byte. Playwright's clock belongs to the whole browser context, so every later page in the shared context thought today was 2026-10-22. From 2026-10-26, flow6's "3 days ago" meeting fell after that date and looked upcoming. The app was right; the test was not.
+- **Fix:** flow2b runs in its own context (fonts blocked, welcome skipped) and closes it. Other flows keep real time.
+- **Verified:** `npm test`: smoke, all flows (flow6 included) and vault-bridge pass.
+
 ### ~~Priority 182 — Project Hub: Compact display~~ ✓ Done `[group: projects]`
 Onur (2026-11-05): he likes the cards, but with 46 projects one is hard to find. Wanted a second, slightly minimalist style that helps search — "not a boring flat list". Cards stay the default.
 - **▦ Cards / ▤ Compact** switch in the Overview filter bar. The choice is a per-browser view setting (`hub-session-v1.projectDisplay`), never project data.

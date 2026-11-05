@@ -186,7 +186,16 @@ function startServer() {
   // exportedAt matches). A wrong passphrase must fail. esen-vault hub_changes.py
   // `decrypt` reads the same envelope.
   {
-    const page = await ctx.newPage();
+    // Own context: a fixed clock applies to the whole context, and the shared
+    // one must keep real time. Sharing it made flow6 fail from 2026-10-26 on,
+    // when "3 days ago" passed the frozen date.
+    const clockCtx = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true });
+    await clockCtx.route(/fonts\.(googleapis|gstatic)\.com|esm\.sh/, (r) => r.abort());
+    await clockCtx.addInitScript(() => {
+      localStorage.setItem('tutorial-seen-v1', 'true');
+      localStorage.setItem('quick-tour-seen-v1', 'true');
+    });
+    const page = await clockCtx.newPage();
     await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'));
     await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
     await page.evaluate(() => {
@@ -239,6 +248,7 @@ function startServer() {
       fs.writeFileSync(path.join(process.env.ENC_FIXTURE_DIR, 'export.enc.json'), enc.bytes);
     }
     await page.close();
+    await clockCtx.close();
   }
 
   // ── Flow 3: link + graph ──
