@@ -548,6 +548,49 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 12: Signals Hub reads files on its own (P175) ──
+  // Imports a reading with its request and a news file, taps Follow with real
+  // mouse timing, and checks the taps file and the backup key.
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/signals-hub.html`, { waitUntil: 'load' });
+    const imported = await page.evaluate(async () => {
+      const request = { schema: 'signals-hub-review-request-v1', id: 'req-2026-11-08-abc', createdAt: '2026-11-08T22:45:00Z',
+        evidence: [{ id: 'item:1', title: 'IFC check tools gain AI', url: 'https://a.example/1', source: 'A', date: '2026-11-07' }] };
+      const review = { schema: 'signals-hub-review-v1', requestId: 'req-2026-11-08-abc', reviewer: 'Claude Code (morning run)',
+        weekPlan: 'Do one thing.', followUps: [],
+        newEvidence: [{ id: 'web:1', title: 'Vendor blog', url: 'https://b.example/2', source: 'B', date: '2026-11-08', summary: '' }],
+        insights: [{ headline: 'Checking is the bottleneck', summary: 's', citations: ['item:1', 'web:1', 'item:404'] }],
+        directions: [{ title: 'Ask a vendor about rules', kind: 'reach-out', by: '2026-11-20', whyNow: 'w', firstStep: 'f',
+          draft: 'Hello', citations: ['web:1'] }] };
+      const news = { schema: 'signals-hub-news-v1', createdAt: '2026-11-08T22:44:00Z',
+        items: [{ title: 'News one', url: 'https://c.example/3', sourceName: 'C', publishedAt: '2026-11-08' }] };
+      const file = (name, obj) => new File([JSON.stringify(obj)], name, { type: 'application/json' });
+      return SignalsHubTool.importFiles([file('review.json', review), file('req.json', request), file('news-2026-11-08.json', news)]);
+    });
+    check('flow12: reading and news imported from files', imported.readings === 1 && imported.news === 1, JSON.stringify(imported));
+    const shown = await page.evaluate(() => ({
+      lead: document.querySelector('.lead').textContent, sources: document.querySelectorAll('.srcs a').length,
+      missing: /1 citation without a known source/.test(document.querySelector('.meta').textContent),
+    }));
+    check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources === 3 && shown.missing, JSON.stringify(shown));
+    const follow = page.locator('[data-tap="follow"]').first();
+    const box = await follow.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    const after = await page.evaluate(() => ({
+      on: document.querySelector('[data-tap="follow"]').classList.contains('on'),
+      state: SignalsHubTool.stateFile(), stored: HubStorage.get('signals-hub-v1'),
+    }));
+    check('flow12: Follow tap is shown and stored', after.on && after.stored.reactions.length === 1 && after.stored.reactions[0].reaction === 'follow');
+    check('flow12: taps file names the request and the move', after.state.schema === 'signals-hub-hub-state-v1' &&
+      after.state.reactions[0].requestId === 'req-2026-11-08-abc' && after.state.reactions[0].index === 0 && !!after.state.updatedAt);
+    check('flow12: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
   await browser.close();
   server.close();
   console.log(failures === 0 ? '\nALL FLOW CHECKS PASSED' : `\n${failures} FLOW CHECK(S) FAILED`);

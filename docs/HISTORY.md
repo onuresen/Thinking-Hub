@@ -4,6 +4,24 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 175 — Signals Hub as a hub tool of its own~~ ✓ Done `[group: integrations]`
+Onur (2026-11-04): the P174 frame only worked while the separate app ran on this computer. "Not acceptable for Thinking Hub's style." He wants a copy inside the hub that reads the data by import or automatically, like the vault folder. Since the same day, Claude's morning run (cloud) fetches the news and writes the readings, so the hub no longer needs the app for daily use.
+- `signals-hub.html` rewritten. Two tabs: **Reading** (lead insight, this week's plan, still-open moves with Keep / Nudge / Drop?, moves with Follow / Later / Not for me and optional reasons, draft copy, what Claude sees; every line opens its sources) and **News** (search, source filter, ★ Keep, ⇄ Counter, ✕ Hide).
+- Data in: **Link folder** (File System Access, handle kept in IndexedDB, read on every open, like the Vault Bridge) or **Import files** (reading + its request, news files, the app's taps file).
+- Data out: taps and marks go to `signals-hub/state/hub-state.json` in the linked folder (`signals-hub-hub-state-v1`), or **Save taps file**, and into the full backup (`signals-hub-v1`). The morning run reads the newer of the two.
+- Taps made in the separate app carry over once from its `state/pc-state.json`.
+- Stores only the sources a reading cites, a few KB each; at most 8 readings and 500 news items (30 days).
+- P174 frame removed: `frame-src` back to `'self'` on every page.
+
+**Key decisions**
+- **Decision:** a native hub page fed by files; the separate app stays an optional engine. **Why:** the cloud now does the fetching and the reasoning, so the hub only needs to read files and keep taps; a page that depends on a running server is not the hub's style. **Alternative:** keep the frame (dead without the app), or port the whole app (feeds and SQLite need a server, P84). **Revisit when:** Prove (proof tracking) is used weekly; it still lives only in the app. **Confidence:** med.
+- **Decision:** taps travel two ways: a taps file in the linked folder and the full backup. **Why:** Onur chose both (2026-11-04): the file is fast, the backup is a fallback he already pushes. **Confidence:** med.
+- **Decision:** a reading's moves are keyed by request id (`signals-<request id>-<n>`), the one id both the hub and the app know. **Why:** the app's review ids exist only in its database.
+
+**Verified:** smoke (3 new checks) and vault-bridge pass; flows: new flow12 passes (import, real mouse Follow, taps file, backup key, no page errors); flow6 still fails as on `main` (meeting dates). Screenshots in dark and light with Onur's real latest readings; his 5 app taps carried over.
+
+**Files:** `signals-hub.html` (rewritten), `index.html` (APPS desc, `SCOPE_KEYS.full`, `EXPORT_KEY_LABELS`, `APP_FILE_STORAGE_KEYS`), CSP `frame-src` on every page, `sw.js` (cache v50), `tests/smoke.js`, `tests/flows.js`, `PRIVACY.md`, `CHANGELOG.md`, `CLAUDE.md`, `docs/HISTORY.md`
+
 ### ~~Priority 174 — Signals Hub inside the hub~~ ✓ Done `[group: integrations]`
 Onur (2026-11-02): he can't judge Signals Hub until it lives in the hub. Bring it in now and adjust it here.
 - New sidebar tool **Signals Hub** (Strategy & Decisions, 📡). `signals-hub.html` frames Signals Hub running on this computer at `http://127.0.0.1:8770` (personal-lab `Signals-Hub`, its own Python server and SQLite).

@@ -29,7 +29,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
 | `goals-hub.html` | OKRs by quarter |
 | `risk-hub.html` | Risk register + heat map |
-| `signals-hub.html` | Signals Hub (P174): frames Signals Hub running on this computer (`127.0.0.1:8770`, personal-lab) and passes the theme. Self-contained: no hub script, no storage key. Removal checklist in the file header |
+| `signals-hub.html` | Signals Hub (P175): reads Claude's morning readings and news from a linked folder (like the vault folder) or imported files; Follow / Later / Not for me taps and Keep / Hide marks. Writes taps to `state/hub-state.json` in the linked folder. No server, no fetch |
 | `achievements-hub.html` | Profile (identity) + achievements |
 | `tags-hub.html` | Central tag registry: rename, merge, delete everywhere |
 | `help-hub.html` | Help & Guide: tool cards, framework reference, workflows |
@@ -89,7 +89,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 
 ## localStorage keys (source of truth)
-Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up).
+Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals Hub readings, news and taps; the morning run reads its taps from the backup too).
 
 Not backed up (ephemeral UI state): `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `hub-resurface-v1`, `hub-last-backup-v1`, `hub-briefing-v1`, `ai-drawer-pos-v1`, `machi-milestones-v1`.
 
@@ -170,7 +170,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **UI text says what a feature does, not Onur's routine (P170).** No repo, branch or service names, no "for X" purpose labels. His workflow belongs in the vault, not the app.
 - **Feedback loop:** Onur's corrections live in esen-vault `meta/Feedback-Loop.md` § Register, each with a strength (Rule / Default / One-off / Signal). Follow Rules; apply Defaults quietly and break them when they don't fit. A choice for one project is not a preference. Add an entry when he corrects you.
 - **Missing timestamp = unknown age, never stale** (P90).
-- **One CSP for every page** (P93). Favicon egress only in the three opted-in pages. `frame-src` adds only `http://127.0.0.1:8770` (P174, Signals Hub on this computer); smoke-tested.
+- **One CSP for every page** (P93). Favicon egress only in the three opted-in pages. `frame-src` is `'self'` only (P175 removed the P174 Signals Hub frame); smoke-tested.
 - **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).
 - **Parked:** Workspaces (Model A, in-browser switcher). Do not start until Onur asks.
 - **Test UI with real mouse timing** (`mouse.down` → 80 ms → `mouse.up`), not `page.click()`. Six Canvas Connect bugs hid behind synthetic clicks (P113–P124).
