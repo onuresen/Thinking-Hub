@@ -572,10 +572,14 @@ function startServer() {
     });
     check('flow12: reading and news imported from files', imported.readings === 1 && imported.news === 1, JSON.stringify(imported));
     const shown = await page.evaluate(() => ({
-      lead: document.querySelector('.lead').textContent, sources: document.querySelectorAll('.srcs a').length,
-      missing: /1 citation without a known source/.test(document.querySelector('.meta').textContent),
+      lead: document.querySelector('#place-radar .hero h1').textContent, sources: document.querySelectorAll('#place-radar .srcs a').length,
+      missing: /1 citation without a known source/.test(document.querySelector('#place-radar .side').textContent),
+      radar: document.querySelectorAll('#place-radar svg .ins').length + document.querySelectorAll('#place-radar svg .new').length,
+      library: document.querySelectorAll('#place-library .item').length,
+      brief: /Your calls/.test(document.querySelector('#place-brief .paper').textContent),
     }));
     check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources === 3 && shown.missing, JSON.stringify(shown));
+    check('flow12: radar, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief, JSON.stringify(shown));
     const follow = page.locator('[data-tap="follow"]').first();
     const box = await follow.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -588,6 +592,52 @@ function startServer() {
     check('flow12: taps file names the request and the move', after.state.schema === 'signals-hub-hub-state-v1' &&
       after.state.reactions[0].requestId === 'req-2026-11-08-abc' && after.state.reactions[0].index === 0 && !!after.state.updatedAt);
     check('flow12: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 13: your own signals (P177) ──
+  // Add a signal, link it to a project through the hub picker, move it to
+  // Emerging, all with real mouse timing; the taps file carries it and other
+  // tools can find it.
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/signals-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('project-hub-v1', { projects: [{ id: 'p-cdi', name: 'CDI', tasks: [] }] });
+      HubStorage.set('hub-links-v1', []);
+      SignalsHubTool.showPlace('mine');
+    });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    await page.fill('#sig-title', 'Ontology may become an integration layer');
+    await page.fill('#sig-why', 'It could connect project knowledge with AI.');
+    await click(page.locator('#add-sig button[type="submit"]'));
+    await click(page.locator('[data-sig="link"]').first());
+    await click(page.locator('.hl-tool-tab', { hasText: 'Project Hub' }));
+    await click(page.locator('.hl-item-row', { hasText: 'CDI' }).first());
+    await click(page.locator('#hl-btn-confirm'));
+    await page.waitForTimeout(100);
+    await click(page.locator('[data-stage="emerging"]').first());
+    const r = await page.evaluate(() => {
+      const sig = SignalsHubTool.data.signals[0];
+      return {
+        n: SignalsHubTool.data.signals.length, state: sig.state, created: !!sig.createdAt, stateAt: !!sig.stateAt,
+        conv: document.querySelector('#place-mine .conv').textContent.trim(),
+        lane: document.querySelector('#place-mine .lanes > div:nth-child(2) .sig h3').textContent,
+        file: SignalsHubTool.stateFile().signals.map((x) => x.state),
+        found: HubLinks.resolveItems('signals-hub').map((x) => x.label),
+      };
+    });
+    check('flow13: a signal is added from the form', r.n === 1 && r.created, JSON.stringify(r));
+    check('flow13: linking through the hub picker counts as convergence', /1 project item/.test(r.conv), r.conv);
+    check('flow13: the stage button moves it to Emerging', r.state === 'emerging' && r.stateAt && r.lane === 'Ontology may become an integration layer');
+    check('flow13: the taps file and other tools see the signal', r.file[0] === 'emerging' && r.found[0] === 'Ontology may become an integration layer', JSON.stringify(r));
+    check('flow13: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
 

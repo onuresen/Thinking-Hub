@@ -7,13 +7,18 @@
   <title>Signals Hub</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
+  <script src="hub-links.js"></script>
   <script src="hub-toast.js"></script>
   <script src="hub-bootstrap.js"></script>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <!--
-    Signals Hub (P175). A hub tool of its own: it reads the files Claude's
-    morning run writes (readings and news) and keeps Onur's taps.
+    Signals Hub (P175, redesigned P176). A hub tool of its own: it reads the
+    files Claude's morning run writes (readings and news) and keeps Onur's taps.
+
+    Four places: Radar (the week at a glance), Library (everything collected),
+    Brief (one page to read, print or copy) and Mine (P177: Onur's own signals,
+    observations he watches, with links to hub items and Claude's notes).
 
     Data in: a linked folder (read on every open, like the vault folder) or
     files imported by hand. Data out: a taps file written into the linked
@@ -24,115 +29,305 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
     body { display: flex; flex-direction: column; }
+    button { font-family: var(--font-body); }
 
+    /* ── Top bar ── */
     .topbar {
-      min-height: 54px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 8px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface);
+      min-height: 54px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface);
     }
-    .logo-mark {
-      width: 26px; height: 26px; border-radius: 7px; background: var(--accent);
-      display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
-    }
-    .logo-text { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; margin-right: 8px; }
+    .logo-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .logo-text { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin: 0 14px 0 4px; }
+    .place { padding: 6px 12px; border-radius: var(--r-sm); border: 0; background: transparent; color: var(--text2); font-size: 13px; cursor: pointer; }
+    .place:hover { color: var(--text); background: var(--surface2); }
+    .place.on { color: var(--text); background: var(--accent-dim); font-weight: 600; }
     .topbar-spacer { flex: 1; }
-    .tab {
-      padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
-      color: var(--text2); font: 500 12px var(--font-body); cursor: pointer;
-    }
-    .tab.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
     .status { font-size: 11.5px; color: var(--text3); }
     .status.warn { color: var(--accent-super); }
-    .tb-btn { font-size: 12px; padding: 6px 12px; }
 
-    main { flex: 1; overflow-y: auto; padding: 22px 20px 60px; }
-    .wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
-    .ui-section-header { margin-bottom: 10px; }
+    main { flex: 1; overflow-y: auto; }
+    .page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
+    .hidden { display: none !important; }
+    .mono { font-family: var(--font-mono); font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--text3); }
 
-    .lead { font: 600 19px/1.35 var(--font-display); }
-    .plan { color: var(--text2); font-size: 13.5px; line-height: 1.55; margin-top: 8px; }
-    .meta { color: var(--text3); font-size: 11.5px; margin-top: 6px; }
-    .meta select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); font: 11.5px var(--font-body); padding: 2px 6px; }
+    /* ── Hero ── */
+    .hero { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; margin-bottom: 26px; }
+    .hero h1 { font: 600 34px/1.15 var(--font-display); margin: 10px 0 12px; letter-spacing: -.3px; }
+    .hero .facts { font-family: var(--font-mono); font-size: 11.5px; color: var(--text3); }
+    .hero .plan { margin-top: 14px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--accent-dim); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 13.5px; line-height: 1.55; }
+    .hero .plan b { font-weight: 700; }
+    .side { padding: 16px 18px; }
+    .side .when { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .dot.off { background: var(--text3); }
+    .side .sub { color: var(--text3); font-size: 12px; margin-top: 4px; line-height: 1.5; }
+    .side .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .side select { margin-top: 10px; width: 100%; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); font: 12px var(--font-body); padding: 5px 8px; }
+    .btn-s { font-size: 12px; padding: 6px 12px; }
 
-    .card { padding: 14px 16px; }
-    .card + .card { margin-top: 10px; }
-    .card h3 { font: 600 14.5px/1.35 var(--font-body); }
-    .card p { font-size: 13px; line-height: 1.55; color: var(--text2); margin-top: 6px; }
-    .card p b { color: var(--text); font-weight: 600; }
-    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .tag { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--text2); }
-    .tag.kind { background: var(--accent-dim); color: var(--text); }
-    .tag.late { background: var(--accent-glow); color: var(--text); }
-    .srcs { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
-    .srcs a, .news a { color: var(--text2); font-size: 12px; text-decoration: none; }
-    .srcs a:hover, .news a:hover { color: var(--accent); text-decoration: underline; }
-    .srcs .src-meta { color: var(--text3); }
+    /* ── Grid ── */
+    .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+    .panel { padding: 18px 20px; }
+    .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .panel-head .hint { font-size: 11.5px; color: var(--text3); }
 
-    .taps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
-    .tap, .chip {
-      padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
-      color: var(--text2); font: 500 12px var(--font-body); cursor: pointer;
-    }
-    .tap:hover, .chip:hover { border-color: var(--accent); color: var(--text); }
+    /* ── Radar ── */
+    .radar svg { width: 100%; height: auto; display: block; }
+    .radar .ring { fill: none; stroke: var(--border); }
+    .radar .horizon { fill: none; stroke: var(--accent2); stroke-dasharray: 3 5; opacity: .7; }
+    .radar .spoke { stroke: var(--border); }
+    .radar .proj { fill: var(--surface); stroke: var(--text3); stroke-width: 1.5; }
+    .radar .proj.hit { fill: var(--accent); stroke: var(--accent); }
+    .radar .plabel { fill: var(--text2); font: 13.5px var(--font-body); text-transform: none; letter-spacing: 0; }
+    .radar .you { fill: var(--text); }
+    .radar .you-label { fill: var(--text3); font: 11px var(--font-mono); letter-spacing: 1.5px; }
+    .radar .h-label { fill: var(--accent2); font: 11px var(--font-mono); letter-spacing: 1.5px; }
+    .radar .ins { fill: var(--accent); stroke: var(--bg); stroke-width: 2; cursor: pointer; }
+    .radar .halo { fill: var(--accent-glow); }
+    .radar .move { fill: var(--accent2); stroke: var(--bg); stroke-width: 1.5; cursor: pointer; }
+    .radar .new { fill: var(--bg); stroke: var(--accent2); stroke-width: 2; cursor: pointer; }
+    .radar .ins:hover, .radar .move:hover, .radar .new:hover { stroke: var(--text); }
+    .radar-read { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface2); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 12.5px; color: var(--text2); min-height: 40px; }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 11.5px; color: var(--text3); }
+    .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; }
+    .legend .l-ins { border-radius: 50%; background: var(--accent); }
+    .legend .l-move { background: var(--accent2); transform: rotate(45deg); }
+    .legend .l-new { border-radius: 50%; border: 2px solid var(--accent2); }
+    .legend .l-proj { border-radius: 50%; border: 1.5px solid var(--text3); }
+
+    /* ── Pulse ── */
+    .pulse-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .pulse-row:last-child { border-bottom: 0; }
+    .pulse-top { display: grid; grid-template-columns: 150px 1fr 22px; gap: 12px; align-items: center; }
+    .pulse-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar { height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+    .pulse-n { font-family: var(--font-mono); font-size: 12px; text-align: right; color: var(--text2); }
+    .pulse-why { font-size: 12px; color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feed-row { display: grid; grid-template-columns: 1fr 64px 28px; gap: 10px; align-items: center; padding: 6px 0; font-size: 12.5px; }
+    .spark { display: flex; gap: 3px; align-items: flex-end; height: 18px; }
+    .spark span { flex: 1; background: var(--surface3); border-radius: 2px 2px 0 0; min-height: 2px; }
+    .spark span.now { background: var(--accent); }
+
+    /* ── Moves ── */
+    .move-card { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface2); }
+    .move-card + .move-card { margin-top: 10px; }
+    .move-card.tapped { background: transparent; }
+    .move-top { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .chip-p { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface3); color: var(--text2); }
+    .chip-k { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent2-dim); color: var(--accent2); font-weight: 600; }
+    .chip-new { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--accent2); color: var(--accent2); }
+    .chip-date { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+    .chip-date.late { color: var(--accent-nope); }
+    .move-card h3 { font: 600 16px/1.3 var(--font-display); }
+    .move-card .step { font-size: 12.5px; line-height: 1.55; color: var(--text2); margin-top: 6px; }
+    .move-card details { margin-top: 8px; font-size: 12.5px; color: var(--text2); }
+    .move-card summary { cursor: pointer; color: var(--text3); font-size: 12px; }
+    .move-card details p { margin-top: 6px; line-height: 1.55; }
+    .move-card details p b { color: var(--text); }
+    .draft { margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+    .taps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+    .tap { padding: 6px 12px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+    .tap:hover { border-color: var(--accent); }
     .tap.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-    .chip { font-size: 11px; padding: 3px 9px; }
-    .chip.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
-    .draft { margin-top: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface2); font-size: 12.5px; line-height: 1.5; color: var(--text2); white-space: pre-wrap; }
-
-    .verdict { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text3); }
+    .reason { padding: 3px 9px; border-radius: 999px; border: 1px dashed var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; }
+    .reason.on { border-style: solid; border-color: var(--accent); color: var(--text); }
+    .verdict { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .8px; text-transform: uppercase; }
+    .verdict.keep { color: var(--accent); }
     .verdict.nudge { color: var(--accent-super); }
     .verdict.drop { color: var(--accent-nope); }
+    .open-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .open-row:last-child { border-bottom: 0; }
+    .open-row .t { font-size: 13px; font-weight: 600; margin-top: 2px; }
+    .open-row .n { font-size: 12px; color: var(--text2); margin-top: 3px; }
+    .horizon-item { padding: 10px 12px; border: 1px dashed var(--accent2); border-radius: var(--r-sm); font-size: 13px; }
+    .horizon-item + .horizon-item { margin-top: 8px; }
 
-    .news-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-    .news-tools select, .news-tools input[type="search"] {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
-      color: var(--text); font: 12px var(--font-body); padding: 5px 8px;
+    /* ── Insights ── */
+    .insights { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+    .ins-card { padding: 16px 18px; }
+    .ins-card h3 { font: 600 16px/1.3 var(--font-display); }
+    .ins-card p { font-size: 12.5px; line-height: 1.55; color: var(--text2); margin-top: 7px; }
+    .ins-card p b { color: var(--text); }
+    .try { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--accent-dim); font-size: 12.5px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .srcs { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .srcs a { color: var(--text2); font-size: 12px; text-decoration: none; line-height: 1.4; }
+    .srcs a:hover { color: var(--accent); text-decoration: underline; }
+    .srcs .m { color: var(--text3); }
+    .flash { outline: 2px solid var(--accent); outline-offset: 2px; transition: outline-color 1.2s; }
+
+    /* ── Library ── */
+    .lib { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }
+    .lib-intro h1 { font: 600 30px/1.2 var(--font-display); margin: 8px 0 6px; }
+    .lib-intro p { color: var(--text2); font-size: 13.5px; margin-bottom: 22px; }
+    .rail { position: sticky; top: 0; display: flex; flex-direction: column; gap: 18px; }
+    .rail input[type="search"] { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); font: 13px var(--font-body); padding: 9px 11px; }
+    .rail input[type="search"]:focus { outline: none; border-color: var(--accent); }
+    .seg { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); margin-top: 7px; }
+    .seg button { flex: 1; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .seg button.on { background: var(--surface3); color: var(--text); font-weight: 600; }
+    .stack { display: flex; flex-direction: column; margin-top: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 3px; }
+    .stack button { text-align: left; padding: 6px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--text2); font-size: 12.5px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+    .stack button.on { background: var(--surface3); color: var(--text); font-weight: 600; }
+    .stack button span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stack .n { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+    .lib-count { font-family: var(--font-mono); font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+    .lib-count b { color: var(--accent); font-weight: 500; }
+    .group-head { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); margin: 18px 0 12px; }
+    .group-head:first-of-type { margin-top: 0; }
+    .group-head h2 { font: 600 20px var(--font-display); }
+    .group-head .n { font-family: var(--font-mono); font-size: 12px; color: var(--text3); }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .item { padding: 14px 16px; display: flex; flex-direction: column; gap: 7px; }
+    .item.used { border-left: 3px solid var(--accent); }
+    .item.dim { opacity: .5; }
+    .item-top { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 11.5px; color: var(--text3); }
+    .item-top b { color: var(--text2); font-weight: 600; }
+    .item h3 { font: 600 15px/1.3 var(--font-display); }
+    .item h3 a { color: var(--text); text-decoration: none; }
+    .item h3 a:hover { color: var(--accent); }
+    .item .sum { font-size: 12.5px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .used-box { padding: 8px 10px; background: var(--surface2); border-radius: var(--r-sm); font-size: 12px; line-height: 1.45; }
+    .used-box div + div { margin-top: 4px; }
+    .used-box .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .8px; margin-right: 6px; }
+    .used-box .k.i { color: var(--accent); }
+    .used-box .k.m { color: var(--accent2); }
+    .item .acts { display: flex; gap: 6px; margin-top: auto; padding-top: 4px; }
+    .mark { padding: 5px 10px; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; }
+    .mark:hover { border-color: var(--accent); color: var(--text); }
+    .mark.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .more { margin: 16px auto 0; display: block; }
+
+    /* ── Brief ── */
+    .brief-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .brief-bar p { color: var(--text2); font-size: 13.5px; margin-top: 6px; }
+    .paper { max-width: 860px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 54px 60px; }
+    .paper h1 { font: 600 32px/1.2 var(--font-display); margin: 14px 0 12px; }
+    .paper .lede { color: var(--text2); font-size: 13px; padding-bottom: 20px; border-bottom: 3px double var(--border); }
+    .paper h2 { font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin: 30px 0 14px; }
+    .paper h2 span { color: var(--accent2); margin-right: 8px; }
+    .b-item { display: grid; grid-template-columns: 34px 1fr; gap: 6px; margin-bottom: 18px; }
+    .b-item .num { font: 600 26px/1 var(--font-display); color: var(--text3); }
+    .b-item h3 { font: 600 17px/1.35 var(--font-display); }
+    .b-item h3 sup { font: 600 10px var(--font-mono); color: var(--accent); margin-left: 3px; }
+    .b-item p { font-size: 13px; line-height: 1.6; color: var(--text2); margin-top: 6px; }
+    .b-item .meta { font-size: 11.5px; color: var(--text3); margin-top: 6px; }
+    .calls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+    .calls h4 { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    .calls li { font-size: 13px; line-height: 1.5; color: var(--text2); margin: 0 0 5px 16px; }
+    .b-list li { font-size: 13px; line-height: 1.55; color: var(--text2); margin: 0 0 6px 18px; }
+    .b-src li { font-size: 12px; line-height: 1.5; color: var(--text2); margin: 0 0 4px 22px; word-break: break-word; }
+    .b-src a { color: var(--text2); }
+
+    /* ── Mine (own signals) ── */
+    .mine-intro h1 { font: 600 30px/1.2 var(--font-display); margin: 8px 0 6px; }
+    .mine-intro p { color: var(--text2); font-size: 13.5px; max-width: 720px; }
+    .add-sig { padding: 16px 18px; margin: 20px 0 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .add-sig .full { grid-column: 1 / -1; }
+    .add-sig input, .add-sig textarea, .sig-edit input, .sig-edit textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+      color: var(--text); font: 13px/1.45 var(--font-body); padding: 9px 11px; resize: vertical;
     }
-    .news { display: flex; flex-direction: column; }
-    .news-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--border); }
-    .news-row .body { flex: 1; min-width: 0; }
-    .news-row .title { font-size: 13px; color: var(--text); }
-    .news-row .sub { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
-    .news-row.hidden-item { opacity: .45; }
-    .news-row .acts { display: flex; gap: 4px; flex-shrink: 0; }
+    .add-sig input:focus, .add-sig textarea:focus, .sig-edit input:focus, .sig-edit textarea:focus { outline: none; border-color: var(--accent); }
+    .add-sig #sig-title { font: 600 15px var(--font-display); }
+    .add-sig .acts { display: flex; justify-content: flex-end; gap: 8px; }
+    .mine-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .mine-bar .seg { margin-top: 0; }
+    .mine-bar .hint { font-size: 12px; color: var(--text3); }
+    .lanes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+    .lane-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px 8px; }
+    .lane-head b { font: 600 15px var(--font-display); }
+    .lane-head .n { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+    .lane-head .d { font-size: 11.5px; color: var(--text3); display: block; margin-top: 2px; }
+    .lane { display: flex; flex-direction: column; gap: 10px; min-height: 60px; padding: 8px; border-radius: var(--r); background: var(--surface2); }
+    .lane .none { font-size: 12px; color: var(--text3); padding: 8px; }
+    .sig { padding: 14px 15px; display: flex; flex-direction: column; gap: 7px; }
+    .sig h3 { font: 600 15px/1.3 var(--font-display); }
+    .sig .obs { font-size: 12.5px; line-height: 1.5; color: var(--text2); }
+    .sig .why { font-size: 12px; line-height: 1.5; color: var(--text3); }
+    .sig .why b { color: var(--text2); }
+    .conv { font-size: 12px; color: var(--text2); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .conv .c { font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--accent-dim); color: var(--text); }
+    .conv .c.none { background: var(--surface2); color: var(--text3); }
+    .links { display: flex; gap: 5px; flex-wrap: wrap; }
+    .links button { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .links button:hover { border-color: var(--accent); color: var(--text); }
+    .note { padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface2); font-size: 12px; line-height: 1.45; color: var(--text2); }
+    .note .v { font-family: var(--font-mono); font-size: 10px; letter-spacing: .8px; text-transform: uppercase; margin-right: 6px; }
+    .note .v.supports { color: var(--accent); }
+    .note .v.contradicts { color: var(--accent-nope); }
+    .note .v.new-angle { color: var(--accent2); }
+    .note .srcs { margin-top: 5px; }
+    .hint-move { font-size: 12px; color: var(--accent-super); }
+    .stages { display: flex; gap: 3px; flex-wrap: wrap; }
+    .stages button { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; }
+    .stages button.on { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+    .stages button:hover { color: var(--text); }
+    .sig-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sig-tools button { font-size: 11.5px; padding: 4px 9px; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; }
+    .sig-tools button:hover { border-color: var(--accent); color: var(--text); }
+    .sig-edit { display: flex; flex-direction: column; gap: 8px; }
+    .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .sig.done { opacity: .75; }
 
-    .help { font-size: 12.5px; color: var(--text2); line-height: 1.6; }
+    .empty-wrap { max-width: 640px; margin: 40px auto; }
+    .help { font-size: 13px; color: var(--text2); line-height: 1.7; padding: 16px 20px; margin-top: 16px; }
     .help li { margin-left: 18px; }
-    .hidden { display: none !important; }
+
+    @media (max-width: 960px) {
+      .hero, .grid, .lib { grid-template-columns: 1fr; }
+      .insights, .cards, .calls, .lanes, .sig-grid, .add-sig { grid-template-columns: 1fr; }
+      .rail { position: static; }
+      .paper { padding: 28px 22px; }
+      .hero h1 { font-size: 26px; }
+    }
+    @media print {
+      html, body { overflow: visible; height: auto; background: var(--surface); }
+      .topbar, .brief-bar, #place-radar, #place-library, #place-mine { display: none !important; }
+      main { overflow: visible; }
+      .page { padding: 0; }
+      .paper { border: 0; padding: 0; max-width: none; }
+    }
   </style>
 </head>
 <body>
   <div class="topbar">
     <div class="logo-mark" aria-hidden="true">📡</div>
     <div class="logo-text">Signals Hub</div>
-    <button class="tab on" id="tab-reading" type="button">Reading</button>
-    <button class="tab" id="tab-news" type="button">News</button>
+    <button class="place on" data-place="radar" type="button">Radar</button>
+    <button class="place" data-place="library" type="button">Library</button>
+    <button class="place" data-place="brief" type="button">Brief</button>
+    <button class="place" data-place="mine" type="button">Mine</button>
     <div class="topbar-spacer"></div>
     <span class="status" id="status" role="status"></span>
-    <button class="btn btn-ghost tb-btn" id="btn-folder" type="button">Link folder</button>
-    <button class="btn btn-ghost tb-btn" id="btn-import" type="button">Import files</button>
-    <button class="btn btn-ghost tb-btn" id="btn-save" type="button">Save taps file</button>
     <input type="file" id="file-input" accept=".json" multiple class="hidden">
   </div>
-  <main>
-    <div class="wrap" id="view-reading"></div>
-    <div class="wrap hidden" id="view-news"></div>
+  <main id="main">
+    <div class="page" id="place-radar"></div>
+    <div class="page hidden" id="place-library"></div>
+    <div class="page hidden" id="place-brief"></div>
+    <div class="page hidden" id="place-mine"></div>
   </main>
   <script>
   (() => {
     'use strict';
     const KEY = 'signals-hub-v1';
+    const READING_VERSION = 2;
     const esc = (s) => HubUtils.esc(s == null ? '' : String(s));
     const NO_REASONS = ['Not my field', 'Too early', 'Already doing it', 'Too big for now'];
     const KEEP_READINGS = 8;
-    const NEWS_DAYS = 30;
-    const NEWS_MAX = 500;
+    const NEWS_DAYS = 45;
+    const NEWS_MAX = 800;
     const KIND_NAMES = { build: 'Build', 'reach-out': 'Reach out', test: 'Test', watch: 'Watch' };
+    const VERDICT = { keep: 'Keep', nudge: 'Nudge', drop: 'Drop?' };
 
     let data = load();
-    let folder = null;          // the signals-hub folder inside the linked folder
-    let linkHandle = null;      // what Onur picked
+    let folder = null;
+    let linkHandle = null;
     let needsPermission = false;
     let shownIndex = 0;
+    let place = 'radar';
 
     function load() {
       const d = HubStorage.get(KEY) || {};
@@ -142,6 +337,7 @@
         newsFiles: d.newsFiles && typeof d.newsFiles === 'object' ? d.newsFiles : {},
         reactions: Array.isArray(d.reactions) ? d.reactions : [],
         items: d.items && typeof d.items === 'object' ? d.items : {},
+        signals: Array.isArray(d.signals) ? d.signals : [],
         updatedAt: d.updatedAt || '',
       };
     }
@@ -151,33 +347,49 @@
     }
 
     // ── Reading files ────────────────────────────────────────────────────
-    // A review cites ids from its request. Keep only the sources it cites,
-    // so the hub holds a few KB per reading, not the whole request.
+    // Keep only what a reading cites (a few KB), plus the names of the
+    // projects it touches, so the Radar can place it.
+    function hasReading(requestId) {
+      return data.readings.some((r) => r.requestId === requestId && (r.v || 1) >= READING_VERSION);
+    }
     function addReading(review, request) {
       if (!review || review.schema !== 'signals-hub-review-v1' || !review.requestId) return false;
-      if (data.readings.some((r) => r.requestId === review.requestId)) return false;
+      if (hasReading(review.requestId)) return false;
+      data.readings = data.readings.filter((r) => r.requestId !== review.requestId);
       const known = {};
       ((request && request.evidence) || []).forEach((doc) => { known[doc.id] = doc; });
       (review.newEvidence || []).forEach((doc) => {
         if (String(doc.id || '').startsWith('web:') && /^https?:\/\//.test(doc.url || '')) known[doc.id] = doc;
       });
+      const names = {};
+      ((request && request.projects) || []).forEach((p) => { names[p.projectId || p.id] = p.name; });
       const docs = {};
+      const projects = {};
       let missing = 0;
       const keep = (ids) => (ids || []).filter((id) => {
-        if (known[id]) {
-          const d = known[id];
-          docs[id] = { title: d.title || '', url: d.url || '', source: d.source || '', date: d.date || '' };
-          return true;
-        }
-        missing += 1;
-        return false;
+        if (!known[id]) { missing += 1; return false; }
+        const d = known[id];
+        docs[id] = { title: d.title || '', url: d.url || '', source: d.source || '', date: d.date || '', summary: String(d.summary || '').slice(0, 280) };
+        return true;
       });
-      const insights = (review.insights || []).map((x) => ({ ...x, citations: keep(x.citations) }));
-      const directions = (review.directions || []).map((x) => ({ ...x, citations: keep(x.citations) }));
+      const touch = (id) => { if (id) projects[id] = names[id] || id.replace(/-/g, ' '); };
+      const insights = (review.insights || []).map((x) => {
+        (x.projects || []).forEach((p) => touch(p.projectId));
+        return { ...x, citations: keep(x.citations),
+          projects: (x.projects || []).map((p) => ({ projectId: p.projectId, why: p.why || '', citations: keep(p.citations) })) };
+      });
+      const directions = (review.directions || []).map((x) => {
+        (x.projectIds || []).forEach(touch);
+        return { ...x, citations: keep(x.citations) };
+      });
       data.readings.push({
-        requestId: review.requestId, reviewer: review.reviewer || '', createdAt: (request && request.createdAt) || '',
-        importedAt: new Date().toISOString(), weekPlan: review.weekPlan || '', followUps: review.followUps || [],
-        insights, directions, docs, missing, hasRequest: !!request,
+        v: READING_VERSION, requestId: review.requestId, reviewer: review.reviewer || '',
+        createdAt: (request && request.createdAt) || '', importedAt: new Date().toISOString(),
+        evidenceCount: ((request && request.evidence) || []).length,
+        weekPlan: review.weekPlan || '', followUps: review.followUps || [],
+        signalNotes: (review.signalNotes || []).map((n) => ({ signalId: n.signalId, verdict: n.verdict, note: n.note || '', citations: keep(n.citations) }))
+          .filter((n) => n.citations.length),
+        insights, directions, docs, projects, missing, hasRequest: !!request,
       });
       data.readings.sort((a, b) => (b.createdAt || b.requestId).localeCompare(a.createdAt || a.requestId));
       data.readings = data.readings.slice(0, KEEP_READINGS);
@@ -222,16 +434,15 @@
       writeState();
     }
     function mark(url, state) {
-      const item = data.news.find((n) => n.url === url);
+      const item = libraryItems().find((n) => n.url === url);
       const current = data.items[url] && data.items[url].state;
       const next = current === state ? 'new' : state;
       data.items[url] = { state: next, title: item ? item.title : '', source: item ? item.source : '', at: new Date().toISOString() };
       save(true);
-      renderNews();
+      renderLibrary();
       writeState();
     }
-    // Taps made in the separate Signals Hub app carry over once, so a move
-    // tapped there shows as tapped here. A tap made here always wins.
+    // Taps made in the separate Signals Hub app carry over once. A tap made here wins.
     function adoptPcState(pc) {
       if (!pc || pc.schema !== 'signals-hub-pc-state-v1') return 0;
       const byReview = {};
@@ -251,12 +462,12 @@
       if (added) data.reactions.sort((a, b) => String(a.at).localeCompare(String(b.at)));
       return added;
     }
-
     function stateFile() {
       return {
         schema: 'signals-hub-hub-state-v1', updatedAt: data.updatedAt,
         reactions: data.reactions,
         items: Object.entries(data.items).map(([url, v]) => ({ url, title: v.title, sourceName: v.source, state: v.state, at: v.at })),
+        signals: data.signals.map((x) => ({ id: x.id, title: x.title, observation: x.observation || '', why: x.why || '', state: x.state, updatedAt: x.updatedAt || '' })),
       };
     }
 
@@ -296,7 +507,6 @@
       for await (const [name, h] of dir.entries()) if (h.kind === 'file' && name.endsWith('.json')) out.push([name, h]);
       return out.sort((a, b) => a[0].localeCompare(b[0]));
     }
-
     async function useHandle(handle, ask) {
       let perm = 'prompt';
       try { perm = await handle.queryPermission({ mode: 'readwrite' }); } catch { }
@@ -304,14 +514,13 @@
         try { perm = await handle.requestPermission({ mode: 'readwrite' }); } catch { }
       }
       linkHandle = handle;
-      if (perm !== 'granted') { needsPermission = true; folder = null; renderStatus(); return false; }
+      if (perm !== 'granted') { needsPermission = true; folder = null; render(); return false; }
       needsPermission = false;
       folder = await resolveFolder(handle);
-      if (!folder) { renderStatus('This folder has no Signals Hub files. Pick the folder that holds them.', true); return false; }
+      if (!folder) { setStatus('This folder has no Signals Hub files. Pick the folder that holds them.', true); render(); return false; }
       await scanFolder();
       return true;
     }
-
     async function linkFolder() {
       if (!supported()) { showToast('This browser cannot link a folder. Use Import files.', 'error'); return; }
       if (linkHandle && needsPermission) { await useHandle(linkHandle, true); return; }
@@ -321,7 +530,6 @@
         await useHandle(handle, true);
       } catch (e) { if (e.name !== 'AbortError') showToast('Could not link the folder.', 'error'); }
     }
-
     async function scanFolder() {
       if (!folder) return;
       let readings = 0, news = 0;
@@ -329,56 +537,47 @@
       const requests = await child(folder, 'requests');
       for (const [, h] of await jsonFiles(reviews)) {
         const review = await readJson(h);
-        if (!review || data.readings.some((r) => r.requestId === review.requestId)) continue;
+        if (!review || hasReading(review.requestId)) continue;
         let request = null;
         if (requests && review.requestId && !/[\\/]|\.\./.test(review.requestId)) {
           try { request = await readJson(await requests.getFileHandle(review.requestId + '.json')); } catch { }
         }
         if (addReading(review, request)) readings += 1;
       }
-      for (const [name, h] of await jsonFiles(await child(folder, 'news'))) {
-        news += addNews(await readJson(h), name);
-      }
+      for (const [name, h] of await jsonFiles(await child(folder, 'news'))) news += addNews(await readJson(h), name);
       const stateDir = await child(folder, 'state');
-      if (stateDir) {
-        try { adoptPcState(await readJson(await stateDir.getFileHandle('pc-state.json'))); } catch { }
-      }
+      if (stateDir) { try { adoptPcState(await readJson(await stateDir.getFileHandle('pc-state.json'))); } catch { } }
       save(false);
       if (readings) shownIndex = 0;
       render();
-      renderStatus(readings || news
-        ? `${readings ? readings + ' new reading' + (readings > 1 ? 's' : '') : ''}${readings && news ? ', ' : ''}${news ? news + ' new items' : ''}`
-        : 'Up to date');
+      setStatus(readings || news ? [readings && `${readings} new reading${readings > 1 ? 's' : ''}`, news && `${news} new items`].filter(Boolean).join(', ') : 'Up to date');
     }
-
     async function writeState() {
-      if (!folder) { renderStatus('Taps saved here. Save the taps file to send them.', true); return; }
+      if (!folder) { setStatus('Taps saved here. Save the taps file to send them.', true); return; }
       try {
         const dir = await folder.getDirectoryHandle('state', { create: true });
         const fh = await dir.getFileHandle('hub-state.json', { create: true });
         const w = await fh.createWritable();
         await w.write(JSON.stringify(stateFile(), null, 2));
         await w.close();
-        renderStatus('Taps saved in the linked folder');
-      } catch { renderStatus('Could not write to the folder. Save the taps file instead.', true); }
+        setStatus('Taps saved in the linked folder');
+      } catch { setStatus('Could not write to the folder. Save the taps file instead.', true); }
     }
-
-    function saveTapsFile() {
-      const blob = new Blob([JSON.stringify(stateFile(), null, 2)], { type: 'application/json' });
+    function download(name, text, type) {
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'hub-state.json';
+      a.href = URL.createObjectURL(new Blob([text], { type }));
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    }
+    function saveTapsFile() {
+      download('hub-state.json', JSON.stringify(stateFile(), null, 2), 'application/json');
       showToast('Saved hub-state.json. Put it in the state folder.');
     }
-
     async function importFiles(files) {
       const parsed = [];
-      for (const file of files) {
-        try { parsed.push([file.name, JSON.parse(await file.text())]); } catch { }
-      }
+      for (const file of files) { try { parsed.push([file.name, JSON.parse(await file.text())]); } catch { } }
       const requests = {};
       parsed.forEach(([, d]) => { if (d && d.schema === 'signals-hub-review-request-v1') requests[d.id] = d; });
       let readings = 0, news = 0, other = 0;
@@ -395,31 +594,95 @@
       return { readings, news, other };
     }
 
-    // ── Render ───────────────────────────────────────────────────────────
-    function renderStatus(text, warn) {
+    // ── Helpers ──────────────────────────────────────────────────────────
+    let statusText = '', statusWarn = false;
+    function setStatus(text, warn) {
+      statusText = text || ''; statusWarn = !!warn;
       const el = document.getElementById('status');
-      const btn = document.getElementById('btn-folder');
-      if (needsPermission) { el.textContent = 'Click Reconnect to read the folder'; el.className = 'status warn'; btn.textContent = 'Reconnect'; return; }
-      btn.textContent = folder ? 'Check folder' : 'Link folder';
-      el.textContent = text || (folder ? 'Folder linked' : '');
-      el.className = 'status' + (warn ? ' warn' : '');
+      el.textContent = statusText;
+      el.className = 'status' + (statusWarn ? ' warn' : '');
     }
-
-    function sources(reading, ids) {
-      const rows = (ids || []).map((id) => reading.docs[id]).filter(Boolean);
+    const section = (title, hint) => `<div class="panel-head"><span class="mono">${esc(title)}</span>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
+    function isoWeek(day) {
+      const d = new Date(day + 'T12:00:00');
+      d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+      const first = new Date(d.getFullYear(), 0, 4);
+      return 1 + Math.round(((d - first) / 86400000 - 3 + ((first.getDay() + 6) % 7)) / 7);
+    }
+    const dayOf = (r) => (r.createdAt ? HubUtils.isoToLocalDay(r.createdAt) : r.requestId.slice(4, 14));
+    const kindOf = (move) => move.kind || ((/\((build|reach-out|test|watch)\b/.exec(move.title || '') || [])[1] || '');
+    const byOf = (move) => move.by || ((/(?:by|again) (\d{4}-\d{2}-\d{2})\)/.exec(move.title || '') || [])[1] || '');
+    function sources(reading, ids, numbered) {
+      const rows = (ids || []).map((id) => [id, reading.docs[id]]).filter(([, d]) => d);
       if (!rows.length) return '';
-      return `<div class="srcs">${rows.map((d) => `<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(d.title)} <span class="src-meta">· ${esc(d.source)}${d.date ? ' · ' + esc(d.date) : ''}</span></a>`).join('')}</div>`;
+      return `<div class="srcs">${rows.map(([id, d]) => `<a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${numbered ? `[${numbered(id)}] ` : '↗ '}${esc(d.title)} <span class="m">· ${esc(d.source)}${d.date ? ' · ' + esc(d.date) : ''}</span></a>`).join('')}</div>`;
+    }
+    function current() {
+      shownIndex = Math.min(shownIndex, Math.max(0, data.readings.length - 1));
+      return data.readings[shownIndex] || null;
+    }
+    function projectCounts(reading) {
+      const counts = {}, top = {};
+      reading.insights.forEach((x) => (x.projects || []).forEach((p) => {
+        counts[p.projectId] = (counts[p.projectId] || 0) + 1;
+        if (!top[p.projectId]) top[p.projectId] = x.headline;
+      }));
+      reading.directions.forEach((m) => (m.projectIds || []).forEach((id) => {
+        counts[id] = (counts[id] || 0) + 1;
+        if (!top[id]) top[id] = m.title;
+      }));
+      return Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b)).map((id) => ({ id, name: reading.projects[id] || id, n: counts[id], top: top[id] }));
     }
 
-    function kindOf(move) {
-      if (move.kind) return move.kind;
-      const m = /\((build|reach-out|test|watch)\b/.exec(move.title || '');
-      return m ? m[1] : '';
-    }
-    function byOf(move) {
-      if (move.by) return move.by;
-      const m = /(?:by|again) (\d{4}-\d{2}-\d{2})\)/.exec(move.title || '');
-      return m ? m[1] : '';
+    // ── Radar place ──────────────────────────────────────────────────────
+    function radarSvg(reading) {
+      const ring = projectCounts(reading);
+      const S = 560, C = S / 2, R = 200, H = 248;
+      const angle = {};
+      ring.forEach((p, i) => { angle[p.id] = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(ring.length, 1); });
+      const at = (a, r) => [C + r * Math.cos(a), C + r * Math.sin(a)];
+      const mean = (ids) => {
+        const list = ids.filter((id) => id in angle);
+        if (!list.length) return null;
+        const x = list.reduce((s, id) => s + Math.cos(angle[id]), 0), y = list.reduce((s, id) => s + Math.sin(angle[id]), 0);
+        return Math.hypot(x, y) < 1e-6 ? angle[list[0]] : Math.atan2(y, x);
+      };
+      let out = `<svg viewBox="-90 0 ${S + 180} ${S}" role="img" aria-label="Radar of this reading">`;
+      [70, 135, R].forEach((r) => { out += `<circle class="ring" cx="${C}" cy="${C}" r="${r}"/>`; });
+      out += `<circle class="horizon" cx="${C}" cy="${C}" r="${H}"/><text class="h-label" x="${C}" y="${C - H - 6}" text-anchor="middle">HORIZON</text>`;
+      ring.forEach((p) => {
+        const [x, y] = at(angle[p.id], R);
+        out += `<line class="spoke" x1="${C}" y1="${C}" x2="${x}" y2="${y}"/>`;
+      });
+      ring.forEach((p) => {
+        const a = angle[p.id], [x, y] = at(a, R), [lx, ly] = at(a, R + 16);
+        const anchor = Math.abs(Math.cos(a)) < 0.25 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end';
+        const name = p.name.length > 26 ? p.name.slice(0, 25) + '…' : p.name;
+        out += `<circle class="proj${p.n > 1 ? ' hit' : ''}" cx="${x}" cy="${y}" r="${4 + Math.min(p.n, 4)}"><title>${esc(p.name)}: ${p.n}</title></circle>`;
+        out += `<text class="plabel" x="${lx}" y="${ly + 4}" text-anchor="${anchor}">${esc(name)}</text>`;
+      });
+      out += `<circle class="you" cx="${C}" cy="${C}" r="4"/><text class="you-label" x="${C}" y="${C + 18}" text-anchor="middle">YOU</text>`;
+      const nearness = { high: 70, medium: 115, low: 160 };
+      reading.insights.forEach((x, i) => {
+        const a = mean((x.projects || []).map((p) => p.projectId));
+        const r = nearness[x.confidence] || 135;
+        const [cx, cy] = a == null ? at(-Math.PI / 2 + i, H) : at(a + (i % 2 ? 0.12 : -0.12), r);
+        const size = 6 + Math.min((x.citations || []).length, 8);
+        out += `<circle class="halo" cx="${cx}" cy="${cy}" r="${size + 7}"/><circle class="ins" data-go="ins-${i}" data-read="Insight: ${esc(x.headline)}" cx="${cx}" cy="${cy}" r="${size}"><title>${esc(x.headline)}</title></circle>`;
+      });
+      let free = 0;
+      reading.directions.forEach((m, i) => {
+        const a = mean(m.projectIds || []);
+        if (a == null) {
+          const [cx, cy] = at(-Math.PI / 4 + free * 0.6, H);
+          free += 1;
+          out += `<circle class="new" data-go="move-${i}" data-read="New direction: ${esc(m.title)}" cx="${cx}" cy="${cy}" r="8"><title>${esc(m.title)}</title></circle>`;
+          return;
+        }
+        const [cx, cy] = at(a + 0.22, 150);
+        out += `<rect class="move" data-go="move-${i}" data-read="Move: ${esc(m.title)}" x="${cx - 6}" y="${cy - 6}" width="12" height="12" transform="rotate(45 ${cx} ${cy})"><title>${esc(m.title)}</title></rect>`;
+      });
+      return out + '</svg>';
     }
 
     function moveCard(reading, move, index) {
@@ -428,22 +691,26 @@
       const kind = kindOf(move), by = byOf(move), late = by && now === 'follow' && by < HubUtils.todayLocal();
       const btn = (r, label) => `<button class="tap${now === r ? ' on' : ''}" type="button" data-tap="${r}" data-i="${index}">${label}</button>`;
       const reasons = now === 'no'
-        ? NO_REASONS.map((x) => `<button class="chip${t.reason === x ? ' on' : ''}" type="button" data-tap="no" data-reason="${esc(x)}" data-i="${index}">${esc(x)}</button>`).join('') : '';
-      return `<div class="card">
+        ? NO_REASONS.map((x) => `<button class="reason${t.reason === x ? ' on' : ''}" type="button" data-tap="no" data-reason="${esc(x)}" data-i="${index}">${esc(x)}</button>`).join('') : '';
+      const chips = (move.projectIds || []).map((id) => `<span class="chip-p">${esc(reading.projects[id] || id)}</span>`).join('');
+      const details = [
+        move.whyNow && `<p><b>Why now.</b> ${esc(move.whyNow)}</p>`,
+        move.deliverable && `<p><b>What.</b> ${esc(move.deliverable)}</p>`,
+        move.contact && `<p><b>Who.</b> ${esc(move.contact)}</p>`,
+        move.draft && `<div class="draft">${esc(move.draft)}</div><div class="taps"><button class="reason" type="button" data-copy="${index}">Copy draft</button></div>`,
+        move.wouldChangeMind && `<p><b>Would change the call.</b> ${esc(move.wouldChangeMind)}</p>`,
+        sources(reading, move.citations),
+      ].filter(Boolean).join('');
+      return `<div class="move-card${now ? ' tapped' : ''}" id="move-${index}">
+        <div class="move-top"><span class="mono">${esc(move.area || '')}</span>${kind ? `<span class="chip-k">${esc(KIND_NAMES[kind] || kind)}</span>` : ''}${chips}${(move.projectIds || []).length ? '' : '<span class="chip-new">New direction</span>'}${by ? `<span class="chip-date${late ? ' late' : ''}">${late ? 'past its date · ' : ''}${esc(by)}</span>` : ''}</div>
         <h3>${esc(move.title)}</h3>
-        <div class="tags">${kind ? `<span class="tag kind">${esc(KIND_NAMES[kind] || kind)}</span>` : ''}${by ? `<span class="tag${late ? ' late' : ''}">${late ? 'Past its date · ' : ''}${esc(by)}</span>` : ''}${move.area ? `<span class="tag">${esc(move.area)}</span>` : ''}</div>
-        ${move.whyNow ? `<p><b>Why now.</b> ${esc(move.whyNow)}</p>` : ''}
-        ${move.deliverable ? `<p><b>What.</b> ${esc(move.deliverable)}</p>` : ''}
-        ${move.contact ? `<p><b>Who.</b> ${esc(move.contact)}</p>` : ''}
-        ${move.firstStep ? `<p><b>First step.</b> ${esc(move.firstStep)}</p>` : ''}
-        ${move.draft ? `<div class="draft">${esc(move.draft)}</div><div class="taps"><button class="chip" type="button" data-copy="${index}">Copy draft</button></div>` : ''}
-        ${move.wouldChangeMind ? `<p><b>Would change the call.</b> ${esc(move.wouldChangeMind)}</p>` : ''}
-        ${sources(reading, move.citations)}
-        <div class="taps">${btn('follow', 'Follow')}${btn('later', 'Later')}${btn('no', 'Not for me')}${reasons}</div>
+        ${move.firstStep ? `<div class="step"><b>First step.</b> ${esc(move.firstStep)}</div>` : ''}
+        ${details ? `<details><summary>Why, sources${move.draft ? ', draft' : ''}</summary>${details}</details>` : ''}
+        <div class="taps">${btn('follow', '✓ Follow')}${btn('later', '◷ Later')}${btn('no', '✕ Not for me')}${reasons}</div>
       </div>`;
     }
 
-    function openMoves(reading) {
+    function stillOpen(reading) {
       const verdicts = {};
       (reading.followUps || []).forEach((f) => { verdicts[f.directionId] = f; });
       const rows = [];
@@ -451,60 +718,488 @@
         if (r.requestId === reading.requestId) return;
         r.directions.forEach((move, i) => {
           const t = latestTap(r.requestId, i);
-          if (!t || t.reaction !== 'follow') return;
-          rows.push({ move, by: byOf(move), follow: verdicts[`signals-${r.requestId}-${i}`] });
+          if (t && t.reaction === 'follow') rows.push({ move, by: byOf(move), follow: verdicts[`signals-${r.requestId}-${i}`] });
         });
       });
       if (!rows.length) return '';
       const today = HubUtils.todayLocal();
-      return '<div>' + section('Still open') + rows.map(({ move, by, follow }) => `<div class="card">
-        ${follow ? `<div class="verdict ${esc(follow.verdict)}">${esc({ keep: 'Keep', nudge: 'Nudge', drop: 'Drop?' }[follow.verdict] || follow.verdict)}</div>` : ''}
-        <h3>${esc(move.title)}</h3>
-        ${by ? `<div class="tags"><span class="tag${by < today ? ' late' : ''}">${by < today ? 'Past its date · ' : ''}${esc(by)}</span></div>` : ''}
-        ${follow && follow.note ? `<p>${esc(follow.note)}</p>` : ''}
-      </div>`).join('') + '</div>';
+      return `<div class="panel card">${section('Still open', 'moves you follow')}${rows.map(({ move, by, follow }) => `<div class="open-row">
+        ${follow ? `<span class="verdict ${esc(follow.verdict)}">${esc(VERDICT[follow.verdict] || follow.verdict)}</span>` : ''}
+        <div class="t">${esc(move.title)}</div>
+        ${by ? `<span class="chip-date${by < today ? ' late' : ''}">${by < today ? 'past its date · ' : ''}${esc(by)}</span>` : ''}
+        ${follow && follow.note ? `<div class="n">${esc(follow.note)}</div>` : ''}
+      </div>`).join('')}</div>`;
     }
 
-    const section = (title) => `<div class="ui-section-header"><span class="ui-section-title">${esc(title)}</span><span class="ui-section-line"></span></div>`;
+    function feedPulse() {
+      if (!data.news.length) return '';
+      const today = new Date(HubUtils.todayLocal() + 'T12:00:00');
+      const weekOf = (day) => Math.floor((today - new Date(day + 'T12:00:00')) / (7 * 86400000));
+      const by = {};
+      data.news.forEach((n) => {
+        if (!n.date) return;
+        const w = weekOf(n.date);
+        if (w < 0 || w > 3) return;
+        (by[n.source] = by[n.source] || [0, 0, 0, 0])[3 - w] += 1;
+      });
+      const rows = Object.entries(by).sort((a, b) => b[1][3] - a[1][3] || b[1].reduce((s, x) => s + x, 0) - a[1].reduce((s, x) => s + x, 0));
+      if (!rows.length) return '';
+      const max = Math.max(1, ...rows.flatMap(([, w]) => w));
+      return `<div class="panel card">${section('Feed pulse', 'items per week, last 4 weeks')}${rows.map(([name, w]) => `<div class="feed-row">
+        <span>${esc(name)}</span>
+        <span class="spark">${w.map((n, i) => `<span class="${i === 3 ? 'now' : ''}" style="height:${Math.max(2, Math.round((n / max) * 18))}px" title="${n}"></span>`).join('')}</span>
+        <span class="pulse-n">${w[3]}</span></div>`).join('')}</div>`;
+    }
 
-    function renderReading() {
-      const view = document.getElementById('view-reading');
-      if (!data.readings.length) {
-        view.innerHTML = `<div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading yet</div>
-          <div class="e-sub">Link the folder that holds the Signals Hub files, or import a reading file.</div></div>
-          <div class="card help"><ol>
-            <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. The hub reads new readings and news each time you open this page.</li>
-            <li><b>Import files</b>: pick a reading file and its request file, or a news file.</li>
-            <li>Tap each move. Your taps go into the linked folder (<code>state/hub-state.json</code>) and into the full backup.</li>
-          </ol></div>`;
-        return;
-      }
-      shownIndex = Math.min(shownIndex, data.readings.length - 1);
-      const reading = data.readings[shownIndex];
+    function emptyPage() {
+      return `<div class="empty-wrap">
+        <div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading yet</div>
+        <div class="e-sub">Link the folder that holds the Signals Hub files, or import a reading file.</div></div>
+        <div class="card help"><ol>
+          <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. New readings and news come in each time you open this page.</li>
+          <li><b>Import files</b>: a reading file and its request file, or a news file.</li>
+          <li>Tap each move. Taps go into the linked folder (<code>state/hub-state.json</code>) and into the full backup.</li>
+        </ol>
+        <div class="row" style="margin-top:12px">${folderButtons()}</div></div></div>`;
+    }
+    function folderButtons() {
+      const link = !supported() ? '' : needsPermission ? '<button class="btn btn-primary btn-s" data-act="link" type="button">Reconnect folder</button>'
+        : folder ? '<button class="btn btn-ghost btn-s" data-act="scan" type="button">Check folder</button>'
+        : '<button class="btn btn-primary btn-s" data-act="link" type="button">Link folder</button>';
+      return `${link}<button class="btn btn-ghost btn-s" data-act="import" type="button">Import files</button><button class="btn btn-ghost btn-s" data-act="save" type="button">Save taps file</button>`;
+    }
+
+    function renderRadar() {
+      const view = document.getElementById('place-radar');
+      const reading = current();
+      if (!reading) { view.innerHTML = emptyPage(); wire(view); return; }
+      const day = dayOf(reading);
+      const waiting = reading.directions.filter((_, i) => !latestTap(reading.requestId, i)).length;
       const lead = reading.insights[0];
-      const day = (r) => (r.createdAt ? HubUtils.isoToLocalDay(r.createdAt) : r.requestId.slice(4, 14));
-      const picker = data.readings.length > 1
-        ? `<select id="pick-reading" aria-label="Reading">${data.readings.map((r, i) => `<option value="${i}"${i === shownIndex ? ' selected' : ''}>${esc(day(r))}</option>`).join('')}</select>`
-        : esc(day(reading));
+      const pulse = projectCounts(reading);
+      const maxN = Math.max(1, ...pulse.map((p) => p.n));
+      const horizon = reading.directions.map((m, i) => [m, i]).filter(([m]) => !(m.projectIds || []).length);
       view.innerHTML = `
-        <div>
-          <div class="lead">${esc(lead ? lead.headline : 'A reading without insights')}</div>
-          ${reading.weekPlan ? `<div class="plan"><b>This week.</b> ${esc(reading.weekPlan)}</div>` : ''}
-          <div class="meta">Reading ${picker} · ${esc(reading.reviewer)}${reading.missing ? ` · ${reading.missing} citation${reading.missing > 1 ? 's' : ''} without a known source left out` : ''}${reading.hasRequest ? '' : ' · its request file was not found, so sources are missing'}</div>
-        </div>
-        ${openMoves(reading)}
-        <div>${section('Moves')}${reading.directions.length ? reading.directions.map((m, i) => moveCard(reading, m, i)).join('') : '<div class="card"><p>No moves this time.</p></div>'}</div>
-        <div>${section('What Claude sees')}${reading.insights.map((x) => `<div class="card">
-          <h3>${esc(x.headline)}</h3>
-          ${x.summary ? `<p>${esc(x.summary)}</p>` : ''}
-          ${x.comparison ? `<p><b>How sources compare.</b> ${esc(x.comparison)}</p>` : ''}
-          ${x.counterpoint ? `<p><b>Counterpoint.</b> ${esc(x.counterpoint)}</p>` : ''}
-          ${x.firstStep ? `<p><b>First step.</b> ${esc(x.firstStep)}</p>` : ''}
-          ${x.confidence ? `<div class="tags"><span class="tag">Evidence: ${esc(x.confidence)}</span></div>` : ''}
-          ${sources(reading, x.citations)}
-        </div>`).join('')}</div>`;
-      const pick = document.getElementById('pick-reading');
-      if (pick) pick.onchange = () => { shownIndex = Number(pick.value); renderReading(); };
+        <section class="hero">
+          <div>
+            <div class="mono">Week ${isoWeek(day)} · ${esc(day)}</div>
+            <h1>${esc(lead ? lead.headline : 'A reading without insights')}</h1>
+            <div class="facts">Claude read ${reading.evidenceCount || '—'} sources · ${reading.insights.length} insights · ${waiting ? `${waiting} move${waiting > 1 ? 's' : ''} waiting for one tap` : 'every move tapped'}</div>
+            ${reading.weekPlan ? `<div class="plan"><b>This week.</b> ${esc(reading.weekPlan)}</div>` : ''}
+          </div>
+          <div class="card side">
+            <div class="when"><span class="dot${folder ? '' : ' off'}"></span>Reading of ${esc(HubUtils.relativeAge ? (reading.createdAt ? HubUtils.relativeAge(reading.createdAt) : day) : day)}</div>
+            <div class="sub">${esc(reading.reviewer)}${reading.missing ? ` · ${reading.missing} citation${reading.missing > 1 ? 's' : ''} without a known source left out` : ''}${reading.hasRequest ? '' : ' · request file not found, so sources are missing'}</div>
+            <div class="sub">${needsPermission ? 'The linked folder needs one click to read again.' : folder ? 'Folder linked. New readings come in when you open this page.' : 'No folder linked. Import files by hand, or link the folder.'}</div>
+            ${data.readings.length > 1 ? `<select id="pick-reading" aria-label="Reading">${data.readings.map((r, i) => `<option value="${i}"${i === shownIndex ? ' selected' : ''}>Reading of ${esc(dayOf(r))}</option>`).join('')}</select>` : ''}
+            <div class="row">${folderButtons()}</div>
+          </div>
+        </section>
+        <section class="grid">
+          <div class="col">
+            <div class="panel card radar">${section('Radar', 'you in the middle · broader evidence closer · new directions on the horizon')}
+              ${radarSvg(reading)}
+              <div class="radar-read" id="radar-read">Point at a dot to read it. Click to jump to it.</div>
+              <div class="legend"><span><i class="l-ins"></i>insight</span><span><i class="l-move"></i>move</span><span><i class="l-new"></i>new direction</span><span><i class="l-proj"></i>your project</span></div>
+            </div>
+            ${pulse.length ? `<div class="panel card">${section('Project pulse', 'insights and moves per project')}${pulse.map((p) => `<div class="pulse-row">
+              <div class="pulse-top"><span class="pulse-name" title="${esc(p.name)}">${esc(p.name)}</span><span class="bar"><span style="width:${Math.round((p.n / maxN) * 100)}%"></span></span><span class="pulse-n">${p.n}</span></div>
+              <div class="pulse-why">${esc(p.top)}</div></div>`).join('')}</div>` : ''}
+          </div>
+          <div class="col">
+            ${readingSignalPanel(reading)}
+            ${stillOpen(reading)}
+            <div class="panel card">${section('Moves', 'one tap each · Claude learns from it')}
+              ${reading.directions.length ? reading.directions.map((m, i) => moveCard(reading, m, i)).join('') : '<p class="hint">No moves this time.</p>'}
+            </div>
+            ${horizon.length ? `<div class="panel card">${section('On the horizon', 'fits none of your projects')}${horizon.map(([m, i]) => `<div class="horizon-item" data-go="move-${i}">${esc(m.title)}</div>`).join('')}</div>` : ''}
+            ${feedPulse()}
+          </div>
+        </section>
+        <section>
+          <div class="panel-head" style="margin-top:30px"><span class="mono">What Claude sees</span><span class="hint">every line opens its sources</span></div>
+          <div class="insights">${reading.insights.map((x, i) => `<div class="card ins-card" id="ins-${i}">
+            <div class="move-top">${(x.projects || []).map((p) => `<span class="chip-p">${esc(reading.projects[p.projectId] || p.projectId)}</span>`).join('')}${x.confidence ? `<span class="chip-date">evidence: ${esc(x.confidence)}</span>` : ''}</div>
+            <h3>${esc(x.headline)}</h3>
+            ${x.summary ? `<p>${esc(x.summary)}</p>` : ''}
+            ${x.comparison ? `<p><b>How sources compare.</b> ${esc(x.comparison)}</p>` : ''}
+            ${x.counterpoint ? `<p><b>Counterpoint.</b> ${esc(x.counterpoint)}</p>` : ''}
+            ${x.firstStep ? `<div class="try"><b>Try:</b> ${esc(x.firstStep)}</div>` : ''}
+            ${sources(reading, x.citations)}
+          </div>`).join('')}</div>
+        </section>`;
+      wire(view, reading);
+      const pick = view.querySelector('#pick-reading');
+      if (pick) pick.onchange = () => { shownIndex = Number(pick.value); render(); };
+      const readOut = view.querySelector('#radar-read');
+      view.querySelectorAll('[data-read]').forEach((el) => {
+        el.addEventListener('mouseenter', () => { readOut.textContent = el.getAttribute('data-read'); });
+      });
+    }
+
+    // ── Library place ────────────────────────────────────────────────────
+    function libraryItems() {
+      const items = new Map();
+      data.news.forEach((n) => items.set(n.url, { ...n, usedIn: [], projectIds: new Set() }));
+      data.readings.slice().reverse().forEach((r) => {
+        const use = (ids, entry, projectIds) => (ids || []).forEach((id) => {
+          const d = r.docs[id];
+          if (!d || !d.url) return;
+          if (!items.has(d.url)) items.set(d.url, { title: d.title, url: d.url, source: d.source, date: d.date, summary: d.summary || '', usedIn: [], projectIds: new Set() });
+          const it = items.get(d.url);
+          if (!it.usedIn.some((u) => u.title === entry.title)) it.usedIn.push(entry);
+          projectIds.forEach((p) => it.projectIds.add(r.projects[p] || p));
+        });
+        r.insights.forEach((x) => {
+          use(x.citations, { kind: 'insight', title: x.headline }, (x.projects || []).map((p) => p.projectId));
+          (x.projects || []).forEach((p) => use(p.citations, { kind: 'insight', title: x.headline }, [p.projectId]));
+        });
+        r.directions.forEach((m) => use(m.citations, { kind: 'move', title: m.title }, m.projectIds || []));
+      });
+      return [...items.values()].map((it) => ({ ...it, projects: [...it.projectIds], state: (data.items[it.url] || {}).state || 'new' }))
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+
+    const lib = { text: '', days: 30, group: 'date', show: 'all', source: '', limit: 60 };
+    function renderLibrary() {
+      const view = document.getElementById('place-library');
+      const all = libraryItems();
+      if (!all.length) { view.innerHTML = emptyPage(); wire(view); return; }
+      const today = HubUtils.todayLocal();
+      const since = lib.days ? HubUtils.localYmd(new Date(Date.now() - lib.days * 86400000)) : '';
+      const text = lib.text.toLowerCase();
+      const inTime = all.filter((it) => !since || !it.date || it.date >= since);
+      const shown = inTime.filter((it) => {
+        if (lib.show === 'all' && it.state === 'dismissed') return false;
+        if (lib.show === 'used' && !it.usedIn.length) return false;
+        if (lib.show === 'kept' && it.state !== 'kept') return false;
+        if (lib.show === 'counter' && it.state !== 'counter-signal') return false;
+        if (lib.show === 'hidden' && it.state !== 'dismissed') return false;
+        if (lib.source && it.source !== lib.source) return false;
+        return !text || `${it.title} ${it.summary}`.toLowerCase().includes(text);
+      });
+      const sourceCounts = {};
+      inTime.forEach((it) => { sourceCounts[it.source || 'Unknown'] = (sourceCounts[it.source || 'Unknown'] || 0) + 1; });
+      const weekAgo = HubUtils.localYmd(new Date(Date.now() - 7 * 86400000));
+      const groupOf = (it) => {
+        if (lib.group === 'source') return [it.source || 'Unknown'];
+        if (lib.group === 'theme') return it.usedIn.length ? it.usedIn.map((u) => u.title) : ['Not used by Claude yet'];
+        if (lib.group === 'project') return it.projects.length ? it.projects : ['No project'];
+        return [it.date === today ? 'Today' : it.date >= weekAgo ? 'This week' : 'Earlier'];
+      };
+      const groups = new Map();
+      shown.slice(0, lib.limit).forEach((it) => groupOf(it).forEach((g) => { if (!groups.has(g)) groups.set(g, []); groups.get(g).push(it); }));
+      const seg = (name, value, label) => `<button type="button" class="${lib[name] === value ? 'on' : ''}" data-lib="${name}" data-v="${value}">${label}</button>`;
+      const usedCount = inTime.filter((it) => it.usedIn.length).length;
+      view.innerHTML = `
+        <div class="lib-intro"><div class="mono">Library</div><h1>Everything collected, your way.</h1>
+          <p>No need to go through it. Claude reads it for each reading. Slice it when you are curious; ★ Keep puts an item first for Claude, ✕ Hide takes it out.</p></div>
+        <div class="lib">
+          <aside class="rail">
+            <input type="search" id="lib-text" placeholder="Search titles and summaries…" value="${esc(lib.text)}" aria-label="Search the library">
+            <div><div class="mono">When</div><div class="seg">${seg('days', 7, '7 days')}${seg('days', 30, '30 days')}${seg('days', 0, 'All')}</div></div>
+            <div><div class="mono">Group by</div><div class="seg">${seg('group', 'date', 'Date')}${seg('group', 'theme', "Claude's themes")}${seg('group', 'project', 'Project')}${seg('group', 'source', 'Source')}</div></div>
+            <div><div class="mono">Show</div><div class="stack">${[['all', 'Everything'], ['used', 'Used by Claude'], ['kept', 'Kept by you'], ['counter', 'Counter-evidence'], ['hidden', 'Hidden']].map(([v, l]) => `<button type="button" class="${lib.show === v ? 'on' : ''}" data-lib="show" data-v="${v}"><span>${l}</span></button>`).join('')}</div></div>
+            <div><div class="mono">Sources</div><div class="stack"><button type="button" class="${lib.source ? '' : 'on'}" data-lib="source" data-v=""><span>All sources</span><span class="n">${inTime.length}</span></button>${Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).map(([s, n]) => `<button type="button" class="${lib.source === s ? 'on' : ''}" data-lib="source" data-v="${esc(s)}"><span>${esc(s)}</span><span class="n">${n}</span></button>`).join('')}</div></div>
+          </aside>
+          <div>
+            <div class="lib-count">${shown.length} items · <b>${usedCount} used by Claude</b> · ${all.length} in the library</div>
+            ${shown.length ? [...groups.entries()].map(([g, items]) => `<div class="group-head"><h2>${esc(g)}</h2><span class="n">${items.length}</span></div>
+              <div class="cards">${items.map(itemCard).join('')}</div>`).join('') : '<div class="empty-state"><div class="e-title">Nothing matches</div><div class="e-sub">Widen the time or clear the search.</div></div>'}
+            ${shown.length > lib.limit ? `<button class="btn btn-ghost more" type="button" data-lib="more">Show ${Math.min(60, shown.length - lib.limit)} more</button>` : ''}
+          </div>
+        </div>`;
+      const textEl = view.querySelector('#lib-text');
+      textEl.oninput = () => {
+        lib.text = textEl.value; lib.limit = 60;
+        const pos = textEl.selectionStart;
+        renderLibrary();
+        const again = document.getElementById('lib-text');
+        again.focus(); again.setSelectionRange(pos, pos);
+      };
+      view.querySelectorAll('[data-lib]').forEach((b) => {
+        b.onclick = () => {
+          const name = b.dataset.lib;
+          if (name === 'more') lib.limit += 60;
+          else { lib[name] = name === 'days' ? Number(b.dataset.v) : b.dataset.v; lib.limit = 60; }
+          renderLibrary();
+        };
+      });
+      view.querySelectorAll('[data-mark]').forEach((b) => { b.onclick = () => mark(b.dataset.url, b.dataset.mark); });
+    }
+    function itemCard(it) {
+      const m = (state, label, title) => `<button class="mark${it.state === state ? ' on' : ''}" type="button" data-mark="${state}" data-url="${esc(it.url)}" title="${title}">${label}</button>`;
+      return `<div class="card item${it.usedIn.length ? ' used' : ''}${it.state === 'dismissed' ? ' dim' : ''}">
+        <div class="item-top"><b>${esc(it.source)}</b>${it.date ? `<span>${esc(it.date)}</span>` : ''}${it.projects.slice(0, 3).map((p) => `<span class="chip-p">${esc(p)}</span>`).join('')}</div>
+        <h3><a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a></h3>
+        ${it.summary ? `<div class="sum">${esc(it.summary)}</div>` : ''}
+        ${it.usedIn.length ? `<div class="used-box">${it.usedIn.slice(0, 3).map((u) => `<div><span class="k ${u.kind === 'move' ? 'm' : 'i'}">${u.kind === 'move' ? "CLAUDE'S MOVE" : "CLAUDE'S INSIGHT"}</span>${esc(u.title)}</div>`).join('')}</div>` : ''}
+        <div class="acts">${m('kept', '★ Keep', 'Claude reads it first')}${m('counter-signal', '⇄ Counter', 'Evidence against a trend')}${m('dismissed', '✕ Hide', 'Claude skips it')}</div>
+      </div>`;
+    }
+
+    // ── Brief place ──────────────────────────────────────────────────────
+    function briefParts(reading) {
+      const order = [];
+      const num = (id) => { if (!order.includes(id)) order.push(id); return order.indexOf(id) + 1; };
+      const calls = { follow: [], later: [], no: [], open: [] };
+      reading.directions.forEach((m, i) => {
+        const t = latestTap(reading.requestId, i);
+        calls[t ? t.reaction : 'open'].push({ title: m.title, reason: t && t.reason });
+      });
+      const touched = projectCounts(reading);
+      const horizon = reading.directions.filter((m) => !(m.projectIds || []).length);
+      return { num, order, calls, touched, horizon };
+    }
+    function renderBrief() {
+      const view = document.getElementById('place-brief');
+      const reading = current();
+      if (!reading) { view.innerHTML = emptyPage(); wire(view); return; }
+      const day = dayOf(reading);
+      const { num, order, calls, touched, horizon } = briefParts(reading);
+      const sigNotes = (reading.signalNotes || []).map((n) => ({ ...n, sig: data.signals.find((x) => x.id === n.signalId) })).filter((n) => n.sig);
+      const sup = (ids) => {
+        const n = (ids || []).filter((id) => reading.docs[id]).map(num);
+        return n.length ? `<sup>${n.length > 2 ? `${n[0]}–${n[n.length - 1]}` : n.join(',')}</sup>` : '';
+      };
+      const insights = reading.insights.map((x, i) => `<div class="b-item"><div class="num">${i + 1}</div><div>
+        <h3>${esc(x.headline)}${sup(x.citations)}</h3>
+        ${x.summary ? `<p>${esc(x.summary)}</p>` : ''}
+        <div class="meta">${x.confidence ? `${esc(x.confidence)} confidence` : ''}${(x.projects || []).length ? ' · ' + (x.projects || []).map((p) => esc(reading.projects[p.projectId] || p.projectId)).join(', ') : ''}</div>
+        ${x.firstStep ? `<div class="try"><b>Try:</b> ${esc(x.firstStep)}</div>` : ''}
+      </div></div>`).join('');
+      const callList = (title, rows) => `<div><h4>${title}</h4>${rows.length ? `<ul>${rows.map((r) => `<li>${esc(r.title)}${r.reason ? ` <span class="m">(${esc(r.reason)})</span>` : ''}</li>`).join('')}</ul>` : '<ul><li>—</li></ul>'}</div>`;
+      view.innerHTML = `
+        <div class="brief-bar"><div><div class="mono">Brief</div><p>One page from Claude's reading and your taps. Nothing to fill in.</p></div>
+          <div class="row" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-s" type="button" data-brief="print">Print or save PDF</button>
+            <button class="btn btn-ghost btn-s" type="button" data-brief="copy">Copy as text</button>
+            <button class="btn btn-ghost btn-s" type="button" data-brief="md">Download Markdown</button>
+          </div></div>
+        <article class="paper">
+          <div class="mono">Signals Hub brief · Week ${isoWeek(day)} · ${esc(day)}</div>
+          <h1>${esc(reading.insights[0] ? reading.insights[0].headline : 'Signals Hub brief')}</h1>
+          <div class="lede">Claude read ${reading.evidenceCount || '—'} sources · ${esc(reading.reviewer)}.${reading.weekPlan ? ` <b>This week:</b> ${esc(reading.weekPlan)}` : ''}</div>
+          <h2><span>01</span>What changed</h2>${insights}
+          <h2><span>02</span>Your calls</h2>
+          <div class="calls">${callList('Following', calls.follow)}${callList('Later', calls.later)}${callList('Not for me', calls.no)}${callList('Not decided yet', calls.open)}</div>
+          <h2><span>03</span>Projects touched</h2>
+          <ul class="b-list">${touched.map((p) => `<li><b>${esc(p.name)}</b> — ${esc(p.top)}</li>`).join('') || '<li>None.</li>'}</ul>
+          ${horizon.length ? `<h2><span>04</span>On the horizon</h2><ul class="b-list">${horizon.map((m) => `<li>${esc(m.title)}</li>`).join('')}</ul>` : ''}
+          ${sigNotes.length ? `<h2><span>✦</span>Your signals</h2><ul class="b-list">${sigNotes.map((n) => `<li><b>${esc(n.sig.title)}</b> — ${esc({ supports: 'supports', contradicts: 'against', 'new-angle': 'new angle' }[n.verdict] || n.verdict)}: ${esc(n.note)}${sup(n.citations)}</li>`).join('')}</ul>` : ''}
+          <h2><span>${horizon.length ? '05' : '04'}</span>Sources</h2>
+          <ol class="b-src">${order.map((id) => { const d = reading.docs[id]; return `<li><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${esc(d.title)}</a> · ${esc(d.source)}${d.date ? ' · ' + esc(d.date) : ''}</li>`; }).join('')}</ol>
+        </article>`;
+      view.querySelectorAll('[data-brief]').forEach((b) => {
+        b.onclick = async () => {
+          const md = briefMarkdown(reading);
+          if (b.dataset.brief === 'print') window.print();
+          else if (b.dataset.brief === 'md') download(`signals-brief-${day}.md`, md, 'text/markdown');
+          else { try { await navigator.clipboard.writeText(md); showToast('Brief copied.'); } catch { showToast('Could not copy.', 'error'); } }
+        };
+      });
+    }
+    function briefMarkdown(reading) {
+      const day = dayOf(reading);
+      const { num, order, calls, touched, horizon } = briefParts(reading);
+      const refs = (ids) => { const n = (ids || []).filter((id) => reading.docs[id]).map(num); return n.length ? ` [${n.join(', ')}]` : ''; };
+      const lines = [`# ${reading.insights[0] ? reading.insights[0].headline : 'Signals Hub brief'}`, '', `Signals Hub brief · Week ${isoWeek(day)} · ${day}`, ''];
+      if (reading.weekPlan) lines.push(`**This week:** ${reading.weekPlan}`, '');
+      lines.push('## What changed', '');
+      reading.insights.forEach((x, i) => {
+        lines.push(`${i + 1}. **${x.headline}**${refs(x.citations)}`);
+        if (x.summary) lines.push(`   ${x.summary}`);
+        if (x.firstStep) lines.push(`   Try: ${x.firstStep}`);
+      });
+      lines.push('', '## Your calls', '');
+      [['Following', calls.follow], ['Later', calls.later], ['Not for me', calls.no], ['Not decided yet', calls.open]].forEach(([t, rows]) => {
+        lines.push(`**${t}:** ${rows.length ? rows.map((r) => r.title + (r.reason ? ` (${r.reason})` : '')).join('; ') : '—'}`);
+      });
+      lines.push('', '## Projects touched', '', ...touched.map((p) => `- **${p.name}**: ${p.top}`));
+      if (horizon.length) lines.push('', '## On the horizon', '', ...horizon.map((m) => `- ${m.title}`));
+      const sigNotes = (reading.signalNotes || []).map((n) => ({ ...n, sig: data.signals.find((x) => x.id === n.signalId) })).filter((n) => n.sig);
+      if (sigNotes.length) lines.push('', '## Your signals', '', ...sigNotes.map((n) => `- **${n.sig.title}** (${n.verdict}): ${n.note}${refs(n.citations)}`));
+      lines.push('', '## Sources', '', ...order.map((id, i) => { const d = reading.docs[id]; return `${i + 1}. [${d.title}](${d.url}) · ${d.source}${d.date ? ' · ' + d.date : ''}`; }));
+      return lines.join('\n') + '\n';
+    }
+
+    // ── Mine place: Onur's own signals (P177) ───────────────────────────
+    // A signal is an observation that may matter later. Not a task, not a
+    // decision. It grows through links to hub items and Claude's notes, and
+    // it may fade. Nothing here changes a stage by itself.
+    const STAGES = [
+      ['watching', '👀 Watching', 'Noticed. Not enough to act.'],
+      ['emerging', '🌱 Emerging', 'Several things point here.'],
+      ['act', '🔥 Act', 'Should this become real work?'],
+      ['converted', '✅ Converted', 'Became real work.'],
+      ['faded', '🧊 Faded', 'Did not develop. That is fine.'],
+    ];
+    const ACTIVE = ['watching', 'emerging', 'act'];
+    const NOUN = {
+      'project-hub': 'project item', 'meetings-hub': 'meeting', 'learning-hub': 'learning note', 'decision-hub': 'decision',
+      'risk-hub': 'risk', 'goals-hub': 'goal', 'stakeholder-hub': 'organization', 'schedule': 'event', 'idea-swiper': 'idea',
+      'canvas-hub': 'canvas card', 'journal-hub': 'journal day', 'tool-portfolio': 'tool', 'tags-hub': 'tag', 'signals-hub': 'signal',
+    };
+    const hasLinks = () => typeof HubLinks !== 'undefined';
+    function signalLinks(id) {
+      if (!hasLinks()) return [];
+      return HubLinks.getLinksFor('signals-hub', id).map((l) => {
+        const other = l.a.tool === 'signals-hub' && l.a.itemId === id ? l.b : l.a;
+        return { linkId: l.id, tool: other.tool, itemId: other.itemId, label: other.label || other.itemId };
+      });
+    }
+    function signalNotes(id) {
+      const out = [];
+      data.readings.forEach((r) => (r.signalNotes || []).forEach((n) => { if (n.signalId === id) out.push({ ...n, reading: r }); }));
+      return out;
+    }
+    function convergence(links, notes) {
+      const by = {};
+      links.forEach((l) => { by[l.tool] = (by[l.tool] || 0) + 1; });
+      const parts = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([tool, n]) => `${n} ${NOUN[tool] || tool}${n > 1 ? 's' : ''}`);
+      const support = notes.filter((n) => n.verdict === 'supports').length;
+      const against = notes.filter((n) => n.verdict === 'contradicts').length;
+      if (support) parts.push(support > 1 ? `${support} readings support it` : '1 reading supports it');
+      if (against) parts.push(against > 1 ? `${against} readings point against it` : '1 reading points against it');
+      return { parts, kinds: Object.keys(by).length, links: links.length, support };
+    }
+    function stageHint(sig, conv) {
+      if (sig.state === 'watching' && (conv.kinds >= 2 || conv.support >= 1)) return 'Several independent things point here. Move it to Emerging?';
+      if (sig.state === 'emerging' && conv.support >= 1 && conv.links >= 3) return 'Evidence keeps adding up. Ready to act?';
+      return '';
+    }
+    function addSignal(title, observation, why) {
+      title = String(title || '').trim();
+      if (!title) return null;
+      const sig = { id: 'sig-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title,
+        observation: String(observation || '').trim(), why: String(why || '').trim(), state: 'watching' };
+      HubUtils.stampCreate(sig);
+      HubUtils.stampUpdate(sig);
+      sig.stateAt = sig.createdAt;
+      data.signals.unshift(sig);
+      save(true); renderMine(); writeState();
+      return sig;
+    }
+    function updateSignal(id, patch) {
+      const sig = data.signals.find((x) => x.id === id);
+      if (!sig) return;
+      if (patch.state && patch.state !== sig.state) sig.stateAt = new Date().toISOString();
+      Object.assign(sig, patch);
+      HubUtils.stampUpdate(sig);
+      save(true); renderMine(); renderRadar(); writeState();
+    }
+    function deleteSignal(id) {
+      if (hasLinks()) signalLinks(id).forEach((l) => HubLinks.removeLink(l.linkId));
+      data.signals = data.signals.filter((x) => x.id !== id);
+      save(true); renderMine(); writeState();
+    }
+
+    let mineShow = 'active';
+    let editing = null;
+    function signalCard(sig) {
+      const links = signalLinks(sig.id);
+      const notes = signalNotes(sig.id);
+      const conv = convergence(links, notes);
+      const hint = ACTIVE.includes(sig.state) ? stageHint(sig, conv) : '';
+      if (editing === sig.id) {
+        return `<div class="card sig" data-id="${esc(sig.id)}"><div class="sig-edit">
+          <input id="edit-title" value="${esc(sig.title)}" aria-label="Signal">
+          <textarea id="edit-obs" rows="3" placeholder="What are you noticing?" aria-label="Observation">${esc(sig.observation)}</textarea>
+          <textarea id="edit-why" rows="2" placeholder="Why might it matter?" aria-label="Why it may matter">${esc(sig.why)}</textarea>
+          <div class="sig-tools"><button type="button" data-sig="save" data-id="${esc(sig.id)}">Save</button><button type="button" data-sig="cancel">Cancel</button><button type="button" data-sig="delete" data-id="${esc(sig.id)}">Delete</button></div>
+        </div></div>`;
+      }
+      return `<div class="card sig${ACTIVE.includes(sig.state) ? '' : ' done'}" data-id="${esc(sig.id)}">
+        <h3>${esc(sig.title)}</h3>
+        ${sig.observation ? `<div class="obs">${esc(sig.observation)}</div>` : ''}
+        ${sig.why ? `<div class="why"><b>Why it may matter.</b> ${esc(sig.why)}</div>` : ''}
+        <div class="conv">${conv.parts.length ? conv.parts.map((x) => `<span class="c">${esc(x)}</span>`).join('') : '<span class="c none">Nothing connected yet</span>'}</div>
+        ${links.length ? `<div class="links">${links.map((l) => `<button type="button" data-goto="${esc(l.tool)}" data-item="${esc(l.itemId)}" title="${esc(NOUN[l.tool] || l.tool)}">${esc(l.label)}</button>`).join('')}</div>` : ''}
+        ${notes.map((n) => `<div class="note"><span class="v ${esc(n.verdict)}">${esc({ supports: 'Supports', contradicts: 'Against', 'new-angle': 'New angle' }[n.verdict] || n.verdict)}</span>${esc(n.note)} <span class="m">· reading of ${esc(dayOf(n.reading))}</span>${sources(n.reading, n.citations)}</div>`).join('')}
+        ${hint ? `<div class="hint-move">${esc(hint)}</div>` : ''}
+        <div class="stages">${STAGES.map(([k, label]) => `<button type="button" class="${sig.state === k ? 'on' : ''}" data-stage="${k}" data-id="${esc(sig.id)}" title="${esc(STAGES.find((x) => x[0] === k)[2])}">${label}</button>`).join('')}</div>
+        <div class="sig-tools">${hasLinks() ? `<button type="button" data-sig="link" data-id="${esc(sig.id)}">🔗 Link to a hub item</button>` : ''}<button type="button" data-sig="edit" data-id="${esc(sig.id)}">Edit</button></div>
+      </div>`;
+    }
+
+    function renderMine() {
+      const view = document.getElementById('place-mine');
+      const counts = {};
+      data.signals.forEach((x) => { counts[x.state] = (counts[x.state] || 0) + 1; });
+      const activeN = ACTIVE.reduce((n, k) => n + (counts[k] || 0), 0);
+      const seg = (v, label, n) => `<button type="button" class="${mineShow === v ? 'on' : ''}" data-show="${v}">${label}${n ? ` · ${n}` : ''}</button>`;
+      let body;
+      if (mineShow === 'active') {
+        body = `<div class="lanes">${STAGES.slice(0, 3).map(([k, label, desc]) => {
+          const list = data.signals.filter((x) => x.state === k);
+          return `<div><div class="lane-head"><div><b>${label}</b><span class="d">${esc(desc)}</span></div><span class="n">${list.length}</span></div>
+            <div class="lane">${list.length ? list.map(signalCard).join('') : '<div class="none">None.</div>'}</div></div>`;
+        }).join('')}</div>`;
+      } else {
+        const list = data.signals.filter((x) => mineShow === 'all' || x.state === mineShow);
+        body = list.length ? `<div class="sig-grid">${list.map(signalCard).join('')}</div>` : '<div class="empty-state"><div class="e-title">None here</div></div>';
+      }
+      view.innerHTML = `
+        <div class="mine-intro"><div class="mono">Mine</div><h1>What you are noticing.</h1>
+          <p>A signal is an observation that may matter later. Not a task, not a decision. Link it to hub items as they touch it; Claude's readings say when outside evidence supports it or points against it. Let it grow, or let it fade.</p></div>
+        <form class="card add-sig" id="add-sig" autocomplete="off">
+          <input id="sig-title" class="full" placeholder="What are you noticing? e.g. Ontology may become an integration layer" aria-label="New signal">
+          <textarea id="sig-obs" rows="2" placeholder="Observation (optional): where do you see it?" aria-label="Observation"></textarea>
+          <textarea id="sig-why" rows="2" placeholder="Why might it matter? (optional)" aria-label="Why it may matter"></textarea>
+          <div class="acts full"><button class="btn btn-primary btn-s" type="submit">Add signal</button></div>
+        </form>
+        <div class="mine-bar"><div class="seg">${seg('active', 'Active', activeN)}${seg('converted', 'Converted', counts.converted)}${seg('faded', 'Faded', counts.faded)}${seg('all', 'All', data.signals.length)}</div>
+          <span class="hint">${data.signals.length ? 'Claude reads your active signals in the next reading.' : 'Your first signal starts here.'}</span></div>
+        ${body}`;
+      view.querySelector('#add-sig').onsubmit = (e) => {
+        e.preventDefault();
+        const sig = addSignal(view.querySelector('#sig-title').value, view.querySelector('#sig-obs').value, view.querySelector('#sig-why').value);
+        if (!sig) { view.querySelector('#sig-title').focus(); return; }
+        mineShow = 'active';
+        renderMine();
+        showToast('Signal added. Link it to what it touches.');
+      };
+      view.querySelectorAll('[data-show]').forEach((b) => { b.onclick = () => { mineShow = b.dataset.show; renderMine(); }; });
+      view.querySelectorAll('[data-stage]').forEach((b) => { b.onclick = () => updateSignal(b.dataset.id, { state: b.dataset.stage }); });
+      view.querySelectorAll('[data-goto]').forEach((b) => { b.onclick = () => hasLinks() && HubLinks.navigateTo(b.dataset.goto, b.dataset.item); });
+      view.querySelectorAll('[data-sig]').forEach((b) => {
+        b.onclick = () => {
+          const id = b.dataset.id, act = b.dataset.sig;
+          const sig = data.signals.find((x) => x.id === id);
+          if (act === 'link' && sig) HubLinks.openModal('signals-hub', id, sig.title);
+          else if (act === 'edit') { editing = id; renderMine(); const t = document.getElementById('edit-title'); if (t) t.focus(); }
+          else if (act === 'cancel') { editing = null; renderMine(); }
+          else if (act === 'save') {
+            const title = document.getElementById('edit-title').value.trim();
+            if (!title) return;
+            editing = null;
+            updateSignal(id, { title, observation: document.getElementById('edit-obs').value.trim(), why: document.getElementById('edit-why').value.trim() });
+          } else if (act === 'delete' && sig && confirm(`Delete the signal "${sig.title}" and its links? Fading keeps it instead.`)) {
+            editing = null; deleteSignal(id);
+          }
+        };
+      });
+    }
+
+    function readingSignalPanel(reading) {
+      const notes = (reading.signalNotes || []).map((n) => ({ ...n, sig: data.signals.find((x) => x.id === n.signalId) })).filter((n) => n.sig);
+      if (!notes.length) return '';
+      return `<div class="panel card">${section('Your signals', 'what this reading says about them')}${notes.map((n) => `<div class="note" style="margin-top:8px">
+        <span class="v ${esc(n.verdict)}">${esc({ supports: 'Supports', contradicts: 'Against', 'new-angle': 'New angle' }[n.verdict] || n.verdict)}</span><b>${esc(n.sig.title)}</b> — ${esc(n.note)}${sources(reading, n.citations)}</div>`).join('')}</div>`;
+    }
+
+    // ── Wiring ───────────────────────────────────────────────────────────
+    function wire(view, reading) {
+      view.querySelectorAll('[data-act]').forEach((b) => {
+        b.onclick = () => {
+          const act = b.dataset.act;
+          if (act === 'link') linkFolder();
+          else if (act === 'scan') scanFolder();
+          else if (act === 'import') document.getElementById('file-input').click();
+          else if (act === 'save') saveTapsFile();
+        };
+      });
+      if (!reading) return;
       view.querySelectorAll('[data-tap]').forEach((b) => {
         b.onclick = () => tap(reading.requestId, Number(b.dataset.i), b.dataset.tap, b.dataset.reason || '');
       });
@@ -514,86 +1209,46 @@
           catch { showToast('Could not copy.', 'error'); }
         };
       });
+      view.querySelectorAll('[data-go]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const target = document.getElementById(el.getAttribute('data-go'));
+          if (!target) return;
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.add('flash');
+          setTimeout(() => target.classList.remove('flash'), 1400);
+        });
+      });
     }
 
-    const newsFilter = { source: '', text: '', show: 'all' };
-    function renderNews() {
-      const view = document.getElementById('view-news');
-      if (!data.news.length) {
-        view.innerHTML = `<div class="empty-state"><span class="e-icon">📰</span><div class="e-title">No news yet</div><div class="e-sub">News arrives with the linked folder or an imported news file.</div></div>`;
-        return;
-      }
-      const sourcesList = [...new Set(data.news.map((n) => n.source).filter(Boolean))].sort();
-      const text = newsFilter.text.toLowerCase();
-      const rows = data.news.filter((n) => {
-        const st = (data.items[n.url] || {}).state || 'new';
-        if (newsFilter.show === 'kept' && st !== 'kept') return false;
-        if (newsFilter.show === 'all' && st === 'dismissed') return false;
-        if (newsFilter.source && n.source !== newsFilter.source) return false;
-        return !text || (n.title + ' ' + n.summary).toLowerCase().includes(text);
-      }).slice(0, 200);
-      view.innerHTML = `
-        <div class="news-tools">
-          <input type="search" id="news-text" placeholder="Search" value="${esc(newsFilter.text)}" aria-label="Search news">
-          <select id="news-source" aria-label="Source"><option value="">All sources</option>${sourcesList.map((s) => `<option${s === newsFilter.source ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
-          <select id="news-show" aria-label="Show">
-            <option value="all"${newsFilter.show === 'all' ? ' selected' : ''}>Without hidden</option>
-            <option value="kept"${newsFilter.show === 'kept' ? ' selected' : ''}>Kept only</option>
-            <option value="every"${newsFilter.show === 'every' ? ' selected' : ''}>Everything</option>
-          </select>
-          <span class="status">${rows.length} shown</span>
-        </div>
-        <div class="news">${rows.map((n) => {
-          const st = (data.items[n.url] || {}).state || 'new';
-          return `<div class="news-row${st === 'dismissed' ? ' hidden-item' : ''}">
-            <div class="body"><a class="title" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>
-              <div class="sub">${esc(n.source)}${n.date ? ' · ' + esc(n.date) : ''}</div></div>
-            <div class="acts">
-              <button class="chip${st === 'kept' ? ' on' : ''}" type="button" data-mark="kept" data-url="${esc(n.url)}" title="Keep: Claude reads it first">★ Keep</button>
-              <button class="chip${st === 'counter-signal' ? ' on' : ''}" type="button" data-mark="counter-signal" data-url="${esc(n.url)}" title="Counter: evidence against a trend">⇄</button>
-              <button class="chip${st === 'dismissed' ? ' on' : ''}" type="button" data-mark="dismissed" data-url="${esc(n.url)}" title="Hide: Claude skips it">✕</button>
-            </div></div>`;
-        }).join('')}</div>`;
-      const textEl = document.getElementById('news-text');
-      textEl.oninput = () => {
-        newsFilter.text = textEl.value;
-        const pos = textEl.selectionStart;
-        renderNews();
-        const again = document.getElementById('news-text');
-        again.focus();
-        again.setSelectionRange(pos, pos);
-      };
-      document.getElementById('news-source').onchange = (e) => { newsFilter.source = e.target.value; renderNews(); };
-      document.getElementById('news-show').onchange = (e) => { newsFilter.show = e.target.value; renderNews(); };
-      view.querySelectorAll('[data-mark]').forEach((b) => { b.onclick = () => mark(b.dataset.url, b.dataset.mark); });
+    function render() {
+      renderRadar(); renderLibrary(); renderBrief(); renderMine();
+      setStatus(needsPermission ? 'Reconnect the folder to read new files' : statusText, needsPermission || statusWarn);
     }
-
-    function render() { renderReading(); renderNews(); }
-
-    function showTab(name) {
-      document.getElementById('tab-reading').classList.toggle('on', name === 'reading');
-      document.getElementById('tab-news').classList.toggle('on', name === 'news');
-      document.getElementById('view-reading').classList.toggle('hidden', name !== 'reading');
-      document.getElementById('view-news').classList.toggle('hidden', name !== 'news');
+    function showPlace(name) {
+      place = name;
+      document.querySelectorAll('.place').forEach((b) => b.classList.toggle('on', b.dataset.place === name));
+      ['radar', 'library', 'brief', 'mine'].forEach((p) => document.getElementById('place-' + p).classList.toggle('hidden', p !== name));
+      document.getElementById('main').scrollTop = 0;
     }
-
-    document.getElementById('tab-reading').onclick = () => showTab('reading');
-    document.getElementById('tab-news').onclick = () => showTab('news');
-    document.getElementById('btn-folder').onclick = () => (folder ? scanFolder() : linkFolder());
-    document.getElementById('btn-import').onclick = () => document.getElementById('file-input').click();
-    document.getElementById('btn-save').onclick = saveTapsFile;
+    document.querySelectorAll('.place').forEach((b) => { b.onclick = () => showPlace(b.dataset.place); });
     document.getElementById('file-input').onchange = (e) => { importFiles([...e.target.files]); e.target.value = ''; };
 
+    // A link made in the picker, or a jump here from another tool.
+    window.__hl_onLinkChange = () => renderMine();
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'hub-highlight' && data.signals.some((x) => x.id === e.data.itemId)) {
+        const sig = data.signals.find((x) => x.id === e.data.itemId);
+        mineShow = ACTIVE.includes(sig.state) ? 'active' : 'all';
+        renderMine();
+        showPlace('mine');
+      }
+    });
+
     // For tests and the shell; no storage beyond signals-hub-v1.
-    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, render, get data() { return data; } };
+    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, render, showPlace, briefMarkdown, addSignal, updateSignal, signalLinks, get data() { return data; } };
 
     render();
-    renderStatus();
-    if (supported()) {
-      idb('readonly', (s) => s.get(HANDLE)).then((handle) => { if (handle) useHandle(handle, false); });
-    } else {
-      document.getElementById('btn-folder').classList.add('hidden');
-    }
+    if (supported()) idb('readonly', (s) => s.get(HANDLE)).then((handle) => { if (handle) useHandle(handle, false); });
     HubBootstrap.start('signals-hub');
   })();
   </script>
