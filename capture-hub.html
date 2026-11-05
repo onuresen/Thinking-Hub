@@ -312,7 +312,6 @@
     }
     .pc-cat-opt:hover { background: var(--surface2); }
     .pc-cat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .pc-cat-dest { font-size: 0.68rem; color: var(--text3); margin-left: auto; }
 
     .review-footer {
       display: flex; align-items: center; justify-content: flex-end;
@@ -470,7 +469,7 @@
 <header class="cap-header">
   <div class="cap-title-block">
     <div class="cap-title">Capture</div>
-    <div class="cap-subtitle">one thought per line</div>
+    <div class="cap-subtitle">one thought per line · capture now, sort later</div>
   </div>
   <div class="cat-legend" id="cat-legend"></div>
 </header>
@@ -497,7 +496,7 @@
           <span class="dump-empty-hint">Start typing ↑  one thought per line</span>
         </div>
         <button class="btn btn-primary" id="btn-parse" onclick="parseDump()" disabled>
-          Parse &amp; Route →
+          Process →
         </button>
       </div>
     </div>
@@ -507,14 +506,13 @@
       <div class="review-header">
         <div>
           <div class="review-count" id="review-count"></div>
-          <div class="review-sub">Review categories, then send to your tools</div>
+          <div class="review-sub">Check the labels, then save to the Inbox. Nothing goes anywhere else.</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="backToWrite()">← Edit</button>
       </div>
       <div class="parsed-cards" id="parsed-cards"></div>
       <div class="review-footer">
-        <button class="btn btn-ghost" onclick="sendAllToInbox()">→ All to Inbox</button>
-        <button class="btn btn-primary" onclick="sendAll()">Send All</button>
+        <button class="btn btn-primary" id="btn-save-inbox" onclick="sendAllToInbox()">Save to Inbox</button>
       </div>
     </div>
   </div>
@@ -551,9 +549,13 @@
 HubBootstrap.start('capture-hub');
 
 // ── Category definitions ──────────────────────────────────────────────────
+// P178: a category is a label ("this looks like a task"), not a destination.
+// Process saves every line to the Inbox. Only a deliberate click on one Inbox
+// card sends it to another tool. Tasks have no such button until Promote can
+// pick an existing project: Capture never creates a project.
 
 const CATS = {
-  task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Project Hub',   routable: true  },
+  task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Project Hub',   routable: false },
   question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'Decision Hub',  routable: true  },
   idea:     { label: 'Idea',     icon: '✦', dot: 'var(--border-yellow)', chipBg: 'var(--node-yellow)', chipColor: 'var(--border-yellow)', dest: 'Inbox',         routable: false },
   decision: { label: 'Decision', icon: '⚖', dot: 'var(--border-green)',  chipBg: 'var(--node-green)',  chipColor: 'var(--border-green)',  dest: 'Decision Hub',  routable: true  },
@@ -694,7 +696,7 @@ function backToWrite() {
 function renderReview() {
   const n = _parsedCards.length;
   document.getElementById('review-count').textContent =
-    n + ' item' + (n !== 1 ? 's' : '') + ' parsed';
+    n + ' thought' + (n !== 1 ? 's' : '') + ' sorted';
   const container = document.getElementById('parsed-cards');
   container.innerHTML = '';
   _parsedCards.forEach((card, idx) => container.appendChild(buildParsedCard(card, idx)));
@@ -729,7 +731,6 @@ function toggleCatMenu(cardId, chipEl) {
     <div class="pc-cat-opt" onclick="setCardCat('${cardId}','${key}',this.closest('.pc-cat-menu'))">
       <span class="pc-cat-dot" style="background:${c.dot}"></span>
       ${c.icon} ${c.label}
-      <span class="pc-cat-dest">${c.dest}</span>
     </div>`).join('');
   chipEl.closest('.pc-chip-wrap').appendChild(menu);
   _openMenu = menu;
@@ -759,34 +760,18 @@ function removeCard(cardId) {
   document.getElementById('pc-' + cardId)?.remove();
   if (!_parsedCards.length) backToWrite();
   else document.getElementById('review-count').textContent =
-    _parsedCards.length + ' item' + (_parsedCards.length !== 1 ? 's' : '') + ' parsed';
+    _parsedCards.length + ' thought' + (_parsedCards.length !== 1 ? 's' : '') + ' sorted';
 }
 
 // ── Routing ───────────────────────────────────────────────────────────────
 
 function routeCard(card) {
   const ts = new Date().toISOString();
-  if (card.cat === 'task')     return routeTask(card.text, ts);
   if (card.cat === 'question') return routeQuestion(card.text, ts);
   if (card.cat === 'decision') return routeDecision(card.text, ts);
   if (card.cat === 'risk')     return routeRisk(card.text, ts);
   if (card.cat === 'learning') return routeLearning(card.text, ts);
   return addToInbox(card.text, card.cat, ts) && 'Inbox';
-}
-
-function routeTask(text, ts) {
-  try {
-    const raw = HubStorage.get('project-hub-v1') || { projects: [], members: [] };
-    if (!Array.isArray(raw.projects)) raw.projects = [];
-    let proj = raw.projects.find(p => p._captureInbox);
-    if (!proj) {
-      proj = { id: 'proj-capture-' + Date.now(), name: '📥 Capture', status: 'active', color: 'blue', tasks: [], members: [], createdAt: ts, _captureInbox: true };
-      raw.projects.push(proj);
-    }
-    proj.tasks.push({ id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), title: text, status: 'open', priority: 'med', createdAt: ts });
-    HubStorage.set('project-hub-v1', raw);
-    return 'Project Hub';
-  } catch { addToInbox(text, 'task', ts); return 'Inbox'; }
 }
 
 function routeQuestion(text, ts) {
@@ -837,37 +822,11 @@ function addToInbox(text, cat, ts) {
   return true;
 }
 
-// ── Send All ──────────────────────────────────────────────────────────────
-
-function sendAll() {
-  if (!_parsedCards.length) return;
-  const summary = {};
-  const cards   = [..._parsedCards];
-  cards.forEach((card, i) => {
-    const el = document.getElementById('pc-' + card.id);
-    if (el) { el.style.animationDelay = (i * 25) + 'ms'; el.classList.add('sending'); }
-    const dest = routeCard(card);
-    summary[dest] = (summary[dest] || 0) + 1;
-  });
-  setTimeout(() => {
-    _parsedCards = [];
-    dumpArea.value = '';
-    _prevSig = '';
-    dumpGutter.innerHTML = '';
-    dumpCount.textContent = '';
-    dumpStats.innerHTML = '<span class="dump-empty-hint">Start typing ↑  one thought per line</span>';
-    btnParse.disabled = true;
-    document.getElementById('phase-review').classList.add('hidden');
-    document.getElementById('phase-write').classList.remove('hidden');
-    const msg = Object.entries(summary).map(([d, n]) => `${n} → ${d}`).join(', ');
-    if (window.showToast) showToast('Sent: ' + msg, 'success');
-    updateInboxBadge();
-    renderInbox();
-  }, cards.length * 25 + 280);
-}
+// ── Save to Inbox ──────────────────────────────────────────────────────────
 
 function sendAllToInbox() {
   const ts = new Date().toISOString();
+  const n = _parsedCards.length;
   _parsedCards.forEach(c => addToInbox(c.text, c.cat, ts));
   _parsedCards = [];
   dumpArea.value = '';
@@ -880,7 +839,7 @@ function sendAllToInbox() {
   document.getElementById('phase-write').classList.remove('hidden');
   updateInboxBadge();
   renderInbox();
-  if (window.showToast) showToast('All items saved to Inbox', 'info');
+  if (window.showToast) showToast(n + ' saved to the Inbox', 'success');
 }
 
 // ── Quick Capture ─────────────────────────────────────────────────────────
