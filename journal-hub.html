@@ -343,6 +343,15 @@
       .tj-side { display: none; }
     }
     @media (max-width: 560px) { .tj-wrap { padding: 16px 12px 32px; } }
+    /* Capture links (P179): read-only views of Capture */
+    .cap-link { margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: var(--r-sm); }
+    .cap-link-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .cap-link-head button { background: none; border: none; color: var(--accent); font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 500; }
+    .cap-link-sum { font-size: 12px; color: var(--text2); margin-top: 4px; }
+    .cap-link ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+    .cap-link li { font-size: 12.5px; color: var(--text2); display: flex; gap: 8px; align-items: baseline; }
+    .cap-link li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cap-link li .s { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -433,6 +442,7 @@
               <button class="lh-bf-chip" data-bf="events" onclick="lhSetBulletFocus('events')">📅 Events</button>
             </div>
             <textarea class="lh-log-textarea" id="lh-log-textarea" placeholder="Start writing…" oninput="lhOnEdit()"></textarea>
+            <div class="cap-link" id="lh-captures" hidden></div>
             <div class="lh-learning-section">
               <div class="lh-learning-label">🔬 What did I learn today? <span class="lh-learning-hint">(Feynman: explain it simply)</span></div>
               <textarea class="lh-learning-textarea" id="lh-learning-textarea" rows="3"
@@ -509,6 +519,7 @@
           <div class="rh-capture-section">
             <div class="rh-capture-label">Free notes</div>
             <textarea class="rh-capture-textarea" id="rh-cap-notes" rows="4" placeholder="Anything else on your mind…" oninput="rhAutosave()"></textarea>
+            <div class="cap-link" id="rh-captures" hidden></div>
           </div>
         </div>
       </div>
@@ -663,6 +674,51 @@
 
   function lhTodayStr() { return HubUtils.todayLocal(); }
 
+  // ── Capture links (P179) ──────────────────────────────────────────────
+  // Read-only: what the day's captures became, and what a week left open.
+  // Capture owns the data; the journal only shows it.
+  const CAP_LIFE = { quick: '⚡', develop: '◆', reference: '○' };
+  function capItemsBetween(from, to) {
+    const cap = HubStorage.get('capture-hub-v1') || {};
+    const inDay = (iso) => { const d = iso ? HubUtils.isoToLocalDay(iso) : ''; return d && d >= from && d <= to; };
+    const waiting = (cap.inbox || []).filter((it) => inDay(it.capturedAt)).map((it) => ({ text: it.text, life: it.life, status: it.keptAt ? 'kept' : 'waiting' }));
+    const done = (cap.log || []).filter((it) => inDay(it.capturedAt)).map((it) => ({ text: it.text, life: it.life, status: it.outcome === 'promoted' ? '→ ' + (it.to || 'promoted') : 'done' }));
+    return { waiting, done };
+  }
+  function capOpen() {
+    try { window.parent.postMessage({ type: 'hub-navigate', tool: 'capture-hub' }, window.location.origin || '*'); } catch { }
+  }
+  function capRow(r) {
+    return `<li><span class="t">${r.life ? CAP_LIFE[r.life] + ' ' : ''}${HubUtils.esc(r.text)}</span><span class="s">${HubUtils.esc(r.status)}</span></li>`;
+  }
+  function lhRenderCaptures(dateStr) {
+    const el = document.getElementById('lh-captures');
+    if (!el) return;
+    const { waiting, done } = capItemsBetween(dateStr, dateStr);
+    const all = done.concat(waiting);
+    if (!all.length) { el.hidden = true; el.innerHTML = ''; return; }
+    const promoted = done.filter((r) => r.status !== 'done').length;
+    const parts = [`${all.length} captured`];
+    if (done.length - promoted) parts.push(`${done.length - promoted} done`);
+    if (promoted) parts.push(`${promoted} moved into the hub`);
+    if (waiting.length) parts.push(`${waiting.length} still in Capture`);
+    el.hidden = false;
+    el.innerHTML = `<div class="cap-link-head"><span>Captured this day</span><button type="button">Open Capture →</button></div>
+      <div class="cap-link-sum">${HubUtils.esc(parts.join(' · '))}</div><ul>${all.slice(0, 12).map(capRow).join('')}</ul>`;
+    el.querySelector('button').onclick = capOpen;
+  }
+  function rhRenderCaptures(monday) {
+    const el = document.getElementById('rh-captures');
+    if (!el) return;
+    const end = new Date(monday); end.setDate(end.getDate() + 6);
+    const { waiting } = capItemsBetween(HubUtils.localYmd(monday), HubUtils.localYmd(end));
+    if (!waiting.length) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = `<div class="cap-link-head"><span>Still in Capture from this week · ${waiting.length}</span><button type="button">Open Capture →</button></div>
+      <ul>${waiting.slice(0, 12).map(capRow).join('')}</ul>`;
+    el.querySelector('button').onclick = capOpen;
+  }
+
   function lhLoad() {
     const raw = HubStorage.get(LH_STORAGE_KEY);
     lhData = raw || { entries: {} };
@@ -796,6 +852,7 @@
     const db = document.getElementById('lh-delete-btn');
     if (db) db.style.display = !!lhData.entries[dateStr] ? '' : 'none';
 
+    lhRenderCaptures(dateStr);
     if (ta) ta.focus();
     lhRenderEntryList();
   }
@@ -1342,6 +1399,7 @@
     rhRenderDoneCol();
     rhRenderRocks();
     rhRenderOpenTasks();
+    rhRenderCaptures(monday);
   }
 
   function rhSendToDecision() {

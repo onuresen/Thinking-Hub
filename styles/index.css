@@ -288,6 +288,25 @@
       margin-bottom: 28px;
     }
 
+    .home-write {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 22px;
+      padding: 6px 6px 6px 14px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); transition: border-color 0.15s;
+    }
+    .home-write:focus-within { border-color: var(--accent); }
+    .home-write input {
+      flex: 1; min-width: 0; background: transparent; border: 0; outline: none;
+      color: var(--text); font-family: var(--font-body); font-size: 14px; padding: 8px 0;
+    }
+    .home-write input::placeholder { color: var(--text3); }
+    .hw-to { display: flex; gap: 2px; padding: 3px; background: var(--surface2); border-radius: var(--r-sm); flex-shrink: 0; }
+    .hw-opt {
+      background: transparent; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer;
+      color: var(--text3); font-family: var(--font-body); font-size: 12px; white-space: nowrap;
+    }
+    .hw-opt.on { background: var(--accent-dim); color: var(--text); font-weight: 600; }
+    @media (max-width: 560px) { .home-write { flex-wrap: wrap; } .hw-to { width: 100%; } .hw-opt { flex: 1; } }
+
     .home-section-label {
       font-family: var(--font-mono);
       font-size: 10px;

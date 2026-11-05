@@ -186,7 +186,16 @@ function startServer() {
   // exportedAt matches). A wrong passphrase must fail. esen-vault hub_changes.py
   // `decrypt` reads the same envelope.
   {
-    const page = await ctx.newPage();
+    // Own context: a fixed clock applies to the whole context, and the shared
+    // one must keep real time. Sharing it made flow6 fail from 2026-10-26 on,
+    // when "3 days ago" passed the frozen date.
+    const clockCtx = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true });
+    await clockCtx.route(/fonts\.(googleapis|gstatic)\.com|esm\.sh/, (r) => r.abort());
+    await clockCtx.addInitScript(() => {
+      localStorage.setItem('tutorial-seen-v1', 'true');
+      localStorage.setItem('quick-tour-seen-v1', 'true');
+    });
+    const page = await clockCtx.newPage();
     await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'));
     await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
     await page.evaluate(() => {
@@ -239,6 +248,7 @@ function startServer() {
       fs.writeFileSync(path.join(process.env.ENC_FIXTURE_DIR, 'export.enc.json'), enc.bytes);
     }
     await page.close();
+    await clockCtx.close();
   }
 
   // ── Flow 3: link + graph ──
@@ -670,15 +680,213 @@ function startServer() {
     const r = await page.evaluate(() => ({
       inbox: (HubStorage.get('capture-hub-v1').inbox || []).map((i) => i.cat).sort(),
       projects: JSON.stringify(HubStorage.get('project-hub-v1')), decisions: JSON.stringify(HubStorage.get('decision-hub-v1')),
-      taskButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Task/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
-      questionButtons: [...document.querySelectorAll('.ic-card')].filter((c) => /Question/.test(c.textContent)).map((c) => c.querySelectorAll('.ic-route-btn').length),
+      oldSend: document.querySelectorAll('.ic-route-btn').length,
+      promote: [...document.querySelectorAll('.ic-card')].map((c) => [...c.querySelectorAll('.ic-act')].some((x) => /Promote/.test(x.textContent))),
       sendAll: typeof window.sendAll,
     }));
     check('flow14: the button says Process', /Process/.test(label) && !/Route/.test(label), label);
     check('flow14: Process saves every line to the Inbox', JSON.stringify(r.inbox) === JSON.stringify(['decision', 'question', 'task']), JSON.stringify(r.inbox));
     check('flow14: nothing is written to other tools; no Capture project', r.projects === before.projects && r.decisions === before.decisions && r.sendAll === 'undefined', r.projects);
-    check('flow14: tasks have no send button; questions keep theirs', r.taskButtons[0] === 0 && r.questionButtons[0] === 1, JSON.stringify(r));
+    check('flow14: no direct send buttons; every card has Promote (P179)', r.oldSend === 0 && r.promote.length === 3 && r.promote.every(Boolean), JSON.stringify(r));
     check('flow14: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 15: Inbox lifespan, Done · Keep · Promote, Journal links (P179) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const now = new Date().toISOString();
+      HubStorage.set('project-hub-v1', { projects: [{ id: 'p1', name: 'CDI', status: 'active', tasks: [] }, { id: 'p2', name: 'Old', status: 'done', tasks: [] }] });
+      HubStorage.set('signals-hub-v1', { signals: [] });
+      HubStorage.set('log-hub-v1', { entries: {} });
+      HubStorage.set('capture-hub-v1', { inbox: [
+        { id: 'c1', text: 'Update Digital Census with the feedback', cat: 'task', capturedAt: now },
+        { id: 'c2', text: 'Geometry generation readiness as its own theme', cat: 'idea', capturedAt: now },
+        { id: 'c3', text: 'Bay Area Council follow-up', cat: 'task', capturedAt: now },
+        { id: 'c4', text: 'Good talk on IDS today', cat: 'note', capturedAt: now },
+        { id: 'c5', text: 'Read the KIR paper', cat: 'learning', capturedAt: now },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const card = (id) => page.locator(`.ic-card[data-id="${id}"]`);
+    const sugg = await page.evaluate(() => [...document.querySelectorAll('.ic-card')].map((c) => [c.dataset.id, c.querySelector('.ic-life').textContent.trim(), c.querySelector('.ic-life').classList.contains('suggested')]));
+    check('flow15: every item gets a suggested lifespan', sugg.every(([, , s]) => s) && sugg.find(([id]) => id === 'c1')[1].includes('Quick') && sugg.find(([id]) => id === 'c2')[1].includes('Develop'), JSON.stringify(sugg));
+    await click(card('c4').locator('.ic-life'));
+    await click(card('c3').locator('.ic-act', { hasText: 'Done' }));
+    await click(card('c5').locator('.ic-act', { hasText: 'Keep' }));
+    await click(card('c1').locator('.ic-act', { hasText: 'Promote' }));
+    const projectsInMenu = await page.evaluate(() => [...document.querySelectorAll('.pm-opt')].map((o) => o.textContent.trim()));
+    await click(page.locator('.pm-opt', { hasText: 'CDI' }));
+    await click(card('c2').locator('.ic-act', { hasText: 'Promote' }));
+    await click(page.locator('.pm-opt', { hasText: 'Signal' }));
+    await click(card('c4').locator('.ic-act', { hasText: 'Promote' }));
+    await click(page.locator('.pm-opt', { hasText: "Today's journal" }));
+    const r = await page.evaluate(() => {
+      const cap = HubStorage.get('capture-hub-v1');
+      const today = HubUtils.todayLocal();
+      return {
+        inbox: cap.inbox.map((i) => [i.id, !!i.keptAt]), log: cap.log.map((l) => [l.id, l.outcome, l.to]),
+        tasks: HubStorage.get('project-hub-v1').projects[0].tasks.map((t) => [t.title, !!t.createdAt]),
+        projects: HubStorage.get('project-hub-v1').projects.length,
+        signal: (HubStorage.get('signals-hub-v1').signals[0] || {}).title,
+        journal: ((HubStorage.get('log-hub-v1').entries || {})[today] || {}).text || '',
+        badge: document.getElementById('inbox-badge').textContent, keptHead: !!document.querySelector('.ic-kept-head'),
+      };
+    });
+    check('flow15: Promote lists only active projects, no new project is made', projectsInMenu.some((x) => x.startsWith('✓ CDI')) && !projectsInMenu.some((x) => x.includes('Old')) && r.projects === 2, JSON.stringify(projectsInMenu));
+    check('flow15: Promote to a project adds a stamped task there', JSON.stringify(r.tasks) === JSON.stringify([['Update Digital Census with the feedback', true]]), JSON.stringify(r.tasks));
+    check('flow15: Promote to Signal and to the journal', r.signal === 'Geometry generation readiness as its own theme' && /^• \d\d:\d\d Good talk on IDS today$/.test(r.journal), r.journal);
+    check('flow15: Done and Keep; the badge counts only waiting items', JSON.stringify(r.inbox) === JSON.stringify([['c5', true]]) && r.badge === '' && r.keptHead, JSON.stringify(r));
+    check('flow15: the log records where each thought went', r.log.length === 4 && r.log.some(([id, o]) => id === 'c3' && o === 'done') && r.log.some(([id, , to]) => id === 'c1' && to === 'CDI · task'), JSON.stringify(r.log));
+    await page.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });
+    await page.waitForTimeout(300);
+    const j = await page.evaluate(() => { const el = document.getElementById('lh-captures'); return { hidden: el.hidden, text: el.textContent }; });
+    check('flow15: the Daily Log shows what the day\'s captures became', !j.hidden && /5 captured/.test(j.text) && /1 done/.test(j.text) && /3 moved into the hub/.test(j.text) && /1 still in Capture/.test(j.text), j.text.replace(/\s+/g, ' ').slice(0, 200));
+    check('flow15: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 16: read-only project hints and nicknames (P180) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const now = new Date().toISOString();
+      HubStorage.set('project-hub-v1', { projects: [
+        { id: 'p1', name: 'Digital Census', status: 'active', tasks: [] },
+        { id: 'p2', name: 'CDI (Construction Decision Intelligence)', status: 'active', tasks: [] },
+        { id: 'p3', name: 'bSI Tokyo 2026', status: 'active', tasks: [] },
+        { id: 'p4', name: 'Akebono', status: 'active', tasks: [] },
+        { id: 'p5', name: 'ONES', status: 'active', tasks: [] },
+      ] });
+      HubStorage.set('capture-hub-v1', { inbox: [
+        { id: 'i1', text: 'Update Digital Census with 部会 feedback', cat: 'task', capturedAt: now },
+        { id: 'i2', text: 'continue work on the summit report', cat: 'task', capturedAt: now },
+        { id: 'i3', text: 'Town Reboot slides for Friday', cat: 'task', capturedAt: now },
+        { id: 'i4', text: 'the cdi of things and ONESIE jokes', cat: 'note', capturedAt: now },
+        { id: 'i5', text: 'Talk on construction decision intelligence', cat: 'note', capturedAt: now },
+      ] });
+    });
+    await page.reload({ waitUntil: 'load' });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const before = await page.evaluate(() => JSON.stringify(HubStorage.get('project-hub-v1')));
+    await click(page.locator('.nick-btn'));
+    await page.fill('#nick-p3', 'bSI, summit');
+    await page.fill('#nick-p4', 'Town Reboot、タウンリブート');
+    await click(page.locator('#nick-save'));
+    await page.waitForTimeout(100);
+    const hints = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.ic-card')].map((c) => [c.dataset.id, (c.querySelector('.ic-likely b') || {}).textContent || ''])));
+    check('flow16: project names give hints; short names match whole words only', hints.i1 === 'Digital Census' && hints.i5 === 'CDI (Construction Decision Intelligence)' && hints.i4 === '', JSON.stringify(hints));
+    check('flow16: nicknames saved in the editor give hints', hints.i2 === 'bSI Tokyo 2026' && hints.i3 === 'Akebono', JSON.stringify(hints));
+    await click(page.locator('.ic-card[data-id="i3"] .ic-act', { hasText: 'Promote' }));
+    const first = await page.evaluate(() => { const o = document.querySelector('.pm-opt'); return { text: o.textContent, likely: o.classList.contains('likely') }; });
+    await page.keyboard.press('Escape');
+    const r = await page.evaluate(() => ({ projects: JSON.stringify(HubStorage.get('project-hub-v1')), nick: HubStorage.get('capture-hub-v1').nicknames }));
+    check('flow16: Promote lists the likely project first', first.likely && /Akebono/.test(first.text), JSON.stringify(first));
+    check('flow16: hints write nothing; nicknames are stored in Capture', r.projects === before && JSON.stringify(r.nick.p4) === JSON.stringify(['Town Reboot', 'タウンリブート']), JSON.stringify(r.nick));
+    check('flow16: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 17: one place to write (P181) ──
+  // The Home box sends a line to Capture or to today's journal; `log:` in
+  // Cmd+K does the same as the journal option; Capture labels the line.
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      HubStorage.set('capture-hub-v1', { inbox: [] });
+      HubStorage.set('log-hub-v1', { entries: {} });
+      if (typeof switchDashView === 'function') switchDashView('today');
+      if (typeof closeApp === 'function') closeApp();
+    });
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    await click(page.locator('#home-write-text'));
+    await page.keyboard.type('Follow up Bay Area Council');
+    await page.keyboard.press('Enter');
+    await click(page.locator('.hw-opt[data-to="log"]'));
+    await page.keyboard.type('Good talk on IDS today');
+    await page.keyboard.press('Enter');
+    await page.evaluate(() => HubSearch.openSearch());
+    await page.fill('#hub-search-input', 'log: Shipped the Capture plan');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({
+      inbox: (HubStorage.get('capture-hub-v1').inbox || []).map((i) => i.text),
+      log: ((HubStorage.get('log-hub-v1').entries || {})[HubUtils.todayLocal()] || {}).text || '',
+      box: document.getElementById('home-write-text').value,
+    }));
+    check('flow17: the Home box captures by default', JSON.stringify(r.inbox) === JSON.stringify(['Follow up Bay Area Council']), JSON.stringify(r.inbox));
+    check('flow17: the journal option and log: add timed lines to today', /^• \d\d:\d\d Good talk on IDS today\n• \d\d:\d\d Shipped the Capture plan$/.test(r.log) && r.box === '', r.log);
+    await page.goto(`${BASE}/capture-hub.html`, { waitUntil: 'load' });
+    const label = await page.evaluate(() => document.querySelector('.ic-card .ic-cat-label').textContent);
+    check('flow17: Capture labels a line that came from Home', label === 'Task', label);
+    check('flow17: no page errors', errors.length === 0, errors.join(' | '));
+    await page.close();
+  }
+
+  // ── Flow 18: Project Hub Compact display (P182) ──
+  {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      const mk = (id, name, group) => ({ id, name, group, color: '#5b8def', status: 'active', desc: '', tasks: [{ id: id + 't', title: 'Draft', done: false, status: 'inprogress' }], members: [] });
+      HubStorage.set('project-hub-v1', { members: [], projects: [mk('a', 'Autodesk IS06', 'Industrial'), mk('b', 'CDI', 'Decision'), mk('c', 'Digital Census', 'Strategy'), mk('d', 'Akebono', '')] });
+      const sess = JSON.parse(localStorage.getItem('hub-session-v1') || '{}'); delete sess.projectDisplay; localStorage.setItem('hub-session-v1', JSON.stringify(sess));
+    });
+    await page.reload({ waitUntil: 'load' });
+    errors.length = 0; // the first load still saw thin sample data from earlier flows
+    const click = async (locator) => {
+      const box = await locator.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
+    };
+    const before = await page.evaluate(() => ({ cards: document.querySelectorAll('.project-card').length, tiles: document.querySelectorAll('.compact-tile').length }));
+    check('flow18: Cards stay the default', before.cards === 4 && before.tiles === 0, JSON.stringify(before));
+    await click(page.locator('.ov-view-btn', { hasText: 'Compact' }));
+    const compact = await page.evaluate(() => ({
+      tiles: document.querySelectorAll('.compact-tile').length, jump: document.querySelectorAll('.ct-jump-chip').length,
+      saved: JSON.parse(localStorage.getItem('hub-session-v1') || '{}').projectDisplay,
+      data: Object.keys(HubStorage.get('project-hub-v1')).sort().join(','),
+    }));
+    check('flow18: Compact shows tiles and a Jump-to row; the choice is a per-browser view setting', compact.tiles === 4 && compact.jump === 4 && compact.saved === 'compact' && !/display/i.test(compact.data), JSON.stringify(compact));
+    await page.mouse.click(5, 5);
+    await page.keyboard.press('/');
+    await page.keyboard.type('census');
+    await page.waitForTimeout(450);
+    const found = await page.evaluate(() => ({ tiles: [...document.querySelectorAll('.compact-tile')].map((t) => t.querySelector('.ct-name').innerHTML) }));
+    check('flow18: "/" focuses search; matches are highlighted', found.tiles.length === 1 && /<mark>Census<\/mark>/.test(found.tiles[0]), JSON.stringify(found));
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    const opened = await page.evaluate(() => state.selectedProject);
+    check('flow18: Enter opens the first match', opened === 'c', String(opened));
+    await page.reload({ waitUntil: 'load' });
+    const kept = await page.evaluate(() => document.querySelectorAll('.compact-tile').length > 0 || document.querySelector('.view-title, h1') !== null);
+    check('flow18: the display choice survives a reload', await page.evaluate(() => JSON.parse(localStorage.getItem('hub-session-v1')).projectDisplay === 'compact') && kept);
+    check('flow18: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
 

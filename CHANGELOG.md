@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Project Hub Overview has a **Compact** style next to Cards: small tiles in your groups with a progress ring, status, open tasks and what is next, plus a "Jump to" row of groups. Press `/` to search projects and Enter to open the first match.
+- Home has a writing box: type a thought and press Enter. It goes to the Capture Inbox, or to today's journal with one switch. In Cmd+K, `log: …` adds a line to today's journal.
 - Signals Hub **Mine**: note your own signals, link them to projects, meetings and other hub items, and move them from Watching to Emerging to Act (or let them fade). The page counts what each signal is connected to, and Claude's readings say when outside evidence supports a signal or points against it. Signals can be linked from any tool's link picker and found with Cmd+K.
 - Signals Hub has three places: **Radar** (the week, a radar of the reading, project and feed pulse, moves to tap), **Library** (everything collected, with filters and grouping) and **Brief** (one page to print or copy).
 - Signals Hub in the sidebar (Strategy & Decisions). It reads readings and news from a linked folder or imported files, and keeps your Follow / Later / Not for me taps and Keep / Hide marks. It needs no other app. Taps go into the linked folder and the full backup.
@@ -17,6 +19,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Changed
 
+- Capture: a card may show "Likely: project" from project names and your **Project nicknames** (editable in the Inbox). The likely project comes first in Promote. A hint never changes anything.
+- Capture Inbox: each thought gets a lifespan (⚡ Quick, ◆ Develop, ○ Reference; suggested, change with a click) and **Done · Keep · Promote**. Promote moves it to a task in an existing project, a Signal, a decision, a risk, a learning or today's journal. The Daily Log shows what the day's captures became; the Weekly Review shows what is still waiting.
 - Capture: **Process** replaces Parse & Route. Every line goes to the Inbox with its label; nothing is sent to other tools, and Capture no longer creates a "📥 Capture" project. From the Inbox you can still send a question, decision, risk or learning on, one card at a time.
 - Project panel and Tool Portfolio: more than two Canvas boards fold into one "▦ On N boards" chip. Click it to see them.
 - Settings has three tabs: **Export & Import** (opens first), **Integrations**, **Snapshots & Reset**. Daily actions come first; storage, snapshots and the reset live in the last tab.

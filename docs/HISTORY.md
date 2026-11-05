@@ -4,6 +4,72 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Test fix — flow6 failed from 2026-10-26 (frozen clock leaked)~~ ✓ Done `[group: tests]`
+CI had been red on every run since 2026-10-26, always one check: flow6 ("next upcoming meeting").
+- **Cause:** flow2b freezes the clock at 2026-10-22 to compare export files byte for byte. Playwright's clock belongs to the whole browser context, so every later page in the shared context thought today was 2026-10-22. From 2026-10-26, flow6's "3 days ago" meeting fell after that date and looked upcoming. The app was right; the test was not.
+- **Fix:** flow2b runs in its own context (fonts blocked, welcome skipped) and closes it. Other flows keep real time.
+- **Verified:** `npm test`: smoke, all flows (flow6 included) and vault-bridge pass.
+
+### ~~Priority 182 — Project Hub: Compact display~~ ✓ Done `[group: projects]`
+Onur (2026-11-05): he likes the cards, but with 46 projects one is hard to find. Wanted a second, slightly minimalist style that helps search — "not a boring flat list". Cards stay the default.
+- **▦ Cards / ▤ Compact** switch in the Overview filter bar. The choice is a per-browser view setting (`hub-session-v1.projectDisplay`), never project data.
+- **Compact tiles**, about four times as many per screen, in the same groups: the project color as a side bar, name, a small progress ring, status, open-task count, a risk badge, and the next thing (task in progress or next meeting). Done projects fade. Hover shows the description. Drag to reorder still works.
+- **Jump to** row with one chip per group (color, count) that scrolls to it.
+- **Search** (both styles): `/` focuses it, Enter opens the first match, Esc clears it. It now matches the group name too. Compact highlights the match in the name, or shows the matching part of the description.
+
+**Key decisions**
+- **Decision:** tiles in groups with a ring and a "next" line, not a table. **Why:** Onur asked for search help without a flat list; tiles keep the card's color and status at a glance. **Confidence:** med.
+- **Decision:** the display choice lives in `hub-session-v1`. **Why:** a view setting must not show up in backups or change files. **Confidence:** high.
+
+**Verified:** new flow18 (Cards default; real-mouse switch; Jump to; `/`, typing, highlight; Enter opens the match; choice survives reload) passes; smoke passes; flow6 fails as on `main`. Screenshots dark and light with 39 sample projects in 6 groups.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `tests/flows.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
+### ~~Priority 181 — One place to write: Home box and `log:`~~ ✓ Done `[group: capture]`
+Onur (2026-11-05) had used neither Capture nor Journal much and asked about merging them. Decided: link, don't merge; give one easy place to write instead.
+- **Home writing box** under the greeting: type and press Enter. **Capture** (default) puts the line in the Capture Inbox; **Today's journal** adds "• HH:MM text" to today's Daily Log.
+- **Cmd+K `log: …`** does the same as the journal option. Help text lists it.
+- `HubSearch.writeCapture` / `writeLog` are the one writer for both. Capture labels a line that arrives without one when it opens.
+- `sw.js` cache v51 (P176–P181 changed several app files).
+
+**Key decisions**
+- **Decision:** a box on Home, not a merged Capture + Journal tool. **Why:** Onur wants one easy place to write; a merge would mix a buffer (should empty) with a record (should grow). **Alternative:** merge the tools; rejected as forced. **Confidence:** med.
+
+**Verified:** new flow17 (real typing: Home box to Capture, switch to journal, `log:` in Cmd+K; Capture labels the line) passes; smoke passes; flow6 fails as on `main`.
+
+**Files:** `index.html`, `styles/index.css`, `hub-search.js`, `capture-hub.html`, `sw.js`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
+### ~~Priority 180 — Capture: read-only project hints and nicknames (Group 3)~~ ✓ Done `[group: capture]`
+Follows P179. Last group of the Capture plan (vault `Roadmap.md`).
+- Each Inbox card may show **"Likely: Digital Census"**. It comes from project names (and both parts of "CDI (Construction Decision Intelligence)") and from **Project nicknames**.
+- **Project nicknames** (button in the Inbox head): one line per active project, comma-separated words, Japanese too (、 works). Stored in `capture-hub-v1.nicknames` (backed up with Capture).
+- Matching: a short or capitalised single word ("CDI", "ONES", "bSI") matches only as a whole word with the same case; longer names ignore case; Japanese matches as plain text.
+- The likely project comes first in **Promote**, marked "likely". A hint never writes anything.
+
+**Key decisions**
+- **Decision:** nicknames live in Capture, edited there. **Why:** only Capture uses them; no new key, no new tool. **Alternative:** a field on each project in Project Hub. Rejected for now: touches the biggest tool for a hint. **Revisit when:** another tool needs project nicknames. **Confidence:** med.
+
+**Verified:** new flow16 (nickname editor with real typing, hints for names and nicknames, "cdi"/"ONESIE" do not match, likely first in Promote, nothing written) passes; smoke passes; flow6 fails as on `main`.
+
+**Files:** `capture-hub.html`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
+### ~~Priority 179 — Capture Inbox: lifespan, Done · Keep · Promote, Journal links (Group 2)~~ ✓ Done `[group: capture]`
+Follows P178. Plan in vault `Roadmap.md` § Capture Hub as a buffer; Capture ↔ Journal: link, don't merge (Onur 2026-11-05).
+- **Lifespan** per Inbox item: ⚡ Quick, ◆ Develop, ○ Reference. A rule suggests one (dashed chip); a click cycles it and stores it. Old items get a suggestion too, nothing is rewritten. Filter chips per lifespan.
+- **Done** clears an item. **Keep** holds it on purpose under "Kept"; the badge counts only waiting items.
+- **Promote ▾** is the only way out of Capture: a task in an existing active project (never a new project), a Signal (Signals Hub Mine), a decision or open question, a risk, a learning, or today's Daily Log (`• HH:MM text`). The old per-card send buttons are gone.
+- `capture-hub-v1.log` records where each thought went (done / promoted, to what), last 500.
+- **Journal Hub (read-only):** the Daily Log shows "Captured this day" (5 captured · 1 done · 2 moved into the hub · 2 still in Capture, with a list); the Weekly Review shows what is still in Capture from that week. Both open Capture.
+
+**Key decisions**
+- **Decision:** the lifespan suggestion is computed, not stored. **Why:** old items get it without a migration; a stored value always means Onur chose it. **Confidence:** high.
+- **Decision:** the journal only reads Capture. **Why:** link, don't merge; one owner per record. **Confidence:** high.
+- **Decision:** "Idea" is not a Promote target. **Why:** the hub has no idea store besides Idea Swiper's swipe history; a developing idea is a Signal. **Revisit when:** Onur misses it.
+
+**Verified:** new flow15 (real mouse: suggested lifespans, change, Done, Keep, Promote to a project, to Signal and to the journal; no new project; the Daily Log panel) passes; flow14 updated; smoke passes; flow6 fails as on `main`.
+
+**Files:** `capture-hub.html`, `journal-hub.html`, `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 178 — Capture is a buffer (Group 1)~~ ✓ Done `[group: capture]`
 From Copilot's Capture suggestion and the 2026-11-05 plan with Onur (vault `Roadmap.md` § Capture Hub as a buffer). Capture now, sort later.
 - **Parse & Route → Process.** Process saves every line to the Inbox with its label. "Send All" is gone; nothing is written to other tools.

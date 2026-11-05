@@ -833,7 +833,45 @@
     }
 
     // ─── OVERVIEW ────────────────────────────────────────────────────────────────
+    // P182: Overview display style. Cards (default) or Compact tiles for
+    // finding one of many projects. A per-browser view choice in hub-session-v1.
+    function overviewDisplay() {
+      try { return (JSON.parse(localStorage.getItem('hub-session-v1') || '{}').projectDisplay) === 'compact' ? 'compact' : 'cards'; } catch { return 'cards'; }
+    }
+    function setOverviewDisplay(v) {
+      try {
+        const s = JSON.parse(localStorage.getItem('hub-session-v1') || '{}');
+        s.projectDisplay = v;
+        localStorage.setItem('hub-session-v1', JSON.stringify(s));
+      } catch {}
+      renderContent();
+    }
+    function markMatch(text, q) {
+      const t = HubUtils.esc(text || '');
+      if (!q) return t;
+      const i = (text || '').toLowerCase().indexOf(q);
+      if (i < 0) return t;
+      return HubUtils.esc(text.slice(0, i)) + '<mark>' + HubUtils.esc(text.slice(i, i + q.length)) + '</mark>' + HubUtils.esc(text.slice(i + q.length));
+    }
+    function progressRing(pct, color) {
+      const r = 8, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(100, pct)) / 100);
+      return `<svg class="ct-ring" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="${r}" class="ct-ring-bg"/><circle cx="10" cy="10" r="${r}" class="ct-ring-fg" style="stroke:${color}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 10 10)"/></svg>`;
+    }
+
+    // "/" jumps to the project search on Overview (P182), unless typing.
+    document.addEventListener('keydown', e => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const search = document.querySelector('.ov-filter-search');
+      if (!search) return;
+      e.preventDefault();
+      search.focus();
+      search.select();
+    });
+
     function renderOverview(container) {
+      const display = overviewDisplay();
       const allTasks = state.projects.flatMap(p => p.tasks);
       const open = allTasks.filter(t => !t.done);
       const overdue = open.filter(t => isOverdue(t.due));
@@ -880,8 +918,20 @@
       const searchInput = document.createElement('input');
       searchInput.type = 'text';
       searchInput.className = 'input ov-filter-search';
-      searchInput.placeholder = 'Search projects…';
+      searchInput.placeholder = 'Search projects…  ( / )';
       searchInput.value = of.search;
+      searchInput.title = 'Press / to search, Enter to open the first match';
+      searchInput.onkeydown = e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const first = document.querySelector('.project-grid [data-proj-open]');
+          if (first) openProject(first.dataset.projOpen);
+        } else if (e.key === 'Escape' && searchInput.value) {
+          e.preventDefault();
+          state.overviewFilter.search = '';
+          renderContent();
+        }
+      };
       searchInput.oninput = e => {
         state.overviewFilter.search = e.target.value;
         const cursorPos = e.target.selectionStart;
@@ -944,13 +994,28 @@
       sortSel.onchange = e => { state.overviewFilter.sort = e.target.value; renderContent(); };
       filterBar.appendChild(sortSel);
 
+      const viewSeg = document.createElement('div');
+      viewSeg.className = 'ov-view-seg';
+      viewSeg.setAttribute('role', 'group');
+      viewSeg.setAttribute('aria-label', 'Display');
+      [{ val: 'cards', label: '▦ Cards', tip: 'Full project cards' }, { val: 'compact', label: '▤ Compact', tip: 'Small tiles: see and find more projects at once' }].forEach(o => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ov-view-btn' + (display === o.val ? ' active' : '');
+        b.textContent = o.label; b.title = o.tip;
+        b.setAttribute('aria-pressed', display === o.val ? 'true' : 'false');
+        b.onclick = () => setOverviewDisplay(o.val);
+        viewSeg.appendChild(b);
+      });
+      filterBar.appendChild(viewSeg);
+
       container.appendChild(filterBar);
 
       const hdr = document.createElement('div');
       hdr.innerHTML = `<div class="ui-section-header"><div class="ui-section-title">Projects</div><div class="ui-section-line"></div><div class="ui-section-action" onclick="showAddProject()">+ New</div></div>`; container.appendChild(hdr);
 
       const grid = document.createElement('div');
-      grid.className = 'project-grid animate-in';
+      grid.className = 'project-grid animate-in' + (display === 'compact' ? ' compact' : '');
 
       // ── Apply filters & sort ──
       let visible = [...state.projects];
@@ -960,7 +1025,7 @@
         visible = visible.filter(p => p.status === of.status);
       if (of.search.trim()) {
         const q = of.search.trim().toLowerCase();
-        visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q)));
+        visible = visible.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q)) || (p.group || '').toLowerCase().includes(q));
       }
       if (of.sort === 'name') visible.sort((a, b) => a.name.localeCompare(b.name));
       else if (of.sort === 'recent') visible.sort((a, b) => projectRecency(b) - projectRecency(a));
@@ -1036,11 +1101,34 @@
         });
       });
 
-      renderOrder.forEach(([groupName, projects]) => {
+      // P182: in Compact, a "Jump to" row of groups when there are several.
+      if (display === 'compact' && namedGroups.length > 1) {
+        const jump = document.createElement('div');
+        jump.className = 'ct-jump';
+        jump.innerHTML = '<span class="ct-jump-label">Jump to</span>' + renderOrder.map(([g, projs], i) =>
+          `<button type="button" class="ct-jump-chip" data-jump="${i}"><span class="ct-jump-dot" style="background:${projs[0]?.color || 'var(--accent)'}"></span>${HubUtils.esc(g || 'Ungrouped')} <span class="ct-jump-n">${projs.length}</span></button>`).join('');
+        jump.querySelectorAll('[data-jump]').forEach(b => {
+          b.onclick = () => {
+            const target = grid.querySelector(`[data-group-index="${b.dataset.jump}"]`);
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          };
+        });
+        container.appendChild(jump);
+      }
+
+      renderOrder.forEach(([groupName, projects], groupIndex) => {
+        if (display === 'compact' && !groupName && namedGroups.length) {
+          const hdr = document.createElement('div');
+          hdr.className = 'proj-group-header';
+          hdr.dataset.groupIndex = groupIndex;
+          hdr.innerHTML = `<div class="proj-group-accent" style="background:var(--text3)"></div><div class="proj-group-name">Ungrouped</div><div class="proj-group-line"></div><div class="proj-group-count">${projects.length} project${projects.length !== 1 ? 's' : ''}</div>`;
+          grid.appendChild(hdr);
+        }
         if (groupName) {
           const accentColor = projects[0]?.color || 'var(--accent)';
           const hdr = document.createElement('div');
           hdr.className = 'proj-group-header';
+          hdr.dataset.groupIndex = groupIndex;
           hdr.innerHTML = `
             <div class="proj-group-accent" style="background:${accentColor}"></div>
             <div class="proj-group-name">${HubUtils.esc(groupName)}</div>
@@ -1052,7 +1140,8 @@
 
         projects.forEach(proj => {
           const card = document.createElement('div');
-          card.className = 'project-card' + (state.selectedProject === proj.id ? ' selected' : '');
+          card.className = (display === 'compact' ? 'compact-tile' : 'project-card') + (state.selectedProject === proj.id ? ' selected' : '');
+          card.dataset.projOpen = proj.id;
           card.draggable = true;
           if (groupName) card.style.borderLeftColor = proj.color + '66';
 
@@ -1064,7 +1153,7 @@
           card.addEventListener('dragend', () => {
             card.classList.remove('drag-src');
             projDragSrc = null;
-            document.querySelectorAll('.project-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+            document.querySelectorAll('.project-card.drag-over, .compact-tile.drag-over').forEach(c => c.classList.remove('drag-over'));
           });
           card.addEventListener('dragover', e => {
             e.preventDefault();
@@ -1101,6 +1190,28 @@
             ${doing.length ? `<div class="pn-row" title="In progress">▶ ${HubUtils.esc(doing[0].title)}${doing.length > 1 ? ` <span class="pn-more">+${doing.length - 1}</span>` : ''}</div>` : ''}
             ${nm ? `<div class="pn-row" title="Next meeting">▣ ${formatDate(nm.date)} · ${HubUtils.esc(nm.title)}</div>` : ''}
           </div>` : '';
+
+          if (display === 'compact') {
+            const q = of.search.trim().toLowerCase();
+            const openN = proj.tasks.filter(t => !t.done && !t.archived).length;
+            const next = doing.length ? `▶ ${HubUtils.esc(doing[0].title)}` : nm ? `▣ ${formatDate(nm.date)} · ${HubUtils.esc(nm.title)}` : '';
+            card.classList.toggle('is-done', proj.status === 'done');
+            card.style.setProperty('--ct-color', proj.color || 'var(--accent)');
+            card.title = [proj.name, proj.desc].filter(Boolean).join(' — ');
+            card.innerHTML = `
+          <div class="ct-top">
+            <span class="ct-name">${markMatch(proj.name, q)}</span>
+            ${progressRing(prog, proj.color || 'var(--accent)')}
+          </div>
+          <div class="ct-meta">
+            <span class="ct-status ${statusClass(proj.status)}">${statusLabel(proj.status)}</span>
+            <span class="ct-open">${openN ? openN + ' open' : 'no open tasks'}</span>
+            ${risksMap[proj.id] ? `<span class="ct-badge" title="${risksMap[proj.id]} risk${risksMap[proj.id] !== 1 ? 's' : ''}">⚠ ${risksMap[proj.id]}</span>` : ''}
+          </div>
+          ${next ? `<div class="ct-next">${next}</div>` : (q && proj.desc && proj.desc.toLowerCase().includes(q) ? `<div class="ct-next">${markMatch(proj.desc.slice(0, 120), q)}</div>` : '')}`;
+            grid.appendChild(card);
+            return;
+          }
 
           const groupTagHtml = `<span class="proj-group-tag${proj.group ? ' has-group' : ''}" data-proj-id="${proj.id}" title="Click to set group">${proj.group ? HubUtils.esc(proj.group) : '＋ group'}</span>`;
 

@@ -412,20 +412,62 @@
       flex-shrink: 0; opacity: 0; transition: opacity 0.15s;
     }
     .ic-card:hover .ic-actions { opacity: 1; }
-    .ic-route-btn {
-      padding: 0.22rem 0.55rem;
-      background: var(--surface2); border: 1px solid var(--border1);
-      border-radius: var(--r-sm); color: var(--text2);
-      font-size: 0.72rem; font-family: var(--font-body);
-      cursor: pointer; white-space: nowrap; transition: all 0.15s;
-    }
-    .ic-route-btn:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
     .ic-del-btn {
       padding: 0.22rem 0.4rem; background: none; border: none;
       color: var(--text3); font-size: 0.85rem; cursor: pointer;
       border-radius: var(--r-sm); transition: color 0.15s; line-height: 1;
     }
     .ic-del-btn:hover { color: var(--accent-nope); }
+
+    /* Lifespan + actions (P179) */
+    .ic-life {
+      font-size: 0.66rem; padding: 1px 7px; border-radius: 999px; cursor: pointer;
+      border: 1px solid var(--border1); background: transparent; color: var(--text2); font-family: var(--font-body);
+    }
+    .ic-life.suggested { border: 1px dashed var(--border); color: var(--text3); }
+    .ic-life:focus { outline: none; }
+    .ic-life:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .ic-life:hover { border-color: var(--accent); color: var(--text); }
+    .ic-card .ic-actions { opacity: 0.55; }
+    .ic-act {
+      padding: 0.22rem 0.5rem; background: var(--surface2); border: 1px solid var(--border1);
+      border-radius: var(--r-sm); color: var(--text2); font-size: 0.72rem; font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+    }
+    .ic-act:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .ic-kept-head { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); margin: 0.7rem 0 0.2rem; }
+    .ic-card.kept { opacity: 0.8; }
+    .pm-menu {
+      position: fixed; z-index: 50; min-width: 230px; max-height: 360px; overflow-y: auto;
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r-sm);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); padding: 0.3rem;
+    }
+    .pm-head { font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); padding: 0.45rem 0.55rem 0.2rem; }
+    .pm-opt { display: flex; gap: 0.45rem; align-items: center; padding: 0.38rem 0.55rem; border-radius: 6px; font-size: 0.8rem; color: var(--text); cursor: pointer; }
+    .pm-opt:hover, .pm-opt:focus { background: var(--accent-dim); outline: none; }
+    .pm-opt small { color: var(--text3); margin-left: auto; font-size: 0.68rem; }
+    .pm-none { font-size: 0.75rem; color: var(--text3); padding: 0.3rem 0.55rem; }
+
+    /* Project hints + nicknames (P180) */
+    .ic-likely { display: block; margin-top: 3px; font-size: 0.7rem; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ic-meta-row { flex-wrap: wrap; }
+    .ic-life, .ic-time { white-space: nowrap; }
+    .ic-likely b { color: var(--text2); font-weight: 600; }
+    .pm-opt.likely { background: var(--accent-dim); }
+    .nick-btn { margin-left: auto; background: none; border: none; color: var(--text3); font-size: 0.7rem; cursor: pointer; font-family: var(--font-body); }
+    .nick-btn:hover { color: var(--accent); }
+    .nick-modal { max-width: 560px; max-height: 80vh; display: flex; flex-direction: column; gap: 12px; }
+    .nick-modal h2 { font: 600 1.05rem var(--font-display); }
+    .nick-modal p { font-size: 0.8rem; color: var(--text2); line-height: 1.5; }
+    .nick-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+    .nick-row { display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; }
+    .nick-row label { font-size: 0.8rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nick-row input {
+      background: var(--surface); border: 1px solid var(--border1); border-radius: var(--r-sm);
+      color: var(--text); font: 0.8rem var(--font-body); padding: 6px 9px; width: 100%;
+    }
+    .nick-row input:focus { outline: none; border-color: var(--accent); }
+    .nick-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
     /* ── Empty states ────────────────────────────────────────────────── */
     .cap-empty {
@@ -522,6 +564,7 @@
     <div class="col-head">
       <span class="col-label">Inbox</span>
       <span class="inbox-badge" id="inbox-badge"></span>
+      <button class="nick-btn" type="button" onclick="openNicknames()" title="Short names that point to a project">Project nicknames</button>
     </div>
 
     <div class="qc-area">
@@ -538,6 +581,18 @@
     <div class="inbox-list" id="inbox-list"></div>
   </div>
 
+</div>
+
+<div class="ui-modal-overlay" id="nick-overlay" aria-hidden="true">
+  <div class="ui-modal nick-modal" role="dialog" aria-modal="true" aria-labelledby="nick-title">
+    <h2 id="nick-title">Project nicknames</h2>
+    <p>Words that point to a project, comma-separated. A capture that uses one shows "Likely: project". It is only a hint: nothing is written until you Promote. Project names count already.</p>
+    <div class="nick-list" id="nick-list"></div>
+    <div class="nick-actions">
+      <button class="btn btn-ghost" type="button" onclick="closeNicknames()">Cancel</button>
+      <button class="btn btn-primary" type="button" id="nick-save" onclick="saveNicknames()">Save</button>
+    </div>
+  </div>
 </div>
 
 <script src="hub-storage.js"></script>
@@ -765,15 +820,6 @@ function removeCard(cardId) {
 
 // ── Routing ───────────────────────────────────────────────────────────────
 
-function routeCard(card) {
-  const ts = new Date().toISOString();
-  if (card.cat === 'question') return routeQuestion(card.text, ts);
-  if (card.cat === 'decision') return routeDecision(card.text, ts);
-  if (card.cat === 'risk')     return routeRisk(card.text, ts);
-  if (card.cat === 'learning') return routeLearning(card.text, ts);
-  return addToInbox(card.text, card.cat, ts) && 'Inbox';
-}
-
 function routeQuestion(text, ts) {
   try {
     const raw = HubStorage.get('decision-hub-v1');
@@ -815,10 +861,9 @@ function routeLearning(text, ts) {
 }
 
 function addToInbox(text, cat, ts) {
-  const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
-  if (!Array.isArray(raw.inbox)) raw.inbox = [];
+  const raw = capData();
   raw.inbox.unshift({ id: 'cap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), text, cat, capturedAt: ts });
-  HubStorage.set('capture-hub-v1', raw);
+  capSave(raw);
   return true;
 }
 
@@ -857,13 +902,269 @@ document.getElementById('qc-input').addEventListener('keydown', e => {
   if (window.showToast) showToast(`"${text.slice(0, 40)}" → Inbox`, 'success');
 });
 
+// ── Lifespan (P179) ──────────────────────────────────────────────────────
+// ⚡ Quick: deal with it and it is gone. ◆ Develop: worth thinking about.
+// ○ Reference: worth remembering, no action. A rule suggests one; it is
+// stored only when Onur picks it, so old items get a suggestion too.
+const LIFE = {
+  quick:     { icon: '⚡', label: 'Quick' },
+  develop:   { icon: '◆', label: 'Develop' },
+  reference: { icon: '○', label: 'Reference' },
+};
+const LIFE_ORDER = ['quick', 'develop', 'reference'];
+
+function suggestLife(item) {
+  const t = (item.text || '').trim();
+  if (item.cat === 'task' || item.cat === 'event') return t.length > 120 ? 'develop' : 'quick';
+  if (item.cat === 'idea' || item.cat === 'risk') return 'develop';
+  if (item.cat === 'question') return /^(what if|why|how might|could|should we)\b/i.test(t) || t.length > 80 ? 'develop' : 'quick';
+  if (item.cat === 'learning' || item.cat === 'decision') return 'reference';
+  return t.length > 100 ? 'develop' : 'reference';
+}
+function lifeOf(item) { return item.life || suggestLife(item); }
+
+function capData() {
+  const raw = HubStorage.get('capture-hub-v1') || {};
+  if (!Array.isArray(raw.inbox)) raw.inbox = [];
+  if (!Array.isArray(raw.log)) raw.log = [];
+  // Lines from Home or Cmd+K arrive without a label; give them one here.
+  raw.inbox.forEach(it => { if (!it.cat) it.cat = classify(it.text || '') || 'note'; });
+  return raw;
+}
+function capSave(raw) {
+  raw.log = raw.log.slice(-500);
+  HubStorage.set('capture-hub-v1', raw);
+}
+
+// Leave the Inbox with a record of where the thought went, so the
+// Daily Log can show what the day's captures became.
+function finishItem(itemId, outcome, to) {
+  const raw = capData();
+  const idx = raw.inbox.findIndex(it => it.id === itemId);
+  if (idx === -1) return null;
+  const item = raw.inbox.splice(idx, 1)[0];
+  raw.log.push({ id: item.id, text: item.text, cat: item.cat, life: lifeOf(item), outcome, to: to || '',
+    capturedAt: item.capturedAt, at: new Date().toISOString() });
+  capSave(raw);
+  return item;
+}
+
+function setLife(itemId) {
+  const raw = capData();
+  const item = raw.inbox.find(it => it.id === itemId);
+  if (!item) return;
+  const next = LIFE_ORDER[(LIFE_ORDER.indexOf(lifeOf(item)) + 1) % LIFE_ORDER.length];
+  item.life = next;
+  capSave(raw);
+  renderInbox();
+}
+
+function toggleKeep(itemId) {
+  const raw = capData();
+  const item = raw.inbox.find(it => it.id === itemId);
+  if (!item) return;
+  if (item.keptAt) delete item.keptAt; else item.keptAt = new Date().toISOString();
+  capSave(raw);
+  updateInboxBadge();
+  renderInbox();
+}
+
+function markDone(itemId) {
+  if (!finishItem(itemId, 'done', '')) return;
+  updateInboxBadge();
+  renderInbox();
+}
+
+// ── Project hints (P180) ────────────────────────────────────────────────
+// Read-only. A project's name, the parts of "Name (Long name)", and Onur's
+// nicknames (capture-hub-v1.nicknames: { projectId: ["bSI", "summit"] }).
+// One short or capitalised word ("CDI", "ONES") must match exactly, as a whole
+// word; longer names ignore case. Japanese has no spaces: a plain contains.
+function projectTerms(project, nicknames) {
+  const name = String(project.name || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  const terms = [name];
+  const m = /^(.*?)\s*\((.+)\)\s*$/.exec(name);
+  if (m) terms.push(m[1], m[2]);
+  (nicknames[project.id] || []).forEach(n => terms.push(n));
+  return [...new Set(terms.map(t => String(t).trim()).filter(t => t.length >= 2))];
+}
+function termHit(term, text) {
+  if (/[\u3040-\u30ff\u3400-\u9fff]/.test(term)) return text.includes(term);
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const caseSensitive = !/\s/.test(term) && (term.length <= 4 || /[A-Z].*[A-Z]/.test(term));
+  return new RegExp('(^|[^\\p{L}\\p{N}])' + esc + '($|[^\\p{L}\\p{N}])', caseSensitive ? 'u' : 'iu').test(text);
+}
+let _hintCache = null;
+function likelyProjects(text) {
+  if (!_hintCache) {
+    const nick = capData().nicknames || {};
+    _hintCache = activeProjects().map(p => ({ p, terms: projectTerms(p, nick) }));
+  }
+  const hits = [];
+  _hintCache.forEach(({ p, terms }) => {
+    const best = terms.filter(t => termHit(t, text)).sort((a, b) => b.length - a.length)[0];
+    if (best) hits.push({ project: p, term: best });
+  });
+  return hits.sort((a, b) => b.term.length - a.term.length).slice(0, 2);
+}
+
+function openNicknames() {
+  const nick = capData().nicknames || {};
+  const list = document.getElementById('nick-list');
+  const projects = activeProjects();
+  list.innerHTML = projects.length ? projects.map(p => `
+    <div class="nick-row"><label for="nick-${HubUtils.esc(p.id)}" title="${HubUtils.esc(p.name)}">${HubUtils.esc(p.name || 'Untitled project')}</label>
+    <input id="nick-${HubUtils.esc(p.id)}" data-project="${HubUtils.esc(p.id)}" value="${HubUtils.esc((nick[p.id] || []).join(', '))}" placeholder="e.g. short name, old name, 略称"></div>`).join('')
+    : '<p>No active project yet.</p>';
+  const ov = document.getElementById('nick-overlay');
+  ov.classList.add('is-open');
+  ov.setAttribute('aria-hidden', 'false');
+  window._nickUntrap = HubUtils.trapFocus ? HubUtils.trapFocus(ov) : null;
+  const first = list.querySelector('input');
+  if (first) first.focus();
+}
+function closeNicknames() {
+  const ov = document.getElementById('nick-overlay');
+  ov.classList.remove('is-open');
+  ov.setAttribute('aria-hidden', 'true');
+  if (window._nickUntrap) { window._nickUntrap(); window._nickUntrap = null; }
+}
+function saveNicknames() {
+  const raw = capData();
+  const nick = {};
+  document.querySelectorAll('#nick-list input[data-project]').forEach(inp => {
+    const words = inp.value.split(/[,、]/).map(w => w.trim()).filter(w => w.length >= 2);
+    if (words.length) nick[inp.dataset.project] = [...new Set(words)];
+  });
+  raw.nicknames = nick;
+  capSave(raw);
+  _hintCache = null;
+  closeNicknames();
+  renderInbox();
+  if (window.showToast) showToast('Nicknames saved', 'success');
+}
+document.getElementById('nick-overlay').addEventListener('mousedown', e => { if (e.target.id === 'nick-overlay') closeNicknames(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('nick-overlay').classList.contains('is-open')) closeNicknames();
+  closePromote();
+});
+HubStorage.subscribe && HubStorage.subscribe('project-hub-v1', () => { _hintCache = null; });
+
+// ── Promote (P179) ──────────────────────────────────────────────────────
+// The only way a thought leaves Capture for another tool. Only to things
+// that exist; a task needs an existing project. Capture never creates one.
+let _promoteMenu = null;
+function closePromote() { if (_promoteMenu) { _promoteMenu.remove(); _promoteMenu = null; } }
+
+function activeProjects() {
+  const ph = HubStorage.get('project-hub-v1') || {};
+  return (ph.projects || [])
+    .filter(p => !p.archived && !p._captureInbox && !/^(done|closed|completed|cancelled|archived)$/i.test(String(p.status || '')))
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+function openPromote(itemId, btn) {
+  closePromote();
+  const raw = capData();
+  const item = raw.inbox.find(it => it.id === itemId);
+  if (!item) return;
+  const likely = likelyProjects(item.text).map(h => h.project.id);
+  const projects = activeProjects().sort((a, b) => (likely.includes(b.id) ? 1 : 0) - (likely.includes(a.id) ? 1 : 0));
+  const opt = (target, icon, label, hint) =>
+    `<div class="pm-opt${likely.includes(target.slice(8)) && target.startsWith('project:') ? ' likely' : ''}" role="menuitem" tabindex="0" data-target="${HubUtils.esc(target)}">${icon} ${HubUtils.esc(label)}${hint ? `<small>${HubUtils.esc(hint)}</small>` : ''}</div>`;
+  const menu = document.createElement('div');
+  menu.className = 'pm-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = `
+    <div class="pm-head">Task in a project</div>
+    ${projects.length ? projects.slice(0, 30).map(p => opt('project:' + p.id, '✓', p.name || 'Untitled project', likely.includes(p.id) ? 'likely' : '')).join('') : '<div class="pm-none">No active project. Keep it here until one fits.</div>'}
+    <div class="pm-head">Somewhere else</div>
+    ${opt('signal', '📡', 'Signal', 'Signals Hub · Mine')}
+    ${opt('decision', '⚖', item.cat === 'question' ? 'Open question' : 'Decision', 'Decision Hub')}
+    ${opt('risk', '⚠', 'Risk', 'Risk Register')}
+    ${opt('learning', '◎', 'Learning', 'Learning Log')}
+    ${opt('journal', '📓', "Today's journal", 'Daily Log')}`;
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  const h = Math.min(360, menu.offsetHeight);
+  menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.right - menu.offsetWidth)) + 'px';
+  menu.style.top = (r.bottom + h + 8 > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+  menu.querySelectorAll('.pm-opt').forEach(el => {
+    el.onclick = () => { closePromote(); promote(itemId, el.dataset.target); };
+    el.onkeydown = e => { if (e.key === 'Enter') el.click(); if (e.key === 'Escape') closePromote(); };
+  });
+  _promoteMenu = menu;
+  setTimeout(() => {
+    document.addEventListener('mousedown', function closer(e) {
+      if (_promoteMenu && !_promoteMenu.contains(e.target)) { closePromote(); }
+      document.removeEventListener('mousedown', closer);
+    }, true);
+  }, 0);
+}
+
+function promote(itemId, target) {
+  const raw = capData();
+  const item = raw.inbox.find(it => it.id === itemId);
+  if (!item) return;
+  const ts = new Date().toISOString();
+  let to = '';
+  try {
+    if (target.startsWith('project:')) {
+      const ph = HubStorage.get('project-hub-v1') || { projects: [] };
+      const proj = (ph.projects || []).find(p => p.id === target.slice(8));
+      if (!proj) throw new Error('project gone');
+      if (!Array.isArray(proj.tasks)) proj.tasks = [];
+      const task = { id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), title: item.text, status: 'open', priority: 'med' };
+      HubUtils.stampCreate(task);
+      proj.tasks.push(task);
+      HubStorage.set('project-hub-v1', ph);
+      to = (proj.name || 'Project') + ' · task';
+    } else if (target === 'signal') {
+      const sh = HubStorage.get('signals-hub-v1') || {};
+      if (!Array.isArray(sh.signals)) sh.signals = [];
+      const sig = { id: 'sig-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: item.text,
+        observation: '', why: '', state: 'watching', fromCapture: true };
+      HubUtils.stampCreate(sig);
+      HubUtils.stampUpdate(sig);
+      sig.stateAt = sig.createdAt;
+      sh.signals.unshift(sig);
+      sh.updatedAt = ts;
+      HubStorage.set('signals-hub-v1', sh);
+      to = 'Signal';
+    } else if (target === 'decision') {
+      to = item.cat === 'question' ? routeQuestion(item.text, ts) : routeDecision(item.text, ts);
+    } else if (target === 'risk') {
+      to = routeRisk(item.text, ts);
+    } else if (target === 'learning') {
+      to = routeLearning(item.text, ts);
+    } else if (target === 'journal') {
+      const lh = HubStorage.get('log-hub-v1') || {};
+      if (!lh.entries) lh.entries = {};
+      const day = HubUtils.todayLocal();
+      const e = lh.entries[day] || (lh.entries[day] = { mood: 0, text: '' });
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      e.text = (e.text ? e.text.replace(/\s+$/, '') + '\n' : '') + `• ${time} ${item.text}`;
+      e.updatedAt = ts;
+      HubStorage.set('log-hub-v1', lh);
+      to = 'Daily Log';
+    } else return;
+  } catch {
+    if (window.showToast) showToast('Could not promote it. It stays in the Inbox.', 'error');
+    return;
+  }
+  finishItem(itemId, 'promoted', to);
+  if (window.showToast) showToast('→ ' + to, 'success');
+  updateInboxBadge();
+  renderInbox();
+}
+
 // ── Inbox ─────────────────────────────────────────────────────────────────
 
 let _inboxFilter = 'all';
 
 function updateInboxBadge() {
-  const raw   = HubStorage.get('capture-hub-v1') || { inbox: [] };
-  const count = (raw.inbox || []).length;
+  const count = capData().inbox.filter(it => !it.keptAt).length;
   const badge = document.getElementById('inbox-badge');
   badge.textContent = count > 0 ? count : '';
   if (count > 0) {
@@ -874,9 +1175,12 @@ function updateInboxBadge() {
 }
 
 function renderInboxToolbar(items) {
+  const byKey = {};
+  items.forEach(it => { const l = lifeOf(it); byKey[l] = (byKey[l] || 0) + 1; });
   const byCat = {};
   items.forEach(it => { byCat[it.cat] = (byCat[it.cat] || 0) + 1; });
   const filters = [{ key: 'all', label: 'All', n: items.length, dot: null }]
+    .concat(LIFE_ORDER.filter(k => byKey[k]).map(k => ({ key: 'life:' + k, label: LIFE[k].icon + ' ' + LIFE[k].label, n: byKey[k], dot: null })))
     .concat(Object.entries(byCat).filter(([, n]) => n > 0)
       .map(([cat, n]) => ({ key: cat, label: CATS[cat]?.label || cat, n, dot: CATS[cat]?.dot })));
   document.getElementById('inbox-toolbar').innerHTML = filters.map(({ key, label, n, dot }) => `
@@ -891,58 +1195,63 @@ function setInboxFilter(cat) {
   renderInbox();
 }
 
+function inboxCard(item) {
+  const cat  = CATS[item.cat] || CATS.note;
+  const life = lifeOf(item);
+  const card = document.createElement('div');
+  card.className = 'ic-card' + (item.keptAt ? ' kept' : '');
+  card.dataset.id = item.id;
+  card.style.cssText = `--_bc:${cat.dot}`;
+  card.innerHTML = `
+    <div class="ic-content">
+      <div class="ic-text">${HubUtils.esc(item.text)}</div>
+      <div class="ic-meta-row">
+        <span class="ic-cat-dot" style="background:${cat.dot}"></span>
+        <span class="ic-cat-label">${cat.label}</span>
+        <button class="ic-life${item.life ? '' : ' suggested'}" type="button" title="${item.life ? 'Lifespan' : 'Suggested lifespan'} — click to change" onclick="setLife('${item.id}')">${LIFE[life].icon} ${LIFE[life].label}</button>
+        <span class="ic-time">${relativeTime(item.capturedAt)}</span>
+      </div>
+      ${(() => { const h = likelyProjects(item.text); return h.length ? `<span class="ic-likely" title="A hint from the project name or a nickname. Nothing is written until you Promote.">Likely: <b>${h.map(x => HubUtils.esc(x.project.name)).join(', ')}</b></span>` : ''; })()}
+    </div>
+    <div class="ic-actions">
+      <button class="ic-act" type="button" title="Dealt with: clear it" onclick="markDone('${item.id}')">✓ Done</button>
+      <button class="ic-act" type="button" title="${item.keptAt ? 'Back to waiting' : 'Keep it here on purpose'}" onclick="toggleKeep('${item.id}')">${item.keptAt ? 'Unkeep' : 'Keep'}</button>
+      <button class="ic-act" type="button" title="Move it into the hub" onclick="openPromote('${item.id}', this)">Promote ▾</button>
+      <button class="ic-del-btn" title="Delete" onclick="deleteFromInbox('${item.id}')">×</button>
+    </div>`;
+  return card;
+}
+
 function renderInbox() {
-  const raw      = HubStorage.get('capture-hub-v1') || { inbox: [] };
-  const items    = raw.inbox || [];
+  const items    = capData().inbox;
   renderInboxToolbar(items);
-  const filtered = _inboxFilter === 'all' ? items : items.filter(it => it.cat === _inboxFilter);
+  const filtered = _inboxFilter === 'all' ? items
+    : _inboxFilter.startsWith('life:') ? items.filter(it => lifeOf(it) === _inboxFilter.slice(5))
+    : items.filter(it => it.cat === _inboxFilter);
   const list     = document.getElementById('inbox-list');
   list.innerHTML = '';
 
   if (!filtered.length) {
     list.innerHTML = items.length === 0 ? inboxZeroHTML()
-      : `<div class="cap-empty"><p>No ${CATS[_inboxFilter]?.label ?? ''} items.</p></div>`;
+      : `<div class="cap-empty"><p>Nothing here.</p></div>`;
     return;
   }
-
-  filtered.forEach(item => {
-    const cat  = CATS[item.cat] || CATS.note;
-    const card = document.createElement('div');
-    card.className = 'ic-card';
-    card.style.cssText = `--_bc:${cat.dot}`;
-    card.innerHTML = `
-      <div class="ic-content">
-        <div class="ic-text">${HubUtils.esc(item.text)}</div>
-        <div class="ic-meta-row">
-          <span class="ic-cat-dot" style="background:${cat.dot}"></span>
-          <span class="ic-cat-label">${cat.label}</span>
-          <span class="ic-time">${relativeTime(item.capturedAt)}</span>
-        </div>
-      </div>
-      <div class="ic-actions">
-        ${cat.routable ? `<button class="ic-route-btn" onclick="routeFromInbox('${item.id}')">→ ${cat.dest}</button>` : ''}
-        <button class="ic-del-btn" title="Delete" onclick="deleteFromInbox('${item.id}')">×</button>
-      </div>`;
-    list.appendChild(card);
-  });
-}
-
-function routeFromInbox(itemId) {
-  const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
-  const idx = (raw.inbox || []).findIndex(it => it.id === itemId);
-  if (idx === -1) return;
-  const item = raw.inbox.splice(idx, 1)[0];
-  HubStorage.set('capture-hub-v1', raw);
-  const dest = routeCard({ text: item.text, cat: item.cat });
-  if (window.showToast) showToast(`Sent to ${dest}`, 'success');
-  updateInboxBadge();
-  renderInbox();
+  const waiting = filtered.filter(it => !it.keptAt);
+  const kept = filtered.filter(it => it.keptAt);
+  waiting.forEach(item => list.appendChild(inboxCard(item)));
+  if (kept.length) {
+    const head = document.createElement('div');
+    head.className = 'ic-kept-head';
+    head.textContent = 'Kept · ' + kept.length;
+    list.appendChild(head);
+    kept.forEach(item => list.appendChild(inboxCard(item)));
+  }
 }
 
 function deleteFromInbox(itemId) {
-  const raw = HubStorage.get('capture-hub-v1') || { inbox: [] };
-  raw.inbox = (raw.inbox || []).filter(it => it.id !== itemId);
-  HubStorage.set('capture-hub-v1', raw);
+  const raw = capData();
+  raw.inbox = raw.inbox.filter(it => it.id !== itemId);
+  capSave(raw);
   updateInboxBadge();
   renderInbox();
 }
