@@ -4,6 +4,12 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Fix — Compact showed unstyled, with huge rings (new page, old stylesheet)~~ ✓ Done `[group: platform]`
+Onur (2026-11-05): after merging P182, Compact on his PC had unstyled buttons and tiles, and each progress ring filled the screen.
+- **Cause:** a tool page loads with a `?v=` stamp, so the new `project-hub.html` arrived at once. Its stylesheet has no stamp: the service worker's background refresh used `fetch(req)`, which could take the browser's HTTP-cached copy (GitHub Pages: about 10 minutes), and the cache is one load behind anyway. A new page met an old stylesheet. The ring SVG had only a `viewBox`, so without its CSS it grew to full width.
+- **Fix:** the background refresh asks the server (`cache: 'no-cache'`); install precaches with `cache: 'reload'`; cache v52 so every browser installs fresh. The ring carries `width`/`height` itself.
+- **Verified:** smoke and all flows pass; with the service worker on and a 10-minute HTTP cache, install leaves the new stylesheet in cache v52.
+
 ### ~~Test fix — flow6 failed from 2026-10-26 (frozen clock leaked)~~ ✓ Done `[group: tests]`
 CI had been red on every run since 2026-10-26, always one check: flow6 ("next upcoming meeting").
 - **Cause:** flow2b freezes the clock at 2026-10-22 to compare export files byte for byte. Playwright's clock belongs to the whole browser context, so every later page in the shared context thought today was 2026-10-22. From 2026-10-26, flow6's "3 days ago" meeting fell after that date and looked upcoming. The app was right; the test was not.
