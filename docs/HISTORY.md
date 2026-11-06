@@ -4,6 +4,14 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Fix — .ics import kept email addresses as attendee names~~ ✓ Done `[group: meetings]`
+Onur (2026-11-06): the contact check kept flagging emails he never saw. One came from a meeting import: an attendee with no display name was stored by its address.
+- **Cause:** `extractCN` fell back to the `mailto:` address when an attendee had no `CN`, and kept a `CN` that was itself an address (or "Name <address>").
+- **Fix:** keep the display name only. Drop the `<address>` part; skip an attendee whose name is empty or an address.
+- **Key decision:** skip, not shorten to the part before `@`. **Why:** that part is still an identifier, and an attendee without a name adds nothing to a meeting note. **Confidence:** high.
+- **Not changed:** meetings imported earlier keep what they have. Remove those addresses in the attendee list by hand.
+- **Verified:** new flow4 check (named, quoted-with-address, address-as-name, no-name attendees) fails on the old code and passes now; smoke, all flows and vault-bridge pass.
+
 ### ~~Fix — Compact showed unstyled, with huge rings (new page, old stylesheet)~~ ✓ Done `[group: platform]`
 Onur (2026-11-05): after merging P182, Compact on his PC had unstyled buttons and tiles, and each progress ring filled the screen.
 - **Cause:** a tool page loads with a `?v=` stamp, so the new `project-hub.html` arrived at once. Its stylesheet has no stamp: the service worker's background refresh used `fetch(req)`, which could take the browser's HTTP-cached copy (GitHub Pages: about 10 minutes), and the cache is one load behind anyway. A new page met an old stylesheet. The ring SVG had only a `viewBox`, so without its CSS it grew to full width.
