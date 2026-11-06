@@ -38,7 +38,7 @@ window.HubTags = (() => {
       }
     },
     {
-      id: 'project-hub', label: 'Project Hub',
+      id: 'project-hub', label: 'Projects',
       storageKey: 'project-hub-v1',
       collect(data) {
         return (data.projects || []).map(p => ({
@@ -48,7 +48,7 @@ window.HubTags = (() => {
       }
     },
     {
-      id: 'meetings-hub', label: 'Meeting Hub',
+      id: 'meetings-hub', label: 'Meetings',
       storageKey: 'meetings-hub-v1',
       collect(data) {
         return (data.meetings || []).map(m => ({
@@ -58,7 +58,7 @@ window.HubTags = (() => {
       }
     },
     {
-      id: 'decision-hub', label: 'Decision Hub',
+      id: 'decision-hub', label: 'Decisions',
       storageKey: 'decision-hub-v1',
       collect(data) {
         // decision-hub-v1 stores tags as a CSV string, but several other

@@ -573,16 +573,16 @@ create_risk — log a new risk:
 create_decision — log a new decision:
   { "type":"create_decision", "title":"title", "summary":"details", "projectId":"id (optional)" }
 
-create_goal — add an objective to Goals Hub:
+create_goal — add an objective to Goals:
   { "type":"create_goal", "title":"objective title", "description":"optional", "quarterId":"id (optional)", "quarterName":"name (optional)", "projectId":"id (optional)" }
 
 create_schedule_event — add an event to Schedule:
   { "type":"create_schedule_event", "title":"event title", "eventType":"task|event|milestone", "start":"YYYY-MM-DD", "end":"YYYY-MM-DD (optional)", "projectId":"id (optional)", "notes":"optional" }
 
-create_meeting — schedule a meeting in Meeting Hub:
+create_meeting — schedule a meeting in Meetings:
   { "type":"create_meeting", "title":"meeting title", "date":"YYYY-MM-DD", "time":"HH:MM (optional)", "meetingType":"custom|standup|1on1|retro|planning|kickoff|review|decision|sync", "projectId":"id (optional)", "agenda":"optional" }
 
-create_assumption — log an assumption to track in Decision Hub's Assumptions:
+create_assumption — log an assumption to track in the Decisions tool's Assumptions:
   { "type":"create_assumption", "statement":"the assumption", "why":"optional rationale", "decisionId":"id (optional)" }
 
 create_learning — add an item to the Reading & Learning log:

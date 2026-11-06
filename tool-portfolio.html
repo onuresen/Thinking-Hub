@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tool Portfolio Hub</title>
+    <title>Tool Portfolio</title>
     <script src="hub-storage.js"></script>
     <script src="hub-utils.js"></script>
     <script src="hub-links.js"></script>
@@ -1300,12 +1300,12 @@
             const raw = HubStorage.get('project-hub-v1') || {};
             const projects = raw.projects || [];
             if (!projects.length) {
-                return '<div class="field-hint" style="padding:4px 0">No projects found in Project Hub yet.</div>';
+                return '<div class="field-hint" style="padding:4px 0">No projects found in Projects yet.</div>';
             }
             const linked = t.projectIds || [];
             const statusColor = { active:'var(--accent)', planning:'#38bdf8', onhold:'var(--accent-super)', done:'var(--text3)' };
 
-            // Group by proj.group, using Project Hub's saved group order (same as its
+            // Group by proj.group, using the Projects tool's saved group order (same as its
             // Groupings view) with unseen groups appended alphabetically; ungrouped last.
             const groupMap = new Map();
             projects.forEach(p => {

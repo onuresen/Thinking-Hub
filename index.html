@@ -199,7 +199,7 @@
           <label class="sfield-toggle" for="ai-visible-toggle">
             <input type="checkbox" id="ai-visible-toggle" checked onchange="onAiVisibleToggle(this.checked)">
             <span class="sfield-toggle-label">Show AI Assistant
-              <small id="ai-visible-hint">The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal Hub.</small>
+              <small id="ai-visible-hint">The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal.</small>
             </span>
           </label>
 
@@ -239,7 +239,7 @@
             <input type="text" id="obsidian-vault-name" placeholder="e.g. My Vault"
               oninput="saveVaultSetting(this.value)"
               style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font-body);outline:none">
-            <div class="sfield-hint">Enables "Open in Obsidian" links in Project Hub &amp; Decision Hub</div>
+            <div class="sfield-hint">Enables "Open in Obsidian" links in Projects &amp; Decisions</div>
           </div>
           <div id="obsidian-vault-picker" style="display:none">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -365,13 +365,13 @@
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
           <div class="sfield-group-title" style="color:var(--accent-nope)">⚠ Danger Zone</div>
           <div style="padding:12px;border:1px solid var(--accent-nope);border-radius:var(--r-sm);background:color-mix(in srgb, var(--accent-nope) 8%, transparent)">
-            <div style="font-size:12px;color:var(--accent-nope);font-weight:700;margin-bottom:4px">Reset Project Hub</div>
+            <div style="font-size:12px;color:var(--accent-nope);font-weight:700;margin-bottom:4px">Reset Projects</div>
             <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">
               Permanently deletes <b>every project, task, milestone and goal</b>. This cannot be undone (a local snapshot may be restorable above).
             </div>
             <button class="data-btn secondary" style="width:100%;color:var(--accent-nope);border-color:var(--accent-nope)"
               onclick="resetProjectHubData()">
-              Reset all Project Hub data…
+              Reset all Projects data…
             </button>
           </div>
         </div>
@@ -441,30 +441,30 @@
 
     const APPS = [
       // ── Daily Work ────────────────────────────────────────────────────
-      { id: 'project-hub', label: 'Project Hub', group: 'Daily Work', wg: 'Daily Work', icon: '◈', file: 'project-hub.html', desc: 'Create projects, track tasks and milestones, assign team members — start here' },
-      { id: 'schedule', label: 'Schedule', group: 'Daily Work', wg: 'Daily Work', icon: '▦', file: 'schedule.html', desc: 'See all your tasks and milestones on a timeline or calendar — syncs with Project Hub' },
-      { id: 'meetings-hub', label: 'Meeting Hub', group: 'Daily Work', wg: 'Daily Work', icon: '▣', file: 'meetings-hub.html', desc: 'Run structured meetings — capture agenda, decisions and action items in one place' },
-      { id: 'capture-hub', label: 'Capture Hub', group: 'Daily Work', wg: 'Daily Work', icon: '⊞', file: 'capture-hub.html', desc: 'Brain dump everything at once — one line per thought, auto-sorted to the right tool' },
-      { id: 'journal-hub', label: 'Journal Hub', group: 'Daily Work', wg: 'Daily Work', icon: '◷', file: 'journal-hub.html', desc: 'Write a daily log or weekly review — track mood, streaks and key wins' },
+      { id: 'project-hub', label: 'Projects', group: 'Daily Work', wg: 'Daily Work', icon: '◈', file: 'project-hub.html', desc: 'Create projects, track tasks and milestones, assign team members — start here' },
+      { id: 'schedule', label: 'Schedule', group: 'Daily Work', wg: 'Daily Work', icon: '▦', file: 'schedule.html', desc: 'See all your tasks and milestones on a timeline or calendar — syncs with Projects' },
+      { id: 'meetings-hub', label: 'Meetings', group: 'Daily Work', wg: 'Daily Work', icon: '▣', file: 'meetings-hub.html', desc: 'Run structured meetings — capture agenda, decisions and action items in one place' },
+      { id: 'capture-hub', label: 'Capture', group: 'Daily Work', wg: 'Daily Work', icon: '⊞', file: 'capture-hub.html', desc: 'Brain dump everything at once — one line per thought, auto-sorted to the right tool' },
+      { id: 'journal-hub', label: 'Journal', group: 'Daily Work', wg: 'Daily Work', icon: '◷', file: 'journal-hub.html', desc: 'Write a daily log or weekly review — track mood, streaks and key wins' },
       // ── People & Network ──────────────────────────────────────────────
       { id: 'graph-hub', label: 'Dependency Graph', group: 'People & Network', wg: 'People & Network', icon: '🕸️', file: 'graph-hub.html', desc: 'Draw links between tasks, decisions and ideas to see what depends on what' },
-      { id: 'people-hub', label: 'People Hub', group: 'People & Network', wg: 'People & Network', icon: '◉', file: 'people-hub.html', desc: 'See your whole team in one place — roles, workload and who is over-allocated' },
-      { id: 'stakeholder-hub', label: 'Stakeholder Map', group: 'People & Network', wg: 'People & Network', icon: '◇', file: 'stakeholder-hub.html', desc: 'Track who you work with, grouped by organization, with what you\'re waiting on from each' },
+      { id: 'people-hub', label: 'People', group: 'People & Network', wg: 'People & Network', icon: '◉', file: 'people-hub.html', desc: 'See your whole team in one place — roles, workload and who is over-allocated' },
+      { id: 'stakeholder-hub', label: 'Stakeholders', group: 'People & Network', wg: 'People & Network', icon: '◇', file: 'stakeholder-hub.html', desc: 'Track who you work with, grouped by organization, with what you\'re waiting on from each' },
       { id: 'tool-portfolio', label: 'Tool Portfolio', group: 'People & Network', wg: 'People & Network', icon: '🧰', file: 'tool-portfolio.html', desc: 'Track the tools you actually use, and which projects each one is tied to' },
-      { id: 'town-hub', label: 'Machi Hub', group: 'People & Network', wg: 'People & Network', icon: '🏙', file: 'town-hub.html', desc: 'A living pixel city of Hub activity, tools, projects, people, achievements and risk response' },
+      { id: 'town-hub', label: 'Machi', group: 'People & Network', wg: 'People & Network', icon: '🏙', file: 'town-hub.html', desc: 'A living pixel city of Hub activity, tools, projects, people, achievements and risk response' },
       // ── Learning & Ideas ──────────────────────────────────────────────
-      { id: 'learning-hub', label: 'Learning Hub', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '◑', file: 'learning-hub.html', desc: 'Log books, articles and courses — capture highlights, key insights and reading progress' },
+      { id: 'learning-hub', label: 'Learning', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '◑', file: 'learning-hub.html', desc: 'Log books, articles and courses — capture highlights, key insights and reading progress' },
       { id: 'idea-swiper', label: 'Idea Swiper', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '⟳', file: 'idea-swiper.html', desc: 'Capture ideas and swipe to sort them — keep the strong ones, discard the rest' },
-      { id: 'canvas-hub', label: 'Canvas Hub', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '✏️', file: 'canvas-hub.html', desc: 'Free-form whiteboard — place notes, connect thoughts, think spatially' },
+      { id: 'canvas-hub', label: 'Canvas', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '✏️', file: 'canvas-hub.html', desc: 'Free-form whiteboard — place notes, connect thoughts, think spatially' },
       // ── Strategy & Decisions ──────────────────────────────────────────
-      { id: 'decision-hub', label: 'Decision Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
-      { id: 'goals-hub', label: 'Goals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
+      { id: 'decision-hub', label: 'Decisions', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⊕', file: 'decision-hub.html', desc: 'Record key decisions with context, reasoning and alternatives — avoid repeating past mistakes' },
+      { id: 'goals-hub', label: 'Goals', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '◎', file: 'goals-hub.html', desc: 'Set quarterly OKRs and track progress — connect daily work to strategic objectives' },
       { id: 'risk-hub', label: 'Risk Register', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '⚠', file: 'risk-hub.html', desc: 'List risks, score them by probability and impact, and track mitigation actions' },
-      { id: 'signals-hub', label: 'Signals Hub', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '📡', file: 'signals-hub.html', desc: 'Read what is changing outside and tap the moves Claude proposes' },
+      { id: 'signals-hub', label: 'Signals', group: 'Strategy & Decisions', wg: 'Strategy & Decisions', icon: '📡', file: 'signals-hub.html', desc: 'Read what is changing outside and tap the moves Claude proposes' },
       // ── Tools & Focus ─────────────────────────────────────────────────
       { id: 'achievements-hub', label: 'Profile', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '👤', file: 'achievements-hub.html', desc: 'Your profile — name, role and who-is-me — plus badges earned, streaks and an activity heatmap' },
       { id: 'tags-hub', label: 'Tags', group: 'Tools & Focus', wg: 'Tools & Focus', icon: '🏷', file: 'tags-hub.html', desc: 'Central registry of tags and topics — rename or merge duplicates and the change applies everywhere' },
-      { id: 'help-hub', label: 'Help & Guide', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
+      { id: 'help-hub', label: 'Help', group: 'Tools & Focus', wg: 'Tools & Focus', icon: 'ℹ', file: 'help-hub.html', desc: 'New here? Read the tool guide, browse 37 frameworks, or follow a suggested workflow' },
     ];
 
 
@@ -557,7 +557,7 @@
     const START_STEPS = [
       { icon: '◈', label: 'Create a Project', sub: 'Start here — it connects everything else', tool: 'project-hub' },
       { icon: '◎', label: 'Set a Goal', sub: 'Define OKRs and quarterly objectives', tool: 'goals-hub' },
-      { icon: '◑', label: 'Open Learning Hub', sub: 'Track books, articles and courses', tool: 'learning-hub' },
+      { icon: '◑', label: 'Open Learning', sub: 'Track books, articles and courses', tool: 'learning-hub' },
     ];
 
     function buildStartBanner() {
@@ -924,7 +924,7 @@
           }).join('');
           const phAge = relativeAge(latestTimestamp(projects.flatMap(p => [p, ...(p.tasks || [])])));
           widgets.push({
-            id: 'project-hub', icon: '◈', title: 'Project Hub',
+            id: 'project-hub', icon: '◈', title: 'Projects',
             count: `${projects.length} project${projects.length !== 1 ? 's' : ''}`,
             body: rows,
             more: projects.length > 3 ? `+${projects.length - 3} more` : '',
@@ -962,7 +962,7 @@
         }
       } catch { }
 
-      // ── Decision Hub (decision-hub-v1) ────────────────────────────────────────
+      // ── Decisions (decision-hub-v1) ────────────────────────────────────────
       try {
         const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
         const entries = Array.isArray(dl) ? dl : (dl.entries || []);
@@ -974,7 +974,7 @@
       </div>`).join('');
           const dhAge = relativeAge(latestTimestamp(entries));
           widgets.push({
-            id: 'decision-hub', icon: '◎', title: 'Decision Hub',
+            id: 'decision-hub', icon: '◎', title: 'Decisions',
             count: `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`,
             body: rows,
             more: entries.length > 3 ? `+${entries.length - 3} more` : '',
@@ -983,7 +983,7 @@
         }
       } catch { }
 
-      // ── Goals Hub (goals-hub-v1) ──────────────────────────────────────────────
+      // ── Goals (goals-hub-v1) ──────────────────────────────────────────────
       try {
         const gh = JSON.parse(localStorage.getItem('goals-hub-v1') || '{}');
         const quarters = (gh.quarters || []).filter(q => !q.archived);
@@ -1093,7 +1093,7 @@
         }
       } catch { }
 
-      // ── Learning Hub (learning-hub-v1) ────────────────────────────────────
+      // ── Learning (learning-hub-v1) ────────────────────────────────────
       try {
         const lh = JSON.parse(localStorage.getItem('learning-hub-v1') || '{}');
         const items = (lh.items || []).filter(it => !it.archived);
@@ -1129,7 +1129,7 @@
           </div>`;
           const lhAge = relativeAge(latestTimestamp(items));
           widgets.push({
-            id: 'learning-hub', icon: '◑', title: 'Learning Hub',
+            id: 'learning-hub', icon: '◑', title: 'Learning',
             count: `${total} item${total !== 1 ? 's' : ''}`,
             body: (reading.length ? rows : `<div style="color:var(--text3);font-size:12px;padding:4px 0">Nothing in progress right now.</div>`) + stackBar,
             more: reading.length > 3 ? `+${reading.length - 3} more in progress` : '',
@@ -1620,7 +1620,7 @@
       const sel = document.getElementById('vb-proj-' + i);
       HubVaultBridge.accept(p, { projectId: sel ? sel.value : '' });
       _vbProposals.splice(i, 1);
-      showToast('Imported into Decision Hub', 'success');
+      showToast('Imported into Decisions', 'success');
       renderVaultReview();
     }
 
@@ -1634,7 +1634,7 @@
 
     function vbAcceptAll() {
       if (!_vbProposals.length) return;
-      if (!confirm(`Import all ${_vbProposals.length} decisions into Decision Hub?`)) return;
+      if (!confirm(`Import all ${_vbProposals.length} decisions into Decisions?`)) return;
       const n = _vbProposals.length;
       // Read each row's project selection before the list is rebuilt.
       _vbProposals.forEach((p, i) => {
@@ -1949,7 +1949,7 @@
           if (!m.recurring) return m;
           const occ = (m.occurrenceDates || []).find(o => o.date === todayStr);
           return { ...m, time: occ ? occ.time : m.time, durationMins: occ ? occ.durationMins : m.durationMins };
-        });
+        }).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
         if (todayMeetings.length) sections.push({ type: 'meetings', items: todayMeetings });
       } catch { }
 
@@ -1996,7 +1996,7 @@
       if (calibrationDueCount >= 3) {
         const nudge = document.createElement('div');
         nudge.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-sm);background:var(--accent-super-dim,rgba(255,180,0,.1));border:1px solid var(--accent-super);cursor:pointer;font-size:13px;color:var(--text2)';
-        nudge.innerHTML = `<span style="font-size:16px">⚖</span> <span><strong>${calibrationDueCount} decisions</strong> are past their revisit date — <span style="color:var(--accent-super)">calibrate your calls</span></span><span style="margin-left:auto;font-size:11px;color:var(--text3)">Open Decision Hub →</span>`;
+        nudge.innerHTML = `<span style="font-size:16px">⚖</span> <span><strong>${calibrationDueCount} decisions</strong> are past their revisit date — <span style="color:var(--accent-super)">calibrate your calls</span></span><span style="margin-left:auto;font-size:11px;color:var(--text3)">Open Decisions →</span>`;
         nudge.addEventListener('click', () => openApp('decision-hub'));
         grid.appendChild(nudge);
       }
@@ -2294,17 +2294,17 @@
           },
           {
             element: '[data-app="project-hub"]',
-            title: '1 — Plan: Project Hub',
+            title: '1 — Plan: Projects',
             text: 'Start by creating a project and adding tasks with due dates. Those tasks flow automatically into Schedule, and you can promote ideas from Idea Swiper directly into tasks here.'
           },
           {
             element: '[data-app="idea-swiper"]',
             title: '2 — Think: Idea Swiper',
-            text: 'Dump every idea into Idea Swiper and swipe to sort (Like / Super / Nope). Strong ideas land in Project Hub; the rest you can capture and route from Capture Hub.'
+            text: 'Dump every idea into Idea Swiper and swipe to sort (Like / Super / Nope). Strong ideas land in Projects; the rest you can capture and route from Capture.'
           },
           {
             element: '[data-app="decision-hub"]',
-            title: '3 — Decide: Decision Hub',
+            title: '3 — Decide: Decisions',
             text: 'Log decisions with problem framing, option mapping, and stakeholder alignment votes. Link decisions to tasks and ideas, and track the assumptions behind each call.'
           },
           {
@@ -2326,7 +2326,7 @@
         {
           element: '[data-app="schedule"]',
           title: 'Tasks → Schedule (automatic)',
-          text: 'Any task you add with a due date in Project Hub syncs automatically to the Schedule view. No manual import needed.'
+          text: 'Any task you add with a due date in Projects syncs automatically to the Schedule view. No manual import needed.'
         },
         {
           element: '[data-app="idea-swiper"]',
@@ -2336,7 +2336,7 @@
         {
           element: '[data-app="decision-hub"]',
           title: 'Log decisions, not just tasks',
-          text: 'When you face a real choice, log it in Decision Hub — frame the problem, map options, record the rationale, and calibrate your past calls over time.'
+          text: 'When you face a real choice, log it in Decisions — frame the problem, map options, record the rationale, and calibrate your past calls over time.'
         },
         {
           element: '[data-app="graph-hub"]',
@@ -2378,7 +2378,7 @@
         el.textContent = `${count} notes indexed · ${mins < 1 ? 'just now' : mins + 'm ago'}`;
         if (btn) btn.style.display = '';
       } else {
-        el.textContent = 'Pick your vault folder to enable note autocomplete in Project Hub & Decision Hub';
+        el.textContent = 'Pick your vault folder to enable note autocomplete in Projects & Decisions';
       }
     }
 
@@ -2785,7 +2785,7 @@
       if (body) body.style.display = on ? '' : 'none';
       const hint = document.getElementById('ai-visible-hint');
       if (hint) hint.textContent = on
-        ? 'The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal Hub.'
+        ? 'The drawer at the bottom of the screen, the Today briefing card, and the AI buttons in Time Journal and Journal.'
         : 'Hidden everywhere. Nothing is deleted — your provider and key settings are kept.';
     }
 
@@ -3197,7 +3197,7 @@
             restoreScope = 'Full Backup';
           } else if (parsed.storageKey && parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data)) {
             // Single-tool export format — { storageKey: "project-hub-v1", data: { ... } }
-            // Generated by Project Hub's own export button (not Thinking Hub's full backup)
+            // Generated by the Projects tool's own export button (not Thinking Hub's full backup)
             if (!RETIRED_KEYS.includes(parsed.storageKey)) HubStorage.set(parsed.storageKey, parsed.data);
             restoreScope = parsed.storageKey;
           } else {
@@ -3227,13 +3227,13 @@
 
     function triggerVerifyBackup() { document.getElementById('verify-file').click(); }
 
-    // Moved here from Project Hub's per-project Settings panel — a whole-tool
+    // Moved here from the Projects tool's per-project Settings panel — a whole-tool
     // reset doesn't belong buried under one project's danger zone. Operates
-    // directly on localStorage so it works whether or not Project Hub is the
+    // directly on localStorage so it works whether or not Projects is the
     // currently open tool; if it IS open, the iframe is refreshed afterward.
     function resetProjectHubData() {
       const ans = prompt(
-        '⚠ This permanently deletes ALL your Project Hub data — every project, task, milestone and goal.\n\n' +
+        '⚠ This permanently deletes ALL your Projects data — every project, task, milestone and goal.\n\n' +
         'This cannot be undone (a local snapshot may be restorable above).\n\n' +
         'Type RESET to confirm:'
       );
@@ -3248,7 +3248,7 @@
         setTimeout(() => { frame.src = currentSrc; }, 80);
       }
 
-      showToast('Project Hub reset');
+      showToast('Projects reset');
     }
 
     // Read-only backup validator — parses a chosen .json and reports exactly what a
@@ -3901,7 +3901,7 @@
           const projects = raw.projects || [];
           let target = r.projectId ? projects.find(p => p.id === r.projectId) : null;
           if (!target) target = projects[0]; // fallback to first project
-          if (!target) { showToast('No project found — open Project Hub to create one first', 'error'); return; }
+          if (!target) { showToast('No project found — open Projects to create one first', 'error'); return; }
           target.tasks = target.tasks || [];
           target.tasks.push({
             id: 'task-' + Date.now(),

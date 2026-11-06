@@ -635,7 +635,7 @@ function startServer() {
     await page.fill('#sig-why', 'It could connect project knowledge with AI.');
     await click(page.locator('#add-sig button[type="submit"]'));
     await click(page.locator('[data-sig="link"]').first());
-    await click(page.locator('.hl-tool-tab', { hasText: 'Project Hub' }));
+    await click(page.locator('.hl-tool-tab', { hasText: 'Projects' }));
     await click(page.locator('.hl-item-row', { hasText: 'CDI' }).first());
     await click(page.locator('#hl-btn-confirm'));
     await page.waitForTimeout(100);
@@ -896,6 +896,65 @@ function startServer() {
     check('flow18: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
+  // ── Flow 19: grouped meeting list, one Schedule timeline (P183) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/meetings-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const t = HubUtils.todayLocal();
+      const shift = (n) => { const d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() + n); return HubUtils.localYmd(d); };
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: [
+        { id: 'p1', name: 'Alpha', status: 'active', color: '#888', tasks: [], milestones: [] }] });
+      data.meetings = [
+        { id: 'a', title: 'Today one', date: t, time: '09:00', projectId: 'p1', projectName: 'Alpha' },
+        { id: 'b', title: 'Far future', date: shift(40) },
+        { id: 'c', title: 'Old one', date: shift(-90), projectId: 'p1', projectName: 'Alpha' },
+      ].map(normalizeMeeting);
+      save();
+      collapseSeeded = false; collapsedGroups.clear(); activeId = defaultMeetingId(); setListGroup('date');
+      renderList();
+      const heads = () => [...document.querySelectorAll('.mg-head .mg-label')].map(e => e.textContent);
+      const rows = () => [...document.querySelectorAll('.meeting-row .mr-title')].map(e => e.textContent.trim());
+      const byDate = { heads: heads(), rows: rows(), first: activeId };
+      setListGroup('project');
+      const byProject = { heads: heads(), rows: rows(), sub: !!document.querySelector('.mg-sub') };
+      const kept = JSON.parse(localStorage.getItem('hub-session-v1')).meetingsGroup;
+      setListGroup('date');
+      return { byDate, byProject, kept, inData: 'listGroup' in data };
+    });
+    check('flow19: meetings group by date, soonest first, old months folded',
+      r.byDate.heads[0] === 'Today' && r.byDate.heads[1] === 'Later' && r.byDate.heads.length === 3
+      && r.byDate.rows.length === 2 && r.byDate.first === 'a', JSON.stringify(r.byDate));
+    check('flow19: meetings group by project, "No project" last, past split off',
+      r.byProject.heads.join('|') === 'Alpha|No project' && r.byProject.sub, JSON.stringify(r.byProject));
+    check('flow19: the group choice is a view setting, not meeting data', r.kept === 'project' && !r.inData);
+    const sched = await ctx.newPage();
+    await sched.goto(`${BASE}/schedule.html`, { waitUntil: 'load' });
+    const s = await sched.evaluate(() => {
+      const t = HubUtils.todayLocal();
+      HubStorage.set('schedule-v1', { items: [
+        { id: 'copy1', type: 'event', source: 'meeting', title: 'Today one', start: t, end: t, color: '#888' },
+        { id: 'own1', type: 'task', title: 'Own task', start: t, end: t, color: '#888' }], dayTags: {} });
+      const md = HubStorage.get('meetings-hub-v1');
+      md.meetings.find(m => m.id === 'a').scheduleEventId = 'copy1';
+      HubStorage.set('meetings-hub-v1', md);
+      state = loadState();
+      const items = filteredItems().map(i => i.id);
+      switchView('timeline');
+      const groups = [...document.querySelectorAll('.mrow-proj .proj-name')].map(e => e.textContent);
+      const ticks = document.querySelectorAll('.g-meet').length;
+      switchView('calendar'); setCalMode(true);
+      const w0 = ui.calWeekStart; calNav(1); const w1 = ui.calWeekStart;
+      return { items, groups, ticks, moved: w0 !== w1, views: document.querySelectorAll('.sch-view-btn').length };
+    });
+    check('flow19: Schedule hides the old copy of a meeting it already shows', s.items.join() === 'own1', s.items.join());
+    check('flow19: one Timeline holds projects, meetings and own items',
+      s.views === 2 && s.groups.join('|') === 'Alpha|No project' && s.ticks >= 2, JSON.stringify(s));
+    check('flow19: week view moves with ‹ ›', s.moved);
+    await sched.close();
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>People Hub</title>
+  <title>People</title>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <script src="hub-storage.js"></script>
@@ -263,8 +263,8 @@
   <div class="ph-header">
     <div class="ph-header-row">
       <div>
-        <div class="ph-title">People Hub</div>
-        <div class="ph-subtitle">Synced from Project Hub · <span id="ph-count">—</span></div>
+        <div class="ph-title">People</div>
+        <div class="ph-subtitle">Synced from Projects · <span id="ph-count">—</span></div>
       </div>
       <div class="ph-actions">
         <button class="btn btn-primary" onclick="openMemberModal(null)">+ Add Member</button>
@@ -484,7 +484,7 @@
         el.innerHTML = `<div class="ph-empty">
           <div class="ph-empty-icon">👥</div>
           <div class="ph-empty-title">No members yet</div>
-          <div class="ph-empty-desc">Members sync automatically from Project Hub. Add one there or use + Add Member here.</div>
+          <div class="ph-empty-desc">Members sync automatically from Projects. Add one there or use + Add Member here.</div>
         </div>`;
         return;
       }
@@ -579,7 +579,7 @@
         el.innerHTML = `<div class="ph-empty">
           <div class="ph-empty-icon">📊</div>
           <div class="ph-empty-title">No members yet</div>
-          <div class="ph-empty-desc">Members sync from Project Hub automatically. Add a project with tasks to see the matrix.</div>
+          <div class="ph-empty-desc">Members sync from Projects automatically. Add a project with tasks to see the matrix.</div>
         </div>`;
         return;
       }
@@ -872,7 +872,7 @@
     }
 
     function deleteMember(id) {
-      if (!confirm('Remove this member from People Hub?')) return;
+      if (!confirm('Remove this member from People?')) return;
       const data = getData();
       // Clear dangling reportsTo refs
       data.members.forEach(m => { if (m.reportsTo === id) m.reportsTo = null; });
@@ -882,7 +882,7 @@
       showToast('Member removed');
     }
 
-    // ── Auto-sync from Project Hub ────────────────────────────────────────────────
+    // ── Auto-sync from Projects ────────────────────────────────────────────────
 
     function syncFromProjectHub() {
       const phMembers = getPHData().members || [];

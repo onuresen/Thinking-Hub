@@ -4,6 +4,33 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 183 — Meetings and Schedule redesign, plain tool names~~ ✓ Done `[group: meetings]`
+Onur (2026-11-06): the meeting list is flat; wanted grouping by date or project, and a UI pass on Meetings and Schedule. Also asked whether "Hub" is used consistently.
+
+**Meetings**
+- **List grouped** by Date (Today, This week, Next week, Later, Earlier this week, then past months folded) or by Project ("No project" last, a "Past" divider inside each group). Rows show day, time, length, project color, open actions. Past rows dim; today is green. Opens on today's or the next meeting.
+- **Detail page rebuilt.** Header: title + a "Today / In 3 days" chip, then Type · Date · Time · Minutes · Project as labelled fields, the outcome line, People, and Link note / Links. Body: Agenda and Notes on the left, Decisions and Action items on the right, always open. Lifecycle actions (Repeat, Make weekly, Archive, Delete) moved to a footer. A series shows its dates with past dimmed and a dot where notes exist.
+- **Removed** the "→ Schedule" button and the "Upcoming from Schedule" box.
+
+**Schedule**
+- **One Timeline**, built on the old Projects view: each open project lane shows its meetings as ticks (click opens the meeting panel), then milestones, tasks with due dates, and Schedule items tied to the project. A "No project" group holds the rest. The old item-only Timeline is gone.
+- Calendar and Timeline share one toolbar (‹ title ›, a Month|Week or Weeks|Months switch, Today). Week view moves with ‹ › (it was stuck on this week). `t` goes to today in either view.
+- Meetings show time and a project-color edge; past ones dim. Weekend and work-hour shading uses neutral surfaces instead of tinted washes.
+
+**Names**
+- "Hub" is the app's name only. Labels changed to Projects, Meetings, Capture, Journal, People, Stakeholders, Machi, Learning, Canvas, Decisions, Goals, Signals, Help. Kept: Schedule, Dependency Graph, Tool Portfolio, Idea Swiper, Risk Register, Profile, Tags. Page titles now match the sidebar (no "Tool Portfolio Hub", "IdeaSwipe v7").
+
+**Key decisions**
+- **Decision:** rename labels only; file names, tool ids and storage keys keep `-hub`. **Why:** ids live in links, backups, change files and the vault scripts; renaming them breaks data for no user gain. **Alternative:** full rename with a migration, rejected as risk without benefit. **Confidence:** high.
+- **Decision:** remove "→ Schedule" and hide the old copies instead of deleting them. **Why:** Schedule reads meetings directly, so the copy showed twice; hiding keeps data, and a copy whose meeting was deleted still shows as a normal event. **Alternative:** delete the copies on load, rejected (deletes user data). **Confidence:** high.
+- **Decision:** merge into the Projects view and call it Timeline. **Why:** Onur: Projects is richer; the merged view must not look empty. **Alternative:** keep both views. **Confidence:** high.
+- **Decision:** the Date/Project choice lives in `hub-session-v1.meetingsGroup`. **Why:** a view setting, same as P182's display choice; it must not enter backups. **Confidence:** high.
+- **Decision:** lifecycle actions go to a footer, not a "⋯" menu. **Why:** they are rare, and a menu only hides clutter; placing them by meaning fixes the structure. **Confidence:** med.
+
+**Verified:** new flow19 (date and project groups, folded months, view setting not in data; Schedule hides old meeting copies, one Timeline with projects + "No project" + meeting ticks, week ‹ › moves). `npm test`: smoke, all flows, vault-bridge pass. Screenshots dark and light, desktop and phone, with 29 sample meetings.
+
+**Files:** `meetings-hub.html`, `styles/meetings-hub.css`, `schedule.html`, `styles/schedule.css`, `index.html` and every tool page (labels), `hub-*.js` (labels), `machi-fun.js`, `machi-iso.js`, `sw.js` (cache v53), `tests/flows.js`, `CLAUDE.md`, `README.md`, `PRIVACY.md`, `AGENTS.md`, `ai-upload-guide.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Fix — .ics import kept email addresses as attendee names~~ ✓ Done `[group: meetings]`
 Onur (2026-11-06): the contact check kept flagging emails he never saw. One came from a meeting import: an attendee with no display name was stored by its address.
 - **Cause:** `extractCN` fell back to the `mailto:` address when an attendee had no `CN`, and kept a `CN` that was itself an address (or "Name <address>").

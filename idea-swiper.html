@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IdeaSwipe v7</title>
+  <title>Idea Swiper</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -615,7 +615,7 @@ On-demand tutoring market"></textarea>
     <div class="result-item is-${activeTab}" style="display:flex;align-items:flex-start;gap:8px">
       <div class="result-num" style="flex-shrink:0">#${i + 1}</div>
       <div style="flex:1;min-width:0">${esc(idea)}</div>
-      ${showSend ? `<button class="send-to-hub-btn" title="Send to Project Hub" onclick="openSendModal(${JSON.stringify(idea)})">→ Hub</button>` : ''}
+      ${showSend ? `<button class="send-to-hub-btn" title="Send to Projects" onclick="openSendModal(${JSON.stringify(idea)})">→ Hub</button>` : ''}
     </div>`).join('');
     }
 
@@ -1761,7 +1761,7 @@ On-demand tutoring market"></textarea>
       HubBootstrap.start('idea-swiper');
     });
 
-    // ── Send to Project Hub (1A) ────────────────────────────────────────────
+    // ── Send to Projects (1A) ────────────────────────────────────────────
     let _sendIdea = null;
 
     function openSendModal(idea) {
@@ -1769,7 +1769,7 @@ On-demand tutoring market"></textarea>
       const projects = (HubData.getProjects ? HubData.getProjects() : []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       const sel = document.getElementById('send-project-select');
       if (!projects.length) {
-        sel.innerHTML = '<option value="">No projects found — create one in Project Hub first</option>';
+        sel.innerHTML = '<option value="">No projects found — create one in Projects first</option>';
         sel.disabled = true;
       } else {
         sel.disabled = false;
@@ -1802,17 +1802,17 @@ On-demand tutoring market"></textarea>
       closeSendModal();
       // Brief toast feedback
       const t = document.createElement('div');
-      t.textContent = 'Task added to Project Hub ✓';
+      t.textContent = 'Task added to Projects ✓';
       t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent-glow);color:var(--accent);padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none';
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 2200);
     }
   </script>
 
-  <!-- Send to Project Hub modal -->
+  <!-- Send to Projects modal -->
   <div class="send-modal-overlay hidden" id="send-modal-overlay" onclick="if(event.target===this)closeSendModal()">
     <div class="send-modal-box">
-      <div class="send-modal-title">Send idea to Project Hub</div>
+      <div class="send-modal-title">Send idea to Projects</div>
       <div class="send-modal-idea" id="send-idea-preview"></div>
       <div>
         <div class="send-modal-label">Add as task in project</div>

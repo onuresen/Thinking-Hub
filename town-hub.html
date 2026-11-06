@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Machi Hub</title>
+  <title>Machi</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -133,7 +133,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="topbar-title">🏙 Machi Hub <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
+    <div class="topbar-title">🏙 Machi <span class="topbar-sub">YOUR WHOLE HUB AS A LIVING CITY</span></div>
     <div class="mayor-hud" id="mayor-hud"></div>
   </div>
 
@@ -191,7 +191,7 @@
     <div class="empty-state" id="empty" style="display:none">
       Nothing to show — every lens is off or empty.<br>
       Add tools in the <a href="tool-portfolio.html">Tool Portfolio</a>, projects in
-      <a href="project-hub.html">Project Hub</a>, or just use the Hub — pages you open become buildings.
+      <a href="project-hub.html">Projects</a>, or just use the Hub — pages you open become buildings.
     </div>
   </div>
 
@@ -267,18 +267,18 @@
     // ── Lens 2: Hub Pages district (buildings, lit by real page opens) ──────
     // Mirror of index.html's APPS registry (id → label/icon/file/group).
     const HUB_PAGES = {
-      'project-hub': ['Project Hub', '◈', 'Daily Work'], 'schedule': ['Schedule', '▦', 'Daily Work'],
-      'meetings-hub': ['Meeting Hub', '▣', 'Daily Work'], 'capture-hub': ['Capture Hub', '⊞', 'Daily Work'],
-      'journal-hub': ['Journal Hub', '◷', 'Daily Work'],
-      'graph-hub': ['Dependency Graph', '🕸️', 'People & Network'], 'people-hub': ['People Hub', '◉', 'People & Network'],
-      'stakeholder-hub': ['Stakeholder Map', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
-      'town-hub': ['Machi Hub', '🏙', 'People & Network'],
-      'learning-hub': ['Learning Hub', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
-      'canvas-hub': ['Canvas Hub', '✏️', 'Learning & Ideas'],
-      'decision-hub': ['Decision Hub', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals Hub', '◎', 'Strategy & Decisions'],
-      'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'signals-hub': ['Signals Hub', '📡', 'Strategy & Decisions'],
+      'project-hub': ['Projects', '◈', 'Daily Work'], 'schedule': ['Schedule', '▦', 'Daily Work'],
+      'meetings-hub': ['Meetings', '▣', 'Daily Work'], 'capture-hub': ['Capture', '⊞', 'Daily Work'],
+      'journal-hub': ['Journal', '◷', 'Daily Work'],
+      'graph-hub': ['Dependency Graph', '🕸️', 'People & Network'], 'people-hub': ['People', '◉', 'People & Network'],
+      'stakeholder-hub': ['Stakeholders', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
+      'town-hub': ['Machi', '🏙', 'People & Network'],
+      'learning-hub': ['Learning', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
+      'canvas-hub': ['Canvas', '✏️', 'Learning & Ideas'],
+      'decision-hub': ['Decisions', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals', '◎', 'Strategy & Decisions'],
+      'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'signals-hub': ['Signals', '📡', 'Strategy & Decisions'],
       'achievements-hub': ['Profile', '👤', 'Tools & Focus'],
-      'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help & Guide', 'ℹ', 'Tools & Focus'],
+      'tags-hub': ['Tags', '🏷', 'Tools & Focus'], 'help-hub': ['Help', 'ℹ', 'Tools & Focus'],
     };
     // Must match index.html's APPS exactly (smoke test enforces it).
     // Retired tools are left out on purpose. Their old hub-activity-v1 entries
@@ -442,8 +442,8 @@
         });
       }
 
-      // Calibration Courthouse — rises only as real Decision Hub outcomes get
-      // scored (same criteria as Decision Hub's own ⚖ Calibration modal:
+      // Calibration Courthouse — rises only as real Decisions outcomes get
+      // scored (same criteria as the Decisions tool's own ⚖ Calibration modal:
       // outcome.result set and not 'tooearly'). Empty foundation until then.
       const rawDecs = HubStorage.get('decision-hub-v1');
       const decs = Array.isArray(rawDecs) ? rawDecs : [];
@@ -885,7 +885,7 @@
           m.dueUnscored ? `${m.dueUnscored} due now` : null].filter(Boolean).join(' · '));
         line(detail, 'd-note', m.scored
           ? 'The courthouse rises as real outcomes get scored.'
-          : 'Empty so far — no decision has a scored outcome yet. Score one in Decision Hub to start building.');
+          : 'Empty so far — no decision has a scored outcome yet. Score one in Decisions to start building.');
       }
 
       // Trees wilt instead of burning; treeNote above already says so.
@@ -924,11 +924,11 @@
       const links = {
         'portfolio': ['tool-portfolio.html', 'Open in Tool Portfolio →'],
         'hub-page': [(HUB_PAGES[m.appId] ? m.appId + '.html' : '#'), 'Open this tool →'],
-        'project': ['project-hub.html', 'Open in Project Hub →'],
-        'person': ['people-hub.html', 'Open in People Hub →'],
+        'project': ['project-hub.html', 'Open in Projects →'],
+        'person': ['people-hub.html', 'Open in People →'],
         'sky': ['achievements-hub.html', 'Open Profile →'],
         'responder': ['risk-hub.html', 'Open in Risk Register →'],
-        'calibration': ['decision-hub.html', 'Open in Decision Hub →'],
+        'calibration': ['decision-hub.html', 'Open in Decisions →'],
       };
       const [href, label] = (fun && fun.link) || links[m.lens] || [];
       if (href) {
@@ -937,7 +937,7 @@
         a.textContent = label;
         // Inside the shell, ask the parent to open the tool. Plain navigation
         // would load it inside Machi's own iframe and lose the item (a car
-        // opened Project Hub's home, not its project). itemId uses the
+        // opened the Projects tool's home, not its project). itemId uses the
         // shell's existing hub-highlight path.
         a.addEventListener('click', (ev) => {
           if (window.parent === window || href === '#') return;

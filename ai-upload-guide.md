@@ -189,7 +189,7 @@ Keyed by ISO week, not an array.
 ```
 No link back to a project even when liked — the "→ Hub" pipeline that would set
 that link is built but not used in practice. Don't assume a `like`/`super` idea
-became a real task; check Project Hub separately.
+became a real task; check Projects separately.
 
 ### `cross_tool_links` (hub-links-v1) — flat array
 ```json
@@ -234,8 +234,8 @@ appear in an older backup file, but there's no tool left to open them from.
 ## Sections that exist in the schema but had zero data as of 2026-06-17
 These tools/views are fully built and wired in but you haven't used them yet — an
 empty result for these is expected, not a sign of a missing feature:
-- `assumptions-hub-v1` (Decision Hub → Assumptions tab)
-- `matrix-hub-v1` (Project Hub → Priority Matrix view)
+- `assumptions-hub-v1` (Decisions → Assumptions tab)
+- `matrix-hub-v1` (Projects → Priority Matrix view)
 
 ## What to ask the AI to actually do
 Given the above, useful prompts paired with a backup upload:

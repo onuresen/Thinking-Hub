@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Signals Hub</title>
+  <title>Signals</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <!--
-    Signals Hub (P175, redesigned P176). A hub tool of its own: it reads the
+    Signals (P175, redesigned P176). A hub tool of its own: it reads the
     files Claude's morning run writes (readings and news) and keeps Onur's taps.
 
     Four places: Radar (the week at a glance), Library (everything collected),
@@ -294,7 +294,7 @@
 <body>
   <div class="topbar">
     <div class="logo-mark" aria-hidden="true">📡</div>
-    <div class="logo-text">Signals Hub</div>
+    <div class="logo-text">Signals</div>
     <button class="place on" data-place="radar" type="button">Radar</button>
     <button class="place" data-place="library" type="button">Library</button>
     <button class="place" data-place="brief" type="button">Brief</button>
@@ -517,7 +517,7 @@
       if (perm !== 'granted') { needsPermission = true; folder = null; render(); return false; }
       needsPermission = false;
       folder = await resolveFolder(handle);
-      if (!folder) { setStatus('This folder has no Signals Hub files. Pick the folder that holds them.', true); render(); return false; }
+      if (!folder) { setStatus('This folder has no reading files. Pick the folder that holds them.', true); render(); return false; }
       await scanFolder();
       return true;
     }
@@ -754,7 +754,7 @@
     function emptyPage() {
       return `<div class="empty-wrap">
         <div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading yet</div>
-        <div class="e-sub">Link the folder that holds the Signals Hub files, or import a reading file.</div></div>
+        <div class="e-sub">Link the folder that holds the reading files, or import a reading file.</div></div>
         <div class="card help"><ol>
           <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. New readings and news come in each time you open this page.</li>
           <li><b>Import files</b>: a reading file and its request file, or a news file.</li>
@@ -977,8 +977,8 @@
             <button class="btn btn-ghost btn-s" type="button" data-brief="md">Download Markdown</button>
           </div></div>
         <article class="paper">
-          <div class="mono">Signals Hub brief · Week ${isoWeek(day)} · ${esc(day)}</div>
-          <h1>${esc(reading.insights[0] ? reading.insights[0].headline : 'Signals Hub brief')}</h1>
+          <div class="mono">Signals brief · Week ${isoWeek(day)} · ${esc(day)}</div>
+          <h1>${esc(reading.insights[0] ? reading.insights[0].headline : 'Signals brief')}</h1>
           <div class="lede">Claude read ${reading.evidenceCount || '—'} sources · ${esc(reading.reviewer)}.${reading.weekPlan ? ` <b>This week:</b> ${esc(reading.weekPlan)}` : ''}</div>
           <h2><span>01</span>What changed</h2>${insights}
           <h2><span>02</span>Your calls</h2>
@@ -1003,7 +1003,7 @@
       const day = dayOf(reading);
       const { num, order, calls, touched, horizon } = briefParts(reading);
       const refs = (ids) => { const n = (ids || []).filter((id) => reading.docs[id]).map(num); return n.length ? ` [${n.join(', ')}]` : ''; };
-      const lines = [`# ${reading.insights[0] ? reading.insights[0].headline : 'Signals Hub brief'}`, '', `Signals Hub brief · Week ${isoWeek(day)} · ${day}`, ''];
+      const lines = [`# ${reading.insights[0] ? reading.insights[0].headline : 'Signals brief'}`, '', `Signals brief · Week ${isoWeek(day)} · ${day}`, ''];
       if (reading.weekPlan) lines.push(`**This week:** ${reading.weekPlan}`, '');
       lines.push('## What changed', '');
       reading.insights.forEach((x, i) => {

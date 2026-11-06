@@ -1,4 +1,4 @@
-// machi-iso.js — Machi Hub bird's-eye (isometric) view. Thinking-Hub-only, NOT a stamped copy.
+// machi-iso.js — Machi bird's-eye (isometric) view. Thinking-Hub-only, NOT a stamped copy.
 // Same entities as the street view (machi-engine.js), drawn on a small island town:
 // a road grid with gaps, a river with bridges, a park with a pond, a rail loop with a train.
 // Public surface mirrors the parts of MachiHub.Town that town-hub.html uses, so the host

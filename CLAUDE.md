@@ -14,25 +14,25 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | File | Role |
 |------|------|
 | `project-hub.html` | Projects + tasks. Views: Overview (Cards show the Next line, P165; or Compact tiles with Jump to, P182), Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
-| `schedule.html` | Calendar (month / hourly week grid with drag-resize) + timeline. Shows meetings; a click opens the meeting panel (P164) |
-| `meetings-hub.html` | Meetings: type templates, attendee roles, decision register, weekly series, .ics import (project guess, P164), linked vault note review |
+| `schedule.html` | Calendar (month / hourly week grid with drag-resize, ‹ › moves either) + Timeline: open projects with milestones, tasks, meetings and Schedule's own items, plus a "No project" group (P183). Meetings carry their time and project color; a click opens the meeting panel (P164) |
+| `meetings-hub.html` | Meetings: list grouped by date or project (P183), notes left and decisions + actions right, type templates, attendee roles, weekly series, .ics import (project guess, P164), linked vault note review |
 | `capture-hub.html` | Brain-dump inbox with routing to other tools. Also the PWA share target |
 | `journal-hub.html` | Tabs: Daily Log (`log-hub-v1`), Weekly Review (`review-hub-v1`), Time Journal (`focus-hub-v1`) |
 | `graph-hub.html` | Dependency graph (vis-network): critical path, reasoning/impact trace, shortest path, suggested links, tag nodes |
 | `people-hub.html` | Member roster, org tree, load matrix, "Me View" |
 | `stakeholder-hub.html` | Organizations roster (default) + Power/Interest grid |
 | `tool-portfolio.html` | Tool directory: radar ring, Freshness × Mastery matrix, own icon upload |
-| `town-hub.html` | Machi Hub — pixel city from hub data. Fun, not insight (see below) |
+| `town-hub.html` | Machi — pixel city from hub data. Fun, not insight (see below) |
 | `learning-hub.html` | Reading & learning log |
 | `idea-swiper.html` | Swipe triage of ideas |
-| `canvas-hub.html` | Canvas Hub — boards, live cards, frames, layers, color key. See "Canvas Hub" below |
+| `canvas-hub.html` | Canvas — boards, live cards, frames, layers, color key. See "Canvas" below |
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
 | `goals-hub.html` | OKRs by quarter |
 | `risk-hub.html` | Risk register + heat map |
-| `signals-hub.html` | Signals Hub (P175–P177): Radar, Library, Brief from Claude's morning readings and news (linked folder like the vault folder, or imported files), and **Mine**: Onur's own signals (Watching → Emerging → Act → Converted / Faded), linked to hub items via HubLinks (`signals-hub` is a link target). Writes taps and active signals to `state/hub-state.json` in the linked folder. No server, no fetch |
+| `signals-hub.html` | Signals (P175–P177): Radar, Library, Brief from Claude's morning readings and news (linked folder like the vault folder, or imported files), and **Mine**: Onur's own signals (Watching → Emerging → Act → Converted / Faded), linked to hub items via HubLinks (`signals-hub` is a link target). Writes taps and active signals to `state/hub-state.json` in the linked folder. No server, no fetch |
 | `achievements-hub.html` | Profile (identity) + achievements |
 | `tags-hub.html` | Central tag registry: rename, merge, delete everywhere |
-| `help-hub.html` | Help & Guide: tool cards, framework reference, workflows |
+| `help-hub.html` | Help: tool cards, framework reference, workflows |
 
 Shared modules and other files:
 
@@ -49,7 +49,7 @@ Shared modules and other files:
 | `hub-obsidian.js` | Vault index for note autocomplete |
 | `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue, applied change-file record (`changeSets`) |
 | `hub-changes.js` | Change files (P163): status + apply of a pass on top of live data. No DOM; the review modal is in `index.html`. Opened only from Settings → Data → Apply changes (P169) |
-| `hub-vault-notes.js` | Linked-note review dialog (P138) for Project Hub + Meeting Hub |
+| `hub-vault-notes.js` | Linked-note review dialog (P138) for Projects + Meetings |
 | `hub-snapshots.js` | Daily IndexedDB snapshots of all localStorage + restore |
 | `hub-starter-data.js` | First-run sample data |
 | `hub-tutorial.js`, `hub-toast.js`, `hub-bootstrap.js` | Tour, toasts, init (call last) |
@@ -89,7 +89,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 
 ## localStorage keys (source of truth)
-Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals Hub readings, news and taps; the morning run reads its taps from the backup too).
+Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals readings, news and taps; the morning run reads its taps from the backup too).
 
 Not backed up (ephemeral UI state): `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `hub-resurface-v1`, `hub-last-backup-v1`, `hub-briefing-v1`, `ai-drawer-pos-v1`, `machi-milestones-v1`.
 
@@ -112,7 +112,7 @@ Adding a key: add it to `SCOPE_KEYS.full` and `EXPORT_KEY_LABELS`. `tests/flows.
 - Do not use `color-mix()` without a fallback property above it
 - Do not break `hub-storage.js` load order
 - Do not hardcode colors in JS-injected CSS strings
-- Do not load runtime libraries or fonts from a CDN; keep the P93 zero-egress boundary. Favicon fetches are allowed only in Tool Portfolio, Stakeholder Map and Canvas Hub (P101–P112; smoke-tested)
+- Do not load runtime libraries or fonts from a CDN; keep the P93 zero-egress boundary. Favicon fetches are allowed only in Tool Portfolio, Stakeholders and Canvas (P101–P112; smoke-tested)
 - Do not bypass `ThinkingHubPolicy.aiEnabled` or `allowedAiProviders`; every AI surface needs `.ai-surface` and every operation must go through guarded `HubAI`
 - Do not add a Microsoft/Direct Line/Graph secret to browser code. Direct Copilot APIs stay deferred until an explicitly approved identity/backend architecture exists.
 - Do not use `var(--font-b)` or `var(--font-d)` (undefined aliases) — use `var(--font-body)` / `var(--font-display)`
@@ -167,15 +167,16 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Propose, never auto-import** anything parsed from vault prose (P104, P138).
 - **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py`. They live in the private repo `esen-inbox`; Onur applies them by hand (Settings → Data → Apply changes). No Home card, no folder scan (P169). Status logic lives in `hub-changes.js` and that script; change both together.
 - **Backups go to GitHub only encrypted (P168).** "Export encrypted" → private repo `esen-inbox` → `hub_changes.py decrypt` into the scratchpad. The envelope format lives in `index.html` and that script; change both together.
+- **Tool names are plain nouns (P183).** "Hub" is the app's name only: Projects, Meetings, Capture, Journal, People, Stakeholders, Machi, Learning, Canvas, Decisions, Goals, Signals, Help. Names that already say what the tool is stay (Schedule, Dependency Graph, Tool Portfolio, Idea Swiper, Risk Register, Profile, Tags). Only labels changed: file names, tool ids (`project-hub`…) and storage keys keep `-hub`, because links and backups use them. A new tool gets a plain noun.
 - **UI text says what a feature does, not Onur's routine (P170).** No repo, branch or service names, no "for X" purpose labels. His workflow belongs in the vault, not the app.
 - **Feedback loop:** Onur's corrections live in esen-vault `meta/Feedback-Loop.md` § Register, each with a strength (Rule / Default / One-off / Signal). Follow Rules; apply Defaults quietly and break them when they don't fit. A choice for one project is not a preference. Add an entry when he corrects you.
 - **Missing timestamp = unknown age, never stale** (P90).
-- **One CSP for every page** (P93). Favicon egress only in the three opted-in pages. `frame-src` is `'self'` only (P175 removed the P174 Signals Hub frame); smoke-tested.
-- **Rejected, don't re-propose:** Stakeholder Map inside Project Hub; People Hub → Profile; multi-device folder sync (P84).
+- **One CSP for every page** (P93). Favicon egress only in the three opted-in pages. `frame-src` is `'self'` only (P175 removed the P174 Signals frame); smoke-tested.
+- **Rejected, don't re-propose:** Stakeholders inside Projects; People → Profile; multi-device folder sync (P84).
 - **Parked:** Workspaces (Model A, in-browser switcher). Do not start until Onur asks.
 - **Test UI with real mouse timing** (`mouse.down` → 80 ms → `mouse.up`), not `page.click()`. Six Canvas Connect bugs hid behind synthetic clicks (P113–P124).
 
-## Canvas Hub (most-edited file)
+## Canvas (most-edited file)
 - `canvas-v1 = { boards: [{ id, name, nodes, edges, lanes, views, colorKey, panX, panY, zoom, shelved? }], activeBoardId, templates, snapToGrid, dimParked }`. Shelved boards (P165) sit in a "Shelved" optgroup. `db` is a live reference to the active board.
 - Node kinds: note, rd, frame, and live cards (`LINKED` table: project, goal, tool, task, decision, risk, meeting, stakeholder) with `link: {tool, id, label}`. Status is read fresh at render; only the link is stored.
 - Edges: `{from, to, relType: relates|blocks|depends-on, label}`. Frames are nodes. Layers (`lanes`) are visual guides, never containers.
@@ -184,7 +185,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - PNG export uses SVG `foreignObject` (`buildExportScene`). No fallback since html2canvas was removed (P156).
 - Imported board files are untrusted: note HTML is cleaned with an allowlist.
 
-## Machi Hub
+## Machi
 Built by a Codex agent (history in `docs/HISTORY.md`). **For fun, not insight** (Onur, 2026-10-01): add playful, data-driven life; no stats or dashboards. Buildings burn only on evidence of neglect (real `lastUsedAt` ≥ 60 days). `machi-milestones-v1` stays out of backups.
 Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and Bird's-eye (`machi-iso.js`). New Machi features go in both until Onur retires one. The tab choice lives in `machi-milestones-v1.view`. Places carry `meta.look`; each view draws its own version of a look.
 
@@ -193,7 +194,7 @@ Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and B
 Formalizes the "Record decisions, not just outcomes" rule under Workflow Conventions
 above into a shared schema used across all repos. When a non-obvious choice is made
 (a tradeoff, "why this over that", a convention to follow or avoid), record it — as a
-"Key decisions" bullet under the backlog entry / in the Decision Hub — using:
+"Key decisions" bullet under the backlog entry / in Decisions — using:
 - **Decision:** what was chosen
 - **Why:** the reasoning (the cause behind the effect)
 - **Alternative:** what was rejected, and why

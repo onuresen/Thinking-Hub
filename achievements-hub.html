@@ -389,7 +389,7 @@
     <div class="pf-field">
       <label for="pf-self">This is me</label>
       <select id="pf-self"></select>
-      <div class="pf-hint">Links you to a person in People Hub, so the app knows which tasks and work are yours. (Moved here from People Hub.)</div>
+      <div class="pf-hint">Links you to a person in People, so the app knows which tasks and work are yours. (Moved here from People.)</div>
     </div>
     <div class="pf-actions">
       <button class="btn btn-ghost" onclick="closeProfileEdit()">Cancel</button>
@@ -579,7 +579,7 @@
     makeAch('thi-decider', '🏛️', 'The Decider',    'thinker', 200, 'Log 10 decisions',
       ctx => ({ unlocked: ctx.decisions.length >= 10, progress: ctx.decisions.length, total: 10 })),
 
-    makeAch('thi-canvas-painter', '🎨', 'Canvas Painter','thinker', 100, 'Add something to Canvas Hub',
+    makeAch('thi-canvas-painter', '🎨', 'Canvas Painter','thinker', 100, 'Add something to Canvas',
       ctx => ({ unlocked: ctx.canvas.length >= 1, progress: Math.min(ctx.canvas.length, 1), total: 1 })),
 
     // ── Builder ──
@@ -595,7 +595,7 @@
     makeAch('bld-project-done', '🎉', 'Ship It',    'builder', 500, 'Complete all tasks in a project (3+ tasks)',
       ctx => ({ unlocked: ctx.shippedProject, progress: ctx.shippedProject ? 1 : 0, total: 1 })),
 
-    makeAch('bld-goal-setter', '🎯', 'Goal Setter', 'builder', 50,  'Set an objective in Goals Hub',
+    makeAch('bld-goal-setter', '🎯', 'Goal Setter', 'builder', 50,  'Set an objective in Goals',
       ctx => ({ unlocked: ctx.goals.length >= 1, progress: Math.min(ctx.goals.length, 1), total: 1 })),
 
     makeAch('bld-focused', '⏱️', 'Deep Focus',      'builder', 100, 'Complete a focus timer session',
@@ -927,7 +927,7 @@
     profile.selfMemberId = selfId || '';
     settings.profile = profile;
     HubStorage.set('hub-settings-v1', settings);
-    // Mirror selfMemberId to session — the canonical key existing readers use (People Hub, home "My Work")
+    // Mirror selfMemberId to session — the canonical key existing readers use (People, home "My Work")
     const session = HubStorage.get('hub-session-v1') || {};
     if (selfId) session.selfMemberId = selfId; else delete session.selfMemberId;
     HubStorage.set('hub-session-v1', session);
