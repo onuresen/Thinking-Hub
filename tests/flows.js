@@ -302,6 +302,10 @@ function startServer() {
       + ev('u-is06', '大林組様_IS06定例MTG', D1, 16, 0, 17, 0)
       + ev('u-early', '研開打合せ', D1, 8, 35, 9, 0)
       + ev('u-ak', 'AKEBONO2026_最終プレゼン', D2, 13, 0, 18, 0)
+        .replace('END:VEVENT', 'ATTENDEE;CN=Taro Sample;ROLE=REQ-PARTICIPANT:mailto:taro@example.com\r\n'
+          + 'ATTENDEE;CN="Hana Test <hana@example.com>":mailto:hana@example.com\r\n'
+          + 'ATTENDEE;CN=ken@example.com:mailto:ken@example.com\r\n'
+          + 'ATTENDEE;ROLE=OPT-PARTICIPANT:mailto:noname@example.com\r\nEND:VEVENT')
       + 'END:VCALENDAR\r\n';
 
     const r = await page.evaluate(({ ics, d2 }) => {
@@ -324,6 +328,7 @@ function startServer() {
         res, bucho: by('戦略企画部会' ) && data.meetings.filter((m) => m.title === '戦略企画部会').map((m) => m.projectId),
         is06: by('大林組様_IS06定例MTG').projectId, early: by('研開打合せ'), ak: by('AKEBONO2026_最終プレゼン').projectId,
         utcNotes: data.meetings.filter((m) => /UTC/.test(m.notes || '')).length, dupRows,
+        akPeople: JSON.stringify([by('AKEBONO2026_最終プレゼン').attendees, by('AKEBONO2026_最終プレゼン').attendeesList]),
       };
     }, { ics, d2: ymd(D2) });
     check('flow4: a known title reuses its last project', r.bucho.every((p) => p === 'p-sp'), JSON.stringify(r.bucho));
@@ -333,6 +338,8 @@ function startServer() {
     check('flow4: no "🕐 … UTC" line in notes', r.utcNotes === 0);
     check('flow4: 08:35–09:00 JST (crosses UTC midnight) keeps its 25 min', r.early.durationMins === 25 && r.early.time === '08:35',
       `${r.early.time} ${r.early.durationMins}`);
+    check('flow4: attendees keep names, never email addresses',
+      !r.akPeople.includes('@') && r.akPeople.includes('Taro Sample') && r.akPeople.includes('Hana Test'), r.akPeople);
     check('flow4: same day + same title is flagged as a possible duplicate', r.dupRows.length === 2, r.dupRows.join(' | '));
     await tokyo.close();
   }

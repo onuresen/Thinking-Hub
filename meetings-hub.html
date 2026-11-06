@@ -997,12 +997,14 @@
       .replace(/\\\\/g, '\\');
   }
 
+  // Attendee display name only. An attendee with no name, or whose "name" is
+  // just an email address, is skipped: emails stay out of meetings and backups.
   function extractCN(line) {
-    const m = line.match(/CN=([^;:]+)/i);
-    if (m) return unescapeICS(m[1].replace(/^"|"$/g, ''));
-    const mailto = line.match(/:mailto:(.+)$/i);
-    if (mailto) return mailto[1].trim();
-    return null;
+    const m = line.match(/CN=("[^"]*"|[^;:]+)/i);
+    if (!m) return null;
+    const name = unescapeICS(m[1].replace(/^"|"$/g, '')).replace(/<[^>]*>/g, '').trim();
+    if (!name || name.includes('@')) return null;
+    return name;
   }
 
   function parseICSDateValue(value) {
