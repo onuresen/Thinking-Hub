@@ -7,11 +7,13 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Signals Hub now matches the canonical reading flow: a compact change frame, featured interpretation, relevance/emergence/evidence priorities, natural comments, and **Take forward** as the only command that creates proof work.
+
 - Project Hub Overview has a **Compact** style next to Cards: small tiles in your groups with a progress ring, status, open tasks and what is next, plus a "Jump to" row of groups. Press `/` to search projects and Enter to open the first match.
 - Home has a writing box: type a thought and press Enter. It goes to the Capture Inbox, or to today's journal with one switch. In Cmd+K, `log: …` adds a line to today's journal.
 - Signals Hub **Mine**: note your own signals, link them to projects, meetings and other hub items, and move them from Watching to Emerging to Act (or let them fade). The page counts what each signal is connected to, and Claude's readings say when outside evidence supports a signal or points against it. Signals can be linked from any tool's link picker and found with Cmd+K.
-- Signals Hub has three places: **Radar** (the week, a radar of the reading, project and feed pulse, moves to tap), **Library** (everything collected, with filters and grouping) and **Brief** (one page to print or copy).
-- Signals Hub in the sidebar (Strategy & Decisions). It reads readings and news from a linked folder or imported files, and keeps your Follow / Later / Not for me taps and Keep / Hide marks. It needs no other app. Taps go into the linked folder and the full backup.
+- Signals Hub has four places: **Radar**, **Library**, **Brief**, and **Mine**.
+- Signals Hub reads readings and news from a linked folder or imported files. Comments, Take forward choices and active Mine signals go into the linked folder and full backup; the desktop engine receives taken-forward moves for Prove.
 
 ### Security
 

@@ -29,7 +29,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
 | `goals-hub.html` | OKRs by quarter |
 | `risk-hub.html` | Risk register + heat map |
-| `signals-hub.html` | Signals Hub (P175–P177): Radar, Library, Brief from Claude's morning readings and news (linked folder like the vault folder, or imported files), and **Mine**: Onur's own signals (Watching → Emerging → Act → Converted / Faded), linked to hub items via HubLinks (`signals-hub` is a link target). Writes taps and active signals to `state/hub-state.json` in the linked folder. No server, no fetch |
+| `signals-hub.html` | Signals Hub (P175–P177, P183): Radar, Library, Brief from morning readings and news, and **Mine**. Natural comments steer later readings; **Take forward** is the explicit Prove boundary. Writes comments, choices and active signals to `state/hub-state.json`. No server, no fetch |
 | `achievements-hub.html` | Profile (identity) + achievements |
 | `tags-hub.html` | Central tag registry: rename, merge, delete everywhere |
 | `help-hub.html` | Help & Guide: tool cards, framework reference, workflows |
@@ -89,7 +89,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 
 ## localStorage keys (source of truth)
-Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals Hub readings, news and taps; the morning run reads its taps from the backup too).
+Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals Hub readings, news, comments, choices and Mine signals; the morning run reads this state too).
 
 Not backed up (ephemeral UI state): `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `hub-resurface-v1`, `hub-last-backup-v1`, `hub-briefing-v1`, `ai-drawer-pos-v1`, `machi-milestones-v1`.
 

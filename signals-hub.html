@@ -14,14 +14,15 @@
   <link rel="stylesheet" href="theme.css">
   <!--
     Signals Hub (P175, redesigned P176). A hub tool of its own: it reads the
-    files Claude's morning run writes (readings and news) and keeps Onur's taps.
+    files Claude's morning run writes (readings and news), natural comments and
+    explicit Take forward decisions.
 
     Four places: Radar (the week at a glance), Library (everything collected),
     Brief (one page to read, print or copy) and Mine (P177: Onur's own signals,
     observations he watches, with links to hub items and Claude's notes).
 
     Data in: a linked folder (read on every open, like the vault folder) or
-    files imported by hand. Data out: a taps file written into the linked
+    files imported by hand. Data out: a state file written into the linked
     folder (state/hub-state.json), or saved by hand, and the full backup
     (`signals-hub-v1`). The page sends nothing anywhere and needs no server.
   -->
@@ -64,6 +65,33 @@
     .side .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
     .side select { margin-top: 10px; width: 100%; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); font: 12px var(--font-body); padding: 5px 8px; }
     .btn-s { font-size: 12px; padding: 6px 12px; }
+    .reading-snapshot { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 12px; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+    .snapshot { min-width: 0; padding: 13px 15px; border-right: 1px solid var(--border); }
+    .snapshot:last-child { border-right: 0; }
+    .snapshot span { display: block; color: var(--text3); font: 700 9px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+    .snapshot strong { display: block; margin-top: 5px; font-size: 13px; line-height: 1.3; }
+    .snapshot small { display: block; margin-top: 4px; color: var(--text3); font-size: 10.5px; line-height: 1.35; }
+    .reading-view { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 10px 0; }
+    .reading-view > span { margin-right: 5px; color: var(--text3); font: 700 9px var(--font-mono); text-transform: uppercase; }
+    .reading-view button { padding: 5px 9px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--text3); font-size: 10.5px; cursor: pointer; }
+    .reading-view button.on { border-color: var(--border); background: var(--surface); color: var(--text); }
+    .featured { margin-bottom: 18px; padding: 20px; background: linear-gradient(120deg, var(--accent-dim), transparent 48%), var(--surface); }
+    .featured h2 { max-width: 36ch; margin: 6px 0 14px; font: 600 25px/1.18 var(--font-display); }
+    .featured-grid { display: grid; grid-template-columns: 1.1fr 1.1fr .9fr .9fr; border-top: 1px solid var(--border); }
+    .featured-grid > div { padding: 14px 15px 0 0; min-width: 0; }
+    .featured-grid > div + div { padding-left: 15px; border-left: 1px solid var(--border); }
+    .featured-grid b { display: block; margin-bottom: 6px; color: var(--text3); font: 700 9px var(--font-mono); text-transform: uppercase; }
+    .featured-grid p { color: var(--text2); font-size: 12px; line-height: 1.5; }
+    .method-note { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .method-note summary { color: var(--text3); font-size: 11px; cursor: pointer; }
+    .method-note p { margin-top: 8px; color: var(--text3); font-size: 11px; line-height: 1.5; }
+    .comment-dialog { width: min(520px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); color: var(--text); }
+    .comment-dialog::backdrop { background: var(--surface3); opacity: .82; }
+    .comment-form { display: grid; gap: 10px; padding: 20px; }
+    .comment-form h2 { font: 600 22px var(--font-display); }
+    .comment-form p { color: var(--text3); font-size: 12px; }
+    .comment-form textarea { min-height: 110px; padding: 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface2); color: var(--text); font: 13px/1.5 var(--font-body); resize: vertical; }
+    .comment-form .row { display: flex; justify-content: flex-end; gap: 8px; }
 
     /* ── Grid ── */
     .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -281,6 +309,7 @@
       .rail { position: static; }
       .paper { padding: 28px 22px; }
       .hero h1 { font-size: 26px; }
+      .reading-snapshot, .featured-grid { grid-template-columns: 1fr 1fr; }
     }
     @media print {
       html, body { overflow: visible; height: auto; background: var(--surface); }
@@ -309,13 +338,20 @@
     <div class="page hidden" id="place-brief"></div>
     <div class="page hidden" id="place-mine"></div>
   </main>
+  <dialog id="comment-dialog" class="comment-dialog">
+    <form id="comment-form" class="comment-form" method="dialog">
+      <div><div class="mono">Tell it naturally</div><h2>Add a comment</h2></div>
+      <p id="comment-about">For the next reading. Silence is fine too.</p>
+      <textarea id="comment-text" maxlength="2000" placeholder="This matters to me… This is not related… Look into…" required></textarea>
+      <div class="row"><button class="btn btn-ghost btn-s" value="cancel" type="button" data-comment-cancel>Cancel</button><button class="btn btn-primary btn-s" value="save" type="submit">Add comment</button></div>
+    </form>
+  </dialog>
   <script>
   (() => {
     'use strict';
     const KEY = 'signals-hub-v1';
     const READING_VERSION = 2;
     const esc = (s) => HubUtils.esc(s == null ? '' : String(s));
-    const NO_REASONS = ['Not my field', 'Too early', 'Already doing it', 'Too big for now'];
     const KEEP_READINGS = 8;
     const NEWS_DAYS = 45;
     const NEWS_MAX = 800;
@@ -328,6 +364,8 @@
     let needsPermission = false;
     let shownIndex = 0;
     let place = 'radar';
+    let readingMode = 'relevant';
+    let commentContext = null;
 
     function load() {
       const d = HubStorage.get(KEY) || {};
@@ -338,6 +376,7 @@
         reactions: Array.isArray(d.reactions) ? d.reactions : [],
         items: d.items && typeof d.items === 'object' ? d.items : {},
         signals: Array.isArray(d.signals) ? d.signals : [],
+        notes: Array.isArray(d.notes) ? d.notes : [],
         updatedAt: d.updatedAt || '',
       };
     }
@@ -433,6 +472,22 @@
       render();
       writeState();
     }
+    function addNote(text, about) {
+      text = String(text || '').trim();
+      if (!text) return null;
+      const note = { id: 'hub-' + Date.now().toString(36), at: new Date().toISOString(), text: text.slice(0, 2000) };
+      if (about && about.title) note.about = { kind: about.kind || '', ref: about.ref || '', title: about.title };
+      data.notes.unshift(note);
+      save(true); writeState(); renderBrief();
+      return note;
+    }
+    function openComment(kind, ref, title) {
+      commentContext = title ? { kind, ref, title } : null;
+      document.getElementById('comment-about').textContent = title ? `About “${title}”. Claude reads this with the next reading.` : 'For the next reading. Silence is fine too.';
+      const dialog = document.getElementById('comment-dialog');
+      dialog.showModal();
+      document.getElementById('comment-text').focus();
+    }
     function mark(url, state) {
       const item = libraryItems().find((n) => n.url === url);
       const current = data.items[url] && data.items[url].state;
@@ -468,6 +523,7 @@
         reactions: data.reactions,
         items: Object.entries(data.items).map(([url, v]) => ({ url, title: v.title, sourceName: v.source, state: v.state, at: v.at })),
         signals: data.signals.map((x) => ({ id: x.id, title: x.title, observation: x.observation || '', why: x.why || '', state: x.state, updatedAt: x.updatedAt || '' })),
+        notes: data.notes,
       };
     }
 
@@ -688,10 +744,9 @@
     function moveCard(reading, move, index) {
       const t = latestTap(reading.requestId, index);
       const now = t ? t.reaction : '';
-      const kind = kindOf(move), by = byOf(move), late = by && now === 'follow' && by < HubUtils.todayLocal();
+      const taken = now === 'take-forward' || now === 'follow';
+      const kind = kindOf(move), by = byOf(move), late = by && taken && by < HubUtils.todayLocal();
       const btn = (r, label) => `<button class="tap${now === r ? ' on' : ''}" type="button" data-tap="${r}" data-i="${index}">${label}</button>`;
-      const reasons = now === 'no'
-        ? NO_REASONS.map((x) => `<button class="reason${t.reason === x ? ' on' : ''}" type="button" data-tap="no" data-reason="${esc(x)}" data-i="${index}">${esc(x)}</button>`).join('') : '';
       const chips = (move.projectIds || []).map((id) => `<span class="chip-p">${esc(reading.projects[id] || id)}</span>`).join('');
       const details = [
         move.whyNow && `<p><b>Why now.</b> ${esc(move.whyNow)}</p>`,
@@ -706,7 +761,7 @@
         <h3>${esc(move.title)}</h3>
         ${move.firstStep ? `<div class="step"><b>First step.</b> ${esc(move.firstStep)}</div>` : ''}
         ${details ? `<details><summary>Why, sources${move.draft ? ', draft' : ''}</summary>${details}</details>` : ''}
-        <div class="taps">${btn('follow', '✓ Follow')}${btn('later', '◷ Later')}${btn('no', '✕ Not for me')}${reasons}</div>
+        <div class="taps">${taken ? '<span class="chip-p">Taken forward</span>' : btn('take-forward', '→ Take forward')}<button class="reason" type="button" data-comment-kind="move" data-comment-ref="${esc(reading.requestId + ':' + index)}" data-comment-title="${esc(move.title)}">💬 Comment</button></div>
       </div>`;
     }
 
@@ -718,12 +773,12 @@
         if (r.requestId === reading.requestId) return;
         r.directions.forEach((move, i) => {
           const t = latestTap(r.requestId, i);
-          if (t && t.reaction === 'follow') rows.push({ move, by: byOf(move), follow: verdicts[`signals-${r.requestId}-${i}`] });
+          if (t && ['take-forward', 'follow'].includes(t.reaction)) rows.push({ move, by: byOf(move), follow: verdicts[`signals-${r.requestId}-${i}`] });
         });
       });
       if (!rows.length) return '';
       const today = HubUtils.todayLocal();
-      return `<div class="panel card">${section('Still open', 'moves you follow')}${rows.map(({ move, by, follow }) => `<div class="open-row">
+      return `<div class="panel card">${section('Still open', 'moves taken forward')}${rows.map(({ move, by, follow }) => `<div class="open-row">
         ${follow ? `<span class="verdict ${esc(follow.verdict)}">${esc(VERDICT[follow.verdict] || follow.verdict)}</span>` : ''}
         <div class="t">${esc(move.title)}</div>
         ${by ? `<span class="chip-date${by < today ? ' late' : ''}">${by < today ? 'past its date · ' : ''}${esc(by)}</span>` : ''}
@@ -758,7 +813,7 @@
         <div class="card help"><ol>
           <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. New readings and news come in each time you open this page.</li>
           <li><b>Import files</b>: a reading file and its request file, or a news file.</li>
-          <li>Tap each move. Taps go into the linked folder (<code>state/hub-state.json</code>) and into the full backup.</li>
+          <li>Comment naturally, or Take forward only when you want a move to enter Prove. State goes into the linked folder and full backup.</li>
         </ol>
         <div class="row" style="margin-top:12px">${folderButtons()}</div></div></div>`;
     }
@@ -766,7 +821,50 @@
       const link = !supported() ? '' : needsPermission ? '<button class="btn btn-primary btn-s" data-act="link" type="button">Reconnect folder</button>'
         : folder ? '<button class="btn btn-ghost btn-s" data-act="scan" type="button">Check folder</button>'
         : '<button class="btn btn-primary btn-s" data-act="link" type="button">Link folder</button>';
-      return `${link}<button class="btn btn-ghost btn-s" data-act="import" type="button">Import files</button><button class="btn btn-ghost btn-s" data-act="save" type="button">Save taps file</button>`;
+      return `${link}<button class="btn btn-ghost btn-s" data-act="import" type="button">Import files</button><button class="btn btn-ghost btn-s" data-act="save" type="button">Save state file</button>`;
+    }
+
+    function readingChange(reading, index) {
+      const previous = data.readings[data.readings.indexOf(reading) + 1];
+      const current = reading.insights[index];
+      if (!previous || !current) return { status: 'new', reason: 'A later reading will show whether this strengthens or cools.' };
+      const words = (s) => new Set(String(s || '').toLowerCase().match(/[a-z0-9]{5,}/g) || []);
+      const now = words(current.headline), matches = previous.insights.map((x, i) => ({ x, i, shared: [...now].filter((w) => words(x.headline).has(w)).length }))
+        .sort((a, b) => b.shared - a.shared);
+      const match = matches[0];
+      if (!match || match.shared < 2) return { status: 'new', reason: 'No comparable insight appeared in the previous reading.' };
+      const delta = (current.citations || []).length - (match.x.citations || []).length;
+      if (delta >= 2) return { status: 'growing', reason: `${delta} more cited sources than last time.` };
+      if (delta <= -2) return { status: 'cooling', reason: `${Math.abs(delta)} fewer cited sources than last time.` };
+      return { status: 'persistent', reason: 'The theme persists with similar evidence breadth.' };
+    }
+    function featuredIndex(reading) {
+      const rank = { high: 3, medium: 2, low: 1 };
+      return reading.insights.map((x, i) => ({ x, i })).sort((a, b) => {
+        const score = ({ x, i }) => readingMode === 'evidence' ? (x.citations || []).length * 100 + (rank[x.confidence] || 0)
+          : readingMode === 'emerging' ? ({ new: 500, growing: 400, persistent: 200, cooling: 100 }[readingChange(reading, i).status] || 0) + (x.citations || []).length
+          : (x.projects || []).length * 100 + (rank[x.confidence] || 0) * 10 + (x.citations || []).length;
+        return score(b) - score(a);
+      })[0]?.i || 0;
+    }
+    function readingFrame(reading) {
+      if (!reading.insights.length) return '';
+      const changes = reading.insights.map((x, i) => ({ ...readingChange(reading, i), headline: x.headline, i }));
+      const up = changes.find((x) => ['growing', 'new'].includes(x.status));
+      const down = changes.find((x) => x.status === 'cooling');
+      const strongest = reading.insights.map((x, i) => ({ x, i })).sort((a, b) => (b.x.citations || []).length - (a.x.citations || []).length)[0];
+      const cell = (label, title, note) => `<div class="snapshot"><span>${label}</span><strong>${esc(title)}</strong><small>${esc(note)}</small></div>`;
+      return `<div class="reading-snapshot">${cell('Evidence read', `${reading.evidenceCount || '—'} sources`, 'Source-checked reading')}${cell(up?.status === 'new' ? 'Newly emerging' : 'Strengthening', up?.headline || 'No clear rise yet', up?.reason || 'Attention is steady')}${cell('Cooling', down?.headline || 'Nothing clearly cooling', down?.reason || 'Attention is steady')}${cell('Strongest evidence', strongest.x.headline, `${(strongest.x.citations || []).length} cited sources · ${strongest.x.confidence || 'unstated'} confidence`)}</div>`;
+    }
+    function featuredReading(reading) {
+      if (!reading.insights.length) return '';
+      const i = featuredIndex(reading), x = reading.insights[i];
+      const label = { relevant: 'Most relevant to your projects', emerging: 'Newly emerging', evidence: 'Strongest evidence' }[readingMode];
+      return `<div class="reading-view"><span>Prioritize</span>${['relevant','emerging','evidence'].map((mode) => `<button type="button" class="${readingMode === mode ? 'on' : ''}" data-reading-mode="${mode}">${{relevant:'Most relevant',emerging:'Newly emerging',evidence:'Strongest evidence'}[mode]}</button>`).join('')}</div>
+        <article class="featured card"><div class="mono">Worth your attention · ${label}</div><h2>${esc(x.headline)}</h2><div class="featured-grid">
+          <div><b>Observation</b><p>${esc(x.summary || '')}</p></div><div><b>Evidence pattern</b><p>${esc(x.comparison || 'The cited sources point in the same direction, with limits described in the full reading.')}</p></div>
+          <div><b>Open question</b><p>${esc(x.counterpoint || 'What additional evidence would change this interpretation?')}</p></div><div><b>Uncertainty</b><p>${esc(x.confidenceWhy || `${x.confidence || 'Unstated'} confidence. A lead to explore, not a conclusion.`)}</p></div>
+        </div><div class="taps"><button class="reason" type="button" data-comment-kind="insight" data-comment-ref="${esc(reading.requestId + ':' + i)}" data-comment-title="${esc(x.headline)}">💬 Comment</button></div></article>`;
     }
 
     function renderRadar() {
@@ -774,7 +872,6 @@
       const reading = current();
       if (!reading) { view.innerHTML = emptyPage(); wire(view); return; }
       const day = dayOf(reading);
-      const waiting = reading.directions.filter((_, i) => !latestTap(reading.requestId, i)).length;
       const lead = reading.insights[0];
       const pulse = projectCounts(reading);
       const maxN = Math.max(1, ...pulse.map((p) => p.n));
@@ -784,7 +881,7 @@
           <div>
             <div class="mono">Week ${isoWeek(day)} · ${esc(day)}</div>
             <h1>${esc(lead ? lead.headline : 'A reading without insights')}</h1>
-            <div class="facts">Claude read ${reading.evidenceCount || '—'} sources · ${reading.insights.length} insights · ${waiting ? `${waiting} move${waiting > 1 ? 's' : ''} waiting for one tap` : 'every move tapped'}</div>
+            <div class="facts">Claude read ${reading.evidenceCount || '—'} sources · ${reading.insights.length} insights · ${reading.directions.length} optional actions</div>
             ${reading.weekPlan ? `<div class="plan"><b>This week.</b> ${esc(reading.weekPlan)}</div>` : ''}
           </div>
           <div class="card side">
@@ -795,12 +892,14 @@
             <div class="row">${folderButtons()}</div>
           </div>
         </section>
+        ${readingFrame(reading)}${featuredReading(reading)}
         <section class="grid">
           <div class="col">
             <div class="panel card radar">${section('Radar', 'you in the middle · broader evidence closer · new directions on the horizon')}
               ${radarSvg(reading)}
               <div class="radar-read" id="radar-read">Point at a dot to read it. Click to jump to it.</div>
               <div class="legend"><span><i class="l-ins"></i>insight</span><span><i class="l-move"></i>move</span><span><i class="l-new"></i>new direction</span><span><i class="l-proj"></i>your project</span></div>
+              <details class="method-note"><summary>How to read Radar and change</summary><p>Closer means more relevant to current projects. Size and colour reflect evidence support and attention, not truth. Claude's confidence remains a separate judgment.</p></details>
             </div>
             ${pulse.length ? `<div class="panel card">${section('Project pulse', 'insights and moves per project')}${pulse.map((p) => `<div class="pulse-row">
               <div class="pulse-top"><span class="pulse-name" title="${esc(p.name)}">${esc(p.name)}</span><span class="bar"><span style="width:${Math.round((p.n / maxN) * 100)}%"></span></span><span class="pulse-n">${p.n}</span></div>
@@ -809,7 +908,7 @@
           <div class="col">
             ${readingSignalPanel(reading)}
             ${stillOpen(reading)}
-            <div class="panel card">${section('Moves', 'one tap each · Claude learns from it')}
+            <div class="panel card">${section('Possible actions', 'optional · Take forward only when useful')}
               ${reading.directions.length ? reading.directions.map((m, i) => moveCard(reading, m, i)).join('') : '<p class="hint">No moves this time.</p>'}
             </div>
             ${horizon.length ? `<div class="panel card">${section('On the horizon', 'fits none of your projects')}${horizon.map(([m, i]) => `<div class="horizon-item" data-go="move-${i}">${esc(m.title)}</div>`).join('')}</div>` : ''}
@@ -870,11 +969,7 @@
       const text = lib.text.toLowerCase();
       const inTime = all.filter((it) => !since || !it.date || it.date >= since);
       const shown = inTime.filter((it) => {
-        if (lib.show === 'all' && it.state === 'dismissed') return false;
         if (lib.show === 'used' && !it.usedIn.length) return false;
-        if (lib.show === 'kept' && it.state !== 'kept') return false;
-        if (lib.show === 'counter' && it.state !== 'counter-signal') return false;
-        if (lib.show === 'hidden' && it.state !== 'dismissed') return false;
         if (lib.source && it.source !== lib.source) return false;
         return !text || `${it.title} ${it.summary}`.toLowerCase().includes(text);
       });
@@ -893,13 +988,13 @@
       const usedCount = inTime.filter((it) => it.usedIn.length).length;
       view.innerHTML = `
         <div class="lib-intro"><div class="mono">Library</div><h1>Everything collected, your way.</h1>
-          <p>No need to go through it. Claude reads it for each reading. Slice it when you are curious; ★ Keep puts an item first for Claude, ✕ Hide takes it out.</p></div>
+          <p>No need to go through it. Claude reads it for each reading. Slice it when you are curious; comment naturally when something matters.</p></div>
         <div class="lib">
           <aside class="rail">
             <input type="search" id="lib-text" placeholder="Search titles and summaries…" value="${esc(lib.text)}" aria-label="Search the library">
             <div><div class="mono">When</div><div class="seg">${seg('days', 7, '7 days')}${seg('days', 30, '30 days')}${seg('days', 0, 'All')}</div></div>
             <div><div class="mono">Group by</div><div class="seg">${seg('group', 'date', 'Date')}${seg('group', 'theme', "Claude's themes")}${seg('group', 'project', 'Project')}${seg('group', 'source', 'Source')}</div></div>
-            <div><div class="mono">Show</div><div class="stack">${[['all', 'Everything'], ['used', 'Used by Claude'], ['kept', 'Kept by you'], ['counter', 'Counter-evidence'], ['hidden', 'Hidden']].map(([v, l]) => `<button type="button" class="${lib.show === v ? 'on' : ''}" data-lib="show" data-v="${v}"><span>${l}</span></button>`).join('')}</div></div>
+            <div><div class="mono">Show</div><div class="stack">${[['all', 'Everything'], ['used', 'Used by Claude']].map(([v, l]) => `<button type="button" class="${lib.show === v ? 'on' : ''}" data-lib="show" data-v="${v}"><span>${l}</span></button>`).join('')}</div></div>
             <div><div class="mono">Sources</div><div class="stack"><button type="button" class="${lib.source ? '' : 'on'}" data-lib="source" data-v=""><span>All sources</span><span class="n">${inTime.length}</span></button>${Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).map(([s, n]) => `<button type="button" class="${lib.source === s ? 'on' : ''}" data-lib="source" data-v="${esc(s)}"><span>${esc(s)}</span><span class="n">${n}</span></button>`).join('')}</div></div>
           </aside>
           <div>
@@ -925,16 +1020,15 @@
           renderLibrary();
         };
       });
-      view.querySelectorAll('[data-mark]').forEach((b) => { b.onclick = () => mark(b.dataset.url, b.dataset.mark); });
+      view.querySelectorAll('[data-comment-kind]').forEach((b) => { b.onclick = () => openComment(b.dataset.commentKind, b.dataset.commentRef, b.dataset.commentTitle); });
     }
     function itemCard(it) {
-      const m = (state, label, title) => `<button class="mark${it.state === state ? ' on' : ''}" type="button" data-mark="${state}" data-url="${esc(it.url)}" title="${title}">${label}</button>`;
       return `<div class="card item${it.usedIn.length ? ' used' : ''}${it.state === 'dismissed' ? ' dim' : ''}">
         <div class="item-top"><b>${esc(it.source)}</b>${it.date ? `<span>${esc(it.date)}</span>` : ''}${it.projects.slice(0, 3).map((p) => `<span class="chip-p">${esc(p)}</span>`).join('')}</div>
         <h3><a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a></h3>
         ${it.summary ? `<div class="sum">${esc(it.summary)}</div>` : ''}
         ${it.usedIn.length ? `<div class="used-box">${it.usedIn.slice(0, 3).map((u) => `<div><span class="k ${u.kind === 'move' ? 'm' : 'i'}">${u.kind === 'move' ? "CLAUDE'S MOVE" : "CLAUDE'S INSIGHT"}</span>${esc(u.title)}</div>`).join('')}</div>` : ''}
-        <div class="acts">${m('kept', '★ Keep', 'Claude reads it first')}${m('counter-signal', '⇄ Counter', 'Evidence against a trend')}${m('dismissed', '✕ Hide', 'Claude skips it')}</div>
+        <div class="acts"><button class="mark" type="button" data-comment-kind="item" data-comment-ref="${esc(it.url)}" data-comment-title="${esc(it.title)}">💬 Comment</button></div>
       </div>`;
     }
 
@@ -942,10 +1036,10 @@
     function briefParts(reading) {
       const order = [];
       const num = (id) => { if (!order.includes(id)) order.push(id); return order.indexOf(id) + 1; };
-      const calls = { follow: [], later: [], no: [], open: [] };
+      const calls = { forward: [], open: [] };
       reading.directions.forEach((m, i) => {
         const t = latestTap(reading.requestId, i);
-        calls[t ? t.reaction : 'open'].push({ title: m.title, reason: t && t.reason });
+        calls[t && ['take-forward', 'follow'].includes(t.reaction) ? 'forward' : 'open'].push({ title: m.title, reason: t && t.reason });
       });
       const touched = projectCounts(reading);
       const horizon = reading.directions.filter((m) => !(m.projectIds || []).length);
@@ -970,7 +1064,7 @@
       </div></div>`).join('');
       const callList = (title, rows) => `<div><h4>${title}</h4>${rows.length ? `<ul>${rows.map((r) => `<li>${esc(r.title)}${r.reason ? ` <span class="m">(${esc(r.reason)})</span>` : ''}</li>`).join('')}</ul>` : '<ul><li>—</li></ul>'}</div>`;
       view.innerHTML = `
-        <div class="brief-bar"><div><div class="mono">Brief</div><p>One page from Claude's reading and your taps. Nothing to fill in.</p></div>
+        <div class="brief-bar"><div><div class="mono">Brief</div><p>One page from Claude's reading, your comments and explicit choices. Nothing to fill in.</p></div>
           <div class="row" style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-primary btn-s" type="button" data-brief="print">Print or save PDF</button>
             <button class="btn btn-ghost btn-s" type="button" data-brief="copy">Copy as text</button>
@@ -981,8 +1075,9 @@
           <h1>${esc(reading.insights[0] ? reading.insights[0].headline : 'Signals Hub brief')}</h1>
           <div class="lede">Claude read ${reading.evidenceCount || '—'} sources · ${esc(reading.reviewer)}.${reading.weekPlan ? ` <b>This week:</b> ${esc(reading.weekPlan)}` : ''}</div>
           <h2><span>01</span>What changed</h2>${insights}
-          <h2><span>02</span>Your calls</h2>
-          <div class="calls">${callList('Following', calls.follow)}${callList('Later', calls.later)}${callList('Not for me', calls.no)}${callList('Not decided yet', calls.open)}</div>
+          <h2><span>02</span>Your choices</h2>
+          <div class="calls">${callList('Taken forward', calls.forward)}${callList('Not taken forward', calls.open)}</div>
+          ${data.notes.length ? `<h2><span>✦</span>Your comments</h2><ul class="b-list">${data.notes.slice(0, 12).map((n) => `<li>${esc(n.text)}${n.about?.title ? ` <span class="m">— ${esc(n.about.title)}</span>` : ''}</li>`).join('')}</ul>` : ''}
           <h2><span>03</span>Projects touched</h2>
           <ul class="b-list">${touched.map((p) => `<li><b>${esc(p.name)}</b> — ${esc(p.top)}</li>`).join('') || '<li>None.</li>'}</ul>
           ${horizon.length ? `<h2><span>04</span>On the horizon</h2><ul class="b-list">${horizon.map((m) => `<li>${esc(m.title)}</li>`).join('')}</ul>` : ''}
@@ -1012,9 +1107,10 @@
         if (x.firstStep) lines.push(`   Try: ${x.firstStep}`);
       });
       lines.push('', '## Your calls', '');
-      [['Following', calls.follow], ['Later', calls.later], ['Not for me', calls.no], ['Not decided yet', calls.open]].forEach(([t, rows]) => {
+      [['Taken forward', calls.forward], ['Not taken forward', calls.open]].forEach(([t, rows]) => {
         lines.push(`**${t}:** ${rows.length ? rows.map((r) => r.title + (r.reason ? ` (${r.reason})` : '')).join('; ') : '—'}`);
       });
+      if (data.notes.length) lines.push('', '## Your comments', '', ...data.notes.slice(0, 12).map((n) => `- ${n.text}${n.about?.title ? ` — ${n.about.title}` : ''}`));
       lines.push('', '## Projects touched', '', ...touched.map((p) => `- **${p.name}**: ${p.top}`));
       if (horizon.length) lines.push('', '## On the horizon', '', ...horizon.map((m) => `- ${m.title}`));
       const sigNotes = (reading.signalNotes || []).map((n) => ({ ...n, sig: data.signals.find((x) => x.id === n.signalId) })).filter((n) => n.sig);
@@ -1203,6 +1299,12 @@
       view.querySelectorAll('[data-tap]').forEach((b) => {
         b.onclick = () => tap(reading.requestId, Number(b.dataset.i), b.dataset.tap, b.dataset.reason || '');
       });
+      view.querySelectorAll('[data-comment-kind]').forEach((b) => {
+        b.onclick = () => openComment(b.dataset.commentKind, b.dataset.commentRef, b.dataset.commentTitle);
+      });
+      view.querySelectorAll('[data-reading-mode]').forEach((b) => {
+        b.onclick = () => { readingMode = b.dataset.readingMode; renderRadar(); };
+      });
       view.querySelectorAll('[data-copy]').forEach((b) => {
         b.onclick = async () => {
           try { await navigator.clipboard.writeText(reading.directions[Number(b.dataset.copy)].draft || ''); showToast('Draft copied. Edit and send it yourself.'); }
@@ -1232,6 +1334,15 @@
     }
     document.querySelectorAll('.place').forEach((b) => { b.onclick = () => showPlace(b.dataset.place); });
     document.getElementById('file-input').onchange = (e) => { importFiles([...e.target.files]); e.target.value = ''; };
+    document.querySelector('[data-comment-cancel]').onclick = () => document.getElementById('comment-dialog').close();
+    document.getElementById('comment-form').onsubmit = (e) => {
+      e.preventDefault();
+      const text = document.getElementById('comment-text');
+      if (!addNote(text.value, commentContext)) return;
+      text.value = ''; commentContext = null;
+      document.getElementById('comment-dialog').close();
+      showToast('Comment saved for the next reading.');
+    };
 
     // A link made in the picker, or a jump here from another tool.
     window.__hl_onLinkChange = () => renderMine();
@@ -1245,7 +1356,7 @@
     });
 
     // For tests and the shell; no storage beyond signals-hub-v1.
-    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, render, showPlace, briefMarkdown, addSignal, updateSignal, signalLinks, get data() { return data; } };
+    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, addNote, render, showPlace, briefMarkdown, addSignal, updateSignal, signalLinks, get data() { return data; } };
 
     render();
     if (supported()) idb('readonly', (s) => s.get(HANDLE)).then((handle) => { if (handle) useHandle(handle, false); });
