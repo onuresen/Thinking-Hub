@@ -4,7 +4,7 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
-### ~~Priority 183 — Meetings and Schedule redesign, plain tool names~~ ✓ Done `[group: meetings]`
+### ~~Priority 184 — Meetings and Schedule redesign, plain tool names~~ ✓ Done `[group: meetings]`
 Onur (2026-11-06): the meeting list is flat; wanted grouping by date or project, and a UI pass on Meetings and Schedule. Also asked whether "Hub" is used consistently.
 
 **Meetings**
@@ -30,6 +30,18 @@ Onur (2026-11-06): the meeting list is flat; wanted grouping by date or project,
 **Verified:** new flow19 (date and project groups, folded months, view setting not in data; Schedule hides old meeting copies, one Timeline with projects + "No project" + meeting ticks, week ‹ › moves). `npm test`: smoke, all flows, vault-bridge pass. Screenshots dark and light, desktop and phone, with 29 sample meetings.
 
 **Files:** `meetings-hub.html`, `styles/meetings-hub.css`, `schedule.html`, `styles/schedule.css`, `index.html` and every tool page (labels), `hub-*.js` (labels), `machi-fun.js`, `machi-iso.js`, `sw.js` (cache v53), `tests/flows.js`, `CLAUDE.md`, `README.md`, `PRIVACY.md`, `AGENTS.md`, `ai-upload-guide.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
+### ~~Priority 183 — Signals Hub parity: Comment → Take forward → Prove~~ ✓ Done `[group: integrations]`
+Onur asked for the native Thinking Hub page to catch up with the canonical Signals Hub after its November 7–9 simplification and reading-design work.
+- Replaced Follow / Later / Not for me and Keep / Counter / Hide with natural **Comment** and the explicit **Take forward** authority boundary. Comments and active Mine signals travel in `state/hub-state.json` and the full backup.
+- Added the compact reading frame, relevance / emergence / evidence priority modes, featured interpretation, and plain-language Radar method disclosure. Mine remains Thinking Hub's distinct surface.
+- The desktop Signals Hub sync imports hub comments and Take forward events idempotently, so a choice made here reaches durable Prove rather than only influencing the next cloud reading.
+
+**Key decisions**
+- **Decision:** keep the native file-fed page, not a localhost frame. **Why:** it remains portable, zero-egress and useful without the desktop engine. **Confidence:** high.
+- **Decision:** Prove stays in the canonical app, while Thinking Hub transfers explicit choices. **Why:** duplicating proof state would create two owners. **Confidence:** high.
+
+**Files:** `signals-hub.html`, `tests/flows.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`; paired Personal Lab import and tests.
 
 ### ~~Fix — .ics import kept email addresses as attendee names~~ ✓ Done `[group: meetings]`
 Onur (2026-11-06): the contact check kept flagging emails he never saw. One came from a meeting import: an attendee with no display name was stored by its address.

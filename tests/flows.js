@@ -566,8 +566,8 @@ function startServer() {
   }
 
   // ── Flow 12: Signals Hub reads files on its own (P175) ──
-  // Imports a reading with its request and a news file, taps Follow with real
-  // mouse timing, and checks the taps file and the backup key.
+  // Imports a reading with its request and a news file, takes a move forward
+  // with real mouse timing, and checks the state file and natural comments.
   {
     const page = await ctx.newPage();
     const errors = [];
@@ -593,21 +593,25 @@ function startServer() {
       missing: /1 citation without a known source/.test(document.querySelector('#place-radar .side').textContent),
       radar: document.querySelectorAll('#place-radar svg .ins').length + document.querySelectorAll('#place-radar svg .new').length,
       library: document.querySelectorAll('#place-library .item').length,
-      brief: /Your calls/.test(document.querySelector('#place-brief .paper').textContent),
+      brief: /Your choices/.test(document.querySelector('#place-brief .paper').textContent),
+      featured: /Worth your attention/.test(document.querySelector('#place-radar .featured').textContent),
     }));
     check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources === 3 && shown.missing, JSON.stringify(shown));
-    check('flow12: radar, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief, JSON.stringify(shown));
-    const follow = page.locator('[data-tap="follow"]').first();
+    check('flow12: radar, featured reading, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief && shown.featured, JSON.stringify(shown));
+    const follow = page.locator('.move-card [data-tap="take-forward"]').first();
+    await follow.scrollIntoViewIfNeeded();
     const box = await follow.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
     const after = await page.evaluate(() => ({
-      on: document.querySelector('[data-tap="follow"]').classList.contains('on'),
+      taken: /Taken forward/.test(document.querySelector('#place-radar .move-card').textContent),
       state: SignalsHubTool.stateFile(), stored: HubStorage.get('signals-hub-v1'),
     }));
-    check('flow12: Follow tap is shown and stored', after.on && after.stored.reactions.length === 1 && after.stored.reactions[0].reaction === 'follow');
-    check('flow12: taps file names the request and the move', after.state.schema === 'signals-hub-hub-state-v1' &&
+    check('flow12: Take forward is shown and stored', after.taken && after.stored.reactions.length === 1 && after.stored.reactions[0].reaction === 'take-forward');
+    check('flow12: state file names the request and the move', after.state.schema === 'signals-hub-hub-state-v1' &&
       after.state.reactions[0].requestId === 'req-2026-11-08-abc' && after.state.reactions[0].index === 0 && !!after.state.updatedAt);
+    const comment = await page.evaluate(() => { SignalsHubTool.addNote('This deserves a closer look.', { kind: 'insight', ref: 'req:0', title: 'Checking is the bottleneck' }); return SignalsHubTool.stateFile().notes[0]; });
+    check('flow12: natural comments travel in the state file', comment.text === 'This deserves a closer look.' && comment.about.kind === 'insight', JSON.stringify(comment));
     check('flow12: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
@@ -896,7 +900,7 @@ function startServer() {
     check('flow18: no page errors', errors.length === 0, errors.join(' | '));
     await page.close();
   }
-  // ── Flow 19: grouped meeting list, one Schedule timeline (P183) ──
+  // ── Flow 19: grouped meeting list, one Schedule timeline (P184) ──
   {
     const page = await ctx.newPage();
     await page.goto(`${BASE}/meetings-hub.html`, { waitUntil: 'load' });
