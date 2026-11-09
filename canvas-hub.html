@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Canvas Hub - Thinking Hub</title>
+  <title>Canvas</title>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <script src="hub-storage.js"></script>
@@ -469,7 +469,7 @@
       color: var(--text2); padding: 8px 2px 0; cursor: pointer;
     }
 
-    /* ── Board bar (Canvas Hub: named boards) ──────────────────── */
+    /* ── Board bar (Canvas: named boards) ──────────────────── */
     .board-bar {
       position: absolute;
       top: 14px;
@@ -1490,7 +1490,7 @@
 
     // Node kinds (Canvas structure): a node can be a plain sticky Note, or take
     // on the shape of a Goal / Project / R&D bet. Goal and Project kinds can be
-    // live-linked to a real Goals Hub objective / Project Hub project via
+    // live-linked to a real Goals objective / Projects project via
     // node.link = { tool, id, label } — read fresh at render time, never copied
     // into the node's own persisted state beyond the id + a display fallback.
     const KINDS = [
@@ -1617,14 +1617,14 @@
 
     // One table for every linked card type: where it lives and how to read it.
     const LINKED = {
-      project: { tool: 'project-hub', hub: 'Project Hub', title: 'Project', noun: 'projects', read: liveProjectItems },
-      goal: { tool: 'goals-hub', hub: 'Goals Hub', title: 'Goal', noun: 'goals', read: liveGoalItems },
+      project: { tool: 'project-hub', hub: 'Projects', title: 'Project', noun: 'projects', read: liveProjectItems },
+      goal: { tool: 'goals-hub', hub: 'Goals', title: 'Goal', noun: 'goals', read: liveGoalItems },
       tool: { tool: 'tool-portfolio', hub: 'Tool Portfolio', title: 'Tool', noun: 'tools', read: liveToolItems },
-      task: { tool: 'project-hub', hub: 'Project Hub', title: 'Task', noun: 'tasks', read: liveTaskItems },
-      decision: { tool: 'decision-hub', hub: 'Decision Hub', title: 'Decision', noun: 'decisions', read: liveDecisionItems },
+      task: { tool: 'project-hub', hub: 'Projects', title: 'Task', noun: 'tasks', read: liveTaskItems },
+      decision: { tool: 'decision-hub', hub: 'Decisions', title: 'Decision', noun: 'decisions', read: liveDecisionItems },
       risk: { tool: 'risk-hub', hub: 'Risk Register', title: 'Risk', noun: 'risks', read: liveRiskItems },
-      meeting: { tool: 'meetings-hub', hub: 'Meeting Hub', title: 'Meeting', noun: 'meetings', read: liveMeetingItems },
-      stakeholder: { tool: 'stakeholder-hub', hub: 'Stakeholder Map', title: 'Stakeholder', noun: 'stakeholders', read: liveStakeholderItems },
+      meeting: { tool: 'meetings-hub', hub: 'Meetings', title: 'Meeting', noun: 'meetings', read: liveMeetingItems },
+      stakeholder: { tool: 'stakeholder-hub', hub: 'Stakeholders', title: 'Stakeholder', noun: 'stakeholders', read: liveStakeholderItems },
     };
     // The newer types, offered together under one "Other item…" picker.
     const MORE_KINDS = ['task', 'decision', 'risk', 'meeting', 'stakeholder'];
@@ -4467,7 +4467,7 @@
       const counts = boardTagCounts();
       list.innerHTML = '';
       if (!counts.length) {
-        list.innerHTML = '<div class="tm-empty">No tags on this board yet. Tags come from Project Hub (project Settings), Decision Hub and Meeting Hub.</div>';
+        list.innerHTML = '<div class="tm-empty">No tags on this board yet. Tags come from Projects (project Settings), Decisions and Meetings.</div>';
       }
       counts.forEach(t => {
         const row = document.createElement('div');

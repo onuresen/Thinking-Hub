@@ -86,11 +86,11 @@ window.HubSearch = (() => {
   function _actionMeta(a) {
     const t = _esc(a.text);
     switch (a.type) {
-      case 'task': return { icon: '✓', label: `New task: “${t}”`, sub: '→ Capture Hub' };
-      case 'capture': return { icon: '⊕', label: `Capture: “${t}”`, sub: '→ Capture Hub' };
-      case 'decide': return { icon: '⊖', label: `Log decision: “${t}”`, sub: '→ Decision Hub' };
+      case 'task': return { icon: '✓', label: `New task: “${t}”`, sub: '→ Capture' };
+      case 'capture': return { icon: '⊕', label: `Capture: “${t}”`, sub: '→ Capture' };
+      case 'decide': return { icon: '⊖', label: `Log decision: “${t}”`, sub: '→ Decisions' };
       case 'log': return { icon: '📓', label: `Today's journal: “${t}”`, sub: '→ Daily Log' };
-      case 'focus': return { icon: '◷', label: 'Open Journal', sub: '→ Journal Hub' };
+      case 'focus': return { icon: '◷', label: 'Open Journal', sub: '→ Journal' };
       default: return { icon: '›', label: t, sub: '' };
     }
   }

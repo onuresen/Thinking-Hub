@@ -94,29 +94,6 @@
       opacity: 0.85;
     }
 
-    .sch-filter-btn {
-      padding: 4px 9px;
-      border: 1px solid transparent;
-      border-radius: 20px;
-      background: transparent;
-      color: var(--text3);
-      font-family: var(--font-body);
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.12s;
-    }
-
-    .sch-filter-btn.active {
-      border-color: var(--border2);
-      color: var(--text2);
-      background: var(--surface2);
-    }
-
-    .sch-filter-btn:not(.active):hover {
-      color: var(--text2);
-    }
-
     /* ── Main ──────────────────────────────────────────────────── */
     .sch-main {
       flex: 1;
@@ -194,258 +171,37 @@
       position: relative;
     }
 
-    #view-timeline,
     #view-calendar {
       position: absolute;
       inset: 0;
       overflow: hidden;
     }
 
-    .view-hidden {
-      display: none !important;
-    }
-
-    /* ── Gantt ─────────────────────────────────────────────────── */
-    .gantt-layout {
-      display: flex;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .gantt-label-col {
-      width: 240px;
+    /* Segmented switch (Month | Week, Weeks | Months) — same in every view */
+    .sch-seg {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 2px;
+      gap: 2px;
       flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border2);
-      background: var(--surface);
-      overflow: hidden;
     }
-
-    .gantt-label-head {
-      height: 44px;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .06em;
+    .sch-seg button {
+      border: none;
+      background: transparent;
       color: var(--text3);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      background: var(--surface);
-    }
-
-    .gantt-label-body {
-      flex: 1;
-      overflow: hidden; /* scroll driven by gantt-scroll sync */
-    }
-
-    .gantt-label-row {
-      height: 44px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 0 10px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background .1s;
-    }
-
-    .gantt-label-row:hover { background: var(--surface2); }
-    .gantt-label-row.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); padding-left: 8px; }
-    .gantt-label-row.alt { background: var(--surface2); }
-    .gantt-label-row.alt:hover { background: var(--surface3); }
-    .gantt-label-row.alt.selected { background: var(--accent-dim); }
-
-    .gantt-label-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .gantt-label-dot.ms-shape {
-      border-radius: 1px;
-      transform: rotate(45deg);
-    }
-
-    .gantt-label-name {
+      font-family: var(--font-body);
       font-size: 12px;
       font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .gantt-wrap {
-      display: flex;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .gantt-scroll {
-      flex: 1;
-      overflow: auto;
-    }
-
-    .gantt-scroll::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    .gantt-scroll::-webkit-scrollbar-thumb {
-      background: var(--border2);
-      border-radius: 3px;
-    }
-
-    .gantt-header {
-      display: flex;
-      height: 44px;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .gantt-col-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-right: 1px solid var(--border);
-      flex-shrink: 0;
-      font-size: 10.5px;
-      color: var(--text3);
-      font-family: var(--font-mono);
-      line-height: 1.3;
-    }
-
-    .gantt-col-header.today-col {
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    .gantt-col-header.weekend {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .gantt-col-header .col-main {
-      font-weight: 600;
-      font-size: 11px;
-    }
-
-    .gantt-col-header .col-sub {
-      font-size: 9px;
-      opacity: 0.6;
-    }
-
-    .gantt-body {
-      position: relative;
-    }
-
-    .gantt-row-bg {
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 44px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .gantt-row-bg.alt {
-      background: rgba(255, 255, 255, 0.012);
-    }
-
-    .gantt-col-line {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 1px;
-      background: var(--border);
-    }
-
-    .gantt-col-weekend {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.025);
-    }
-
-    .gantt-today-line {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent);
-      opacity: 0.55;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .gantt-bar {
-      position: absolute;
-      height: 26px;
+      padding: 4px 11px;
       border-radius: 5px;
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #111;
       cursor: pointer;
-      overflow: hidden;
-      white-space: nowrap;
-      transition: filter 0.12s;
-      z-index: 3;
     }
+    .sch-seg button:hover { color: var(--text); }
+    .sch-seg button.active { background: var(--surface3); color: var(--text); font-weight: 600; }
 
-    .gantt-bar:hover {
-      filter: brightness(1.12);
-    }
-
-    .gantt-bar.done {
-      opacity: 0.38;
-    }
-
-    .gantt-bar.selected {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 3px var(--accent);
-    }
-
-    .gantt-milestone {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      transform: translateX(-50%) rotate(45deg);
-      cursor: pointer;
-      z-index: 3;
-      transition: filter 0.12s;
-    }
-
-    .gantt-milestone:hover {
-      filter: brightness(1.2);
-    }
-
-    .gantt-milestone.done {
-      opacity: 0.38;
-    }
-
-    .gantt-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 200px;
-      color: var(--text3);
-      font-size: 13px;
-      gap: 8px;
-    }
-
-    .gantt-empty-icon {
-      font-size: 32px;
-      opacity: 0.25;
+    .view-hidden {
+      display: none !important;
     }
 
     /* ── Calendar ──────────────────────────────────────────────── */
@@ -512,7 +268,8 @@
     }
 
     .cal-week-label.weekend {
-      color: var(--accent2);
+      color: var(--text3);
+      opacity: 0.7;
     }
 
     .cal-grid-wrap {
@@ -556,11 +313,11 @@
     }
 
     .cal-day-cell.weekend {
-      background: var(--accent2-dim);
+      background: var(--bg);
     }
 
     .cal-day-cell.weekend:hover {
-      background: var(--accent2-glow);
+      background: var(--surface2);
     }
 
     .cal-day-cell.today {
@@ -680,9 +437,19 @@
     }
 
     .cal-pill.meeting {
-      background: var(--node-blue);
-      border: 1px solid var(--border-blue);
-      color: var(--text2);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--mc, var(--border-blue));
+      color: var(--text);
+    }
+    .cal-pill.meeting.past,
+    .wg-block.meeting.past { opacity: 0.55; }
+    .pill-time {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 9.5px;
+      color: var(--text3);
+      margin-right: 4px;
     }
 
     .cal-more {
@@ -730,7 +497,7 @@
     }
 
     .wg-allday-col.weekend {
-      background: var(--accent2-dim);
+      background: var(--bg);
     }
 
     .wg-allday-col.today {
@@ -772,7 +539,7 @@
     }
 
     .wg-day-col.weekend {
-      background-color: var(--accent2-dim);
+      background-color: var(--bg);
     }
 
     .wg-day-col.today {
@@ -783,7 +550,8 @@
       position: absolute;
       left: 0;
       right: 0;
-      background: var(--accent-dim);
+      background: var(--surface2);
+      opacity: 0.55;
       pointer-events: none;
       border-radius: var(--r-sm);
     }
@@ -811,10 +579,14 @@
     }
 
     .wg-block.meeting {
-      background: var(--node-blue);
-      border-color: var(--border-blue);
-      color: var(--text2);
+      background: var(--surface2);
+      border-color: var(--border2);
+      border-left: 3px solid var(--mc, var(--border-blue));
+      color: var(--text);
     }
+    .wg-block.meeting .pill-time { display: block; margin: 0; }
+    .wg-block.meeting.short { white-space: nowrap; text-overflow: ellipsis; }
+    .wg-block.meeting.short .pill-time { display: inline; margin-right: 4px; }
 
     .wg-block.dragging {
       opacity: 0.85;
@@ -1071,20 +843,20 @@
     /* ═══════════════════════════════════════════════════════════
        Multi-Project Gantt
     ═══════════════════════════════════════════════════════════ */
-    #view-multi {
+    #view-timeline {
       position: absolute; inset: 0;
       display: flex; flex-direction: column; overflow: hidden;
     }
-    .multi-toolbar {
-      height: 44px; flex-shrink: 0;
-      display: flex; align-items: center; gap: 6px;
-      padding: 0 14px; border-bottom: 1px solid var(--border);
-      background: var(--surface);
+    .tl-legend {
+      display: flex; gap: 12px; margin-left: 14px;
+      font-size: 10.5px; color: var(--text3);
     }
-    .multi-range-label {
-      font-family: var(--font-mono); font-size: 11px; color: var(--text2);
-      min-width: 160px; text-align: center;
-    }
+    .tl-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .tl-legend i { display: inline-block; flex-shrink: 0; background: var(--text3); }
+    .tl-legend .lg-ms { width: 7px; height: 7px; transform: rotate(45deg); border-radius: 1px; }
+    .tl-legend .lg-task { width: 14px; height: 5px; border-radius: 2px; }
+    .tl-legend .lg-meet { width: 3px; height: 12px; border-radius: 2px; background: var(--text); }
+    .tl-legend .lg-item { width: 14px; height: 7px; border-radius: 3px; border: 1px solid var(--text3); background: transparent; }
     .multi-gantt-scroll {
       flex: 1; overflow: auto;
       position: relative;
@@ -1093,11 +865,11 @@
     /* ── Header row ─────────────────────────────────────────── */
     .multi-hdr-row {
       display: flex; position: sticky; top: 0; z-index: 10;
-      background: var(--surface); border-bottom: 2px solid var(--border);
+      background: var(--surface); border-bottom: 1px solid var(--border2);
       min-width: max-content;
     }
     .multi-hdr-corner {
-      width: 220px; min-width: 220px; flex-shrink: 0;
+      width: 240px; min-width: 240px; flex-shrink: 0;
       position: sticky; left: 0; z-index: 11;
       background: var(--surface); border-right: 1px solid var(--border);
       display: flex; align-items: center; padding: 0 14px;
@@ -1105,75 +877,100 @@
       text-transform: uppercase; color: var(--text3);
     }
     .multi-col-hdr {
-      flex-shrink: 0; height: 36px;
+      flex-shrink: 0; height: 34px;
       display: flex; align-items: center; justify-content: center;
       font-size: 10px; font-family: var(--font-mono); color: var(--text3);
       border-right: 1px solid var(--border);
       white-space: nowrap; padding: 0 4px;
     }
-    .multi-col-hdr.is-today { color: var(--accent); background: var(--accent-dim); }
+    .multi-col-hdr.is-today { color: var(--accent); font-weight: 700; }
 
     /* ── Rows ───────────────────────────────────────────────── */
-    .mrow {
-      display: flex; min-width: max-content;
-      border-bottom: 1px solid var(--border);
-    }
+    .mrow { display: flex; min-width: max-content; }
     .mrow-label {
-      width: 220px; min-width: 220px; flex-shrink: 0;
-      position: sticky; left: 0; z-index: 2;
+      width: 240px; min-width: 240px; flex-shrink: 0;
+      position: sticky; left: 0; z-index: 3;
       background: var(--surface); border-right: 1px solid var(--border);
-      display: flex; align-items: center; gap: 6px;
-      padding: 0 10px; overflow: hidden;
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 12px; overflow: hidden;
     }
-    .mrow-gantt {
-      position: relative; flex-shrink: 0;
-    }
+    .mrow-gantt { position: relative; flex-shrink: 0; overflow: hidden; }
 
-    /* ── Project swimlane header ────────────────────────────── */
-    .mrow-proj { height: 36px; }
-    .mrow-proj .mrow-label {
-      background: var(--surface2); cursor: pointer;
-      font-weight: 700; font-size: 12px;
+    /* ── Project lane ───────────────────────────────────────── */
+    .mrow-proj { border-top: 1px solid var(--border2); }
+    .mrow-proj:first-of-type { border-top: none; }
+    .mrow-proj .mrow-label { background: var(--surface2); padding: 0; }
+    .proj-toggle {
+      all: unset; box-sizing: border-box; cursor: pointer;
+      display: flex; align-items: center; gap: 7px; width: 100%; height: 100%; padding: 0 12px;
+      font-weight: 700; font-size: 12.5px; color: var(--text);
     }
-    .mrow-proj .mrow-label:hover { background: var(--surface3); }
-    .mrow-proj .mrow-gantt { background: var(--surface2); }
+    .proj-toggle:hover { background: var(--surface3); }
+    .proj-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .mrow-proj .mrow-gantt { background: var(--surface); }
+    .g-lane { position: absolute; inset: 0; opacity: 0.07; pointer-events: none; }
     .proj-color-bar { width: 4px; min-width: 4px; height: 18px; border-radius: 2px; flex-shrink: 0; }
-    .proj-chevron { font-size: 9px; color: var(--text3); flex-shrink: 0; }
+    .proj-chevron { font-size: 9px; color: var(--text3); flex-shrink: 0; width: 8px; }
     .proj-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .proj-meta { font-size: 10px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; }
+    .proj-meta { font-size: 10px; font-weight: 400; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; }
 
-    /* ── Task / Milestone rows ──────────────────────────────── */
-    .mrow-item { height: 28px; }
-    .mrow-item .mrow-label { font-size: 11.5px; color: var(--text2); padding-left: 26px; }
+    /* ── Item rows ──────────────────────────────────────────── */
+    .mrow-item .mrow-gantt { border-top: 1px solid var(--border); border-top-color: color-mix(in srgb, var(--border) 50%, transparent); }
+    .mrow-item .mrow-label { font-size: 11.5px; color: var(--text2); padding-left: 30px; }
     .mrow-item.is-done .mrow-label { color: var(--text3); text-decoration: line-through; }
-    .item-label-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mrow-empty .mrow-label { color: var(--text3); font-style: italic; }
+    .item-open {
+      all: unset; box-sizing: border-box; cursor: pointer;
+      display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0;
+    }
+    .item-open:hover .item-label-text { color: var(--text); text-decoration: underline; }
+    .item-label-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-due-badge {
       font-size: 10px; font-family: var(--font-mono); color: var(--text3); white-space: nowrap; flex-shrink: 0;
     }
     .item-due-badge.overdue { color: var(--accent-nope); }
-    .ms-icon { font-size: 9px; flex-shrink: 0; }
+    .ms-icon { font-size: 9px; flex-shrink: 0; width: 8px; }
+    .task-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; margin: 0 1px; }
 
-    /* ── Gantt bars & markers ───────────────────────────────── */
+    /* ── Marks ──────────────────────────────────────────────── */
     .g-bar {
       position: absolute; top: 50%; transform: translateY(-50%);
-      height: 8px; border-radius: 3px; min-width: 6px;
-      opacity: 0.85; cursor: default;
+      height: 6px; border-radius: 3px; min-width: 6px;
+      opacity: 0.45; pointer-events: none;
     }
-    .g-bar.is-done { opacity: 0.35; }
+    .g-bar.item { height: 12px; opacity: 0.8; border-radius: 4px; }
+    .g-bar.is-done { opacity: 0.25; }
+    .g-due {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 3px; height: 14px; border-radius: 2px; pointer-events: none;
+    }
     .g-diamond {
       position: absolute; top: 50%; transform: translate(-50%, -50%) rotate(45deg);
-      width: 10px; height: 10px; border-radius: 2px; cursor: default;
+      width: 11px; height: 11px; border-radius: 2px; z-index: 2;
+      box-shadow: 0 0 0 2px var(--bg);
     }
     .g-diamond.is-done { opacity: 0.35; }
+    .g-tag {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      font-size: 10px; color: var(--text3); white-space: nowrap; pointer-events: none;
+    }
+    .g-meet {
+      position: absolute; top: 8px; bottom: 8px; width: 4px; margin-left: -2px;
+      border: none; padding: 0; border-radius: 2px; background: var(--text);
+      cursor: pointer; z-index: 2;
+    }
+    .g-meet.past { opacity: 0.4; }
+    .g-meet:hover, .g-meet:focus-visible { transform: scaleX(1.8); background: var(--accent); outline: none; }
 
     /* ── Grid lines & today ─────────────────────────────────── */
     .g-col-band {
       position: absolute; top: 0; bottom: 0;
       border-right: 1px solid var(--border); pointer-events: none;
     }
+    .g-col-band.is-today { background: var(--accent-dim); }
     .g-today-line {
-      position: absolute; top: 0; bottom: 0; width: 2px;
-      background: var(--accent); opacity: 0.55; pointer-events: none; z-index: 1;
+      position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+      background: var(--accent); opacity: 0.7; pointer-events: none; z-index: 1;
     }
 
     /* ── Empty state ────────────────────────────────────────── */

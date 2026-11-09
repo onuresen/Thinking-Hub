@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Goals Hub</title>
+  <title>Goals</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -278,7 +278,7 @@
 
 <div class="topbar">
   <div class="logo-mark">◎</div>
-  <div class="logo-text">Goals Hub</div>
+  <div class="logo-text">Goals</div>
   <div class="topbar-sep"></div>
   <select class="quarter-select" id="quarter-sel" onchange="selectQuarter(this.value)"></select>
   <div class="topbar-spacer"></div>
@@ -615,8 +615,8 @@
       const scoreCls = kr.score >= 0.7 ? 'good' : kr.score >= 0.4 ? 'ok' : 'low';
       const scoreBadge = (kr.score !== undefined && kr.score !== '') ? `<div class="kr-score-badge ${scoreCls}" title="OKR score">${parseFloat(kr.score).toFixed(1)}</div>` : '';
       const taskBtnHtml = kr.taskId
-        ? `<span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);flex-shrink:0" title="Task exists in Project Hub">✓</span>`
-        : `<button class="kr-task-btn" onclick="sendKrAsTask('${obj.id}','${kr.id}')" title="Create task in Project Hub">→</button>`;
+        ? `<span style="font-size:9px;color:var(--accent);font-family:var(--font-mono);flex-shrink:0" title="Task exists in Projects">✓</span>`
+        : `<button class="kr-task-btn" onclick="sendKrAsTask('${obj.id}','${kr.id}')" title="Create task in Projects">→</button>`;
       return `<div class="kr-row" draggable="true" data-drag-type="kr" data-drag-id="${kr.id}" data-obj-id="${obj.id}">
         <div class="kr-check${isDone?' done':''}" onclick="toggleKR('${obj.id}','${kr.id}')" title="Toggle done"></div>
         <div class="kr-title${isDone?' done':''}">${_esc(kr.title||'Key Result')}</div>
@@ -894,7 +894,7 @@
     if (!kr) return;
     const phData = HubStorage.get('project-hub-v1');
     const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
-    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    if (!projects.length) { showToast('No projects yet — create one in Projects first'); return; }
     const taskId = 'tsk-' + Date.now().toString(36);
     let proj = obj.projectId ? projects.find(p => p.id === obj.projectId) : null;
     if (!proj) proj = projects[0];

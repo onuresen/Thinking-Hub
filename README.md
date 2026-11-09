@@ -40,36 +40,36 @@ Tools are grouped by the kind of work they support.
 
 | Tool | What it does |
 |------|-------------|
-| **Project Hub** | Projects, tasks, roles, WIP-limited kanban, priority views, and cross-tool links |
-| **Schedule** | Calendar and timeline views that sync due dates from Project Hub |
-| **Meeting Hub** | Structured meeting notes with decisions, participants, and action items |
-| **Capture Hub** | A fast inbox for notes, tasks, ideas, decisions, and references before triage |
-| **Journal Hub** | Daily reflection, weekly review, retrospective time journaling, mood and energy patterns, Bullet Journal modes, and Feynman prompts |
+| **Projects** | Projects, tasks, roles, WIP-limited kanban, priority views, and cross-tool links |
+| **Schedule** | Calendar and timeline views that sync due dates from Projects |
+| **Meetings** | Structured meeting notes with decisions, participants, and action items |
+| **Capture** | A fast inbox for notes, tasks, ideas, decisions, and references before triage |
+| **Journal** | Daily reflection, weekly review, retrospective time journaling, mood and energy patterns, Bullet Journal modes, and Feynman prompts |
 
 ### People & Network
 
 | Tool | What it does |
 |------|-------------|
 | **Dependency Graph** | Visualize task dependencies, trace paths, filter orphans, and annotate edges |
-| **People Hub** | See team roles and workload in one place, including who is over-allocated |
-| **Stakeholder Map** | Power/interest mapping with PMBOK-aligned engagement levels |
+| **People** | See team roles and workload in one place, including who is over-allocated |
+| **Stakeholders** | Power/interest mapping with PMBOK-aligned engagement levels |
 | **Tool Portfolio** | Curate tools and vendors with Technology Radar rings and TOGAF layers |
-| **Machi Hub** | Turn workspace activity into a living pixel city whose districts reflect your work |
+| **Machi** | Turn workspace activity into a living pixel city whose districts reflect your work |
 
 ### Learning & Ideas
 
 | Tool | What it does |
 |------|-------------|
-| **Learning Hub** | Reading and learning records with Feynman-style key insights |
+| **Learning** | Reading and learning records with Feynman-style key insights |
 | **Idea Swiper** | Rapidly triage ideas into Like / Super / Nope and promote survivors into projects |
-| **Canvas Hub** | An infinite canvas for freeform notes, diagrams, and spatial thinking |
+| **Canvas** | An infinite canvas for freeform notes, diagrams, and spatial thinking |
 
 ### Strategy & Decisions
 
 | Tool | What it does |
 |------|-------------|
-| **Decision Hub** | Structured decisions with Cynefin domains, confidence, assumptions, alignment, and outcome calibration |
-| **Goals Hub** | Quarterly OKRs with committed or aspirational key results and linked projects |
+| **Decisions** | Structured decisions with Cynefin domains, confidence, assumptions, alignment, and outcome calibration |
+| **Goals** | Quarterly OKRs with committed or aspirational key results and linked projects |
 | **Risk Register** | Heat-map risk tracking with owners, treatments, and review dates |
 
 ### Tools & Focus
@@ -78,7 +78,7 @@ Tools are grouped by the kind of work they support.
 |------|-------------|
 | **Profile** | Identity, milestones, badges, streaks, and an activity heatmap |
 | **Tags** | A central topic registry with usage visibility and cross-tool rename support |
-| **Help & Guide** | Tool directory, framework reference, and pre-built workflow guides |
+| **Help** | Tool directory, framework reference, and pre-built workflow guides |
 
 ### Built-in AI assistance
 
@@ -152,18 +152,18 @@ Each tool is mapped to one or more established frameworks:
 
 | Framework | Tools |
 |-----------|-------|
-| Cynefin | Decision Hub |
-| OKR | Goals Hub |
-| GTD | Journal Hub |
-| Assumption-Based Planning (RAND) | Decision Hub → Assumptions tab |
+| Cynefin | Decisions |
+| OKR | Goals |
+| GTD | Journal |
+| Assumption-Based Planning (RAND) | Decisions → Assumptions tab |
 | Technology Radar (ThoughtWorks) | Tool Portfolio |
 | TOGAF | Tool Portfolio |
-| PMBOK Stakeholder Engagement | Stakeholder Map |
-| Feynman Technique | Learning Hub, Journal Hub |
-| Kanban WIP limits | Project Hub |
-| Bullet Journal | Journal Hub |
+| PMBOK Stakeholder Engagement | Stakeholders |
+| Feynman Technique | Learning, Journal |
+| Kanban WIP limits | Projects |
+| Bullet Journal | Journal |
 
-Full framework reference (37 frameworks) is available inside **Help & Guide**.
+Full framework reference (37 frameworks) is available inside **Help**.
 
 ---
 
@@ -189,7 +189,7 @@ python -m http.server 5500
 
 **First run**
 1. The onboarding tour starts automatically on first open.
-2. Create your first project in **Project Hub** to kick off the workflow tour (covers Schedule sync, Idea Swiper pipeline, Decision Hub, and Graph + Cmd+K).
+2. Create your first project in **Projects** to kick off the workflow tour (covers Schedule sync, Idea Swiper pipeline, Decisions, and Graph + Cmd+K).
 3. Optional: pick your Obsidian vault folder via ⚙️ → Obsidian Vault to enable note autocomplete.
 
 <details>
@@ -232,7 +232,7 @@ decision-hub.html       # Decision log + assumptions + alignment matrix + calibr
 canvas-hub.html         # Infinite canvas
 graph-hub.html          # Task dependency graph (vis-network)
 people-hub.html         # People directory and follow-ups
-town-hub.html           # Machi Hub living pixel city
+town-hub.html           # Machi living pixel city
 goals-hub.html          # OKR / quarterly goals
 learning-hub.html       # Reading & learning log
 stakeholder-hub.html    # Stakeholder power/interest grid

@@ -55,7 +55,7 @@ window.HubData = (() => {
     return getData().projects;
   }
 
-  // Returns projects sorted by the user's saved group order (Project Hub →
+  // Returns projects sorted by the user's saved group order (Projects →
   // Groupings view), then alphabetically within each group, ungrouped last.
   // Identical ordering to the Tool Portfolio "Enabled Projects" list.
   function getProjectsSorted() {

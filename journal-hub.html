@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Journal Hub</title>
+  <title>Journal</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-links.js"></script>
@@ -20,7 +20,7 @@
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
     body { display: flex; flex-direction: column; }
 
-    /* ── Journal Hub Shell ── */
+    /* ── Journal Shell ── */
     .jh-topbar {
       height: 54px; display: flex; align-items: center; gap: 14px;
       padding: 0 20px; border-bottom: 1px solid var(--border);
@@ -356,7 +356,7 @@
 </head>
 <body>
 
-<!-- Journal Hub topbar -->
+<!-- Journal topbar -->
 <header class="jh-topbar">
   <div class="jh-logo">Journal<span style="color:var(--accent)">Hub</span></div>
   <div class="jh-tab-bar">
@@ -638,7 +638,7 @@
 
 <script>
   /* ═══════════════════════════════════════════════
-     Journal Hub — tab controller
+     Journal — tab controller
   ════════════════════════════════════════════════ */
 
   let jhActiveTab = 'daily';
@@ -937,7 +937,7 @@
     if (!e || !e.text) { showToast('Write something first'); return; }
     const phData = HubStorage.get('project-hub-v1');
     const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
-    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    if (!projects.length) { showToast('No projects yet — create one in Projects first'); return; }
     const title = e.text.slice(0, 80).replace(/\n/g, ' ');
     const taskId = 'tsk-' + Date.now().toString(36);
     const proj = projects[0];
@@ -1407,7 +1407,7 @@
     const key = rhWeekKey(monday);
     const wd = rhGetWeekData(key);
     const block = (wd.block || '').trim();
-    if (!block) { showToast('Add blockers first, then push to Decision Hub'); return; }
+    if (!block) { showToast('Add blockers first, then push to Decisions'); return; }
     const arr = Array.isArray(HubStorage.get('decision-hub-v1')) ? HubStorage.get('decision-hub-v1') : [];
     const id = 'dh-' + Date.now().toString(36);
     arr.push({ id, title: 'Review blockers: ' + rhWeekRange(monday), summary: block, reasoning: (wd.learn || ''), status: 'open', type: 'tactical', cynefin: '', confidence: 3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), projectId: '', tags: [], options: '', outcome: '' });
@@ -1423,7 +1423,7 @@
   /* ═══════════════════════════════════════════════
      TIME JOURNAL MODULE (P123 — ported from focus-hub.html;
      same focus-hub-v1 session shape, so its 6 downstream
-     consumers — Project Hub badges, Today dashboard,
+     consumers — Projects badges, Today dashboard,
      Achievements XP, this file's own weekly digest,
      hub-search, hub-links — are all unchanged)
   ════════════════════════════════════════════════ */

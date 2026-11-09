@@ -1,14 +1,14 @@
-// machi-fun.js — Thinking Hub's playful layer for Machi Hub (P140).
+// machi-fun.js — Thinking Hub's playful layer for Machi (P140).
 // NOT a stamped copy: this file is Thinking-Hub-specific and lives only here.
 // It draws through the engine's setDecorator() hook and reads Hub data directly.
 //
 // Goal: fun and cute, not insight. Each tool building gets its own little life:
-//   Learning Hub   → a library. One floor per finished item; a lamp per key insight.
-//   Capture Hub    → a post office. Mail sacks pile up with the inbox; clearing it
+//   Learning   → a library. One floor per finished item; a lamp per key insight.
+//   Capture    → a post office. Mail sacks pile up with the inbox; clearing it
 //                    sends a delivery van off down the road.
-//   Meeting Hub    → a bus stop. Weekly meetings are buses that run on their day;
+//   Meetings    → a bus stop. Weekly meetings are buses that run on their day;
 //                    today's one-off meetings are taxis.
-//   Canvas Hub → an art studio. An easel per board, gallery lights per card,
+//   Canvas → an art studio. An easel per board, gallery lights per card,
 //                    bunting for lines.
 //   Dependency Graph links → pigeons carrying letters between tool buildings.
 //   Every Hub page → its own landmark (clock tower, café, shrine…); tools → trees;
@@ -1383,7 +1383,7 @@ const MachiFun = (() => {
     }
     if (m.lens === 'fun-koban') {
       return { title: '🚓 Police box', status: 'The officer waves at every car', note: '',
-        link: ['project-hub.html', 'Open Project Hub →'] };
+        link: ['project-hub.html', 'Open Projects →'] };
     }
     if (m.lens === 'fun-hospital') {
       const n = data.responders;
@@ -1392,7 +1392,7 @@ const MachiFun = (() => {
     }
     if (m.lens === 'fun-festival') {
       return { title: '🎪 Festival', status: 'Celebrating projects finished in the last two weeks',
-        note: data.festival.join('\n'), link: ['project-hub.html', 'Open Project Hub →'] };
+        note: data.festival.join('\n'), link: ['project-hub.html', 'Open Projects →'] };
     }
     if (m.lens === 'fun-train') {
       const n = data.journal.week;
@@ -1400,7 +1400,7 @@ const MachiFun = (() => {
         title: '🚃 Journal Line',
         status: n ? `${n} carriage${n === 1 ? '' : 's'} · one per day you wrote this week` : 'Just the engine today',
         note: n ? '' : 'Write in the Daily Log and a carriage joins the train.',
-        link: ['journal-hub.html', 'Open Journal Hub →'],
+        link: ['journal-hub.html', 'Open Journal →'],
       };
     }
     if (m.lens === 'fun-busstop') {
@@ -1412,7 +1412,7 @@ const MachiFun = (() => {
         title: '🚏 Bus stop',
         status: data.buses.some((b) => b.today) ? 'Buses running today' : 'No bus today — zzz',
         note: lines.concat(taxis).join('\n') || 'No weekly meetings yet.',
-        link: ['meetings-hub.html', 'Open Meeting Hub →'],
+        link: ['meetings-hub.html', 'Open Meetings →'],
       };
     }
     if (m.lens === 'fun-ride') {
@@ -1421,7 +1421,7 @@ const MachiFun = (() => {
         status: [m.ride === 'taxi' ? 'One-off meeting today' : 'Weekly meeting · today', m.time || null,
           `${m.riders} rider${m.riders === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
         note: '',
-        link: ['meetings-hub.html', 'Open Meeting Hub →'],
+        link: ['meetings-hub.html', 'Open Meetings →'],
       };
     }
     if (m.lens === 'fun-easel') {
@@ -1429,7 +1429,7 @@ const MachiFun = (() => {
         title: '🎨 ' + e.name,
         status: `${m.cards} card${m.cards === 1 ? '' : 's'} · ${m.lines} line${m.lines === 1 ? '' : 's'}`,
         note: '',
-        link: ['canvas-hub.html', 'Open Canvas Hub →'],
+        link: ['canvas-hub.html', 'Open Canvas →'],
       };
     }
     return null;

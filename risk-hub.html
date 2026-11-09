@@ -332,7 +332,7 @@
       <button class="btn btn-primary" onclick="saveDetail()">Save</button>
       <button class="btn btn-ghost" onclick="closeDetail()">Cancel</button>
       <div class="spacer"></div>
-      <button class="btn btn-ghost" id="dp-mit-task-btn" onclick="sendRiskAsMitigationTask()" style="font-size:11px" title="Create a mitigation task in Project Hub">→ Task</button>
+      <button class="btn btn-ghost" id="dp-mit-task-btn" onclick="sendRiskAsMitigationTask()" style="font-size:11px" title="Create a mitigation task in Projects">→ Task</button>
       <button class="btn btn-ghost" id="dp-archive-btn" onclick="archiveRisk()">📦 Archive</button>
       <button class="btn btn-danger" onclick="deleteRisk()">Delete</button>
     </div>
@@ -622,7 +622,7 @@
     if (!r) return;
     const phData = HubStorage.get('project-hub-v1');
     const projects = phData && Array.isArray(phData.projects) ? phData.projects : [];
-    if (!projects.length) { showToast('No projects yet — create one in Project Hub first'); return; }
+    if (!projects.length) { showToast('No projects yet — create one in Projects first'); return; }
     const priorityMap = { low: 'low', medium: 'med', high: 'high', critical: 'high' };
     const priority = priorityMap[band(score(r))] || 'med';
     const taskId = 'tsk-' + Date.now().toString(36);

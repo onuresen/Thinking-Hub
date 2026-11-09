@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meeting Hub</title>
+  <title>Meetings</title>
   <script src="hub-storage.js"></script>
   <script src="hub-utils.js"></script>
   <script src="hub-obsidian.js"></script>
@@ -23,22 +23,26 @@
 
 <div class="topbar">
   <button class="mob-nav-btn" onclick="toggleSidebar()" aria-label="Open meeting list">☰</button>
-  <div class="logo-mark">▦</div>
-  <div class="logo-text">Meeting Hub</div>
+  <div class="logo-mark">▣</div>
+  <div class="logo-text">Meetings</div>
   <div class="topbar-spacer"></div>
-  <button class="btn btn-ghost" onclick="openIcsImportOptions()" style="font-size:12px;padding:6px 12px" title="Import meetings from one or more Outlook/Teams calendar exports (.ics)">📥 Import .ics</button>
+  <button class="btn btn-ghost" onclick="openIcsImportOptions()" style="font-size:12px;padding:6px 12px" title="Import meetings from one or more Outlook/Teams calendar exports (.ics)">📥<span class="tb-text"> Import .ics</span></button>
   <input type="file" id="ics-file-input" accept=".ics,text/calendar" multiple style="display:none" onchange="handleIcsImport(event)">
-  <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+ New meeting</button>
+  <button class="btn btn-primary" onclick="newMeeting()" style="font-size:12px;padding:6px 14px">+<span class="tb-text"> New meeting</span></button>
 </div>
 
 <div class="body-wrap">
 
   <!-- Left panel -->
   <div class="meeting-list-panel" id="meeting-list-panel">
-    <div class="schedule-strip" id="schedule-strip" style="display:none"></div>
     <div class="list-header-row">
       <input class="list-search-input" id="list-search" placeholder="Search meetings…" oninput="renderList()">
       <button class="templates-btn" id="templates-btn" onclick="toggleTemplates()">Templates</button>
+    </div>
+    <div class="list-group-row" role="group" aria-label="Group meetings">
+      <span class="lg-label">Group by</span>
+      <button class="lg-btn" data-mode="date" onclick="setListGroup('date')">Date</button>
+      <button class="lg-btn" data-mode="project" onclick="setListGroup('project')">Project</button>
     </div>
     <div class="meeting-list-wrap" id="meeting-list-wrap">
       <div class="meeting-list" id="meeting-list"></div>
@@ -295,7 +299,6 @@
   let saveTimer = null;
   let showArchived = false;
   let showTemplates = false;
-  let decisionsOpen = false;
   let activeOccDate = null; // selected week's log entry, for recurring series only
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -445,56 +448,130 @@
 
   function activeMeeting() { return data.meetings.find(m => m.id === activeId) || null; }
 
-  // ── Schedule strip ────────────────────────────────────────────────────────────
-
-  function getUpcomingSchedule() {
-    const sd = HubStorage.get('schedule-v1');
-    const today = HubUtils.todayLocal();
-    const cutoff = HubUtils.localYmd(new Date(Date.now() + 14 * 86400000));
-    return (sd?.items || [])
-      .filter(e => e.type === 'event' && e.start >= today && e.start <= cutoff && !e.done)
-      .sort((a, b) => a.start.localeCompare(b.start))
-      .slice(0, 5);
-  }
-
-  function renderScheduleStrip() {
-    const strip = document.getElementById('schedule-strip');
-    if (!strip) return;
-    const events = getUpcomingSchedule();
-    if (!events.length) { strip.style.display = 'none'; return; }
-    strip.style.display = 'block';
-    strip.innerHTML = `<div class="strip-label">Upcoming from Schedule</div>
-      <div class="strip-events">${events.map(e => {
-        const d = e.start ? new Date(e.start + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-        return `<div class="sched-chip" onclick="navigateToScheduleEvent('${esc(e.id)}')">
-          <span class="sched-date">${d}</span>
-          <span class="sched-title">${esc(e.title || 'Event')}</span>
-        </div>`;
-      }).join('')}</div>`;
-  }
-
-  function navigateToScheduleEvent(id) {
-    if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('schedule', id);
-  }
-
   // ── List ──────────────────────────────────────────────────────────────────────
+  // Grouped by date (upcoming first, soonest on top; then the past, by month)
+  // or by project. The choice is a per-browser view setting in hub-session-v1
+  // (never meeting data, so it stays out of backups); folded groups last one visit.
+
+  const collapsedGroups = new Set();
+  let collapseSeeded = false;
+
+  function listGroupMode() {
+    try { return JSON.parse(localStorage.getItem('hub-session-v1') || '{}').meetingsGroup === 'project' ? 'project' : 'date'; }
+    catch { return 'date'; }
+  }
+
+  function setListGroup(mode) {
+    try {
+      const s = JSON.parse(localStorage.getItem('hub-session-v1') || '{}');
+      s.meetingsGroup = mode === 'project' ? 'project' : 'date';
+      localStorage.setItem('hub-session-v1', JSON.stringify(s));
+    } catch { }
+    collapsedGroups.clear(); collapseSeeded = false;
+    renderList();
+  }
+
+  function toggleGroup(key) {
+    if (collapsedGroups.has(key)) collapsedGroups.delete(key); else collapsedGroups.add(key);
+    renderList();
+  }
+
+  function localDate(dateStr) { return new Date(dateStr + 'T00:00:00'); }
+  function addDaysLocal(dateStr, n) { const d = localDate(dateStr); d.setDate(d.getDate() + n); return HubUtils.localYmd(d); }
+
+  function weekStartYmd(dateStr) {
+    const d = localDate(dateStr);
+    const dow = (d.getDay() + 6) % 7; // Monday = 0
+    d.setDate(d.getDate() - dow);
+    return HubUtils.localYmd(d);
+  }
+
+  // Upcoming = today or later. Undated meetings count as upcoming (they still need a date).
+  function isPast(m, today) { return !!m.date && m.date < today; }
+
+  function dateGroupOf(m, today) {
+    if (!m.date) return { key: 'nodate', label: 'No date', order: 0 };
+    const thisWeek = weekStartYmd(today);
+    const nextWeek = addDaysLocal(thisWeek, 7);
+    const weekAfter = addDaysLocal(thisWeek, 14);
+    if (m.date === today) return { key: 'today', label: 'Today', order: 1 };
+    if (m.date > today) {
+      if (m.date < nextWeek)  return { key: 'week', label: 'This week', order: 2 };
+      if (m.date < weekAfter) return { key: 'next', label: 'Next week', order: 3 };
+      return { key: 'later', label: 'Later', order: 4 };
+    }
+    if (m.date >= thisWeek) return { key: 'pastweek', label: 'Earlier this week', order: 5, past: true };
+    const ym = m.date.slice(0, 7);
+    const label = localDate(ym + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    // Months sort newest first after the upcoming groups.
+    return { key: 'm' + ym, label, order: 6, sub: ym, past: true };
+  }
+
+  // Upcoming soonest first, then past newest first.
+  function meetingSort(today) {
+    return (a, b) => {
+      const pa = isPast(a, today), pb = isPast(b, today);
+      if (pa !== pb) return pa ? 1 : -1;
+      const ka = (a.date || '') + (a.time || ''), kb = (b.date || '') + (b.time || '');
+      return pa ? kb.localeCompare(ka) : ka.localeCompare(kb);
+    };
+  }
+
+  function projectColorMap() {
+    const map = {};
+    try { HubData.getProjects().forEach(p => { map[p.id] = p.color || ''; }); } catch { }
+    return map;
+  }
+
+  function meetingRowHtml(m, ctx) {
+    const typeInfo = MEETING_TYPES[m.type] || MEETING_TYPES.custom;
+    const openActions = countOpenActions(m);
+    const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('meetings-hub', m.id).length : 0;
+    const past = isPast(m, ctx.today);
+    const d = m.date ? localDate(m.date) : null;
+    const dayTop = !d ? '—' : ctx.mode === 'date'
+      ? d.toLocaleDateString('en-US', { weekday: 'short' })
+      : d.toLocaleDateString('en-US', { month: 'short' });
+    const dayNum = d ? d.getDate() : '';
+    const color = m.projectId ? ctx.colors[m.projectId] : '';
+    const cls = ['meeting-row', m.id === activeId ? 'active' : '', past ? 'past' : '', m.date === ctx.today ? 'today' : ''].filter(Boolean).join(' ');
+    const sub = [];
+    if (m.time) sub.push(`<span class="mr-time">${esc(m.time)}${m.durationMins ? ` · ${m.durationMins}m` : ''}</span>`);
+    if (m.recurring) sub.push(`<span class="mr-series" title="Weekly series">🔁 ${m.occurrenceDates.length}×</span>`);
+    if (ctx.mode === 'date' && m.projectName) sub.push(`<span class="mr-proj"><i class="mr-dot" style="${color ? `background:${esc(color)}` : ''}"></i>${esc(m.projectName)}</span>`);
+    if (openActions) sub.push(`<span class="mr-action-count">${openActions} open</span>`);
+    if (linkCount) sub.push(`<span class="mr-link-badge">🔗 ${linkCount}</span>`);
+    if (ctx.isDup(m)) sub.push(`<span class="mr-dup-badge" title="Another meeting on this day has the same title">⧉ duplicate?</span>`);
+    return `<div class="${cls}" onclick="openMeeting('${m.id}')">
+      <div class="mr-day"><span class="mr-day-top">${dayTop}</span><span class="mr-day-num">${dayNum}</span></div>
+      <div class="mr-body">
+        <div class="mr-title"><span class="mr-type" title="${esc(typeInfo.label)}">${typeInfo.icon}</span>${esc(m.title || 'Untitled meeting')}</div>
+        ${sub.length ? `<div class="mr-meta">${sub.join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }
 
   function renderList() {
     const q = (document.getElementById('list-search')?.value || '').toLowerCase();
     const list = document.getElementById('meeting-list');
     if (!list) return;
-    let items = data.meetings.filter(m => showArchived ? m.archived : !m.archived)
-      .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const today = HubUtils.todayLocal();
+    const mode = listGroupMode();
+    document.querySelectorAll('.lg-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+
+    let items = data.meetings.filter(m => showArchived ? m.archived : !m.archived);
     if (q) items = items.filter(m =>
       (m.title || '').toLowerCase().includes(q) ||
-      (m.attendees || '').toLowerCase().includes(q)
+      (m.projectName || '').toLowerCase().includes(q) ||
+      (m.attendeesList || []).some(a => (a.name || '').toLowerCase().includes(q))
     );
+    items.sort(meetingSort(today));
     const archivedCount = data.meetings.filter(m => m.archived).length;
     const archBtn = document.getElementById('show-archived-btn');
     if (archBtn) archBtn.innerHTML = showArchived ? '← Active' : `📦 Archived <span style="${archivedCount ? 'color:var(--accent)' : ''}">(${archivedCount})</span>`;
 
     if (!items.length) {
-      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">No meetings yet</div><div class="e-sub">${q ? 'No results.' : 'Create your first meeting above.'}</div></div>`;
+      list.innerHTML = `<div class="empty-state"><span class="e-icon">▣</span><div class="e-title">${q ? 'No results' : 'No meetings yet'}</div><div class="e-sub">${q ? 'Try another word.' : 'Create one, or import a calendar file.'}</div></div>`;
       return;
     }
 
@@ -507,25 +584,60 @@
       if (k) { if (!dupGroups.has(k)) dupGroups.set(k, []); dupGroups.get(k).push(m); }
     });
     const isDup = m => (dupGroups.get(dupKey(m)) || []).some(o => o !== m && (!o.time || !m.time || o.time === m.time));
+    const ctx = { today, mode, colors: projectColorMap(), isDup };
 
-    list.innerHTML = items.map(m => {
-      const typeInfo = MEETING_TYPES[m.type] || MEETING_TYPES.custom;
-      const openActions = countOpenActions(m);
-      const dateLabel = m.recurring
-        ? `🔁 ${fmtShortDate(m.date)}${m.occurrenceDates.length ? ` · ${m.occurrenceDates.length}×` : ''}`
-        : fmtShortDate(m.date);
-      const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('meetings-hub', m.id).length : 0;
-      return `<div class="meeting-row${m.id === activeId ? ' active' : ''}" onclick="openMeeting('${m.id}')">
-        <div class="mr-title">${typeInfo.icon} ${esc(m.title || 'Untitled meeting')}</div>
-        <div class="mr-meta">
-          <span>${dateLabel}</span>
-          ${m.projectName ? `<span class="proj-badge">📁 ${esc(m.projectName)}</span>` : ''}
-          ${openActions ? `<span class="mr-action-count">${openActions} action${openActions !== 1 ? 's' : ''}</span>` : ''}
-          ${linkCount ? `<span class="mr-link-badge">🔗 ${linkCount}</span>` : ''}
-          ${isDup(m) ? `<span class="mr-dup-badge" title="Another meeting on this day has the same title">⧉ duplicate?</span>` : ''}
-        </div>
+    // Build groups in display order.
+    const groups = new Map();
+    items.forEach(m => {
+      let g;
+      if (mode === 'date') g = dateGroupOf(m, today);
+      else g = m.projectId ? { key: 'p' + m.projectId, label: m.projectName || 'Project', color: ctx.colors[m.projectId] }
+                           : { key: 'none', label: 'No project', last: true };
+      if (!groups.has(g.key)) groups.set(g.key, { ...g, items: [] });
+      groups.get(g.key).items.push(m);
+    });
+    let ordered = [...groups.values()];
+    if (mode === 'date') ordered.sort((a, b) => a.order - b.order || (b.sub || '').localeCompare(a.sub || ''));
+    else ordered.sort((a, b) => (a.last ? 1 : 0) - (b.last ? 1 : 0) || a.label.localeCompare(b.label));
+
+    // First render in date mode: fold past months so the list opens on what is next.
+    if (!collapseSeeded) {
+      if (mode === 'date') ordered.filter(g => g.order === 6).forEach(g => collapsedGroups.add(g.key));
+      collapseSeeded = true;
+    }
+    const activeGroup = ordered.find(g => g.items.some(m => m.id === activeId));
+    if (activeGroup && !q) collapsedGroups.delete(activeGroup.key);
+
+    list.innerHTML = ordered.map(g => {
+      const folded = !q && collapsedGroups.has(g.key);
+      const open = g.items.reduce((n, m) => n + countOpenActions(m), 0);
+      let hint = '';
+      if (mode === 'project') {
+        const next = g.items.find(m => m.date && m.date >= today);
+        hint = next ? `next ${fmtShortDate(next.date)}` : '';
+      }
+      return `<div class="mg${g.past ? ' mg-past' : ''}">
+        <button class="mg-head" onclick="toggleGroup('${esc(g.key)}')" aria-expanded="${!folded}">
+          <span class="mg-caret${folded ? '' : ' open'}">▸</span>
+          ${mode === 'project' ? `<i class="mr-dot" style="${g.color ? `background:${esc(g.color)}` : ''}"></i>` : ''}
+          <span class="mg-label">${esc(g.label)}</span>
+          <span class="mg-count">${g.items.length}</span>
+          ${hint ? `<span class="mg-hint">${hint}</span>` : ''}
+          ${open ? `<span class="mg-open" title="Open action items">${open} open</span>` : ''}
+        </button>
+        ${folded ? '' : g.items.map((m, i) => {
+          const firstPast = mode === 'project' && i > 0 && isPast(m, today) && !isPast(g.items[i - 1], today);
+          return (firstPast ? '<div class="mg-sub">Past</div>' : '') + meetingRowHtml(m, ctx);
+        }).join('')}
       </div>`;
     }).join('');
+  }
+
+  // The meeting to open on load: today's, else the next one, else the latest.
+  function defaultMeetingId() {
+    const today = HubUtils.todayLocal();
+    const live = data.meetings.filter(m => !m.archived).sort(meetingSort(today));
+    return live.length ? live[0].id : null;
   }
 
   // ── Templates panel ───────────────────────────────────────────────────────────
@@ -854,8 +966,8 @@
         <select class="dec-owner-sel" onchange="updateDecision('${d.id}','owner',this.value)">${ownerOpts}</select>
         <span class="dec-status-chip" data-status="${d.status || 'open'}"
           onclick="cycleDecisionStatus('${d.id}')">${STATUS_LABEL[d.status || 'open']}</span>
-        ${d.inHub ? `<span class="dec-send-btn" title="Already in Decision Hub" style="opacity:.6;cursor:default">✓ Hub</span>`
-          : `<button class="dec-send-btn" onclick="sendDecisionToHub('${d.id}')" title="Send to Decision Hub">→ Hub</button>`}
+        ${d.inHub ? `<span class="dec-send-btn" title="Already in Decisions" style="opacity:.6;cursor:default">✓ Decisions</span>`
+          : `<button class="dec-send-btn" onclick="sendDecisionToHub('${d.id}')" title="Send to Decisions">→ Decisions</button>`}
         <button class="dec-del-btn" onclick="deleteDecision('${d.id}')">✕</button>
       </div>`;
     }).join('');
@@ -867,15 +979,7 @@
     const body = document.getElementById('decisions-body');
     if (body) body.innerHTML = buildDecisionsBody(m, target);
     const title = document.getElementById('dec-hdr-title');
-    if (title) title.textContent = `Decisions Made (${(target.decisions || []).length})`;
-  }
-
-  function toggleDecisions() {
-    decisionsOpen = !decisionsOpen;
-    const body = document.getElementById('decisions-body');
-    const icon = document.getElementById('dec-toggle-icon');
-    if (body) body.style.display = decisionsOpen ? 'flex' : 'none';
-    if (icon) icon.classList.toggle('open', decisionsOpen);
+    if (title) title.textContent = `Decisions (${(target.decisions || []).length})`;
   }
 
   function logDecision() {
@@ -884,7 +988,6 @@
     if (!target.decisions) target.decisions = [];
     target.decisions.push({ id: uid(), text: '', owner: '', status: 'open' });
     save();
-    if (!decisionsOpen) toggleDecisions();
     refreshDecisionsBody();
     // Focus last decision text input
     setTimeout(() => {
@@ -926,7 +1029,7 @@
     });
     HubStorage.set('decision-hub-v1', arr);
     d.inHub = true; save(); refreshDecisionsBody();
-    showToast('Decision sent to Decision Hub');
+    showToast('Decision sent to Decisions');
     if (typeof HubLinks !== 'undefined') HubLinks.navigateTo('decision-hub', id);
   }
 
@@ -939,40 +1042,6 @@
   }
 
   // ── Schedule sync ─────────────────────────────────────────────────────────────
-
-  function syncToSchedule() {
-    const m = activeMeeting(); if (!m) return;
-    flushCurrentDetail();
-    const sd = HubStorage.get('schedule-v1') || { items: [] };
-    if (!sd.items) sd.items = [];
-    const eventId = m.scheduleEventId || ('sev-' + uid());
-    const existing = sd.items.findIndex(e => e.id === eventId);
-    let endTime = null;
-    if (m.time && m.durationMins) {
-      const [h, mi] = m.time.split(':').map(Number);
-      const total = ((h * 60 + mi + m.durationMins) % 1440 + 1440) % 1440;
-      endTime = String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
-    }
-    const evObj = {
-      id: eventId, type: 'event', source: 'meeting',
-      title: m.title || 'Meeting',
-      start: m.date || HubUtils.todayLocal(),
-      end: m.date || HubUtils.todayLocal(),
-      startTime: m.time || null,
-      endTime,
-      notes: m.desiredOutcome || '',
-      projectId: m.projectId || null, color: '#6366f1', done: false,
-    };
-    if (existing >= 0) { Object.assign(sd.items[existing], evObj); }
-    else { sd.items.push(evObj); }
-    HubStorage.set('schedule-v1', sd);
-    m.scheduleEventId = eventId;
-    save();
-    const btn = document.getElementById('sync-sched-btn');
-    if (btn) { btn.className = 'sync-sched-btn synced'; btn.disabled = true; btn.textContent = '✓ Schedule'; }
-    showToast('Synced to Schedule');
-    renderScheduleStrip();
-  }
 
   // ── Hub links ─────────────────────────────────────────────────────────────────
 
@@ -1485,6 +1554,20 @@
     renderDetail();
   }
 
+  // "Today", "In 3 days", "2 weeks ago": where this meeting sits in time.
+  function whenChipHtml(m, today) {
+    if (!m.date) return '<span class="when-chip">No date</span>';
+    const days = Math.round((new Date(m.date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+    let t, cls = '';
+    if (days === 0) { t = 'Today'; cls = ' now'; }
+    else if (days === 1) { t = 'Tomorrow'; cls = ' soon'; }
+    else if (days === -1) t = 'Yesterday';
+    else if (days > 1) { t = days < 14 ? `In ${days} days` : `In ${Math.round(days / 7)} weeks`; cls = days < 7 ? ' soon' : ''; }
+    else { const a = -days; t = a < 14 ? `${a} days ago` : a < 60 ? `${Math.round(a / 7)} weeks ago` : `${Math.round(a / 30)} months ago`; cls = ' past'; }
+    if (m.recurring) t = (days >= 0 ? 'Next: ' : 'Last: ') + t;
+    return `<span class="when-chip${cls}">${t}</span>`;
+  }
+
   function renderDetail() {
     const m = activeMeeting();
     const empty = document.getElementById('detail-empty');
@@ -1508,115 +1591,128 @@
         <div class="action-check${a.done ? ' done' : ''}" onclick="toggleAction('${a.id}')"></div>
         <div class="action-text${a.done ? ' done' : ''}">${esc(a.text)}</div>
         ${!a.taskCreated
-          ? `<button class="action-send-btn" onclick="sendActionToProjectHub('${a.id}')" title="Create task in Project Hub">→ Project Hub</button>`
+          ? `<button class="action-send-btn" onclick="sendActionToProjectHub('${a.id}')" title="Create task in Projects">→ Projects</button>`
           : `<span class="action-send-btn sent">✓ Task created</span>`}
         <button class="action-del-btn" onclick="deleteAction('${a.id}')" title="Remove">✕</button>
       </div>`).join('');
 
     const todayStr = HubUtils.todayLocal();
     const metaDateHtml = m.recurring
-      ? `<span class="meta-label">🔁 Weekly series</span>
-         <span class="series-count">${m.occurrenceDates.length} occurrence${m.occurrenceDates.length === 1 ? '' : 's'}</span>`
-      : `<span class="meta-label">Date</span>
-         <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()">
-         <span class="meta-label">Time</span>
-         <select class="meta-input meta-date" id="dt-time" onchange="scheduleSave()">${meetingTimeOptions(m.time || '')}</select>
-         <span class="meta-label">Duration</span>
-         <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
-           style="width:60px" placeholder="min" value="${m.durationMins || ''}" onchange="scheduleSave()">`;
+      ? `<span class="meta-field"><span class="meta-label">Repeats</span>
+         <span class="series-count">🔁 Weekly · ${m.occurrenceDates.length} date${m.occurrenceDates.length === 1 ? '' : 's'}</span></span>`
+      : `<label class="meta-field"><span class="meta-label">Date</span>
+           <input class="meta-input meta-date" id="dt-date" type="date" value="${esc(m.date || '')}" onchange="scheduleSave()"></label>
+         <label class="meta-field"><span class="meta-label">Time</span>
+           <select class="meta-input meta-date" id="dt-time" onchange="scheduleSave()">${meetingTimeOptions(m.time || '')}</select></label>
+         <label class="meta-field"><span class="meta-label">Minutes</span>
+           <input class="meta-input meta-date" id="dt-duration" type="number" min="15" max="480" step="15"
+             style="width:64px" placeholder="—" value="${m.durationMins || ''}" onchange="scheduleSave()"></label>`;
+    const linkCount = (typeof HubLinks !== 'undefined') ? HubLinks.getLinksFor('meetings-hub', m.id).length : 0;
 
     const occStripHtml = m.recurring ? `
       <div class="occ-strip-wrap">
-        <div class="occ-strip">
-          ${m.occurrenceDates.map(o => `<button class="occ-chip${o.date === activeOccDate ? ' active' : ''}${o.date === todayStr ? ' today' : ''}"
-            onclick="selectOccurrence('${o.date}')" title="${o.time ? esc(o.time) : ''}">${fmtShortDate(o.date)}</button>`).join('')}
+        <span class="meta-label">Dates</span>
+        <div class="occ-strip" id="occ-strip">
+          ${m.occurrenceDates.map(o => {
+            const entry = (m.log || []).find(l => l.date === o.date) || {};
+            const has = !!(entry.notes || (entry.actionItems || []).length || (entry.decisions || []).length);
+            const cls = ['occ-chip', o.date === activeOccDate ? 'active' : '', o.date === todayStr ? 'today' : '', o.date < todayStr ? 'past' : ''].filter(Boolean).join(' ');
+            return `<button class="${cls}" onclick="selectOccurrence('${o.date}')" title="${o.time ? esc(o.time) : ''}${has ? ' · has notes' : ''}">${fmtShortDate(o.date)}${has ? '<i class="occ-dot"></i>' : ''}</button>`;
+          }).join('')}
         </div>
         <div class="occ-add-row">
-          <input type="date" id="occ-add-date" class="meta-input meta-date">
-          <button class="btn btn-ghost" onclick="addManualOccurrence()" style="font-size:11px;padding:4px 8px">+ Add week</button>
+          <input type="date" id="occ-add-date" class="meta-input meta-date" aria-label="Date to add">
+          <button class="btn btn-ghost dh-btn" onclick="addManualOccurrence()">+ Add date</button>
         </div>
       </div>` : '';
 
     content.innerHTML = `
       <div class="detail-header">
-        <input class="detail-title-input" id="dt-title" placeholder="Meeting title…"
-          value="${esc(m.title || '')}" oninput="scheduleSave()">
+        <div class="dh-top">
+          <input class="detail-title-input" id="dt-title" placeholder="Meeting title…"
+            value="${esc(m.title || '')}" oninput="scheduleSave()">
+          ${whenChipHtml(m, todayStr)}
+          <span class="save-indicator" id="save-indicator"></span>
+        </div>
 
         <div class="detail-meta-row">
-          <select class="type-select" id="dt-type" onchange="changeType(this)">${typeOpts}</select>
+          <label class="meta-field"><span class="meta-label">Type</span>
+            <select class="type-select" id="dt-type" onchange="changeType(this)">${typeOpts}</select></label>
           ${metaDateHtml}
-          <span class="meta-label">Project</span>
-          <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select>
+          <label class="meta-field"><span class="meta-label">Project</span>
+            <select class="project-select" id="dt-project" onchange="changeProject(this)">${projOpts}</select></label>
         </div>
 
         <input class="outcome-input" id="dt-outcome"
           placeholder="What should this meeting produce?"
           value="${esc(m.desiredOutcome || '')}" oninput="scheduleSave()">
 
-        <div class="attendees-section">
-          <div class="att-section-label">Attendees</div>
-          <div class="attendees-wrap" id="attendees-wrap">${buildAttendeeWrapInner(m)}</div>
-        </div>
-
-        <div class="detail-actions-row">
-          <span class="save-indicator" id="save-indicator"></span>
-          <div style="flex:1"></div>
-          ${m.recurring ? '' : `<button class="sync-sched-btn${m.scheduleEventId ? ' synced' : ''}" id="sync-sched-btn"
-            onclick="${m.scheduleEventId ? '' : 'syncToSchedule()'}" ${m.scheduleEventId ? 'disabled' : ''}
-            title="${m.scheduleEventId ? 'Already synced' : 'Sync to Schedule'}">
-            ${m.scheduleEventId ? '✓ Schedule' : '→ Schedule'}
-          </button>`}
-          <button class="btn btn-ghost" id="vault-meeting-btn" onclick="openVaultMeeting()" style="font-size:11px;padding:5px 10px"
-            title="${esc(target.obsidianNote ? 'Decisions and actions from ' + target.obsidianNote : 'Link this meeting to its vault note')}">⟡ ${target.obsidianNote ? 'Vault note' : 'Link note'}</button>
-          <button class="link-hub-btn" onclick="openLinksModal()" title="Link to other items">🔗</button>
-          <button class="btn btn-ghost" onclick="sendMeetingAsDecision()" style="font-size:11px;padding:5px 10px" title="Create decision draft">→ Decision</button>
-          ${m.recurring
-            ? `<button class="btn btn-ghost" onclick="openWeeklyModal()" style="font-size:12px;padding:5px 10px" title="Add more weeks to this series">🔁 Extend Series</button>`
-            : `<button class="btn btn-ghost" onclick="openRepeatModal()" style="font-size:12px;padding:5px 10px" title="Create a follow-up occurrence of this meeting">🔁 Repeat</button>
-               <button class="btn btn-ghost" onclick="openWeeklyModal()" style="font-size:12px;padding:5px 10px" title="Turn this into a weekly recurring meeting">📆 Make Weekly</button>`}
-          <button class="btn btn-ghost" id="archive-meeting-btn" onclick="archiveMeeting()" style="font-size:12px;padding:5px 10px">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
-          <button class="btn btn-danger" onclick="deleteMeeting()" style="font-size:12px;padding:5px 10px">Delete</button>
+        <div class="dh-bottom">
+          <div class="attendees-section">
+            <span class="att-section-label">People</span>
+            <div class="attendees-wrap" id="attendees-wrap">${buildAttendeeWrapInner(m)}</div>
+          </div>
+          <div class="dh-connect">
+            <button class="btn btn-ghost dh-btn" id="vault-meeting-btn" onclick="openVaultMeeting()"
+              title="${esc(target.obsidianNote ? 'Decisions and actions from ' + target.obsidianNote : 'Link this meeting to its vault note')}">⟡ ${target.obsidianNote ? 'Vault note' : 'Link note'}</button>
+            <button class="btn btn-ghost dh-btn" onclick="openLinksModal()" title="Link to other items">🔗 Links${linkCount ? ` (${linkCount})` : ''}</button>
+          </div>
         </div>
       </div>
 
       ${occStripHtml}
 
-      <div class="notes-area">
-        <div class="agenda-col">
-          <div class="col-header">Agenda${m.recurring ? ' (shared across series)' : ''}</div>
-          <textarea class="col-textarea" id="dt-agenda"
-            placeholder="Meeting agenda, topics to cover…" oninput="scheduleSave()">${esc(m.agenda || '')}</textarea>
-        </div>
-        <div class="notes-col">
-          <div class="col-header">Notes${m.recurring ? ` — ${fmtShortDate(target.date)}` : ''}</div>
-          <textarea class="col-textarea" id="dt-notes"
-            placeholder="Live notes, decisions made, key points…" oninput="scheduleSave()">${esc(target.notes || '')}</textarea>
-        </div>
-      </div>
+      <div class="detail-scroll">
+        <div class="detail-grid">
+          <div class="dg-main">
+            <section class="d-card d-agenda">
+              <div class="col-header">Agenda${m.recurring ? '<span class="col-sub">same for every date</span>' : ''}</div>
+              <textarea class="col-textarea" id="dt-agenda"
+                placeholder="Topics to cover…" oninput="scheduleSave()">${esc(m.agenda || '')}</textarea>
+            </section>
+            <section class="d-card d-notes">
+              <div class="col-header">Notes${m.recurring ? `<span class="col-sub">${fmtShortDate(target.date)}</span>` : ''}</div>
+              <textarea class="col-textarea" id="dt-notes"
+                placeholder="Live notes, key points…" oninput="scheduleSave()">${esc(target.notes || '')}</textarea>
+            </section>
+          </div>
 
-      <div class="decisions-section" id="decisions-section">
-        <div class="decisions-hdr" onclick="toggleDecisions()">
-          <span class="dec-toggle-icon${decisionsOpen ? ' open' : ''}" id="dec-toggle-icon">▶</span>
-          <span class="dec-hdr-title" id="dec-hdr-title">Decisions Made (${(target.decisions || []).length})</span>
-          <button class="add-action-btn" onclick="event.stopPropagation();logDecision()" style="margin-left:auto">+ Log decision</button>
-        </div>
-        <div class="decisions-body" id="decisions-body"
-          style="display:${decisionsOpen ? 'flex' : 'none'};flex-direction:column;gap:5px">
-          ${buildDecisionsBody(m, target)}
-        </div>
-      </div>
+          <div class="dg-side">
+            <section class="d-card" id="decisions-section">
+              <div class="col-header">
+                <span id="dec-hdr-title">Decisions (${(target.decisions || []).length})</span>
+                <button class="add-action-btn" onclick="logDecision()">+ Decision</button>
+              </div>
+              <div class="decisions-body" id="decisions-body">${buildDecisionsBody(m, target)}</div>
+              ${(target.decisions || []).length ? `<button class="d-foot-btn" onclick="sendMeetingAsDecision()" title="Make one Decisions draft from this meeting">→ Draft one decision from this meeting</button>` : ''}
+            </section>
 
-      <div class="actions-panel">
-        <div class="actions-header">
-          <div class="actions-title">Action Items (${(target.actionItems || []).length})</div>
-          <button class="add-action-btn" onclick="openActionModal()">+ Add action</button>
+            <section class="d-card">
+              <div class="col-header">
+                <span>Action items (${(target.actionItems || []).length})</span>
+                <button class="add-action-btn" onclick="openActionModal()">+ Action</button>
+              </div>
+              <div class="actions-list" id="actions-list">
+                ${actionsHtml || '<div class="d-empty">No action items yet.</div>'}
+              </div>
+            </section>
+          </div>
         </div>
-        <div class="actions-list" id="actions-list">
-          ${actionsHtml || '<div style="font-size:12px;color:var(--text3);padding:6px 4px">No action items yet.</div>'}
+
+        <div class="detail-footer">
+          ${m.recurring
+            ? `<button class="btn btn-ghost dh-btn" onclick="openWeeklyModal()" title="Add more weeks to this series">🔁 Extend series</button>`
+            : `<button class="btn btn-ghost dh-btn" onclick="openRepeatModal()" title="Create a follow-up meeting">🔁 Repeat</button>
+               <button class="btn btn-ghost dh-btn" onclick="openWeeklyModal()" title="Turn this into a weekly series">📆 Make weekly</button>`}
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost dh-btn" id="archive-meeting-btn" onclick="archiveMeeting()">${m.archived ? '↩ Restore' : '📦 Archive'}</button>
+          <button class="btn btn-danger dh-btn" onclick="deleteMeeting()">Delete</button>
         </div>
       </div>`;
 
     initMHActionDrag(content.querySelector('#actions-list'), m.id);
+    const act = content.querySelector('.occ-chip.active');
+    if (act) act.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
 
   // ── Drag-drop for action items ────────────────────────────────────────────────
@@ -1744,7 +1840,7 @@
     const a = (target.actionItems || []).find(x => x.id === actionId); if (!a) return;
     const ph = HubStorage.get('project-hub-v1');
     if (!ph || !Array.isArray(ph.projects) || !ph.projects.length) {
-      showToast('Open Project Hub first to create a project', 'warn'); return;
+      showToast('Open Projects first to create a project', 'warn'); return;
     }
     const taskId = uid();
     const task = {
@@ -1828,7 +1924,7 @@
           },
         }));
         return [
-          { title: 'Decisions → Decision Hub', addAllLabel: 'Add all', items: decisions },
+          { title: 'Decisions → Decisions', addAllLabel: 'Add all', items: decisions },
           { title: 'Actions', addAllLabel: 'Add all', items: actions },
         ];
       },
@@ -1937,7 +2033,7 @@
 
   // ── Make weekly / extend series ───────────────────────────────────────────────
   // Manual alternative to ICS import: turn any meeting into a weekly series, or add
-  // more weeks to an existing one, entirely from within Meeting Hub.
+  // more weeks to an existing one, entirely from within Meetings.
 
   let weeklyModalMode = 'create';
 
@@ -2043,12 +2139,10 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     load();
-    if (data.meetings.length) activeId = data.meetings[0].id;
-    renderScheduleStrip();
+    activeId = defaultMeetingId();
     renderList();
     renderDetail();
     HubData.onChange(() => renderDetail());
-    HubStorage.subscribe('schedule-v1', renderScheduleStrip);
     HubBootstrap.start('meetings-hub');
   });
 

@@ -26,44 +26,31 @@
       <div class="sch-view-toggle">
         <button class="sch-view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
         <button class="sch-view-btn" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
-        <button class="sch-view-btn" id="btn-multi" onclick="switchView('multi')">Projects</button>
       </div>
-      <div class="sch-toolbar-sep"></div>
-      <div id="toolbar-controls" style="display:flex;align-items:center;gap:6px;flex:1"></div>
+      <div style="flex:1"></div>
       <button class="sch-add-btn" onclick="openDrawer(null)">+ Add Item</button>
     </div>
 
     <div class="sch-view-host">
 
-      <!-- Timeline / Gantt -->
+      <!-- Timeline: projects with their milestones, tasks, meetings and items -->
       <div id="view-timeline" class="view-hidden">
-        <div class="gantt-layout">
-          <div class="gantt-label-col" id="gantt-label-col">
-            <div class="gantt-label-head">Item</div>
-            <div class="gantt-label-body" id="gantt-label-body"></div>
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="multiNav(-1)" aria-label="Earlier">&#8249;</button>
+          <span class="cal-nav-title" id="multi-range-label"></span>
+          <button class="cal-nav-btn" onclick="multiNav(1)" aria-label="Later">&#8250;</button>
+          <div class="tl-legend" aria-hidden="true">
+            <span><i class="lg-ms"></i>Milestone</span><span><i class="lg-task"></i>Task due</span>
+            <span><i class="lg-meet"></i>Meeting</span><span><i class="lg-item"></i>Item</span>
           </div>
-          <div class="gantt-wrap">
-            <div class="gantt-scroll" id="gantt-scroll">
-              <div class="gantt-header" id="gantt-header"></div>
-              <div class="gantt-body" id="gantt-body"></div>
-            </div>
+          <div class="sch-toolbar-sep"></div>
+          <div class="sch-seg" role="group" aria-label="Zoom">
+            <button id="tl-zoom-week" onclick="setMultiZoom('week')">Weeks</button>
+            <button id="tl-zoom-month" onclick="setMultiZoom('month')">Months</button>
           </div>
-        </div>
-      </div>
-
-      <!-- Multi-Project Gantt -->
-      <div id="view-multi" class="view-hidden">
-        <div class="multi-toolbar" id="multi-toolbar">
-          <button class="sch-toolbar-btn" onclick="multiNav(-1)">&#8249;</button>
-          <span class="multi-range-label" id="multi-range-label"></span>
-          <button class="sch-toolbar-btn" onclick="multiNav(1)">&#8250;</button>
           <button class="sch-toolbar-today" onclick="multiToday()">Today</button>
-          <div style="flex:1"></div>
-          <button class="sch-toolbar-btn" id="multi-zoom-btn" onclick="toggleMultiZoom()">Month</button>
         </div>
-        <div class="multi-gantt-scroll" id="multi-gantt-scroll">
-          <!-- built by renderMultiView() -->
-        </div>
+        <div class="multi-gantt-scroll" id="multi-gantt-scroll"></div>
       </div>
 
       <!-- Calendar -->
@@ -73,7 +60,10 @@
           <span class="cal-nav-title" id="cal-title"></span>
           <button class="cal-nav-btn" onclick="calNav(1)">&#8250;</button>
           <div class="sch-toolbar-sep"></div>
-          <button class="sch-toolbar-btn" id="cal-week-toggle" onclick="toggleCalWeek()">Week</button>
+          <div class="sch-seg" role="group" aria-label="Calendar range">
+            <button id="cal-month-btn" onclick="setCalMode(false)">Month</button>
+            <button id="cal-week-btn" onclick="setCalMode(true)">Week</button>
+          </div>
           <button class="sch-toolbar-today" onclick="calToday()">Today</button>
         </div>
         <div class="cal-week-header" id="cal-week-header">
@@ -102,7 +92,7 @@
     </div>
     <div class="sch-drawer-body">
       <div id="drawer-badge" style="display:none">
-        <div class="sch-source-badge">Imported from Project Hub — edit the source there to update the origin.</div>
+        <div class="sch-source-badge">Imported from Projects — edit the source there to update the origin.</div>
       </div>
       <div class="sch-field">
         <label class="sch-label">Title</label>
@@ -171,7 +161,7 @@
     <div class="sch-drawer-body" id="mp-body"></div>
     <div class="sch-drawer-footer">
       <button class="sch-save-btn" onclick="saveMeetingPanel()">Save</button>
-      <button class="sch-secondary-btn" onclick="openMeetingInHub()">Open in Meeting Hub</button>
+      <button class="sch-secondary-btn" onclick="openMeetingInHub()">Open in Meetings</button>
     </div>
   </div>
 
@@ -261,7 +251,6 @@
     // ═══════════════════════════════════════════════════════════════
     const STORAGE_KEY = 'schedule-v1';
     const TODAY = dateToIso(new Date());
-    const ROW_H = 44;
 
     const PALETTE = [
       '#b8f033', '#4ade80', '#60a5fa', '#f472b6',
@@ -312,11 +301,10 @@
     let state;
     let ui = {
       activeView: 'calendar',
-      zoom: 'month',
       calYear: new Date().getFullYear(),
       calMonth: new Date().getMonth(),
       calWeekMode: false,
-      filterType: 'all',
+      calWeekStart: getWeekStart(TODAY),
       selectedId: null,
       drawerItemId: null,
       multiZoom: 'week',
@@ -344,188 +332,35 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Column generation (for Gantt)
-    // ═══════════════════════════════════════════════════════════════
-    function generateColumns() {
-      if (ui.zoom === 'week') {
-        // Day columns: today - 14d to today + 56d
-        const start = addDays(TODAY, -14);
-        const cols = [];
-        for (let i = 0; i < 71; i++) cols.push(addDays(start, i));
-        return cols;
-      } else {
-        // Week (Monday) columns: today - 4 weeks to today + 28 weeks
-        const start = getWeekStart(addDays(TODAY, -28));
-        const cols = [];
-        for (let i = 0; i < 34; i++) cols.push(addDays(start, i * 7));
-        return cols;
-      }
-    }
-
-    function colWidth() { return ui.zoom === 'week' ? 40 : 82; }
-
-    function colIndexForIso(iso, columns) {
-      if (!iso) return -1;
-      if (ui.zoom === 'week') return columns.indexOf(iso);
-      return columns.indexOf(getWeekStart(iso));
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // Filtered items
     // ═══════════════════════════════════════════════════════════════
+    // Schedule's own items. Hides old copies made by the Meetings tool's retired
+    // "→ Schedule" button while that meeting still exists: Schedule already
+    // draws every meeting, so the copy showed twice.
     function filteredItems() {
-      return state.items.filter(it =>
-        ui.filterType === 'all' || it.type === ui.filterType
-      );
+      const copies = meetingCopyIds();
+      return state.items.filter(it => !copies.has(it.id));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Sidebar
-    // ═══════════════════════════════════════════════════════════════
+    function meetingCopyIds() {
+      const ids = new Set();
+      (_readMeetings().meetings || []).forEach(m => { if (m.scheduleEventId) ids.add(m.scheduleEventId); });
+      return ids;
+    }
 
-
-    // ═══════════════════════════════════════════════════════════════
-    // Gantt / Timeline
-    // ═══════════════════════════════════════════════════════════════
-    function renderTimeline() {
-      const columns = generateColumns();
-      const cw = colWidth();
-      const items = filteredItems();
-      const totalWidth = columns.length * cw;
-
-      // ── Header ──
-      const headerEl = document.getElementById('gantt-header');
-      headerEl.style.width = totalWidth + 'px';
-
-      if (ui.zoom === 'week') {
-        let prevMonthLabel = null;
-        headerEl.innerHTML = columns.map((iso, i) => {
-          const d = isoToDate(iso);
-          const monLabel = d.toLocaleDateString('en-US', { month: 'short' });
-          const showMon = monLabel !== prevMonthLabel;
-          prevMonthLabel = monLabel;
-          const isToday = iso === TODAY;
-          const isWE = isWeekend(iso);
-          return `<div class="gantt-col-header${isToday ? ' today-col' : ''}${isWE ? ' weekend' : ''}"
-        style="width:${cw}px">
-        <div class="col-main">${d.getDate()}</div>
-        <div class="col-sub">${DAY_NAMES[getDow(iso)].slice(0, 1)}${showMon ? ' ' + monLabel : ''}</div>
-      </div>`;
-        }).join('');
-      } else {
-        const curWeek = getWeekStart(TODAY);
-        headerEl.innerHTML = columns.map((iso) => {
-          const d = isoToDate(iso);
-          const mon = d.toLocaleDateString('en-US', { month: 'short' });
-          return `<div class="gantt-col-header${iso === curWeek ? ' today-col' : ''}"
-        style="width:${cw}px">
-        <div class="col-main">${mon} ${d.getDate()}</div>
-      </div>`;
-        }).join('');
-      }
-
-      // ── Body ──
-      const bodyEl = document.getElementById('gantt-body');
-
-      if (!items.length) {
-        bodyEl.innerHTML = `<div class="gantt-empty"><div class="gantt-empty-icon">▦</div><div>No items to display</div></div>`;
-        bodyEl.style.width = totalWidth + 'px';
-        bodyEl.style.height = '200px';
-        return;
-      }
-
-      // Build body HTML
-      const totalHeight = items.length * ROW_H;
-      bodyEl.style.width = totalWidth + 'px';
-      bodyEl.style.height = totalHeight + 'px';
-
-      let html = '';
-
-      // Row backgrounds
-      items.forEach((_, i) => {
-        html += `<div class="gantt-row-bg${i % 2 ? ' alt' : ''}" style="top:${i * ROW_H}px"></div>`;
-      });
-
-      // Column lines / weekend fills
-      columns.forEach((iso, i) => {
-        if (ui.zoom === 'week' && isWeekend(iso)) {
-          html += `<div class="gantt-col-weekend" style="left:${i * cw}px; width:${cw}px"></div>`;
-        } else {
-          html += `<div class="gantt-col-line" style="left:${i * cw}px"></div>`;
-        }
-      });
-
-      // Today line
-      const todayIdx = colIndexForIso(TODAY, columns);
-      if (todayIdx >= 0) {
-        const lineLeft = ui.zoom === 'week' ? todayIdx * cw : todayIdx * cw + cw / 2;
-        html += `<div class="gantt-today-line" id="today-line" style="left:${lineLeft}px"></div>`;
-      }
-
-      // Bars & milestones
-      items.forEach((it, rowIdx) => {
-        const top = rowIdx * ROW_H;
-        let startIdx = colIndexForIso(it.start, columns);
-        let endIdx = colIndexForIso(it.end, columns);
-
-        if (it.type === 'milestone') {
-          const mIdx = startIdx >= 0 ? startIdx : (endIdx >= 0 ? endIdx : -1);
-          if (mIdx < 0) return;
-          const left = mIdx * cw + cw / 2;
-          const msTop = top + (ROW_H - 14) / 2;
-          html += `<div class="gantt-milestone${it.done ? ' done' : ''}${it.id === ui.selectedId ? ' selected' : ''}"
-        style="left:${left}px; top:${msTop}px; background:${it.color}"
-        data-id="${it.id}" onclick="selectAndEdit('${it.id}')"></div>`;
-        } else {
-          // clamp to visible columns
-          if (startIdx < 0 && endIdx < 0) return;
-          const s = Math.max(0, startIdx >= 0 ? startIdx : 0);
-          const e = Math.min(columns.length - 1, endIdx >= 0 ? endIdx : columns.length - 1);
-          if (s > e) return;
-          if (startIdx >= columns.length || endIdx < 0) return;
-
-          const left = s * cw + 1;
-          const width = (e - s + 1) * cw - 3;
-          const barTop = top + (ROW_H - 26) / 2;
-          const label = (it.title || '').slice(0, 28);
-          html += `<div class="gantt-bar${it.done ? ' done' : ''}${it.id === ui.selectedId ? ' selected' : ''}"
-        style="left:${left}px; top:${barTop}px; width:${width}px; background:${it.color}"
-        data-id="${it.id}" onclick="selectAndEdit('${it.id}')">${esc(label)}</div>`;
-        }
-      });
-
-      bodyEl.innerHTML = html;
-
-      // ── Label column (aligned with gantt rows) ──
-      const labelBody = document.getElementById('gantt-label-body');
-      if (labelBody) {
-        if (!items.length) {
-          labelBody.innerHTML = '';
-        } else {
-          labelBody.innerHTML = items.map((it, i) => {
-            const msClass = it.type === 'milestone' ? ' ms-shape' : '';
-            const altClass = i % 2 ? ' alt' : '';
-            const selClass = it.id === ui.selectedId ? ' selected' : '';
-            return `<div class="gantt-label-row${altClass}${selClass}" data-id="${it.id}" onclick="selectAndEdit('${it.id}')">
-              <div class="gantt-label-dot${msClass}" style="background:${it.color}"></div>
-              <div class="gantt-label-name">${esc(it.title || '(untitled)')}</div>
-            </div>`;
-          }).join('');
-        }
-
-        // Sync label body scroll with gantt body scroll
-        const gs = document.getElementById('gantt-scroll');
-        if (gs && !gs._labelSyncBound) {
-          gs._labelSyncBound = true;
-          gs.addEventListener('scroll', () => { labelBody.scrollTop = gs.scrollTop; });
-        }
-      }
+    // Project id → color, for meeting pills and timeline rows.
+    function projectColors() {
+      const map = {};
+      try { HubData.getProjects().forEach(p => { if (p.color) map[p.id] = p.color; }); } catch { }
+      return map;
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Calendar
     // ═══════════════════════════════════════════════════════════════
     function renderCalendar() {
+      document.getElementById('cal-month-btn').classList.toggle('active', !ui.calWeekMode);
+      document.getElementById('cal-week-btn').classList.toggle('active', ui.calWeekMode);
       if (ui.calWeekMode) renderCalWeek();
       else renderCalMonth();
     }
@@ -535,6 +370,7 @@
       try { meetingsData = JSON.parse(localStorage.getItem('meetings-hub-v1') || '{}'); } catch { }
       const byDate = {};
       (meetingsData.meetings || []).forEach(m => {
+        if (m.archived) return;
         if (m.recurring) {
           // One pill per occurrence date, sharing the series id (used by drag/resize + click-to-open).
           (m.occurrenceDates || []).forEach(occ => {
@@ -549,11 +385,17 @@
       return byDate;
     }
 
-    function meetingPillHtml(m) {
-      const icon = m.recurring ? '🔁' : '▣';
-      return `<span class="cal-pill meeting"
+    // Meetings carry their project's color on the left edge, and their time.
+    function meetingStyle(m, colors) {
+      const c = m.projectId && colors ? colors[m.projectId] : '';
+      return c ? ` style="--mc:${esc(c)}"` : '';
+    }
+
+    function meetingPillHtml(m, colors) {
+      const icon = m.recurring ? '🔁' : '';
+      return `<span class="cal-pill meeting${m.date < TODAY ? ' past' : ''}"${meetingStyle(m, colors || projectColors())}
         onclick="event.stopPropagation(); openMeetingPanel('${m.id}', '${m.date}')"
-        title="${esc(m.title || 'Meeting')}">${icon} ${esc(m.title || 'Meeting')}</span>`;
+        title="${esc((m.time ? m.time + ' · ' : '') + (m.title || 'Meeting'))}">${m.time ? `<b class="pill-time">${esc(m.time)}</b>` : ''}${icon ? icon + ' ' : ''}${esc(m.title || 'Meeting')}</span>`;
     }
 
     function renderCalMonth() {
@@ -561,6 +403,7 @@
       document.getElementById('cal-title').textContent = fmtMonth(year, month);
       const items = filteredItems();
       const meetingsByDate = getMeetingsByDate();
+      const colors = projectColors();
 
       const firstDay = new Date(year, month, 1);
       const firstDow = firstDay.getDay();
@@ -603,12 +446,12 @@
         const isToday = iso === TODAY;
         const isWE = isWeekend(iso);
 
-        const dayMeetings = meetingsByDate[iso] || [];
+        const dayMeetings = (meetingsByDate[iso] || []).slice().sort((a, b) => (a.time || '').localeCompare(b.time || ''));
         const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
         const total = dayMeetings.length + dayItems.length;
         const shownLimit = 4;
         const shownMeetings = dayMeetings.slice(0, shownLimit);
-        const meetingPills = shownMeetings.map(meetingPillHtml).join('');
+        const meetingPills = shownMeetings.map(m => meetingPillHtml(m, colors)).join('');
         const remaining = shownLimit - shownMeetings.length;
         const shownItems = remaining > 0 ? dayItems.slice(0, remaining) : [];
         const overflow = total - shownMeetings.length - shownItems.length;
@@ -685,7 +528,8 @@
     }
 
     function renderCalWeek() {
-      const weekStart = getWeekStart(TODAY);
+      const weekStart = ui.calWeekStart;
+      const colors = projectColors();
       const days = [];
       for (let i = 0; i < 7; i++) days.push(addDays(weekStart, i));
       const items = filteredItems();
@@ -734,7 +578,7 @@
           return true;
         });
 
-        const meetingPills = dayMeetings.map(meetingPillHtml).join('');
+        const meetingPills = dayMeetings.map(m => meetingPillHtml(m, colors)).join('');
         const pills = dayItems.map(it => {
           const bg = it.color + '28';
           const bd = it.color + '88';
@@ -795,10 +639,11 @@
           const left = b.lane * laneW;
           if (b.type === 'meeting') {
             const m = b.m;
-            return `<div class="wg-block meeting" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%"
+            const mc = m.projectId && colors[m.projectId] ? `;--mc:${esc(colors[m.projectId])}` : '';
+            return `<div class="wg-block meeting${iso < TODAY ? ' past' : ''}${height < 36 ? ' short' : ''}" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%${mc}"
         data-iso="${iso}"
         onmousedown="wgBlockMouseDown(event, 'meeting', '${m.id}', '${iso}', ${b.startMin}, ${b.endMin})"
-        title="${esc(m.title || 'Meeting')}">▣ ${esc(m.title || 'Meeting')}<div class="wg-resize-handle" onmousedown="wgResizeMouseDown(event, 'meeting', '${m.id}', '${iso}', ${b.startMin}, ${b.endMin})"></div></div>`;
+        title="${esc(m.time + ' · ' + (m.title || 'Meeting'))}"><b class="pill-time">${esc(m.time)}</b>${m.recurring ? '🔁 ' : ''}${esc(m.title || 'Meeting')}<div class="wg-resize-handle" onmousedown="wgResizeMouseDown(event, 'meeting', '${m.id}', '${iso}', ${b.startMin}, ${b.endMin})"></div></div>`;
           }
           const it = b.it;
           const bg = it.color + '28';
@@ -1017,24 +862,6 @@
     // ═══════════════════════════════════════════════════════════════
     // Toolbar
     // ═══════════════════════════════════════════════════════════════
-    function renderToolbar() {
-      const ctrlEl = document.getElementById('toolbar-controls');
-      if (ui.activeView === 'timeline') {
-        ctrlEl.innerHTML = `
-          <button class="sch-filter-btn${ui.filterType === 'all' ? ' active' : ''}" onclick="setFilter('all')">All</button>
-          <button class="sch-filter-btn${ui.filterType === 'task' ? ' active' : ''}" onclick="setFilter('task')">Tasks</button>
-          <button class="sch-filter-btn${ui.filterType === 'milestone' ? ' active' : ''}" onclick="setFilter('milestone')">Milestones</button>
-          <button class="sch-filter-btn${ui.filterType === 'event' ? ' active' : ''}" onclick="setFilter('event')">Events</button>
-          <div class="sch-toolbar-sep"></div>
-          <button class="sch-toolbar-btn${ui.zoom === 'week' ? ' active' : ''}" onclick="setZoom('week')">Week</button>
-          <button class="sch-toolbar-btn${ui.zoom === 'month' ? ' active' : ''}" onclick="setZoom('month')">Month</button>
-          <div class="sch-toolbar-sep"></div>
-          <button class="sch-toolbar-today" onclick="scrollToToday()">Today</button>`;
-      } else {
-        ctrlEl.innerHTML = '';
-      }
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // Full render
     // ═══════════════════════════════════════════════════════════════
@@ -1042,7 +869,7 @@
     // Multi-Project Gantt
     // ═══════════════════════════════════════════════════════════════
 
-    const MULTI_LABEL_W = 220;
+    const MULTI_LABEL_W = 240;
     const MULTI_COL_W   = 112;
 
     function getMultiConfig() {
@@ -1052,7 +879,7 @@
       const dayPx      = MULTI_COL_W / daysPerCol;
       const totalPx    = numCols * MULTI_COL_W;
       const lookBack   = isWeek ? Math.floor(numCols / 3) * daysPerCol : daysPerCol;
-      const startIso   = addDays(TODAY, -lookBack + ui.multiOffset);
+      const startIso   = addDays(isWeek ? getWeekStart(TODAY) : TODAY, -lookBack + ui.multiOffset);
       const endIso     = addDays(startIso, numCols * daysPerCol);
       return { isWeek, daysPerCol, numCols, dayPx, totalPx, startIso, endIso };
     }
@@ -1063,34 +890,62 @@
       return Math.round(ms / 86400000 * cfg.dayPx);
     }
 
-    function renderMultiView() {
+    // Meetings by project id ('' = no project), one entry per date (series expanded).
+    function meetingsByProject() {
+      const out = {};
+      (_readMeetings().meetings || []).forEach(m => {
+        if (m.archived) return;
+        const dates = m.recurring ? (m.occurrenceDates || []).map(o => ({ date: o.date, time: o.time }))
+                                  : (m.date ? [{ date: m.date, time: m.time }] : []);
+        dates.forEach(d => (out[m.projectId || ''] = out[m.projectId || ''] || []).push({ id: m.id, title: m.title || 'Meeting', date: d.date, time: d.time || '' }));
+      });
+      return out;
+    }
+
+    // Schedule's own items by project id. Copies of Projects tasks are skipped
+    // when their task is still there: the task row already shows it.
+    function ownItemsByProject(projects) {
+      const known = new Set();
+      projects.forEach(p => { (p.tasks || []).forEach(t => known.add(t.id)); (p.milestones || []).forEach(ms => known.add(ms.id)); });
+      const out = {};
+      filteredItems().forEach(it => {
+        if (it.sourceTool === 'project-hub' && known.has(it.sourceId)) return;
+        (out[it.projectId || ''] = out[it.projectId || ''] || []).push(it);
+      });
+      return out;
+    }
+
+    // One Timeline: every open project with its milestones, tasks, meetings and
+    // Schedule items, plus a "No project" group for the rest.
+    function renderTimeline() {
       const scroll = document.getElementById('multi-gantt-scroll');
       if (!scroll) return;
-
       const cfg = getMultiConfig();
+      document.getElementById('tl-zoom-week').classList.toggle('active', cfg.isWeek);
+      document.getElementById('tl-zoom-month').classList.toggle('active', !cfg.isWeek);
 
-      // Update range label
       const rangeLabel = document.getElementById('multi-range-label');
       if (rangeLabel) {
-        const fmt = iso => isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: cfg.isWeek ? undefined : '2-digit' });
-        rangeLabel.textContent = fmt(cfg.startIso) + ' – ' + fmt(cfg.endIso);
+        const fmt = iso => isoToDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: cfg.isWeek ? undefined : 'numeric' });
+        rangeLabel.textContent = fmt(cfg.startIso) + ' – ' + fmt(addDays(cfg.endIso, -1));
       }
 
-      // Load projects
       let projects = [];
       try { projects = (JSON.parse(localStorage.getItem('project-hub-v1') || '{}').projects || []); } catch {}
-      const visible = projects.filter(p => p.status !== 'done');
+      const meetings = meetingsByProject();
+      const own = ownItemsByProject(projects);
+      const groups = projects.filter(p => p.status !== 'done').map(p => ({ proj: p, id: p.id, name: p.name, color: p.color || 'var(--text3)' }));
+      if ((meetings[''] || []).length || (own[''] || []).length) groups.push({ proj: null, id: '', name: 'No project', color: 'var(--text3)' });
 
-      if (!visible.length) {
+      if (!groups.length) {
         scroll.innerHTML = `<div class="multi-empty">
           <div class="multi-empty-icon">📅</div>
-          <div style="font-weight:600;color:var(--text2)">No active projects yet.</div>
-          <div style="font-size:12px">Add projects in Project Hub — they'll appear here automatically.</div>
+          <div style="font-weight:600;color:var(--text2)">Nothing to show yet.</div>
+          <div style="font-size:12px">Projects, meetings and items with dates appear here.</div>
         </div>`;
         return;
       }
 
-      // Build column headers
       const cols = [];
       for (let i = 0; i < cfg.numCols; i++) {
         const iso = addDays(cfg.startIso, i * cfg.daysPerCol);
@@ -1100,165 +955,149 @@
           : isoToDate(iso).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         cols.push({ iso, label, isToday, x: i * MULTI_COL_W });
       }
-
       const todayX = multiDateX(TODAY, cfg);
       const todayVisible = todayX !== null && todayX >= 0 && todayX <= cfg.totalPx;
+      const inView = x => x !== null && x > -20 && x < cfg.totalPx + 20;
 
-      // Build gantt background (grid cols + today line) — reused in every gantt cell
       function ganttBg(rowH) {
         const bands = cols.map(c =>
-          `<div class="g-col-band" style="left:${c.x}px;width:${MULTI_COL_W}px${c.isToday ? ';background:var(--accent-dim)' : ''}"></div>`
-        ).join('');
+          `<div class="g-col-band${c.isToday ? ' is-today' : ''}" style="left:${c.x}px;width:${MULTI_COL_W}px"></div>`).join('');
         const tl = todayVisible ? `<div class="g-today-line" style="left:${todayX}px;height:${rowH}px"></div>` : '';
         return bands + tl;
       }
-
-      // Header row
-      const hdrColsHTML = cols.map(c =>
-        `<div class="multi-col-hdr${c.isToday ? ' is-today' : ''}" style="width:${MULTI_COL_W}px">${esc(c.label)}</div>`
-      ).join('');
-      let html = `
-        <div class="multi-hdr-row">
-          <div class="multi-hdr-corner">Project / Task</div>
-          ${hdrColsHTML}
+      const row = (cls, label, gantt, h) => `
+        <div class="mrow ${cls}">
+          <div class="mrow-label">${label}</div>
+          <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:${h}px">${ganttBg(h)}${gantt}</div>
         </div>`;
 
-      // Project rows
-      visible.forEach(proj => {
-        const color  = proj.color || 'var(--text3)';
-        const collapsed = ui.collapsedProjects.has(proj.id);
-        const chevron   = collapsed ? '▸' : '▾';
-        const tasks      = (proj.tasks || []).filter(t => t.due && !t.done);
-        const doneTasks  = (proj.tasks || []).filter(t => t.done).length;
-        const noDue      = (proj.tasks || []).filter(t => !t.due && !t.done).length;
-        const milestones = (proj.milestones || []);
-        const openCount  = (proj.tasks || []).filter(t => !t.done).length;
-        const metaParts  = [`${openCount} open`];
-        if (noDue) metaParts.push(`${noDue} no date`);
+      let html = `
+        <div class="multi-hdr-row">
+          <div class="multi-hdr-corner">Project / item</div>
+          ${cols.map(c => `<div class="multi-col-hdr${c.isToday ? ' is-today' : ''}" style="width:${MULTI_COL_W}px">${esc(c.label)}</div>`).join('')}
+        </div>`;
 
-        html += `
-          <div class="mrow mrow-proj">
-            <div class="mrow-label" onclick="toggleProjectCollapse('${esc(proj.id)}')">
-              <span class="proj-chevron">${chevron}</span>
-              <span class="proj-color-bar" style="background:${color}"></span>
-              <span class="proj-name">${esc(proj.name)}</span>
-              <span class="proj-meta">${metaParts.join(' · ')}</span>
-            </div>
-            <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:36px;background:${color}14">
-              ${ganttBg(36)}
-            </div>
-          </div>`;
+      groups.forEach(g => {
+        const p = g.proj;
+        const color = g.color;
+        const collapsed = ui.collapsedProjects.has(g.id || '__none');
+        const tasks = p ? (p.tasks || []).filter(t => t.due && !t.done).sort((a, b) => a.due.localeCompare(b.due)) : [];
+        const milestones = p ? (p.milestones || []).filter(ms => ms.date).sort((a, b) => a.date.localeCompare(b.date)) : [];
+        const items = (own[g.id] || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+        const meets = (meetings[g.id] || []);
+        const openCount = p ? (p.tasks || []).filter(t => !t.done).length : 0;
+        const noDue = p ? (p.tasks || []).filter(t => !t.due && !t.done).length : 0;
+        const upcomingMeets = meets.filter(m => m.date >= TODAY).length;
+        const meta = [];
+        if (p) meta.push(`${openCount} open`);
+        if (noDue) meta.push(`${noDue} undated`);
+        if (upcomingMeets) meta.push(`${upcomingMeets} mtg`);
 
-        if (!collapsed) {
-          // Milestone rows
-          milestones.forEach(ms => {
-            if (!ms.date) return;
-            const x = multiDateX(ms.date, cfg);
-            const inRange = x !== null && x > -20 && x < cfg.totalPx + 20;
-            const markerHTML = inRange
-              ? `<div class="g-diamond${ms.done ? ' is-done' : ''}" style="left:${x}px;background:${color}"></div>`
-              : '';
-            html += `
-              <div class="mrow mrow-item${ms.done ? ' is-done' : ''}">
-                <div class="mrow-label">
-                  <span class="ms-icon" style="color:${color}">◆</span>
-                  <span class="item-label-text">${esc(ms.name || ms.title || 'Milestone')}</span>
-                  <span class="item-due-badge${ms.date < TODAY && !ms.done ? ' overdue' : ''}">${fmtDate(ms.date)}</span>
-                </div>
-                <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:28px">
-                  ${ganttBg(28)}${markerHTML}
-                </div>
-              </div>`;
-          });
+        // Project row: its meetings as ticks on the lane.
+        const ticks = meets.map(m => {
+          const x = multiDateX(m.date, cfg);
+          if (!inView(x)) return '';
+          const tip = `${fmtDate(m.date)}${m.time ? ' ' + m.time : ''} · ${m.title}`;
+          return `<button class="g-meet${m.date < TODAY ? ' past' : ''}" style="left:${x + cfg.dayPx / 2}px" title="${esc(tip)}"
+            onclick="openMeetingPanel('${esc(m.id)}','${m.date}')"></button>`;
+        }).join('');
+        html += row('mrow-proj', `
+            <button class="proj-toggle" onclick="toggleProjectCollapse('${esc(g.id || '__none')}')" aria-expanded="${!collapsed}">
+              <span class="proj-chevron">${collapsed ? '▸' : '▾'}</span>
+              <span class="proj-color-bar" style="background:${esc(color)}"></span>
+              <span class="proj-name">${esc(g.name)}</span>
+              <span class="proj-meta">${meta.join(' · ')}</span>
+            </button>`, `<div class="g-lane" style="background:${esc(color)}"></div>${ticks}`, 38);
 
-          // Task rows (with due dates)
-          tasks.forEach(t => {
-            const x   = multiDateX(t.due, cfg);
-            const inRange = x !== null && x > -50 && x < cfg.totalPx + 20;
-            const barW = Math.max(8, Math.round(cfg.dayPx * 5));
-            const barL = Math.max(0, (x || 0) - barW);
-            const barHTML = inRange
-              ? `<div class="g-bar${t.done ? ' is-done' : ''}" style="left:${barL}px;width:${barW}px;background:${color}"></div>`
-              : '';
-            const overdue = t.due < TODAY && !t.done;
-            html += `
-              <div class="mrow mrow-item${t.done ? ' is-done' : ''}">
-                <div class="mrow-label">
-                  <span style="color:var(--text3);font-size:10px;flex-shrink:0">●</span>
-                  <span class="item-label-text">${esc(t.title)}</span>
-                  <span class="item-due-badge${overdue ? ' overdue' : ''}">${fmtDate(t.due)}</span>
-                </div>
-                <div class="mrow-gantt" style="width:${cfg.totalPx}px;height:28px">
-                  ${ganttBg(28)}${barHTML}
-                </div>
-              </div>`;
-          });
+        if (collapsed) return;
+
+        milestones.forEach(ms => {
+          const x = multiDateX(ms.date, cfg);
+          const mark = inView(x) ? `<div class="g-diamond${ms.done ? ' is-done' : ''}" style="left:${x + cfg.dayPx / 2}px;background:${esc(color)}" title="${esc(fmtDate(ms.date))}"></div>
+            <span class="g-tag" style="left:${x + cfg.dayPx / 2 + 10}px">${esc(ms.name || ms.title || '')}</span>` : '';
+          html += row(`mrow-item${ms.done ? ' is-done' : ''}`, `
+              <span class="ms-icon" style="color:${esc(color)}">◆</span>
+              <span class="item-label-text">${esc(ms.name || ms.title || 'Milestone')}</span>
+              <span class="item-due-badge${ms.date < TODAY && !ms.done ? ' overdue' : ''}">${fmtDate(ms.date)}</span>`, mark, 30);
+        });
+
+        tasks.forEach(t => {
+          const x = multiDateX(t.due, cfg);
+          const end = x === null ? null : x + cfg.dayPx;
+          const barW = Math.max(10, Math.round(cfg.dayPx * 5));
+          const mark = inView(x) ? `<div class="g-bar" style="left:${Math.max(0, end - barW)}px;width:${barW}px;background:${esc(color)}"></div>
+            <div class="g-due" style="left:${end}px;background:${esc(color)}"></div>` : '';
+          html += row('mrow-item', `
+              <span class="task-dot"></span>
+              <span class="item-label-text">${esc(t.title)}</span>
+              <span class="item-due-badge${t.due < TODAY ? ' overdue' : ''}">${fmtDate(t.due)}</span>`, mark, 30);
+        });
+
+        items.forEach(it => {
+          const xs = multiDateX(it.start, cfg), xe = multiDateX(it.end || it.start, cfg);
+          let mark = '';
+          if (it.type === 'milestone') {
+            if (inView(xs)) mark = `<div class="g-diamond${it.done ? ' is-done' : ''}" style="left:${xs + cfg.dayPx / 2}px;background:${esc(it.color)}"></div>`;
+          } else if (xe !== null && xe + cfg.dayPx > 0 && xs < cfg.totalPx) {
+            const l = Math.max(0, xs), w = Math.max(10, xe + cfg.dayPx - l);
+            mark = `<div class="g-bar item${it.done ? ' is-done' : ''}" style="left:${l}px;width:${w}px;background:${esc(it.color)}"></div>`;
+          }
+          html += row(`mrow-item mrow-click${it.done ? ' is-done' : ''}`, `
+              <button class="item-open" onclick="selectAndEdit('${esc(it.id)}')">
+                <span class="task-dot" style="background:${esc(it.color)}"></span>
+                <span class="item-label-text">${esc(it.title || '(untitled)')}</span>
+                <span class="item-due-badge">${fmtDate(it.start)}</span>
+              </button>`, mark, 30);
+        });
+
+        if (!milestones.length && !tasks.length && !items.length) {
+          html += row('mrow-item mrow-empty', `<span class="item-label-text">${meets.length ? 'Only meetings so far' : 'No dated tasks'}</span>`, '', 26);
         }
       });
 
       scroll.innerHTML = html;
-
-      // Scroll so today is roughly 1/3 from the left
-      if (todayVisible) {
-        setTimeout(() => { scroll.scrollLeft = Math.max(0, todayX - cfg.totalPx * 0.28); }, 30);
+      if (todayVisible && !ui.multiOffset) {
+        setTimeout(() => { scroll.scrollLeft = Math.max(0, todayX - scroll.clientWidth * 0.25 + MULTI_LABEL_W); }, 30);
       }
     }
 
     function toggleProjectCollapse(projId) {
       if (ui.collapsedProjects.has(projId)) ui.collapsedProjects.delete(projId);
       else ui.collapsedProjects.add(projId);
-      renderMultiView();
+      renderTimeline();
     }
 
     function multiNav(dir) {
       const cfg = getMultiConfig();
       ui.multiOffset += dir * cfg.daysPerCol * 2;
-      renderMultiView();
+      renderTimeline();
     }
 
     function multiToday() {
       ui.multiOffset = 0;
-      renderMultiView();
+      renderTimeline();
     }
 
-    function toggleMultiZoom() {
-      ui.multiZoom = ui.multiZoom === 'week' ? 'month' : 'week';
+    function setMultiZoom(z) {
+      ui.multiZoom = z;
       ui.multiOffset = 0;
-      const btn = document.getElementById('multi-zoom-btn');
-      if (btn) btn.textContent = ui.multiZoom === 'week' ? 'Month' : 'Week';
-      renderMultiView();
+      renderTimeline();
     }
 
     function render() {
-      renderToolbar();
       if (ui.activeView === 'timeline') renderTimeline();
-      else if (ui.activeView === 'multi') renderMultiView();
       else renderCalendar();
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // View / zoom / filter controls
+    // View controls
     // ═══════════════════════════════════════════════════════════════
     function switchView(view) {
-      ui.activeView = view;
-      document.getElementById('btn-timeline').classList.toggle('active', view === 'timeline');
-      document.getElementById('btn-calendar').classList.toggle('active', view === 'calendar');
-      document.getElementById('btn-multi').classList.toggle('active', view === 'multi');
-      document.getElementById('view-timeline').classList.toggle('view-hidden', view !== 'timeline');
-      document.getElementById('view-calendar').classList.toggle('view-hidden', view !== 'calendar');
-      document.getElementById('view-multi').classList.toggle('view-hidden', view !== 'multi');
-      render();
-      if (view === 'timeline') setTimeout(scrollToToday, 60);
-    }
-
-    function setZoom(z) {
-      ui.zoom = z;
-      render();
-      setTimeout(scrollToToday, 60);
-    }
-
-    function setFilter(type) {
-      ui.filterType = type;
+      ui.activeView = view === 'timeline' ? 'timeline' : 'calendar';
+      document.getElementById('btn-timeline').classList.toggle('active', ui.activeView === 'timeline');
+      document.getElementById('btn-calendar').classList.toggle('active', ui.activeView === 'calendar');
+      document.getElementById('view-timeline').classList.toggle('view-hidden', ui.activeView !== 'timeline');
+      document.getElementById('view-calendar').classList.toggle('view-hidden', ui.activeView !== 'calendar');
       render();
     }
 
@@ -1267,45 +1106,53 @@
     // ═══════════════════════════════════════════════════════════════
     function selectAndEdit(id) {
       ui.selectedId = id;
-      render();
       openDrawer(id);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Scroll to today
-    // ═══════════════════════════════════════════════════════════════
-    function scrollToToday() {
-      const line = document.getElementById('today-line');
-      const scrollEl = document.getElementById('gantt-scroll');
-      if (!line || !scrollEl) return;
-      const lineLeft = parseInt(line.style.left, 10);
-      scrollEl.scrollLeft = Math.max(0, lineLeft - scrollEl.clientWidth / 3);
+    // "t": back to today in the open view.
+    function goToday() {
+      if (ui.activeView === 'timeline') multiToday();
+      else calToday();
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Calendar navigation
     // ═══════════════════════════════════════════════════════════════
     function calNav(dir) {
-      if (ui.calWeekMode) return;
-      ui.calMonth += dir;
-      if (ui.calMonth < 0) { ui.calMonth = 11; ui.calYear--; }
-      if (ui.calMonth > 11) { ui.calMonth = 0; ui.calYear++; }
+      if (ui.calWeekMode) {
+        ui.calWeekStart = addDays(ui.calWeekStart, dir * 7);
+      } else {
+        ui.calMonth += dir;
+        if (ui.calMonth < 0) { ui.calMonth = 11; ui.calYear--; }
+        if (ui.calMonth > 11) { ui.calMonth = 0; ui.calYear++; }
+      }
       renderCalendar();
     }
 
     function calToday() {
       ui.calYear = new Date().getFullYear();
       ui.calMonth = new Date().getMonth();
-      ui.calWeekMode = false;
-      document.getElementById('cal-week-toggle').classList.remove('active');
+      ui.calWeekStart = getWeekStart(TODAY);
       renderCalendar();
     }
 
-    function toggleCalWeek() {
-      ui.calWeekMode = !ui.calWeekMode;
-      document.getElementById('cal-week-toggle').classList.toggle('active', ui.calWeekMode);
+    // Month ⇄ week. The week shown is the one holding today when it is in the
+    // month on screen, else the month's first week; going back picks that week's month.
+    function setCalMode(week) {
+      if (week === ui.calWeekMode) return;
+      if (week) {
+        const first = `${ui.calYear}-${String(ui.calMonth + 1).padStart(2, '0')}-01`;
+        const inMonth = TODAY.slice(0, 7) === first.slice(0, 7);
+        ui.calWeekStart = getWeekStart(inMonth ? TODAY : first);
+      } else {
+        const mid = isoToDate(addDays(ui.calWeekStart, 3));
+        ui.calYear = mid.getFullYear(); ui.calMonth = mid.getMonth();
+      }
+      ui.calWeekMode = week;
       renderCalendar();
     }
+
+    function toggleCalWeek() { setCalMode(!ui.calWeekMode); }
 
     // ═══════════════════════════════════════════════════════════════
     // Drawer
@@ -1437,12 +1284,12 @@
         return;
       }
       if (e.key === 't' && !e.target.closest('input, textarea, select')) {
-        scrollToToday();
+        goToday();
       }
     });
 
     // ═══════════════════════════════════════════════════════════════
-    // Auto-sync imported Project Hub items
+    // Auto-sync imported Projects items
     // ═══════════════════════════════════════════════════════════════
     function syncFromProjectHub() {
       const phData = HubStorage.get('project-hub-v1');
@@ -1482,9 +1329,9 @@
 
     // ═══════════════════════════════════════════════════════════════
     // Meeting panel (P164)
-    // Clicking a meeting used to jump to Meeting Hub, and back again for the
+    // Clicking a meeting used to jump to Meetings, and back again for the
     // next one: Schedule ⇄ Meetings was the most common move in the hub. The
-    // panel shows the meeting here; Meeting Hub stays one click away.
+    // panel shows the meeting here; Meetings stays one click away.
     // ═══════════════════════════════════════════════════════════════
     let _meetingPanel = null; // { id, date }
 
@@ -1585,12 +1432,11 @@
       HubData.onChange(() => {
         _populateProjectSelect();
         syncFromProjectHub();
-        if (ui.activeView === 'multi') renderMultiView();
+        if (ui.activeView === 'timeline') renderTimeline();
       });
     } catch { }
     // Initialize view state (sets view-hidden classes + filter section visibility) then render
     switchView(ui.activeView);
-    setTimeout(scrollToToday, 160);
   </script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

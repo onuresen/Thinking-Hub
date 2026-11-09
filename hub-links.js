@@ -23,10 +23,10 @@ window.HubLinks = (() => {
   const STORAGE_KEY = 'hub-links-v1';
 
   const TOOL_NAMES = {
-    'project-hub': 'Project Hub',
+    'project-hub': 'Projects',
     'schedule': 'Schedule',
     'idea-swiper': 'Idea Swiper',
-    'decision-hub': 'Decision Hub',
+    'decision-hub': 'Decisions',
     'meetings-hub': 'Meetings',
     'goals-hub': 'Goals',
     'risk-hub': 'Risk Register',
@@ -34,7 +34,7 @@ window.HubLinks = (() => {
     'stakeholder-hub': 'Stakeholders',
     'tool-portfolio': 'Tool Portfolio',
     'tags-hub': 'Tags',
-    'signals-hub': 'Signals Hub',
+    'signals-hub': 'Signals',
   };
 
   let _currentTool = null;
@@ -142,7 +142,7 @@ window.HubLinks = (() => {
       if (toolId === 'canvas-hub') {
         const raw = HubStorage.get('canvas-v1');
         if (!raw) return [];
-        // Canvas Hub supports multiple named boards (each board's own
+        // Canvas supports multiple named boards (each board's own
         // {nodes, edges, panX, panY, zoom}); a pre-multi-board save is a
         // flat single-board shape — treat it as one unnamed board.
         const boards = Array.isArray(raw.boards) ? raw.boards : (raw.nodes ? [{ name: '', nodes: raw.nodes }] : []);

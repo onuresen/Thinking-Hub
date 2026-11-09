@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Capture Hub</title>
+  <title>Capture</title>
   <link rel="stylesheet" href="styles/fonts.css">
   <link rel="stylesheet" href="theme.css">
   <style>
@@ -610,12 +610,12 @@ HubBootstrap.start('capture-hub');
 // pick an existing project: Capture never creates a project.
 
 const CATS = {
-  task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Project Hub',   routable: false },
-  question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'Decision Hub',  routable: true  },
+  task:     { label: 'Task',     icon: '✓', dot: 'var(--border-blue)',   chipBg: 'var(--node-blue)',   chipColor: 'var(--border-blue)',   dest: 'Projects',   routable: false },
+  question: { label: 'Question', icon: '?', dot: 'var(--border-purple)', chipBg: 'var(--node-purple)', chipColor: 'var(--border-purple)', dest: 'Decisions',  routable: true  },
   idea:     { label: 'Idea',     icon: '✦', dot: 'var(--border-yellow)', chipBg: 'var(--node-yellow)', chipColor: 'var(--border-yellow)', dest: 'Inbox',         routable: false },
-  decision: { label: 'Decision', icon: '⚖', dot: 'var(--border-green)',  chipBg: 'var(--node-green)',  chipColor: 'var(--border-green)',  dest: 'Decision Hub',  routable: true  },
+  decision: { label: 'Decision', icon: '⚖', dot: 'var(--border-green)',  chipBg: 'var(--node-green)',  chipColor: 'var(--border-green)',  dest: 'Decisions',  routable: true  },
   risk:     { label: 'Risk',     icon: '⚠', dot: 'var(--border-red)',    chipBg: 'var(--node-red)',    chipColor: 'var(--border-red)',    dest: 'Risk Register', routable: true  },
-  learning: { label: 'Learning', icon: '◎', dot: 'var(--accent)',        chipBg: 'var(--accent-dim)',  chipColor: 'var(--accent)',        dest: 'Learning Hub',  routable: true  },
+  learning: { label: 'Learning', icon: '◎', dot: 'var(--accent)',        chipBg: 'var(--accent-dim)',  chipColor: 'var(--accent)',        dest: 'Learning',  routable: true  },
   event:    { label: 'Event',    icon: '◷', dot: 'var(--accent-super)',  chipBg: 'var(--surface3)',    chipColor: 'var(--accent-super)',  dest: 'Inbox',         routable: false },
   note:     { label: 'Note',     icon: '·', dot: 'var(--border2)',       chipBg: 'var(--surface2)',    chipColor: 'var(--text3)',         dest: 'Inbox',         routable: false },
 };
@@ -826,7 +826,7 @@ function routeQuestion(text, ts) {
     const arr = Array.isArray(raw) ? raw : [];
     arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', status: 'pending', type: 'question', tags: [], createdAt: ts });
     HubStorage.set('decision-hub-v1', arr);
-    return 'Decision Hub';
+    return 'Decisions';
   } catch { addToInbox(text, 'question', ts); return 'Inbox'; }
 }
 
@@ -836,7 +836,7 @@ function routeDecision(text, ts) {
     const arr = Array.isArray(raw) ? raw : [];
     arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', status: 'pending', type: 'general', tags: [], createdAt: ts });
     HubStorage.set('decision-hub-v1', arr);
-    return 'Decision Hub';
+    return 'Decisions';
   } catch { addToInbox(text, 'decision', ts); return 'Inbox'; }
 }
 
@@ -856,7 +856,7 @@ function routeLearning(text, ts) {
     if (!Array.isArray(raw.items)) raw.items = [];
     raw.items.push({ id: 'lh-' + Date.now(), title: text, type: 'article', status: 'want', createdAt: ts });
     HubStorage.set('learning-hub-v1', raw);
-    return 'Learning Hub';
+    return 'Learning';
   } catch { addToInbox(text, 'learning', ts); return 'Inbox'; }
 }
 
@@ -1080,8 +1080,8 @@ function openPromote(itemId, btn) {
     <div class="pm-head">Task in a project</div>
     ${projects.length ? projects.slice(0, 30).map(p => opt('project:' + p.id, '✓', p.name || 'Untitled project', likely.includes(p.id) ? 'likely' : '')).join('') : '<div class="pm-none">No active project. Keep it here until one fits.</div>'}
     <div class="pm-head">Somewhere else</div>
-    ${opt('signal', '📡', 'Signal', 'Signals Hub · Mine')}
-    ${opt('decision', '⚖', item.cat === 'question' ? 'Open question' : 'Decision', 'Decision Hub')}
+    ${opt('signal', '📡', 'Signal', 'Signals · Mine')}
+    ${opt('decision', '⚖', item.cat === 'question' ? 'Open question' : 'Decision', 'Decisions')}
     ${opt('risk', '⚠', 'Risk', 'Risk Register')}
     ${opt('learning', '◎', 'Learning', 'Learning Log')}
     ${opt('journal', '📓', "Today's journal", 'Daily Log')}`;

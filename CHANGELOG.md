@@ -7,6 +7,8 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Meetings list groups by **Date** (Today, This week, Next week, Later, then past months, folded) or by **Project**. Each row shows the day, time, length and project color. Past meetings are dimmed.
+- Schedule **Timeline**: every open project with its milestones, tasks, meetings and your own Schedule items, plus a "No project" group.
 - Signals Hub now matches the canonical reading flow: a compact change frame, featured interpretation, relevance/emergence/evidence priorities, natural comments, and **Take forward** as the only command that creates proof work.
 
 - Project Hub Overview has a **Compact** style next to Cards: small tiles in your groups with a progress ring, status, open tasks and what is next, plus a "Jump to" row of groups. Press `/` to search projects and Enter to open the first match.
@@ -20,6 +22,16 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - The Content Security Policy is unchanged: Signals Hub reads files only and sends nothing.
 
 ### Changed
+
+- Tools are named by what they hold: Projects, Meetings, Capture, Journal, People, Stakeholders, Machi, Learning, Canvas, Decisions, Goals, Signals, Help. "Hub" is the app's name only. Links, backups and saved data are unchanged.
+- Meeting page: the header holds title, date, project and people; notes sit on the left, decisions and action items on the right, always open. Repeat, weekly, archive and delete sit at the bottom.
+- Schedule: Calendar and Timeline share one toolbar. Week view moves with ‹ ›. Meetings show their time and project color. Weekend and work-hour shading is quieter.
+- Home: today's meetings are listed by time.
+
+### Removed
+
+- Meetings: the "→ Schedule" button and the "Upcoming from Schedule" box. Schedule already shows every meeting; the button made a second copy. Old copies are hidden while their meeting exists.
+- Schedule: the old Timeline view of Schedule items only. The new Timeline holds them.
 
 - Meeting import (.ics) keeps attendee names only. An attendee listed by email address alone is left out.
 - Capture: a card may show "Likely: project" from project names and your **Project nicknames** (editable in the Inbox). The likely project comes first in Promote. A hint never changes anything.
