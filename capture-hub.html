@@ -824,7 +824,7 @@ function routeQuestion(text, ts) {
   try {
     const raw = HubStorage.get('decision-hub-v1');
     const arr = Array.isArray(raw) ? raw : [];
-    arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', status: 'pending', type: 'question', tags: [], createdAt: ts });
+    arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', type: 'open', tags: [], createdAt: ts });
     HubStorage.set('decision-hub-v1', arr);
     return 'Decisions';
   } catch { addToInbox(text, 'question', ts); return 'Inbox'; }
@@ -834,7 +834,7 @@ function routeDecision(text, ts) {
   try {
     const raw = HubStorage.get('decision-hub-v1');
     const arr = Array.isArray(raw) ? raw : [];
-    arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', status: 'pending', type: 'general', tags: [], createdAt: ts });
+    arr.push({ id: 'dh-' + Date.now(), title: text, summary: '', type: 'decision', tags: [], createdAt: ts });
     HubStorage.set('decision-hub-v1', arr);
     return 'Decisions';
   } catch { addToInbox(text, 'decision', ts); return 'Inbox'; }

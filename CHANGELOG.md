@@ -27,6 +27,15 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - Meeting page: the header holds title, date, project and people; notes sit on the left, decisions and action items on the right, always open. Repeat, weekly, archive and delete sit at the bottom.
 - Schedule: Calendar and Timeline share one toolbar. Week view moves with ‹ ›. Meetings show their time and project color. Weekend and work-hour shading is quieter.
 - Home: today's meetings are listed by time.
+- Home Today has an **In Progress** card: the tasks you marked in progress, high priority first. "Due Today" shows only when something is due.
+- Home "Pending Decisions" is now **Open Questions** and lists only entries of type Open Q.
+
+### Fixed
+
+- Home no longer shows archived tasks as overdue, in My Work, or in a project's open count.
+- Home no longer lists every logged decision as pending.
+- Capture: a question promoted to Decisions is saved as an Open Q, and a decision as a Decision. Before, both got a type the Decisions page did not know.
+- Home cards: a long project name no longer cuts the task title to one word.
 
 ### Removed
 
