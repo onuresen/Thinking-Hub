@@ -959,6 +959,55 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 20: Home Today shows only live work (P185) ──
+  {
+    const page = await ctx.newPage();
+    await page.addInitScript(() => {
+      localStorage.setItem('project-hub-v1', JSON.stringify({
+        projects: [
+          { id: 'p1', name: 'Alpha', status: 'active', color: '#888', tasks: [
+            { id: 't1', title: 'Real overdue', status: 'todo', due: '2020-01-02' },
+            { id: 't2', title: 'Archived overdue', status: 'todo', due: '2020-01-01', archived: true, archivedAt: '2020-02-01T00:00:00.000Z' },
+            { id: 't3', title: 'Working on it', status: 'inprogress', priority: 'medium' },
+            { id: 't4', title: 'Urgent work', status: 'inprogress', priority: 'high' },
+            { id: 't5', title: 'Archived in progress', status: 'inprogress', archived: true, archivedAt: '2020-02-01T00:00:00.000Z' }] },
+          { id: 'p2', name: 'Closed', status: 'done', color: '#888', tasks: [
+            { id: 't6', title: 'Left behind', status: 'inprogress' }] }],
+        members: [],
+      }));
+      localStorage.setItem('decision-hub-v1', JSON.stringify([
+        { id: 'd1', title: 'Logged decision', type: 'decision' },
+        { id: 'd2', title: 'Open question one', type: 'open' },
+        { id: 'd3', title: 'Archived question', type: 'open', archived: true },
+        { id: 'd4', title: 'Captured question', type: 'question', status: 'pending' }]));
+    });
+    await page.goto(`${BASE}/index.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      buildTodayView();
+      buildStatusWidgets();
+      const cards = {};
+      document.querySelectorAll('#today-view .stat-card').forEach((c) => {
+        const t = c.querySelector('.stat-card-title');
+        const n = c.querySelector('.stat-count');
+        if (t) cards[t.textContent.trim()] = { count: n ? n.textContent.trim() : '',
+          rows: [...c.querySelectorAll('.stat-item-text')].map((e) => e.textContent.trim()) };
+      });
+      const proj = [...document.querySelectorAll('#status-grid .stat-item')].find((e) => e.textContent.includes('Alpha'));
+      return { cards, projMeta: proj ? proj.querySelector('.stat-item-meta').textContent.trim() : '' };
+    });
+    const c = r.cards;
+    check('flow20: Overdue leaves archived tasks out',
+      !!c['Overdue'] && c['Overdue'].rows.join('|') === 'Real overdue' && c['Overdue'].count === '1', JSON.stringify(c['Overdue']));
+    check('flow20: In Progress lists live work, high priority first',
+      !!c['In Progress'] && c['In Progress'].rows.join('|') === 'Urgent work|Working on it', JSON.stringify(c['In Progress']));
+    check('flow20: no Due Today card when nothing is due', !c['Due Today'], Object.keys(c).join('|'));
+    check('flow20: Open Questions holds questions only, not logged decisions',
+      !!c['Open Questions'] && c['Open Questions'].rows.join('|') === 'Open question one|Captured question' && !c['Pending Decisions'],
+      JSON.stringify(c['Open Questions'] || Object.keys(c)));
+    check('flow20: Overview counts open tasks without archived ones', r.projMeta.startsWith('3 /'), r.projMeta);
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();

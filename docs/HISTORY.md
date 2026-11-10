@@ -4,6 +4,25 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 185 — Home Today shows only live work~~ ✓ Done `[group: home]`
+Onur (2026-11-10) asked for improvement ideas from his 2026-11-06 backup and picked "Fix Home first". With his data, Home listed 23 overdue tasks (19 archived) and 44 of 50 decisions as pending, and "Due Today" was almost always empty (8 of 69 open tasks have a due date).
+- **Archived tasks are out.** One helper, `homeOpenTasks()`, gives Home its tasks: not done, not archived. Today (In Progress, Due Today, Overdue), My Work, the Projects open count and the blocked count use it or the same rule. Today also skips tasks of a finished project.
+- **In Progress card** on Today: tasks with status in progress, high priority first, then last changed. "Due Today" shows only when something is due.
+- **Open Questions** replaces "Pending Decisions": entries of type Open Q (`open`), not archived.
+- **Capture** saves a promoted question as `type: 'open'` and a decision as `type: 'decision'`. It wrote `question` / `general` with `status: 'pending'`; the Decisions page knows neither, and its Type field turned them into "Decision" on the next save.
+- A long project name beside a title is cut at 42% of the row (`.stat-item > .stat-item-meta`).
+- With the real backup: In Progress 17, Overdue 4, no Open Questions card.
+
+**Key decisions**
+- **Decision:** "pending" is read from `type`, never from `status`. **Why:** the Decisions page has no status field, so a status can never be cleared there; four writers set four different values (none, `open`, `pending`, `decided`). **Alternative:** treat `open` / `pending` status as pending; rejected, such an entry would stay on Home for good. **Revisit when:** Decisions gets a status field. **Confidence:** high.
+- **Decision:** Home still reads `type: 'question'` as an open question. **Why:** entries Capture wrote before this fix keep that type until edited. **Confidence:** high.
+- **Decision:** In Progress shows everyone's tasks, not only Onur's. **Why:** 13 of his 17 are his own; the rest are work he follows. "Me" is a per-browser setting and may be unset. **Revisit when:** delegated tasks crowd the card. **Confidence:** med.
+- **Decision:** the Overview "% complete" still counts archived tasks. **Why:** whether an archived, unfinished task counts as work is a separate question; not asked. **Confidence:** med.
+
+**Verified:** new flow20 (5 checks) fails on the old code and passes now; `npm test`: smoke, all flows, vault-bridge pass. Home rendered with the real 2026-11-06 backup in a headless browser, dark theme: no page errors.
+
+**Files:** `index.html`, `styles/index.css`, `capture-hub.html`, `sw.js` (cache v54), `tests/flows.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 184 — Meetings and Schedule redesign, plain tool names~~ ✓ Done `[group: meetings]`
 Onur (2026-11-06): the meeting list is flat; wanted grouping by date or project, and a UI pass on Meetings and Schedule. Also asked whether "Hub" is used consistently.
 

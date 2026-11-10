@@ -865,6 +865,14 @@
         : (m.date || '').slice(0, 10) === dateStr;
     }
 
+    // P185 — the tasks Home may show: not done and not archived, each with its
+    // project. An archived task is hidden everywhere else, so Home hides it too.
+    function homeOpenTasks(ph) {
+      return ((ph && ph.projects) || []).flatMap(p => (p.tasks || [])
+        .filter(t => !t.done && t.status !== 'done' && !t.archived)
+        .map(t => ({ ...t, _pName: p.name, _pColor: p.color, _pId: p.id, _pStatus: p.status })));
+    }
+
     function buildStatusWidgets() {
       const grid = document.getElementById('status-grid');
       const section = document.getElementById('status-section');
@@ -879,9 +887,7 @@
           const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
           const selfMember = (ph.members || []).find(m => m.id === selfId);
           if (selfMember) {
-            const myOpen = (ph.projects || [])
-              .flatMap(p => (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color, _pId: p.id })))
-              .filter(t => !t.done && t.assigneeId === selfId);
+            const myOpen = homeOpenTasks(ph).filter(t => t.assigneeId === selfId);
             const shown = myOpen.slice(0, 5);
             const { bg, fg } = _avatarColors(selfMember.color);
             const rows = shown.map(t => {
@@ -914,7 +920,7 @@
         if (projects.length) {
           const shown = projects.slice(0, 3);
           const rows = shown.map(p => {
-            const open = (p.tasks || []).filter(t => !t.done).length;
+            const open = (p.tasks || []).filter(t => !t.done && !t.archived).length;
             const all = (p.tasks || []).length;
             return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(p.id || '')}">
           <div class="stat-item-dot" style="background:${p.color || 'var(--text3)'}"></div>
@@ -1933,14 +1939,17 @@
 
       try {
         const ph = JSON.parse(localStorage.getItem('project-hub-v1') || '{}');
-        const allTasks = (ph.projects || []).flatMap(p =>
-          (p.tasks || []).map(t => ({ ...t, _pName: p.name, _pColor: p.color }))
-        );
-        const dueToday = allTasks.filter(t => !t.done && t.due === todayStr);
-        const overdue = allTasks.filter(t => !t.done && t.due && t.due < todayStr)
+        // P185 — live work only: no archived tasks, no tasks of a finished project.
+        const live = homeOpenTasks(ph).filter(t => t._pStatus !== 'done');
+        const prioRank = t => t.priority === 'high' ? 0 : t.priority === 'low' ? 2 : 1;
+        const inProgress = live.filter(t => t.status === 'inprogress')
+          .sort((a, b) => prioRank(a) - prioRank(b) || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+        const dueToday = live.filter(t => t.due === todayStr);
+        const overdue = live.filter(t => t.due && t.due < todayStr)
           .sort((a, b) => a.due.localeCompare(b.due));
-        if (dueToday.length || true) sections.push({ type: 'due-today', items: dueToday });
-        if (overdue.length) sections.push({ type: 'overdue', items: overdue });
+        sections.push({ type: 'in-progress', items: inProgress });
+        sections.push({ type: 'due-today', items: dueToday });
+        sections.push({ type: 'overdue', items: overdue });
       } catch { }
 
       try {
@@ -1956,7 +1965,10 @@
       try {
         const dl = JSON.parse(localStorage.getItem('decision-hub-v1') || '[]');
         const entries = Array.isArray(dl) ? dl : (dl.entries || []);
-        const open = entries.filter(e => !e.status || e.status === 'considering' || e.status === 'revisiting');
+        // P185 — an open question is a Decisions entry of type "Open Q" ('open';
+        // 'question' is what Capture wrote before P185). A logged decision has
+        // no status, so an empty status must not count as pending.
+        const open = entries.filter(e => !e.archived && (e.type === 'open' || e.type === 'question'));
         if (open.length) sections.push({ type: 'decisions', items: open });
       } catch { }
 
@@ -1984,7 +1996,7 @@
         container.innerHTML = `<div class="today-all-clear">
           <div class="today-all-clear-icon">✓</div>
           <div style="font-weight:600;color:var(--text2)">You're all clear for today.</div>
-          <div style="font-size:12px">No tasks due, no meetings, no pending decisions.</div>
+          <div style="font-size:12px">Nothing in progress or due, no meetings, no open questions.</div>
         </div>`;
         return;
       }
@@ -2021,25 +2033,22 @@
 
       sections.forEach(sec => {
         const { type, items } = sec;
-        if (!items.length && type !== 'due-today') return;
+        if (!items.length) return;
 
         let icon, title, urgent = false;
         let rows = '';
 
-        if (type === 'due-today') {
-          icon = '📅'; title = 'Due Today';
-          if (!items.length) {
-            rows = `<div style="color:var(--text3);font-size:12px;padding:4px 0">Nothing due today — clear schedule ✓</div>`;
-          } else {
-            rows = items.slice(0, 5).map(t => {
-              const prio = t.priority === 'high' ? '↑' : t.priority === 'low' ? '↓' : '–';
-              return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id || '')}">
-                <div class="stat-item-dot" style="background:${t._pColor || 'var(--text3)'}"></div>
-                <div class="stat-item-text">${_esc(t.title)}</div>
-                <div class="stat-item-meta">${prio} ${_esc(t._pName)}</div>
-              </div>`;
-            }).join('');
-          }
+        if (type === 'in-progress' || type === 'due-today') {
+          if (type === 'in-progress') { icon = '◐'; title = 'In Progress'; }
+          else { icon = '📅'; title = 'Due Today'; }
+          rows = items.slice(0, 5).map(t => {
+            const prio = t.priority === 'high' ? '↑' : t.priority === 'low' ? '↓' : '–';
+            return `<div class="stat-item" data-tool="project-hub" data-item-id="${_esc(t.id || '')}">
+              <div class="stat-item-dot" style="background:${t._pColor || 'var(--text3)'}"></div>
+              <div class="stat-item-text">${_esc(t.title)}</div>
+              <div class="stat-item-meta">${prio} ${_esc(t._pName)}</div>
+            </div>`;
+          }).join('');
         } else if (type === 'overdue') {
           icon = '⚠'; title = 'Overdue'; urgent = true;
           rows = items.slice(0, 5).map(t => {
@@ -2058,9 +2067,9 @@
             <div class="stat-item-meta">${_esc(m.time || '')}</div>
           </div>`).join('');
         } else if (type === 'decisions') {
-          icon = '◎'; title = 'Pending Decisions';
+          icon = '？'; title = 'Open Questions';
           rows = items.slice(0, 5).map(e => `<div class="stat-item" data-tool="decision-hub" data-item-id="${_esc(e.id || '')}">
-            <span class="stat-badge ${_esc(e.type || 'note')}">${_esc(e.type || 'note')}</span>
+            <div class="stat-item-dot" style="background:var(--accent-super)"></div>
             <div class="stat-item-text">${_esc(e.title || '(untitled)')}</div>
           </div>`).join('');
         }
@@ -2125,7 +2134,7 @@
       const allTasks = projects.flatMap(p => (p.tasks || []).map(t => ({ ...t, _proj: p })));
       const doneTasks = allTasks.filter(t => t.done);
       const projPct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
-      const blockedTasks = allTasks.filter(t => !t.done && t.status === 'blocked');
+      const blockedTasks = allTasks.filter(t => !t.done && !t.archived && t.status === 'blocked');
 
       // ── OKR stats ────────────────────────────────────────────────
       const activeQtrs = (goals.quarters || []).filter(q => !q.archived);

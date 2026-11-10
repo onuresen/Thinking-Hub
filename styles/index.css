@@ -591,6 +591,14 @@
       flex-shrink: 0;
     }
 
+    /* P185: beside a title, a long project name must not squeeze it to one word.
+       Direct child only: Resurface puts its meta on a line of its own. */
+    .stat-item > .stat-item-meta {
+      max-width: 42%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .stat-item[data-item-id] {
       cursor: pointer;
       border-radius: 5px;
