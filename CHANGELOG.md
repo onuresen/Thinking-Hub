@@ -8,6 +8,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 ### Added
 
 - Home Today shows **Current Direction** from the connected vault: the chosen item first, followed by work already in motion. It is read-only and does not create another priority list.
+- Current Direction also shows the current proof status returned to the vault. A completed or parked move stays current until you replace it.
 - Meetings list groups by **Date** (Today, This week, Next week, Later, then past months, folded) or by **Project**. Each row shows the day, time, length and project color. Past meetings are dimmed.
 - Schedule **Timeline**: every open project with its milestones, tasks, meetings and your own Schedule items, plus a "No project" group.
 - Signals Hub now matches the canonical reading flow: a compact change frame, featured interpretation, relevance/emergence/evidence priorities, natural comments, and **Take forward** as the only command that creates proof work.

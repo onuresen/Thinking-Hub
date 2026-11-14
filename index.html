@@ -1455,7 +1455,7 @@
       const rows = [pick, ...inMotion.slice(0, 3)].map(item => `
         <div class="stat-item">
           <div class="stat-item-dot" style="background:${item.state === 'Pick next' ? 'var(--accent)' : 'var(--border-blue)'}"></div>
-          <div class="stat-item-text"><strong>${_esc(item.project)}</strong><br><span style="color:var(--text3)">${_esc(item.next)}</span></div>
+          <div class="stat-item-text"><strong>${_esc(item.project)}</strong>${item.status ? `<br><span style="color:var(--text2)">${_esc(item.status)}</span>` : ''}<br><span style="color:var(--text3)">${_esc(item.next)}</span></div>
           <div class="stat-item-meta">${item.state === 'Pick next' ? 'Chosen' : 'In motion'}</div>
         </div>`).join('');
       card.innerHTML = `

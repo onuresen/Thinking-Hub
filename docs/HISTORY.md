@@ -4,6 +4,19 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 187 — Home shows returned proof status~~ ✓ Done `[group: home]`
+The vault can now apply `direction-system-outcome-v1` to the current row after preview. Thinking Hub already reads that row, so Home now shows its plain current status above the next action.
+- A proving move can say that its proof is in progress.
+- A done move can show the returned judgment and reason.
+- A parked move can show why it stopped.
+- Thinking Hub remains read-only. It does not complete, park or replace the current item.
+
+**Key decision:** keep finished and parked work current until Onur chooses the replacement. **Why:** an outcome is evidence, not permission to choose the next priority. **Alternative:** automatically advance to the next item; rejected because it silently changes direction. **Confidence:** high.
+
+**Verified:** the Vault Bridge fixture parses a current status and Home renders it in the Current Direction card. Full suite passes.
+
+**Files:** `index.html`, `tests/vault-bridge.js`, `sw.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 186 — Home reads the vault's current direction~~ ✓ Done `[group: home]`
 Onur wanted one central place to see current status and choose what to do without reconciling AI sessions. The vault now owns that record in `Now.md`.
 - Home Today reads `Now.md` through the existing local Vault Bridge.

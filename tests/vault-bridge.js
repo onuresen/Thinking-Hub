@@ -133,9 +133,9 @@ const NOW_NOTE = `# Now
 
 ## Pick next
 
-| Work | Why now | Next action | Last checked |
-|---|---|---|---|
-| [[meta/Obsidian-Second-Brain\\|Central direction view]] | One place for current work. | Connect the state to Thinking Hub. | 2026-11-14 |
+| Work | Why now | Current status | Next action | Last checked |
+|---|---|---|---|---|
+| [[meta/Obsidian-Second-Brain\\|Central direction view]] | One place for current work. | Proof in progress. | Connect the state to Thinking Hub. | 2026-11-14 |
 
 ## In motion
 
@@ -264,6 +264,7 @@ const CHANGE_FILES = {
     direction.length === 3
     && direction[0].state === 'Pick next'
     && direction[0].project === 'Central direction view'
+    && direction[0].status === 'Proof in progress.'
     && direction[0].next === 'Connect the state to Thinking Hub.'
     && direction[2].state === 'Waiting', direction);
 
@@ -332,6 +333,7 @@ const CHANGE_FILES = {
   });
   check('Today shows the vault current direction first',
     !!directionCardText && /Central direction view/.test(directionCardText)
+    && /Proof in progress/.test(directionCardText)
     && /Connect the state to Thinking Hub/.test(directionCardText), directionCardText);
 
   // ── review modal: accept / ignore ─────────────────────────────────────────
