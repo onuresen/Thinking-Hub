@@ -34,6 +34,7 @@
  *   HubVaultBridge.status()             — {connected, needsPermission, lastScanAt, ...}
  *   HubVaultBridge.scanDays()           — cheap: unrecorded days
  *   HubVaultBridge.scanDecisions(days)  — deep: proposed decisions from those days
+ *   HubVaultBridge.readCurrentDirection() — read-only current state from Now.md
  *   HubVaultBridge.accept(proposal)     — write one proposal into decision-hub-v1
  *   HubVaultBridge.ignore(proposal)     — never propose this block again
  *   HubVaultBridge.dismissDay(date)     — stop reporting one unrecorded day
@@ -570,6 +571,47 @@ window.HubVaultBridge = (() => {
     return _readNote(rel);
   }
 
+  function parseCurrentDirection(text) {
+    const source = String(text || '');
+    const sections = [];
+    const allowed = new Set(['Pick next', 'In motion', 'Waiting', 'Slow simmer', 'On hold']);
+    const headings = [...source.matchAll(/^##\s+(.+?)\s*\r?$/gm)];
+    headings.forEach((match, index) => {
+      const state = match[1].trim();
+      if (!allowed.has(state)) return;
+      const bodyStart = match.index + match[0].length;
+      const bodyEnd = index + 1 < headings.length ? headings[index + 1].index : source.length;
+      const lines = source.slice(bodyStart, bodyEnd).split(/\r?\n/).filter(line => /^\|.*\|\s*$/.test(line));
+      if (lines.length < 3) return;
+      const cells = line => line.slice(1, line.lastIndexOf('|')).split(/(?<!\\)\|/).map(v => v.trim().replace(/\\\|/g, '|'));
+      const headers = cells(lines[0]).map(v => v.toLowerCase());
+      for (const line of lines.slice(2)) {
+        const values = cells(line);
+        if (!values.length || /^[-: ]+$/.test(values[0])) continue;
+        const row = Object.fromEntries(headers.map((h, i) => [h, values[i] || '']));
+        const link = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/.exec(row.work || row.project || '');
+        const clean = value => String(value || '')
+          .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, path, label) => label || path.split('/').pop())
+          .replace(/[*_`]/g, '').trim();
+        sections.push({
+          state,
+          project: clean(row.work || row.project),
+          path: link ? link[1] : '',
+          why: clean(row['why now']),
+          status: clean(row['current status'] || row.status || row['waiting for']),
+          next: clean(row['next action'] || row['next action when picked'] || row['resume when']),
+          checked: clean(row['last checked']),
+        });
+      }
+    });
+    return sections;
+  }
+
+  async function readCurrentDirection() {
+    const text = await readNote('Now.md');
+    return text ? parseCurrentDirection(text) : [];
+  }
+
   let _noteList = null;
   /** Every .md path in the vault (names only, no reads). Cached per page. */
   async function listNotes() {
@@ -795,7 +837,7 @@ window.HubVaultBridge = (() => {
   return {
     isSupported, init, connect, reconnect, status, getState,
     scanDays, scanDecisions, accept, ignore, dismissDay, setDailyFolder,
-    readNote, listNotes, normNotePath, parseChecklist, parseMeetingNote,
+    readNote, readCurrentDirection, parseCurrentDirection, listNotes, normNotePath, parseChecklist, parseMeetingNote,
     itemKey, markSeen, isSeen, normTitle: _normTitle,
     markChangeSet,
     parseNote, // exported for tests

@@ -1442,6 +1442,32 @@
     // own scan at least once; the 'permission' prompt is exempt since it doesn't
     // depend on scan freshness.
     let _vaultBridgeScannedThisSession = false;
+    let _currentDirection = [];
+
+    function buildCurrentDirectionCard(items) {
+      const pick = (items || []).find(item => item.state === 'Pick next');
+      const inMotion = (items || []).filter(item => item.state === 'In motion');
+      if (!pick) return null;
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.style.borderColor = 'var(--accent)';
+      card.style.cursor = 'default';
+      const rows = [pick, ...inMotion.slice(0, 3)].map(item => `
+        <div class="stat-item">
+          <div class="stat-item-dot" style="background:${item.state === 'Pick next' ? 'var(--accent)' : 'var(--border-blue)'}"></div>
+          <div class="stat-item-text"><strong>${_esc(item.project)}</strong><br><span style="color:var(--text3)">${_esc(item.next)}</span></div>
+          <div class="stat-item-meta">${item.state === 'Pick next' ? 'Chosen' : 'In motion'}</div>
+        </div>`).join('');
+      card.innerHTML = `
+        <div class="stat-card-header">
+          <span class="stat-card-icon">→</span>
+          <span class="stat-card-title">Current Direction</span>
+          <span class="stat-count">${pick.checked ? _esc(pick.checked) : 'live'}</span>
+        </div>
+        <div class="stat-card-body">${rows}</div>
+        <div class="stat-card-footer"><span>Chosen work comes first</span><span>${inMotion.length} in motion</span></div>`;
+      return card;
+    }
 
     function _vaultBridgeSummary() {
       if (typeof HubVaultBridge === 'undefined' || !HubVaultBridge.isSupported()) {
@@ -1479,6 +1505,7 @@
           <div class="stat-card-footer"><span></span><span>Reconnect vault →</span></div>`;
         card.addEventListener('click', async () => {
           const ok = await HubVaultBridge.reconnect();
+          _currentDirection = ok ? await HubVaultBridge.readCurrentDirection() : [];
           showToast(ok ? 'Vault reconnected' : 'Vault access not granted', ok ? 'success' : 'error');
           buildTodayView();
         });
@@ -1990,7 +2017,7 @@
 
       const resurface = buildResurfaceItems();
       const vaultGap = _vaultBridgeSummary();
-      const hasContent = sections.some(s => s.items.length > 0) || resurface.length
+      const hasContent = sections.some(s => s.items.length > 0) || _currentDirection.length || resurface.length
         || thisWeekRocks.length || vaultGap.show;
       if (!hasContent) {
         container.innerHTML = `<div class="today-all-clear">
@@ -2003,6 +2030,9 @@
 
       const grid = document.createElement('div');
       grid.className = 'status-grid';
+
+      const directionCard = buildCurrentDirectionCard(_currentDirection);
+      if (directionCard) grid.appendChild(directionCard);
 
       // B7 — Calibration nudge strip (≥3 decisions unscored and past revisit)
       if (calibrationDueCount >= 3) {
@@ -2395,6 +2425,7 @@
 
     async function vbConnect() {
       const ok = await HubVaultBridge.connect();
+      _currentDirection = ok ? await HubVaultBridge.readCurrentDirection() : [];
       showToast(ok ? 'Vault connected' : 'No vault folder selected', ok ? 'success' : 'error');
       updateVaultBridgeUI();
       buildTodayView();
@@ -2408,6 +2439,7 @@
       } else {
         await HubVaultBridge.scanDays();
       }
+      _currentDirection = await HubVaultBridge.readCurrentDirection();
       const n = (HubVaultBridge.getState().unrecordedDays || []).length;
       showToast(n ? `${n} unrecorded day${n !== 1 ? 's' : ''} found` : 'Hub is up to date with your vault', 'success');
       updateVaultBridgeUI();
@@ -2723,6 +2755,7 @@
       if (typeof HubVaultBridge === 'undefined' || !HubVaultBridge.isSupported()) return;
       try {
         await HubVaultBridge.init();
+        _currentDirection = await HubVaultBridge.readCurrentDirection();
       } catch (e) { console.warn('[VaultBridge] init:', e); }
       _vaultBridgeScannedThisSession = true;
       if (document.getElementById('today-view')) buildTodayView();

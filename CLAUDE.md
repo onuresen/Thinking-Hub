@@ -47,7 +47,7 @@ Shared modules and other files:
 | `hub-tags.js` | Tag registry + `TAG_SOURCES` (every tool with `tags`) + `attachTagInput` chip input |
 | `hub-search.js` | Cmd+K search + quick actions (`task:`, `capture:`, `decide:`, `focus`) |
 | `hub-obsidian.js` | Vault index for note autocomplete |
-| `hub-vault-bridge.js` | Vault Bridge (P104): persisted vault handle, unrecorded-day scan, decision-block parser, propose/accept queue, applied change-file record (`changeSets`) |
+| `hub-vault-bridge.js` | Vault Bridge (P104, P186): persisted vault handle, read-only `Now.md` current direction, unrecorded-day scan, decision-block parser, propose/accept queue, applied change-file record (`changeSets`) |
 | `hub-changes.js` | Change files (P163): status + apply of a pass on top of live data. No DOM; the review modal is in `index.html`. Opened only from Settings → Data → Apply changes (P169) |
 | `hub-vault-notes.js` | Linked-note review dialog (P138) for Projects + Meetings |
 | `hub-snapshots.js` | Daily IndexedDB snapshots of all localStorage + restore |
@@ -165,6 +165,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 - **Lean (P152–P157, Onur 2026-10-06):** keep code and flows lean. Prefer removing a surface over adding one. Keep the AI layer and Journal/Schedule hubs for now.
 - **Delete the code, keep the data** for one release, then retire the keys with a snapshot (P157 pattern).
 - **Propose, never auto-import** anything parsed from vault prose (P104, P138).
+- **Current direction has one owner (P186).** `Now.md` owns the chosen item and next actions. Home reads it through the local Vault Bridge and never writes a second priority list.
 - **Passes arrive as change files (P163).** Never hand Onur a full backup to import for a pass; Import Backup replaces everything and is for restore. Build files with esen-vault `scripts/hub_changes.py`. They live in the private repo `esen-inbox`; Onur applies them by hand (Settings → Data → Apply changes). No Home card, no folder scan (P169). Status logic lives in `hub-changes.js` and that script; change both together.
 - **Backups go to GitHub only encrypted (P168).** "Export encrypted" → private repo `esen-inbox` → `hub_changes.py decrypt` into the scratchpad. The envelope format lives in `index.html` and that script; change both together.
 - **Tool names are plain nouns (P184).** "Hub" is the app's name only: Projects, Meetings, Capture, Journal, People, Stakeholders, Machi, Learning, Canvas, Decisions, Goals, Signals, Help. Names that already say what the tool is stay (Schedule, Dependency Graph, Tool Portfolio, Idea Swiper, Risk Register, Profile, Tags). Only labels changed: file names, tool ids (`project-hub`…) and storage keys keep `-hub`, because links and backups use them. A new tool gets a plain noun.

@@ -129,6 +129,27 @@ title: ${D_OLD}
 `,
 };
 
+const NOW_NOTE = `# Now
+
+## Pick next
+
+| Work | Why now | Next action | Last checked |
+|---|---|---|---|
+| [[meta/Obsidian-Second-Brain\\|Central direction view]] | One place for current work. | Connect the state to Thinking Hub. | 2026-11-14 |
+
+## In motion
+
+| Work | Current status | Next action | Last checked |
+|---|---|---|---|
+| [[projects/Signals-Hub\\|Signals Hub]] | Reading ready. | Judge the latest reading. | 2026-11-14 |
+
+## Waiting
+
+| Work | Waiting for | Resume when | Last checked |
+|---|---|---|---|
+| [[projects/Town-Reboot\\|Town Reboot]] | Data key. | The key arrives. | 2026-11-14 |
+`;
+
 // ── change files (P163) ──────────────────────────────────────────────────────
 // Seeded right before the change-file checks; ids are what the files aim at.
 const CH_SEED = {
@@ -195,7 +216,7 @@ const CHANGE_FILES = {
 
   // Fake vault: <root>/daily/<year>/*.md — mirrors a real Obsidian layout.
   // A hub-changes/ folder with files stays in it: since P169 nothing may read it.
-  await page.addInitScript(({ notes, changeFiles }) => {
+  await page.addInitScript(({ notes, changeFiles, nowNote }) => {
     const fileHandle = (name, text) => ({
       kind: 'file', name, getFile: async () => ({ text: async () => text }),
     });
@@ -219,8 +240,8 @@ const CHANGE_FILES = {
     const year = dirHandle('2026', notes, {});
     const daily = dirHandle('daily', {}, { 2026: year });
     const changes = dirHandle('hub-changes', changeFiles, {});
-    window.showDirectoryPicker = async () => dirHandle('vault', { 'README.md': '# vault' }, { daily, 'hub-changes': changes });
-  }, { notes: NOTES, changeFiles: CHANGE_FILES });
+    window.showDirectoryPicker = async () => dirHandle('vault', { 'README.md': '# vault', 'Now.md': nowNote }, { daily, 'hub-changes': changes });
+  }, { notes: NOTES, changeFiles: CHANGE_FILES, nowNote: NOW_NOTE });
 
   await page.goto(`http://localhost:${port}/index.html`, { waitUntil: 'networkidle' });
 
@@ -237,6 +258,14 @@ const CHANGE_FILES = {
 
   const status = await page.evaluate(() => HubVaultBridge.status());
   check('status reports connected', status.connected === true && status.needsPermission === false);
+
+  const direction = await page.evaluate(() => HubVaultBridge.readCurrentDirection());
+  check('current direction reads the chosen, active and waiting rows',
+    direction.length === 3
+    && direction[0].state === 'Pick next'
+    && direction[0].project === 'Central direction view'
+    && direction[0].next === 'Connect the state to Thinking Hub.'
+    && direction[2].state === 'Waiting', direction);
 
   const days = await page.evaluate(() => HubVaultBridge.getState().unrecordedDays);
   check('cheap scan reports days the vault has and the hub does not',
@@ -296,6 +325,14 @@ const CHANGE_FILES = {
     return c ? c.textContent.replace(/\s+/g, ' ').trim() : null;
   });
   check('Today surfaces the gap', !!cardText && /no record of/.test(cardText));
+  const directionCardText = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('#today-view .stat-card')]
+      .find((el) => el.textContent.includes('Current Direction'));
+    return c ? c.textContent.replace(/\s+/g, ' ').trim() : null;
+  });
+  check('Today shows the vault current direction first',
+    !!directionCardText && /Central direction view/.test(directionCardText)
+    && /Connect the state to Thinking Hub/.test(directionCardText), directionCardText);
 
   // ── review modal: accept / ignore ─────────────────────────────────────────
   await page.evaluate(() => openVaultReview());

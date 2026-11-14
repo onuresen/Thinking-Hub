@@ -4,6 +4,21 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 186 — Home reads the vault's current direction~~ ✓ Done `[group: home]`
+Onur wanted one central place to see current status and choose what to do without reconciling AI sessions. The vault now owns that record in `Now.md`.
+- Home Today reads `Now.md` through the existing local Vault Bridge.
+- **Current Direction** shows the chosen item first and up to three items already in motion.
+- Waiting, slow-simmer and on-hold work stay out of the recommendation card.
+- The card is read-only. Thinking Hub does not store or infer a second priority list.
+
+**Key decisions**
+- **Decision:** `Now.md` owns current direction; Thinking Hub is a view. **Why:** two editable priority lists would drift. **Alternative:** copy the state into `project-hub-v1`; rejected because it would need reconciliation. **Confidence:** high.
+- **Decision:** reuse the local Vault Bridge. **Why:** it already holds the user-approved folder handle and preserves the no-cloud boundary. **Alternative:** add a new file picker or sync service; rejected as duplicated access and extra setup. **Confidence:** high.
+
+**Verified:** Vault Bridge tests cover the `Now.md` parser and the Home card through a fake local vault. Full suite passes.
+
+**Files:** `hub-vault-bridge.js`, `index.html`, `tests/vault-bridge.js`, `sw.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 185 — Home Today shows only live work~~ ✓ Done `[group: home]`
 Onur (2026-11-10) asked for improvement ideas from his 2026-11-06 backup and picked "Fix Home first". With his data, Home listed 23 overdue tasks (19 archived) and 44 of 50 decisions as pending, and "Due Today" was almost always empty (8 of 69 open tasks have a due date).
 - **Archived tasks are out.** One helper, `homeOpenTasks()`, gives Home its tasks: not done, not archived. Today (In Progress, Due Today, Overdue), My Work, the Projects open count and the blocked count use it or the same rule. Today also skips tasks of a finished project.
