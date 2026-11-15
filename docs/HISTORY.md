@@ -4,6 +4,9 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### Rule change 2026-11-15 — P168 "backups go to GitHub only encrypted" removed
+Onur (2026-11-15) dropped the rule. Plain JSON exports in the private `esen-inbox` repo are fine. The "Export encrypted" feature stays. If it changes, its envelope format in `index.html` and `hub_changes.py decrypt` still change together.
+
 ### ~~Priority 187 — Home shows returned proof status~~ ✓ Done `[group: home]`
 The vault can now apply `direction-system-outcome-v1` to the current row after preview. Thinking Hub already reads that row, so Home now shows its plain current status above the next action.
 - A proving move can say that its proof is in progress.
