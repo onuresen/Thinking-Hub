@@ -97,6 +97,26 @@
     .motifs { margin: 13px 0 0; padding: 10px 12px; border-left: 2px solid var(--border2); color: var(--text2); font-size: 12px; line-height: 1.55; }
     .motifs span { display: block; }
     .memory-empty { grid-column: 1 / -1; }
+    .atlas-caveat { margin-top: 12px; padding: 9px 11px; border-left: 2px solid var(--accent); color: var(--text3); background: var(--surface2); font-size: 11.5px; line-height: 1.5; }
+    .change-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 18px; }
+    .change-card { padding: 16px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+    .change-card h2 { margin: 7px 0 5px; font-size: 16px; }
+    .change-card p { margin: 0; color: var(--text3); font-size: 11.5px; line-height: 1.45; }
+    .word-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+    .word { padding: 5px 9px; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); background: var(--surface2); font-size: 11.5px; }
+    .myth-section { margin-top: 28px; }
+    .myth-section-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 12px; }
+    .myth-section-head h2 { font-size: 21px; }
+    .myth-section-head p { margin: 4px 0 0; color: var(--text3); font-size: 12px; }
+    .myth-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 10px; }
+    .myth-card { padding: 17px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+    .myth-card.kept { border-color: var(--accent-glow); background: var(--accent-dim); }
+    .myth-symbol { font-size: 24px; }
+    .myth-card h3 { margin: 8px 0 5px; font: 700 16px var(--font-display); }
+    .myth-card p { min-height: 36px; margin: 0; color: var(--text2); font-size: 12px; line-height: 1.5; }
+    .myth-evidence { margin-top: 10px; color: var(--text3); font: 10px var(--font-mono); }
+    .myth-action { margin-top: 12px; border: 0; padding: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 11.5px; }
+    .myth-action:hover { text-decoration: underline; }
     @media (max-width: 900px) { .topbar { flex-wrap: wrap; } .room-nav { order: 2; width: 100%; margin-left: 0; overflow-x: auto; } .room-btn { flex: 1; } }
     @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } main { width: min(100% - 20px, 1120px); padding-top: 20px; } .capture, .return, .memory-hero { padding: 17px; } .subtitle { display: none; } .movement { grid-template-columns: 50px minmax(0, 1fr); } }
     @media (prefers-reduced-motion: reduce) { .curio { transition: none; } }
@@ -112,6 +132,7 @@
       <button class="room-btn" type="button" data-room="echoes">Echoes</button>
       <button class="room-btn" type="button" data-room="museum">Museum</button>
       <button class="room-btn" type="button" data-room="symphony">Unfinished Symphony</button>
+      <button class="room-btn" type="button" data-room="atlas">Inner Atlas</button>
     </nav>
   </header>
 
@@ -178,6 +199,20 @@
         <p class="intro">Resting, incubating and long-quiet projects appear here without becoming obligations. Revisit only when a motif calls you back.</p>
       </div>
       <div class="memory-grid" id="symphony-grid"></div>
+    </section>
+
+    <section class="room" id="room-atlas" hidden>
+      <div class="memory-hero">
+        <div class="eyebrow">The Inner Atlas</div>
+        <h1>What changed in me?</h1>
+        <p class="intro">A local comparison of language from two seasons of your own writing. These are patterns to consider, never conclusions about who you are.</p>
+        <div class="atlas-caveat">Only dated Cabinet fragments, Journal entries and Decisions count. The recent season is the last 120 days; missing history produces no claim.</div>
+      </div>
+      <div id="change-reading"></div>
+      <section class="myth-section">
+        <div class="myth-section-head"><div><h2>Personal mythology</h2><p>Possible motifs recurring across your work and reflections. You decide what is personally true.</p></div></div>
+        <div class="myth-grid" id="myth-grid"></div>
+      </section>
     </section>
   </main>
 
@@ -251,6 +286,98 @@
       for (const ch of String(value || '')) { hash ^= ch.charCodeAt(0); hash = Math.imul(hash, 16777619); }
       return (hash >>> 0) / 4294967295;
     }
+
+    const ATLAS_STOP = new Set(['the','and','that','this','with','from','have','into','your','what','when','where','were','been','being','will','would','could','should','about','there','their','them','then','than','also','just','more','some','only','work','project','today','keep','made','does','need','still','over','under','after','before']);
+    function atlasWords(text) {
+      return (String(text || '').toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}-]{2,}/gu) || []).filter(word => !ATLAS_STOP.has(word));
+    }
+    function countWords(documents) {
+      const counts = new Map();
+      documents.forEach(document => new Set(atlasWords(document.text)).forEach(word => counts.set(word, (counts.get(word) || 0) + 1)));
+      return counts;
+    }
+    function topWords(counts, predicate, limit = 7) {
+      return [...counts.entries()].filter(([word, count]) => count >= 2 && (!predicate || predicate(word, count)))
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([word]) => word);
+    }
+
+    function changeReading() {
+      const documents = memoryArchive().filter(item => item.date);
+      const recent = documents.filter(item => { const age = daysAgo(item.date); return age !== null && age >= 0 && age <= 120; });
+      const older = documents.filter(item => { const age = daysAgo(item.date); return age !== null && age > 120; });
+      if (recent.length < 2 || older.length < 2) return { enough: false, recent: recent.length, older: older.length, emerging: [], enduring: [], earlier: [] };
+      const now = countWords(recent), then = countWords(older);
+      return {
+        enough: true, recent: recent.length, older: older.length,
+        emerging: topWords(now, word => !then.has(word)),
+        enduring: topWords(now, word => then.has(word)),
+        earlier: topWords(then, word => !now.has(word)),
+      };
+    }
+
+    const MYTH_MOTIFS = [
+      { id: 'thresholds', icon: '🚪', label: 'Doors and thresholds', words: ['door','doors','threshold','thresholds','gate','gates','entry','crossing'], text: 'Beginnings, crossings and the moment before entering.' },
+      { id: 'maps', icon: '🗺', label: 'Maps and paths', words: ['map','maps','path','paths','road','roads','journey','direction','atlas'], text: 'Finding orientation while leaving room to wander.' },
+      { id: 'light', icon: '✦', label: 'Light and stars', words: ['light','lights','star','stars','constellation','lantern','bright','moon','sun'], text: 'Illumination, distance and small guides in darkness.' },
+      { id: 'gardens', icon: '🌱', label: 'Gardens and growth', words: ['garden','gardens','grow','growing','growth','seed','seeds','tree','trees','bloom'], text: 'Ideas as living things with their own seasons.' },
+      { id: 'building', icon: '🏗', label: 'Building and making', words: ['build','building','make','making','craft','construct','shape','material'], text: 'Identity expressed through shaping things into existence.' },
+      { id: 'worlds', icon: '🏙', label: 'Worlds and cities', words: ['world','worlds','city','cities','town','machi','place','places','home'], text: 'Systems imagined as places that can be inhabited.' },
+      { id: 'bridges', icon: '🌉', label: 'Bridges and connections', words: ['bridge','bridges','connect','connection','connections','link','links','between'], text: 'Joining people, ideas and systems without erasing difference.' },
+      { id: 'memory', icon: '◌', label: 'Memory and echoes', words: ['memory','memories','echo','echoes','past','remember','return','again'], text: 'The past returning as material rather than obligation.' },
+      { id: 'seasons', icon: '◐', label: 'Weather and seasons', words: ['weather','season','seasons','rain','snow','wind','mist','climate','storm'], text: 'Change understood as conditions, not judgment.' },
+    ];
+
+    function mythologyDocuments() {
+      const docs = memoryArchive().map(item => ({ text: item.text, kind: item.kind }));
+      projectState().forEach(project => docs.push({ text: [project.name, project.desc, project.group, ...(project.tags || [])].filter(Boolean).join(' '), kind: 'Project' }));
+      return docs.filter(document => document.text.trim());
+    }
+    function mythologySuggestions() {
+      const docs = mythologyDocuments();
+      return MYTH_MOTIFS.map(motif => {
+        const hits = docs.filter(document => motif.words.some(word => atlasWords(document.text).includes(word)));
+        return { ...motif, count: hits.length, sources: [...new Set(hits.map(hit => hit.kind))] };
+      }).filter(motif => motif.count >= 2).sort((a, b) => b.sources.length - a.sources.length || b.count - a.count || a.label.localeCompare(b.label)).slice(0, 6);
+    }
+    function keptMythology() { return Array.isArray(state.mythology) ? state.mythology : []; }
+
+    function renderChangeReading() {
+      const reading = changeReading();
+      const target = document.getElementById('change-reading');
+      if (!reading.enough) {
+        target.innerHTML = `<div class="empty" style="margin-top:18px">Not enough dated material in both seasons yet.<br>${reading.older} older · ${reading.recent} recent. Nothing is inferred.</div>`;
+        return;
+      }
+      const cards = [
+        { eyebrow: 'More present now', title: 'Newly recurring language', words: reading.emerging, text: 'Words appearing across recent records but not the older season.' },
+        { eyebrow: 'Through both seasons', title: 'Enduring language', words: reading.enduring, text: 'Words that continue to return across time.' },
+        { eyebrow: 'More present before', title: 'Earlier language', words: reading.earlier, text: 'Words recurring in the older season but not recently. They are not lost.' },
+      ];
+      target.innerHTML = `<div class="change-grid">${cards.map(card => `<article class="change-card"><div class="eyebrow">${card.eyebrow}</div><h2>${card.title}</h2><p>${card.text}</p><div class="word-cloud">${card.words.length ? card.words.map(word => `<span class="word">${escapeHtml(word)}</span>`).join('') : '<span class="word">No strong signal</span>'}</div></article>`).join('')}</div>`;
+    }
+
+    function renderMythology() {
+      const grid = document.getElementById('myth-grid');
+      const suggestions = mythologySuggestions();
+      const kept = keptMythology();
+      const byId = new Map(MYTH_MOTIFS.map(motif => [motif.id, motif]));
+      const visible = [];
+      kept.forEach(record => { const base = byId.get(record.id); if (base) visible.push({ ...base, kept: true, count: 0, sources: [] }); });
+      suggestions.forEach(suggestion => { if (!visible.some(item => item.id === suggestion.id)) visible.push({ ...suggestion, kept: false }); else Object.assign(visible.find(item => item.id === suggestion.id), suggestion, { kept: true }); });
+      grid.innerHTML = visible.length ? visible.map(motif => `<article class="myth-card${motif.kept ? ' kept' : ''}"><div class="myth-symbol">${motif.icon}</div><h3>${escapeHtml(motif.label)}</h3><p>${escapeHtml(motif.text)}</p>${motif.count ? `<div class="myth-evidence">Seen in ${motif.count} records · ${escapeHtml(motif.sources.join(', '))}</div>` : '<div class="myth-evidence">Part of your mythology</div>'}<button class="myth-action" type="button" onclick="toggleMyth('${motif.id}')">${motif.kept ? 'Let it drift' : 'This feels true'}</button></article>`).join('') : '<div class="empty memory-empty">No motif repeats strongly enough yet. This room will grow from what already exists.</div>';
+    }
+
+    function toggleMyth(id) {
+      const motif = MYTH_MOTIFS.find(item => item.id === id);
+      if (!motif) return;
+      state.mythology = keptMythology();
+      const existing = state.mythology.findIndex(item => item.id === id);
+      if (existing >= 0) state.mythology.splice(existing, 1);
+      else { const record = { id, label: motif.label }; HubUtils.stampCreate(record); HubUtils.stampUpdate(record); state.mythology.push(record); }
+      saveState(); renderMythology();
+    }
+
+    function renderAtlas() { renderChangeReading(); renderMythology(); }
 
     function memoryArchive() {
       const archive = state.items.map(item => ({ id: item.id, kind: 'Curiosity', text: item.text, date: memoryDate(item.createdAt), tool: 'cabinet-hub' }));
@@ -356,12 +483,13 @@
     }
 
     function switchRoom(room) {
-      activeRoom = ['cabinet', 'echoes', 'museum', 'symphony'].includes(room) ? room : 'cabinet';
+      activeRoom = ['cabinet', 'echoes', 'museum', 'symphony', 'atlas'].includes(room) ? room : 'cabinet';
       document.querySelectorAll('.room').forEach(section => { section.hidden = section.id !== 'room-' + activeRoom; });
       document.querySelectorAll('.room-btn').forEach(button => button.classList.toggle('active', button.dataset.room === activeRoom));
       if (activeRoom === 'echoes') renderEchoes();
       if (activeRoom === 'museum') renderMuseum();
       if (activeRoom === 'symphony') renderSymphony();
+      if (activeRoom === 'atlas') renderAtlas();
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
 

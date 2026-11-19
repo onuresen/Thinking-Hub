@@ -80,6 +80,6 @@ A private collection of recurring places, symbols, characters, phrases, values a
 4. **Museum Mode + The Unfinished Symphony** — implemented as two respectful, read-only rooms in the same Memory House (P193).
 5. **Tiny Rituals + Machi Festivals** — implemented (P194): three optional Journal gestures can join Schedule observances and project completions as temporary Machi celebrations.
 6. **Project Creatures** — implemented in the Constellation (P195), derived from existing identity, weather and history with no care mechanics.
-7. **“What changed in me?” + Personal Mythology** — grow slowly from accumulated evidence and voluntary reflection.
+7. **“What changed in me?” + Personal Mythology** — implemented as Inner Atlas in the Memory House (P196), using dated local evidence and optional reversible motif confirmation.
 
 The order is a starting path, not a promise. Each experiment should be reviewed on three questions: Did it feel alive? Did it reuse what was already known? Did it reduce rather than increase the user's maintenance burden?

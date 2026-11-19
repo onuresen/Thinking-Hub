@@ -4,6 +4,19 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 196 — Inner Atlas: What changed in me? + Personal Mythology~~ ✓ Done `[group: learning]`
+Memory House now includes an Inner Atlas room. “What changed in me?” compares document-level recurring language across an older season and the most recent 120 days, using only dated Cabinet fragments, Journal entries and Decisions. It shows newly recurring, enduring and earlier language, or refuses to infer when either season has fewer than two records. Personal Mythology detects a small fixed vocabulary of poetic motifs across those sources plus Projects; motifs need at least two supporting records and remain suggestions until the user optionally chooses “This feels true.” Confirmations are reversible and live in backed-up `cabinet-v1`.
+
+**Key decisions**
+- **Decision:** comparison is local, lexical and evidence-visible rather than AI-generated interpretation. **Why:** a private identity reflection should not create API egress or pretend to diagnose personal change. **Alternative:** ask an AI provider to narrate a transformation; rejected because it would be more authoritative-sounding than the evidence supports. **Confidence:** high.
+- **Decision:** require at least two dated records in both seasons and say “not enough” otherwise. **Why:** missing or sparse history must not become a fabricated story. **Confidence:** high.
+- **Decision:** mythology uses transparent recurring motif dictionaries and requires recurrence across records. **Why:** suggestions should be understandable and stable rather than mysterious personality labels. **Confidence:** high.
+- **Decision:** “This feels true” is optional and reversible, with no review queue or completion state. **Why:** the system may suggest a symbol, but only the user can make it personally true. **Confidence:** high.
+
+**Verified:** flow27 covers evidence thresholds, recent/older comparison, multi-source motifs, optional confirmation, backup persistence, reversal and no automatic writing on view.
+
+**Files:** `cabinet-hub.html`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `docs/CREATIVE-DIRECTIONS.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 195 — Project Creatures~~ ✓ Done `[group: projects]`
 Every open project now has a stable creature companion in Constellation. Species comes deterministically from project identity; new companion, familiar companion and old soul stages come from existing task and reached-milestone history; motion comes from Project Weather. The creature appears beside its star and in a small garden below the sky.
 

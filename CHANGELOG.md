@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added Inner Atlas to the Memory House: a cautious local language comparison and optional, reversible Personal Mythology motifs grounded in recurring evidence.
 - Added optional Tiny Rituals in Journal, automatic observance and ritual festivals in Machi, and maintenance-free Project Creatures in Constellation.
 - Expanded Cabinet into a read-only Memory House with daily Echoes, Museum mode for completed work, and an Unfinished Symphony for intentionally resting or long-quiet projects.
 - Added a Projects Constellation view and derived Project Weather, using existing activity and relationships without introducing new maintenance fields or negative goal-line pressure.

@@ -1283,6 +1283,60 @@ function startServer() {
     await projects.close();
   }
 
+  // ── Flow 27: Inner Atlas uses evidence and leaves truth to the user (P196) ──
+  {
+    const page = await ctx.newPage();
+    await page.addInitScript(() => {
+      localStorage.setItem('cabinet-v1', JSON.stringify({ items: [
+        { id: 'old-1', text: 'A bridge and map for crossing the threshold', createdAt: '2025-01-02T00:00:00.000Z' },
+        { id: 'new-1', text: 'A lantern under a field of stars', createdAt: '2026-11-01T00:00:00.000Z' },
+      ] }));
+      localStorage.setItem('log-hub-v1', JSON.stringify({ entries: {
+        '2025-02-03': { text: 'The old map crossed another bridge and path.' },
+        '2026-10-20': { text: 'Light from the stars reached the garden.' },
+      } }));
+      localStorage.setItem('decision-hub-v1', JSON.stringify([
+        { id: 'old-d', title: 'Choose the path across the bridge', createdAt: '2025-03-01T00:00:00.000Z' },
+        { id: 'new-d', title: 'Keep the lantern light near the stars', createdAt: '2026-10-25T00:00:00.000Z' },
+      ]));
+      localStorage.setItem('project-hub-v1', JSON.stringify({ members: [], concepts: [], projects: [{ id: 'p', name: 'Starlight Garden', status: 'active', tags: ['stars', 'light'], desc: 'A lantern for new growth', tasks: [], milestones: [], members: [] }] }));
+    });
+    await page.goto(`${BASE}/cabinet-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const before = JSON.stringify(HubStorage.get('cabinet-v1'));
+      switchRoom('atlas');
+      const reading = changeReading();
+      const suggestions = mythologySuggestions();
+      const afterView = JSON.stringify(HubStorage.get('cabinet-v1'));
+      toggleMyth('light');
+      const kept = HubStorage.get('cabinet-v1').mythology;
+      const keptText = document.getElementById('myth-grid').textContent;
+      toggleMyth('light');
+      const removed = HubStorage.get('cabinet-v1').mythology;
+      return { reading, suggestions, unchangedOnView: before === afterView, kept, keptText, removed, room: activeRoom };
+    });
+    check('flow27: What changed in me compares two evidenced seasons and finds recent language',
+      r.reading.enough && r.reading.recent === 3 && r.reading.older === 3
+      && r.reading.emerging.includes('lantern') && r.reading.emerging.includes('stars') && r.reading.earlier.includes('bridge'), JSON.stringify(r.reading));
+    check('flow27: Personal Mythology requires recurrence and shows transparent multi-source evidence',
+      r.suggestions.some(motif => motif.id === 'light' && motif.count >= 3 && motif.sources.length >= 3), JSON.stringify(r.suggestions));
+    check('flow27: opening Inner Atlas writes nothing; truth confirmation is optional and reversible',
+      r.unchangedOnView && r.room === 'atlas' && r.kept.length === 1 && r.kept[0].createdAt
+      && /Part of your mythology|Let it drift/.test(r.keptText) && r.removed.length === 0, JSON.stringify(r));
+    await page.close();
+
+    const sparse = await ctx.newPage();
+    await sparse.addInitScript(() => {
+      localStorage.setItem('cabinet-v1', JSON.stringify({ items: [{ id: 'only', text: 'one thought', createdAt: '2026-11-01T00:00:00.000Z' }] }));
+      localStorage.setItem('log-hub-v1', JSON.stringify({ entries: {} }));
+      localStorage.setItem('decision-hub-v1', JSON.stringify([]));
+    });
+    await sparse.goto(`${BASE}/cabinet-hub.html`, { waitUntil: 'load' });
+    const honest = await sparse.evaluate(() => { switchRoom('atlas'); return { reading: changeReading(), text: document.getElementById('change-reading').textContent }; });
+    check('flow27: sparse history produces an honest no-inference state', !honest.reading.enough && /Not enough|Nothing is inferred/.test(honest.text), JSON.stringify(honest));
+    await sparse.close();
+  }
+
 
   await browser.close();
   server.close();

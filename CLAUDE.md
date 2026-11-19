@@ -24,7 +24,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `tool-portfolio.html` | Tool directory: radar ring, Freshness × Mastery matrix, own icon upload |
 | `town-hub.html` | Machi — pixel city from hub data. Fun, not insight (see below) |
 | `learning-hub.html` | Reading & learning log |
-| `cabinet-hub.html` | Memory House: Cabinet captures curious fragments without processing pressure (P191); Echoes returns existing Cabinet, Journal and Decision material; Museum remembers completed projects/milestones; Unfinished Symphony presents resting and long-quiet work without debt (P193) |
+| `cabinet-hub.html` | Memory House: Cabinet captures curious fragments without processing pressure (P191); Echoes returns existing Cabinet, Journal and Decision material; Museum remembers completed projects/milestones; Unfinished Symphony presents resting and long-quiet work without debt (P193); Inner Atlas compares dated language and suggests optional, reversible Personal Mythology motifs (P196) |
 | `idea-swiper.html` | Swipe triage of ideas |
 | `canvas-hub.html` | Canvas — boards, live cards, frames, layers, color key. See "Canvas" below |
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
@@ -90,7 +90,7 @@ When JS modules inject `<style>` blocks (hub-links.js, hub-search.js, hub-tutori
 
 
 ## localStorage keys (source of truth)
-Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals readings, news, comments, choices and Mine signals; the morning run reads this state too), `cabinet-v1` (curious fragments and optional source links).
+Backed up (`SCOPE_KEYS.full` in `index.html`): `project-hub-v1`, `goals-hub-v1`, `decision-hub-v1`, `review-hub-v1`, `risk-hub-v1`, `meetings-hub-v1`, `assumptions-hub-v1`, `schedule-v1`, `learning-hub-v1`, `matrix-hub-v1` (no UI since P155, data kept), `stakeholder-hub-v1`, `focus-hub-v1`, `log-hub-v1`, `canvas-v1`, `ideaswipe_history_v6`, `hub-links-v1`, `hub-activity-v1`, `hub-settings-v1` (API key stripped on export), `tool-portfolio-v1`, `hub-tags-v1`, `capture-hub-v1`, `people-hub-v1`, `hub-vault-bridge-v1` (its `seen` map dedupes imports and `changeSets` records applied change files, so it must be backed up), `signals-hub-v1` (Signals readings, news, comments, choices and Mine signals; the morning run reads this state too), `cabinet-v1` (curious fragments, optional source links and user-confirmed mythology motifs).
 
 Not backed up (ephemeral UI state): `hub-session-v1`, `th-theme`, `tutorial-seen-v1`, `quick-tour-seen-v1`, `hub-resurface-v1`, `hub-last-backup-v1`, `hub-briefing-v1`, `ai-drawer-pos-v1`, `machi-milestones-v1`.
 
