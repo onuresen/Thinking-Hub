@@ -29,7 +29,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
 | `goals-hub.html` | OKRs by quarter |
 | `risk-hub.html` | Risk register + heat map |
-| `signals-hub.html` | Signals (P175–P177, P183): Radar, Library, Brief from morning readings and news, and **Mine**. Natural comments steer later readings; **Take forward** is the explicit Prove boundary. Writes comments, choices and active signals to `state/hub-state.json`. No server, no fetch |
+| `signals-hub.html` | Signals (P175–P177, P183, P189): Today, Library, Brief from morning readings and news, and **Mine**. Today preserves the canonical reading's World, My projects and New ideas groups behind compact doors without copying engine tools. Natural comments steer later readings; **Take forward** is the explicit Prove boundary. Writes comments, choices and active signals to `state/hub-state.json`. No server, no fetch |
 | `achievements-hub.html` | Profile (identity) + achievements |
 | `tags-hub.html` | Central tag registry: rename, merge, delete everywhere |
 | `help-hub.html` | Help: tool cards, framework reference, workflows |

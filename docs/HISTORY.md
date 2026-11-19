@@ -4,6 +4,20 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 189 — Full Signals reading without engine complexity~~ ✓ Done `[group: integrations]`
+Thinking Hub now preserves the canonical reading's three groups instead of silently dropping the richer November 14 fields. Today opens World, My projects and New ideas through three compact disclosure doors; Brief carries the same groups in its page and Markdown output. Existing reading frame, featured interpretation, Library, Mine, comments and Take forward remain intact.
+
+The import version advances so a linked folder can replace an older partial copy of the same reading. World retains news, companies, solutions and trends; My projects retains per-project verdicts and feedback; New ideas retains initiatives that sit outside current projects. Citations are still limited to known request or web evidence.
+
+**Key decisions**
+- **Decision:** show the three reading groups inside Today rather than add three permanent top-level places. **Why:** the separation survives, but navigation and required attention do not grow. **Alternative:** copy Personal Lab's World, My projects and New ideas tabs and their subnavigation; rejected because Thinking Hub would duplicate the engine's operational complexity. **Confidence:** high.
+- **Decision:** Personal Lab continues to own Prove, Projects configuration, Focus, Partners, Topics, Map, Evolution and the Experiment picker. **Why:** Thinking Hub is the portable reading and reflection surface, not a second engine. **Confidence:** high.
+- **Decision:** preserve richer fields locally but keep comments and Take forward as the only interactions. **Why:** reading more context must not create more feedback homework. **Confidence:** high.
+
+**Verified:** flow12 covers rich import, the three compact doors, Brief page and Markdown output, citations, comments and Take forward. Full suite passes.
+
+**Files:** `signals-hub.html`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 188 — Schedule layers and project attention states~~ ✓ Done `[group: schedule]`
 Schedule can hold work and personal time without flattening them into one task list. Items are Commitments, Personal plans, Observances, Goal lines or Focus windows; each layer can be hidden independently. New items require only a title and date, with time, project, notes, color and completion under Optional details. Legacy Task, Milestone and Event records appear as Commitments without migration.
 

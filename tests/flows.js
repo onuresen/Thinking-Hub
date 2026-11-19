@@ -575,10 +575,19 @@ function startServer() {
     await page.goto(`${BASE}/signals-hub.html`, { waitUntil: 'load' });
     const imported = await page.evaluate(async () => {
       const request = { schema: 'signals-hub-review-request-v1', id: 'req-2026-11-08-abc', createdAt: '2026-11-08T22:45:00Z',
-        evidence: [{ id: 'item:1', title: 'IFC check tools gain AI', url: 'https://a.example/1', source: 'A', date: '2026-11-07' }] };
+        evidence: [{ id: 'item:1', title: 'IFC check tools gain AI', url: 'https://a.example/1', source: 'A', date: '2026-11-07' }],
+        projects: [{ projectId: 'p1', name: 'CDI' }] };
       const review = { schema: 'signals-hub-review-v1', requestId: 'req-2026-11-08-abc', reviewer: 'Claude Code (morning run)',
         weekPlan: 'Do one thing.', followUps: [],
         newEvidence: [{ id: 'web:1', title: 'Vendor blog', url: 'https://b.example/2', source: 'B', date: '2026-11-08', summary: '' }],
+        continuity: [],
+        news: [{ headline: 'Checks move earlier', whyItMatters: 'Teams can catch issues sooner.', lenses: ['technology-method'], citations: ['item:1'], projectIds: ['p1'] }],
+        companies: [{ name: 'Speckle', kind: 'vendor', whatChanged: 'Added checking.', whyWatch: 'It may shift workflows.', citations: ['web:1'], projectIds: ['p1'] }],
+        solutions: [{ name: 'Ontology checker', organization: 'Example Org', whatItDoes: 'Checks mappings.', stage: 'announced', citations: ['web:1'], projectIds: ['p1'] }],
+        trends: [{ title: 'Checks move into tools', direction: 'rising', note: 'Two sources point this way.', citations: ['item:1', 'web:1'] }],
+        projectReadings: [{ projectId: 'p1', verdict: 'extends', note: 'This extends CDI.', nextStep: 'Compare the workflow.', citations: ['item:1'] }],
+        feedback: [{ title: 'Keep the scope narrow', observation: 'The wider story is not proven.', suggestion: 'Test one workflow.', lenses: ['risk-counter-signal'], citations: ['item:1'], projectIds: ['p1'] }],
+        ideas: [{ title: 'Small-firm checker', pitch: 'A simpler checking service.', whyNow: 'Tools are changing.', whoNeedsIt: 'Small firms', buildsOn: 'CDI', firstProof: 'Interview three firms.', killIf: 'No repeated need.', citations: ['web:1'] }],
         insights: [{ headline: 'Checking is the bottleneck', summary: 's', citations: ['item:1', 'web:1', 'item:404'] }],
         directions: [{ title: 'Ask a vendor about rules', kind: 'reach-out', by: '2026-11-20', whyNow: 'w', firstStep: 'f',
           draft: 'Hello', citations: ['web:1'] }] };
@@ -595,9 +604,16 @@ function startServer() {
       library: document.querySelectorAll('#place-library .item').length,
       brief: /Your choices/.test(document.querySelector('#place-brief .paper').textContent),
       featured: /Worth your attention/.test(document.querySelector('#place-radar .featured').textContent),
+      doors: [...document.querySelectorAll('#place-radar .reading-door h3')].map((e) => e.textContent),
+      rich: (() => { const r = SignalsHubTool.data.readings[0]; return [r.worldNews.length, r.companies.length, r.solutions.length, r.trends.length, r.projectReadings.length, r.feedback.length, r.ideas.length]; })(),
+      briefGroups: ['World', 'My projects', 'New ideas'].every((x) => document.querySelector('#place-brief .paper').textContent.includes(x)),
+      markdownGroups: ['## World', '## My projects', '## New ideas'].every((x) => SignalsHubTool.briefMarkdown(SignalsHubTool.data.readings[0]).includes(x)),
     }));
-    check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources === 3 && shown.missing, JSON.stringify(shown));
+    check('flow12: lead insight and its sources shown; unknown citation left out', shown.lead === 'Checking is the bottleneck' && shown.sources >= 3 && shown.missing, JSON.stringify(shown));
     check('flow12: radar, featured reading, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief && shown.featured, JSON.stringify(shown));
+    check('flow12: richer reading fields survive import behind three compact doors',
+      shown.doors.join('|') === 'World|My projects|New ideas' && shown.rich.every((n) => n === 1), JSON.stringify(shown));
+    check('flow12: Brief carries World, My projects and New ideas in the page and Markdown', shown.briefGroups && shown.markdownGroups, JSON.stringify(shown));
     const follow = page.locator('.move-card [data-tap="take-forward"]').first();
     await follow.scrollIntoViewIfNeeded();
     const box = await follow.boundingBox();

@@ -17,9 +17,11 @@
     files Claude's morning run writes (readings and news), natural comments and
     explicit Take forward decisions.
 
-    Four places: Radar (the week at a glance), Library (everything collected),
+    Four places: Today (the week at a glance), Library (everything collected),
     Brief (one page to read, print or copy) and Mine (P177: Onur's own signals,
-    observations he watches, with links to hub items and Claude's notes).
+    observations he watches, with links to hub items and Claude's notes). Today
+    keeps the engine's World, My projects and New ideas reading groups behind
+    three compact doors rather than copying its operational screens.
 
     Data in: a linked folder (read on every open, like the vault folder) or
     files imported by hand. Data out: a state file written into the linked
@@ -82,6 +84,26 @@
     .featured-grid > div + div { padding-left: 15px; border-left: 1px solid var(--border); }
     .featured-grid b { display: block; margin-bottom: 6px; color: var(--text3); font: 700 9px var(--font-mono); text-transform: uppercase; }
     .featured-grid p { color: var(--text2); font-size: 12px; line-height: 1.5; }
+    .reading-doors { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 18px; }
+    .reading-door { border:1px solid var(--border); border-radius:var(--r); background:var(--surface); overflow:hidden; }
+    .reading-door[open] { grid-column:1/-1; }
+    .reading-door summary { display:grid; grid-template-columns:1fr auto; gap:5px 14px; padding:16px 18px; cursor:pointer; list-style:none; }
+    .reading-door summary::-webkit-details-marker { display:none; }
+    .reading-door summary:hover { background:var(--surface2); }
+    .reading-door summary .mono { grid-column:1; }
+    .reading-door summary h3 { grid-column:1; font:600 18px/1.2 var(--font-display); }
+    .reading-door summary p { grid-column:1; color:var(--text3); font-size:11.5px; line-height:1.45; }
+    .reading-door summary .door-count { grid-column:2; grid-row:1/4; align-self:center; color:var(--text3); font:600 11px var(--font-mono); }
+    .door-body { padding:0 18px 18px; border-top:1px solid var(--border); }
+    .door-section { margin-top:16px; }
+    .door-section > h4 { margin-bottom:8px; color:var(--text3); font:700 10px var(--font-mono); letter-spacing:.08em; text-transform:uppercase; }
+    .door-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .door-item { padding:11px 12px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); }
+    .door-item h5 { font-size:13px; line-height:1.35; }
+    .door-item p { margin-top:5px; color:var(--text2); font-size:11.5px; line-height:1.5; }
+    .door-item .meta { margin-bottom:5px; color:var(--text3); font:600 9px var(--font-mono); text-transform:uppercase; }
+    .door-item .taps { margin-top:8px; }
+    .door-empty { color:var(--text3); font-size:12px; padding-top:14px; }
     .method-note { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .method-note summary { color: var(--text3); font-size: 11px; cursor: pointer; }
     .method-note p { margin-top: 8px; color: var(--text3); font-size: 11px; line-height: 1.5; }
@@ -309,7 +331,8 @@
       .rail { position: static; }
       .paper { padding: 28px 22px; }
       .hero h1 { font-size: 26px; }
-      .reading-snapshot, .featured-grid { grid-template-columns: 1fr 1fr; }
+      .reading-snapshot, .featured-grid, .reading-doors, .door-list { grid-template-columns: 1fr; }
+      .reading-door[open] { grid-column:1/-1; }
     }
     @media print {
       html, body { overflow: visible; height: auto; background: var(--surface); }
@@ -324,7 +347,7 @@
   <div class="topbar">
     <div class="logo-mark" aria-hidden="true">📡</div>
     <div class="logo-text">Signals</div>
-    <button class="place on" data-place="radar" type="button">Radar</button>
+    <button class="place on" data-place="radar" type="button">Today</button>
     <button class="place" data-place="library" type="button">Library</button>
     <button class="place" data-place="brief" type="button">Brief</button>
     <button class="place" data-place="mine" type="button">Mine</button>
@@ -350,7 +373,7 @@
   (() => {
     'use strict';
     const KEY = 'signals-hub-v1';
-    const READING_VERSION = 2;
+    const READING_VERSION = 3;
     const esc = (s) => HubUtils.esc(s == null ? '' : String(s));
     const KEEP_READINGS = 8;
     const NEWS_DAYS = 45;
@@ -421,6 +444,15 @@
         (x.projectIds || []).forEach(touch);
         return { ...x, citations: keep(x.citations) };
       });
+      const cited = (rows, projectKey) => (rows || []).map((x) => {
+        const ids = projectKey ? (x[projectKey] || []) : [];
+        ids.forEach(touch);
+        return { ...x, citations: keep(x.citations) };
+      });
+      const projectReadings = (review.projectReadings || []).map((x) => {
+        touch(x.projectId);
+        return { ...x, citations: keep(x.citations) };
+      });
       data.readings.push({
         v: READING_VERSION, requestId: review.requestId, reviewer: review.reviewer || '',
         createdAt: (request && request.createdAt) || '', importedAt: new Date().toISOString(),
@@ -428,6 +460,14 @@
         weekPlan: review.weekPlan || '', followUps: review.followUps || [],
         signalNotes: (review.signalNotes || []).map((n) => ({ signalId: n.signalId, verdict: n.verdict, note: n.note || '', citations: keep(n.citations) }))
           .filter((n) => n.citations.length),
+        continuity: cited(review.continuity),
+        worldNews: cited(review.news, 'projectIds'),
+        companies: cited(review.companies, 'projectIds'),
+        solutions: cited(review.solutions, 'projectIds'),
+        trends: cited(review.trends),
+        projectReadings,
+        feedback: cited(review.feedback, 'projectIds'),
+        ideas: cited(review.ideas),
         insights, directions, docs, projects, missing, hasRequest: !!request,
       });
       data.readings.sort((a, b) => (b.createdAt || b.requestId).localeCompare(a.createdAt || a.requestId));
@@ -668,6 +708,8 @@
     const dayOf = (r) => (r.createdAt ? HubUtils.isoToLocalDay(r.createdAt) : r.requestId.slice(4, 14));
     const kindOf = (move) => move.kind || ((/\((build|reach-out|test|watch)\b/.exec(move.title || '') || [])[1] || '');
     const byOf = (move) => move.by || ((/(?:by|again) (\d{4}-\d{2}-\d{2})\)/.exec(move.title || '') || [])[1] || '');
+    const contactOf = (move) => typeof move.contact === 'string' ? move.contact
+      : move.contact && [move.contact.organization, move.contact.person, move.contact.why].filter(Boolean).join(' · ');
     function sources(reading, ids, numbered) {
       const rows = (ids || []).map((id) => [id, reading.docs[id]]).filter(([, d]) => d);
       if (!rows.length) return '';
@@ -751,7 +793,7 @@
       const details = [
         move.whyNow && `<p><b>Why now.</b> ${esc(move.whyNow)}</p>`,
         move.deliverable && `<p><b>What.</b> ${esc(move.deliverable)}</p>`,
-        move.contact && `<p><b>Who.</b> ${esc(move.contact)}</p>`,
+        contactOf(move) && `<p><b>Who.</b> ${esc(contactOf(move))}</p>`,
         move.draft && `<div class="draft">${esc(move.draft)}</div><div class="taps"><button class="reason" type="button" data-copy="${index}">Copy draft</button></div>`,
         move.wouldChangeMind && `<p><b>Would change the call.</b> ${esc(move.wouldChangeMind)}</p>`,
         sources(reading, move.citations),
@@ -867,6 +909,51 @@
         </div><div class="taps"><button class="reason" type="button" data-comment-kind="insight" data-comment-ref="${esc(reading.requestId + ':' + i)}" data-comment-title="${esc(x.headline)}">💬 Comment</button></div></article>`;
     }
 
+    // The desktop engine writes one reading in three groups. Thinking Hub keeps
+    // them as compact doors on Today instead of copying the engine's many tools.
+    function readingDoors(reading) {
+      const worldNews = reading.worldNews || [], companies = reading.companies || [];
+      const solutions = reading.solutions || [], trends = reading.trends || [];
+      const projectReadings = reading.projectReadings || [], feedback = reading.feedback || [];
+      const ideas = reading.ideas || [];
+      const projectMoves = reading.directions.map((x, i) => ({ x, i })).filter(({ x }) => (x.projectIds || []).length);
+      const ideaMoves = reading.directions.map((x, i) => ({ x, i })).filter(({ x }) => !(x.projectIds || []).length);
+      const comment = (kind, ref, title) => `<button class="reason" type="button" data-comment-kind="${kind}" data-comment-ref="${esc(ref)}" data-comment-title="${esc(title)}">💬 Comment</button>`;
+      const item = (kind, ref, title, body, meta, citations, extra) => `<article class="door-item">
+        ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}<h5>${esc(title)}</h5>${body ? `<p>${esc(body)}</p>` : ''}${extra || ''}
+        ${sources(reading, citations)}<div class="taps">${comment(kind, ref, title)}</div></article>`;
+      const list = (title, rows, empty) => `<section class="door-section"><h4>${esc(title)}</h4>${rows.length ? `<div class="door-list">${rows.join('')}</div>` : `<p class="door-empty">${esc(empty)}</p>`}</section>`;
+      const door = (key, title, question, count, body) => `<details class="reading-door" data-reading-door="${key}"><summary>
+        <span class="mono">This reading</span><h3>${title}</h3><p>${question}</p><span class="door-count">${count}</span></summary><div class="door-body">${body}</div></details>`;
+
+      const worldBody = [
+        list('News', worldNews.map((x, i) => item('news', `${reading.requestId}:news:${i}`, x.headline, x.whyItMatters, '', x.citations)), 'No news item passed the bar in this reading.'),
+        list('Companies', companies.map((x, i) => item('company', `${reading.requestId}:company:${i}`, x.name, x.whatChanged, x.kind, x.citations, x.whyWatch ? `<p><b>Why watch.</b> ${esc(x.whyWatch)}</p>` : '')), 'No company change was singled out.'),
+        list('Solutions and methods', solutions.map((x, i) => item('solution', `${reading.requestId}:solution:${i}`, x.name, x.whatItDoes, [x.organization, x.stage].filter(Boolean).join(' · '), x.citations)), 'No solution was singled out.'),
+        list('Trends', trends.map((x, i) => item('trend', `${reading.requestId}:trend:${i}`, x.title, x.note, x.direction, x.citations)), 'No multi-source trend was identified.'),
+        list('Patterns across sources', reading.insights.map((x, i) => item('insight', `${reading.requestId}:${i}`, x.headline, x.summary, x.confidence ? `${x.confidence} confidence` : '', x.citations)), 'No cross-source pattern was identified.'),
+      ].join('');
+
+      const projectBody = [
+        list('Project readings', projectReadings.map((x, i) => item('project', `${reading.requestId}:project:${x.projectId || i}`, reading.projects[x.projectId] || x.projectId, x.note, x.verdict, x.citations, x.nextStep ? `<p><b>Next step.</b> ${esc(x.nextStep)}</p>` : '')), 'No project received its own reading.'),
+        list('Feedback on your direction', feedback.map((x, i) => item('feedback', `${reading.requestId}:feedback:${i}`, x.title, x.observation, (x.projectIds || []).map((id) => reading.projects[id] || id).join(' · '), x.citations, x.suggestion ? `<p><b>Suggestion.</b> ${esc(x.suggestion)}</p>` : '')), 'No separate feedback this time.'),
+        list('Possible actions', projectMoves.map(({ x, i }) => `<article class="door-item"><div class="meta">${(x.projectIds || []).map((id) => esc(reading.projects[id] || id)).join(' · ')}</div><h5>${esc(x.title)}</h5><p>${esc(x.firstStep || x.whyNow || '')}</p><div class="taps"><button class="reason" type="button" data-go="move-${i}">Open action</button></div></article>`), 'No project action was suggested.'),
+      ].join('');
+
+      const ideasBody = [
+        list('Possible new initiatives', ideas.map((x, i) => item('idea', `${reading.requestId}:idea:${i}`, x.title, x.pitch, x.whoNeedsIt ? `For ${x.whoNeedsIt}` : '', x.citations,
+          [x.whyNow && `<p><b>Why now.</b> ${esc(x.whyNow)}</p>`, x.firstProof && `<p><b>Smallest proof.</b> ${esc(x.firstProof)}</p>`, x.killIf && `<p><b>Stop if.</b> ${esc(x.killIf)}</p>`].filter(Boolean).join(''))), 'No new idea passed the bar. That is a valid reading.'),
+        list('Actions beyond current projects', ideaMoves.map(({ x, i }) => `<article class="door-item"><h5>${esc(x.title)}</h5><p>${esc(x.firstStep || x.whyNow || '')}</p><div class="taps"><button class="reason" type="button" data-go="move-${i}">Open action</button></div></article>`), 'No action outside current projects was suggested.'),
+      ].join('');
+
+      const worldCount = worldNews.length + companies.length + solutions.length + trends.length + reading.insights.length;
+      return `<div class="reading-doors">
+        ${door('world', 'World', 'What is happening outside?', worldCount || '—', worldBody)}
+        ${door('projects', 'My projects', 'What does it mean for your work?', projectReadings.length + feedback.length + projectMoves.length || '—', projectBody)}
+        ${door('ideas', 'New ideas', 'What could you start?', ideas.length + ideaMoves.length || '—', ideasBody)}
+      </div>`;
+    }
+
     function renderRadar() {
       const view = document.getElementById('place-radar');
       const reading = current();
@@ -892,7 +979,7 @@
             <div class="row">${folderButtons()}</div>
           </div>
         </section>
-        ${readingFrame(reading)}${featuredReading(reading)}
+        ${readingFrame(reading)}${readingDoors(reading)}${featuredReading(reading)}
         <section class="grid">
           <div class="col">
             <div class="panel card radar">${section('Radar', 'you in the middle · broader evidence closer · new directions on the horizon')}
@@ -1062,6 +1149,18 @@
         <div class="meta">${x.confidence ? `${esc(x.confidence)} confidence` : ''}${(x.projects || []).length ? ' · ' + (x.projects || []).map((p) => esc(reading.projects[p.projectId] || p.projectId)).join(', ') : ''}</div>
         ${x.firstStep ? `<div class="try"><b>Try:</b> ${esc(x.firstStep)}</div>` : ''}
       </div></div>`).join('');
+      const briefRows = (rows) => rows.length ? `<ul class="b-list">${rows.map((x) => `<li><b>${esc(x.title)}</b>${x.meta ? ` <span class="m">· ${esc(x.meta)}</span>` : ''}${x.body ? ` — ${esc(x.body)}` : ''}${sup(x.citations)}</li>`).join('')}</ul>` : '<ul class="b-list"><li>Nothing singled out in this reading.</li></ul>';
+      const worldRows = [
+        ...(reading.worldNews || []).map((x) => ({ title: x.headline, body: x.whyItMatters, citations: x.citations })),
+        ...(reading.companies || []).map((x) => ({ title: x.name, body: x.whatChanged, meta: x.kind, citations: x.citations })),
+        ...(reading.solutions || []).map((x) => ({ title: x.name, body: x.whatItDoes, meta: [x.organization, x.stage].filter(Boolean).join(' · '), citations: x.citations })),
+        ...(reading.trends || []).map((x) => ({ title: x.title, body: x.note, meta: x.direction, citations: x.citations })),
+      ];
+      const projectRows = [
+        ...(reading.projectReadings || []).map((x) => ({ title: reading.projects[x.projectId] || x.projectId, body: [x.note, x.nextStep && `Next: ${x.nextStep}`].filter(Boolean).join(' '), meta: x.verdict, citations: x.citations })),
+        ...(reading.feedback || []).map((x) => ({ title: x.title, body: [x.observation, x.suggestion].filter(Boolean).join(' '), citations: x.citations })),
+      ];
+      const ideaRows = (reading.ideas || []).map((x) => ({ title: x.title, body: [x.pitch, x.firstProof && `Smallest proof: ${x.firstProof}`].filter(Boolean).join(' '), citations: x.citations }));
       const callList = (title, rows) => `<div><h4>${title}</h4>${rows.length ? `<ul>${rows.map((r) => `<li>${esc(r.title)}${r.reason ? ` <span class="m">(${esc(r.reason)})</span>` : ''}</li>`).join('')}</ul>` : '<ul><li>—</li></ul>'}</div>`;
       view.innerHTML = `
         <div class="brief-bar"><div><div class="mono">Brief</div><p>One page from Claude's reading, your comments and explicit choices. Nothing to fill in.</p></div>
@@ -1074,15 +1173,17 @@
           <div class="mono">Signals brief · Week ${isoWeek(day)} · ${esc(day)}</div>
           <h1>${esc(reading.insights[0] ? reading.insights[0].headline : 'Signals brief')}</h1>
           <div class="lede">Claude read ${reading.evidenceCount || '—'} sources · ${esc(reading.reviewer)}.${reading.weekPlan ? ` <b>This week:</b> ${esc(reading.weekPlan)}` : ''}</div>
-          <h2><span>01</span>What changed</h2>${insights}
-          <h2><span>02</span>Your choices</h2>
+          <h2><span>01</span>World</h2>${insights}${briefRows(worldRows)}
+          <h2><span>02</span>My projects</h2>${briefRows(projectRows)}
+          <h2><span>03</span>New ideas</h2>${briefRows(ideaRows)}
+          <h2><span>04</span>Your choices</h2>
           <div class="calls">${callList('Taken forward', calls.forward)}${callList('Not taken forward', calls.open)}</div>
           ${data.notes.length ? `<h2><span>✦</span>Your comments</h2><ul class="b-list">${data.notes.slice(0, 12).map((n) => `<li>${esc(n.text)}${n.about?.title ? ` <span class="m">— ${esc(n.about.title)}</span>` : ''}</li>`).join('')}</ul>` : ''}
-          <h2><span>03</span>Projects touched</h2>
+          <h2><span>05</span>Projects touched</h2>
           <ul class="b-list">${touched.map((p) => `<li><b>${esc(p.name)}</b> — ${esc(p.top)}</li>`).join('') || '<li>None.</li>'}</ul>
-          ${horizon.length ? `<h2><span>04</span>On the horizon</h2><ul class="b-list">${horizon.map((m) => `<li>${esc(m.title)}</li>`).join('')}</ul>` : ''}
+          ${horizon.length ? `<h2><span>✦</span>On the horizon</h2><ul class="b-list">${horizon.map((m) => `<li>${esc(m.title)}</li>`).join('')}</ul>` : ''}
           ${sigNotes.length ? `<h2><span>✦</span>Your signals</h2><ul class="b-list">${sigNotes.map((n) => `<li><b>${esc(n.sig.title)}</b> — ${esc({ supports: 'supports', contradicts: 'against', 'new-angle': 'new angle' }[n.verdict] || n.verdict)}: ${esc(n.note)}${sup(n.citations)}</li>`).join('')}</ul>` : ''}
-          <h2><span>${horizon.length ? '05' : '04'}</span>Sources</h2>
+          <h2><span>06</span>Sources</h2>
           <ol class="b-src">${order.map((id) => { const d = reading.docs[id]; return `<li><a href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${esc(d.title)}</a> · ${esc(d.source)}${d.date ? ' · ' + esc(d.date) : ''}</li>`; }).join('')}</ol>
         </article>`;
       view.querySelectorAll('[data-brief]').forEach((b) => {
@@ -1100,12 +1201,26 @@
       const refs = (ids) => { const n = (ids || []).filter((id) => reading.docs[id]).map(num); return n.length ? ` [${n.join(', ')}]` : ''; };
       const lines = [`# ${reading.insights[0] ? reading.insights[0].headline : 'Signals brief'}`, '', `Signals brief · Week ${isoWeek(day)} · ${day}`, ''];
       if (reading.weekPlan) lines.push(`**This week:** ${reading.weekPlan}`, '');
-      lines.push('## What changed', '');
+      lines.push('## World', '');
       reading.insights.forEach((x, i) => {
         lines.push(`${i + 1}. **${x.headline}**${refs(x.citations)}`);
         if (x.summary) lines.push(`   ${x.summary}`);
         if (x.firstStep) lines.push(`   Try: ${x.firstStep}`);
       });
+      const addRows = (rows) => rows.forEach((x) => lines.push(`- **${x.title}**${x.meta ? ` · ${x.meta}` : ''}${x.body ? ` — ${x.body}` : ''}${refs(x.citations)}`));
+      addRows([
+        ...(reading.worldNews || []).map((x) => ({ title: x.headline, body: x.whyItMatters, citations: x.citations })),
+        ...(reading.companies || []).map((x) => ({ title: x.name, body: x.whatChanged, meta: x.kind, citations: x.citations })),
+        ...(reading.solutions || []).map((x) => ({ title: x.name, body: x.whatItDoes, meta: [x.organization, x.stage].filter(Boolean).join(' · '), citations: x.citations })),
+        ...(reading.trends || []).map((x) => ({ title: x.title, body: x.note, meta: x.direction, citations: x.citations })),
+      ]);
+      lines.push('', '## My projects', '');
+      addRows([
+        ...(reading.projectReadings || []).map((x) => ({ title: reading.projects[x.projectId] || x.projectId, body: [x.note, x.nextStep && `Next: ${x.nextStep}`].filter(Boolean).join(' '), meta: x.verdict, citations: x.citations })),
+        ...(reading.feedback || []).map((x) => ({ title: x.title, body: [x.observation, x.suggestion].filter(Boolean).join(' '), citations: x.citations })),
+      ]);
+      lines.push('', '## New ideas', '');
+      addRows((reading.ideas || []).map((x) => ({ title: x.title, body: [x.pitch, x.firstProof && `Smallest proof: ${x.firstProof}`].filter(Boolean).join(' '), citations: x.citations })));
       lines.push('', '## Your calls', '');
       [['Taken forward', calls.forward], ['Not taken forward', calls.open]].forEach(([t, rows]) => {
         lines.push(`**${t}:** ${rows.length ? rows.map((r) => r.title + (r.reason ? ` (${r.reason})` : '')).join('; ') : '—'}`);

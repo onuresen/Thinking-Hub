@@ -7,6 +7,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Signals Today preserves the full **World · My projects · New ideas** reading in three compact doors, and Brief carries the same groups. Personal Lab still owns Prove and the operational tools.
 - Schedule has independently toggleable layers for commitments, personal plans, observances, goal lines and focus windows. Only a title and date are required; the rest is optional.
 - Projects use attention states: Active, Maintaining, Resting, Incubating and Complete. Existing saved values remain compatible.
 
@@ -19,7 +20,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 - Project Hub Overview has a **Compact** style next to Cards: small tiles in your groups with a progress ring, status, open tasks and what is next, plus a "Jump to" row of groups. Press `/` to search projects and Enter to open the first match.
 - Home has a writing box: type a thought and press Enter. It goes to the Capture Inbox, or to today's journal with one switch. In Cmd+K, `log: …` adds a line to today's journal.
 - Signals Hub **Mine**: note your own signals, link them to projects, meetings and other hub items, and move them from Watching to Emerging to Act (or let them fade). The page counts what each signal is connected to, and Claude's readings say when outside evidence supports a signal or points against it. Signals can be linked from any tool's link picker and found with Cmd+K.
-- Signals Hub has four places: **Radar**, **Library**, **Brief**, and **Mine**.
+- Signals Hub has four places: **Today**, **Library**, **Brief**, and **Mine**.
 - Signals Hub reads readings and news from a linked folder or imported files. Comments, Take forward choices and active Mine signals go into the linked folder and full backup; the desktop engine receives taken-forward moves for Prove.
 
 ### Security
