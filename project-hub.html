@@ -42,6 +42,9 @@
           <span class="nav-icon">▦</span> Overview
           <span class="nav-badge" id="badge-overview">0</span>
         </div>
+        <div class="nav-item" onclick="setView('attention')">
+          <span class="nav-icon">◌</span> Attention
+        </div>
         <div class="nav-item" onclick="setView('groupings')">
           <span class="nav-icon">▤</span> Groupings
           <span class="nav-badge" id="badge-groupings">0</span>
@@ -100,6 +103,7 @@
         <div id="panel-project-links"></div>
       </div>
       <button class="panel-close" id="panel-onepager-btn" title="One-Pager brief (print / copy)" onclick="openOnePager()" style="font-size:14px">📄</button>
+      <button class="panel-close" id="panel-goal-line-btn" title="Set a goal line" onclick="openGoalLineModal(state.selectedProject)" style="font-size:14px">◇</button>
       <button class="panel-close" id="panel-vault-btn" title="Tasks from this project's vault note" onclick="openVaultTasks()" style="font-size:13px;width:auto;min-width:28px;padding:0 6px">⟡</button>
       <button class="panel-close" id="panel-link-btn" title="Link to another tool" style="font-size:13px">🔗</button>
       <button class="panel-close" title="View Profile &amp; Achievements" onclick="parent.postMessage({type:'hub-navigate',tool:'achievements-hub'},window.location.origin||'*')" style="font-size:14px">🏅</button>
@@ -183,6 +187,26 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('modal-project')">Cancel</button>
         <button class="btn btn-primary" onclick="saveProject()">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-modal-overlay" id="modal-goal-line" onclick="closeModal('modal-goal-line')">
+    <div class="ui-modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Set a goal line</div>
+      <div class="modal-sub" id="goal-line-project">Choose when you would like to reflect on meaningful progress. This is not a deadline.</div>
+      <div class="form-group">
+        <label class="form-label">Reflection date</label>
+        <input class="form-input" type="date" id="goal-line-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Meaningful progress <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+        <input class="form-input" id="goal-line-title" placeholder="e.g. A playable build I can evaluate">
+      </div>
+      <div class="goal-line-rule">If this date passes, nothing becomes overdue. Thinking Hub will only offer a quiet reflection.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-goal-line')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveGoalLine()">Set goal line</button>
       </div>
     </div>
   </div>
@@ -444,6 +468,41 @@
         if (t.completedAt) { const ts = new Date(t.completedAt).getTime(); if (ts > latest) latest = ts; }
       });
       return latest || 0;
+    }
+
+    // Goal lines live in Schedule. They are reflection points, never deadlines:
+    // passing one must not create overdue state, red styling or required cleanup.
+    function scheduleState() {
+      const saved = HubStorage.get('schedule-v1') || {};
+      return { ...saved, items: Array.isArray(saved.items) ? saved.items : [], settings: saved.settings || {}, dayTags: saved.dayTags || {} };
+    }
+    function projectGoalLines(projectId) {
+      return scheduleState().items.filter(item => item && item.type === 'goal' && item.projectId === projectId && !item.done)
+        .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')));
+    }
+    function projectGoalLine(projectId) {
+      const today = HubUtils.todayLocal();
+      const lines = projectGoalLines(projectId);
+      const next = lines.find(item => (item.start || '') >= today);
+      if (next) return { item: next, passed: false };
+      const passed = lines.filter(item => (item.start || '') < today).pop();
+      return passed ? { item: passed, passed: true } : null;
+    }
+    function localDayFromNow(days) {
+      const d = new Date(HubUtils.todayLocal() + 'T12:00:00');
+      d.setDate(d.getDate() + days);
+      return HubUtils.localYmd(d);
+    }
+    function daysUntil(day) {
+      if (!day) return null;
+      return Math.round((new Date(day + 'T12:00:00') - new Date(HubUtils.todayLocal() + 'T12:00:00')) / 86400000);
+    }
+    function goalLineText(projectId, compact) {
+      const line = projectGoalLine(projectId);
+      if (!line) return compact ? '◇ Set goal line' : '◇ Set a goal line';
+      const date = formatDate(line.item.start);
+      const title = line.item.title || 'Meaningful progress';
+      return line.passed ? `◇ ${date} passed · reflect when useful · ${title}` : `◇ ${date} · ${title}`;
     }
 
     // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -788,11 +847,11 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', concepts: 'Concept Matrix' };
+      const titles = { overview: 'Overview', attention: 'Attention', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', concepts: 'Concept Matrix' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
       const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept' };
       document.getElementById('main-action-btn').textContent = btnLabels[view] || '+ Task';
-      document.getElementById('main-action-btn').style.display = view === 'groupings' ? 'none' : '';
+      document.getElementById('main-action-btn').style.display = ['groupings', 'attention'].includes(view) ? 'none' : '';
       document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
       renderContent();
     }
@@ -816,6 +875,57 @@
       } else { showAddTask(); }
     }
 
+    function attentionInfo(project) {
+      const line = projectGoalLine(project.id);
+      if (project.status !== 'active') return {
+        rank: 4, kind: 'intentional', label: statusLabel(project.status),
+        text: project.status === 'maintenance' ? 'Occasional attention is enough.'
+          : project.status === 'onhold' ? 'Intentionally resting. Nothing is asking for attention.'
+          : 'Kept as an idea without asking for action.', line,
+      };
+      if (line && line.passed) return { rank: 0, kind: 'reflect', label: 'Reflection available', text: `The ${formatDate(line.item.start)} goal line passed. Nothing is overdue; reflect whenever useful.`, line };
+      const until = line ? daysUntil(line.item.start) : null;
+      if (until !== null && until <= 14) return { rank: 1, kind: 'ahead', label: 'Goal line ahead', text: `${formatDate(line.item.start)} is a point to check direction, not a deadline.`, line };
+      const age = project.updatedAt ? HubUtils.daysSince(project.updatedAt) : Infinity;
+      if (Number.isFinite(age) && age <= 14) return { rank: 2, kind: 'moving', label: 'Receiving attention', text: `Last touched ${HubUtils.relativeAge(project.updatedAt)}.`, line };
+      return { rank: 3, kind: 'open', label: 'Open, no pressure', text: project.updatedAt
+        ? `Last touched ${HubUtils.relativeAge(project.updatedAt)}. Leave it open, set a goal line, or let it rest.`
+        : 'No attention history yet. Leave it open, set a goal line, or let it rest.', line };
+    }
+
+    function setProjectAttentionState(projectId, status) {
+      const project = getProject(projectId);
+      if (!project) return;
+      project.status = status;
+      touchProject(projectId); saveState(); renderContent();
+      showToast(status === 'onhold' ? 'Project is resting' : status === 'done' ? 'Project completed' : 'Project is active');
+    }
+
+    function renderAttention(container) {
+      const wrap = document.createElement('div');
+      wrap.className = 'attention-wrap animate-in';
+      const rows = state.projects.filter(project => project.status !== 'done')
+        .map(project => ({ project, info: attentionInfo(project) }))
+        .sort((a, b) => a.info.rank - b.info.rank || a.project.name.localeCompare(b.project.name));
+      wrap.innerHTML = `<section class="attention-intro card">
+        <div class="mono">Attention, not administration</div>
+        <h2>Goal lines create reflection, never debt.</h2>
+        <p>Passing a goal line never makes a project overdue. Nothing here must be cleared, explained or rescheduled.</p>
+      </section>
+      <div class="attention-grid">${rows.map(({ project, info }) => `<article class="attention-card card">
+        <div class="attention-head"><span class="attention-dot" style="background:${project.color || 'var(--text3)'}"></span><h3>${HubUtils.esc(project.name)}</h3><span class="attention-state ${info.kind}">${HubUtils.esc(info.label)}</span></div>
+        <p>${HubUtils.esc(info.text)}</p>
+        ${info.line ? `<div class="attention-line">${HubUtils.esc(goalLineText(project.id, false))}</div>` : ''}
+        <div class="attention-actions">
+          <button class="btn btn-ghost" onclick="openGoalLineModal('${HubUtils.esc(project.id)}')">${info.line && info.line.passed ? 'Set next line' : info.line ? 'Add another line' : 'Set goal line'}</button>
+          <button class="btn btn-ghost" onclick="openProject('${HubUtils.esc(project.id)}')">Open project</button>
+          ${project.status === 'active' ? `<button class="btn btn-ghost" onclick="setProjectAttentionState('${HubUtils.esc(project.id)}','onhold')">Let it rest</button>` : `<button class="btn btn-ghost" onclick="setProjectAttentionState('${HubUtils.esc(project.id)}','active')">Make active</button>`}
+        </div>
+      </article>`).join('')}</div>
+      ${rows.length ? '' : '<div class="empty-state"><div class="e-icon">◌</div><div class="e-title">No open projects</div></div>'}`;
+      container.appendChild(wrap);
+    }
+
     // ─── RENDER CONTENT ───────────────────────────────────────────────────────────
     function renderContent() {
       buildFocusMap();
@@ -823,6 +933,7 @@
       c.innerHTML = '';
       updateBadges();
       if (state.currentView === 'overview') renderOverview(c);
+      else if (state.currentView === 'attention') renderAttention(c);
       else if (state.currentView === 'tasks') {
         if (state.currentSubView === 'kanban') renderKanban(c);
         else renderAllTasks(c);
@@ -1192,6 +1303,7 @@
             ${doing.length ? `<div class="pn-row" title="In progress">▶ ${HubUtils.esc(doing[0].title)}${doing.length > 1 ? ` <span class="pn-more">+${doing.length - 1}</span>` : ''}</div>` : ''}
             ${nm ? `<div class="pn-row" title="Next meeting">▣ ${formatDate(nm.date)} · ${HubUtils.esc(nm.title)}</div>` : ''}
           </div>` : '';
+          const goalLineHtml = proj.status !== 'done' && projectGoalLine(proj.id) ? `<div class="project-goal-line">${HubUtils.esc(goalLineText(proj.id, display === 'compact'))}</div>` : '';
 
           if (display === 'compact') {
             const q = of.search.trim().toLowerCase();
@@ -1210,7 +1322,8 @@
             <span class="ct-open">${openN ? openN + ' open' : 'no open tasks'}</span>
             ${risksMap[proj.id] ? `<span class="ct-badge" title="${risksMap[proj.id]} risk${risksMap[proj.id] !== 1 ? 's' : ''}">⚠ ${risksMap[proj.id]}</span>` : ''}
           </div>
-          ${next ? `<div class="ct-next">${next}</div>` : (q && proj.desc && proj.desc.toLowerCase().includes(q) ? `<div class="ct-next">${markMatch(proj.desc.slice(0, 120), q)}</div>` : '')}`;
+          ${next ? `<div class="ct-next">${next}</div>` : (q && proj.desc && proj.desc.toLowerCase().includes(q) ? `<div class="ct-next">${markMatch(proj.desc.slice(0, 120), q)}</div>` : '')}
+          ${goalLineHtml}`;
             grid.appendChild(card);
             return;
           }
@@ -1229,6 +1342,7 @@
           <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${proj.color}"></div></div>
         </div>
         ${nextHtml}
+        ${goalLineHtml}
         <div class="project-meta">
           <div class="avatar-stack">${avatars}</div>
           <div class="project-task-count">${proj.tasks.filter(t => !t.done).length} open · ${proj.tasks.length} total</div>
@@ -2303,6 +2417,37 @@
     // ─── MODALS ───────────────────────────────────────────────────────────────────
     function openModal(id) { document.getElementById(id).classList.add('is-open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('is-open'); }
+
+    let _goalLineProjectId = null;
+    function openGoalLineModal(projectId) {
+      const project = getProject(projectId);
+      if (!project) return;
+      _goalLineProjectId = projectId;
+      document.getElementById('goal-line-project').textContent = `${project.name} · Choose when you would like to reflect on meaningful progress. This is not a deadline.`;
+      document.getElementById('goal-line-date').value = localDayFromNow(14);
+      document.getElementById('goal-line-title').value = '';
+      openModal('modal-goal-line');
+      setTimeout(() => document.getElementById('goal-line-date').focus(), 80);
+    }
+
+    function saveGoalLine() {
+      const project = getProject(_goalLineProjectId);
+      const date = document.getElementById('goal-line-date').value;
+      if (!project || !date) { showToast('Choose a reflection date'); return; }
+      const schedule = scheduleState();
+      const title = document.getElementById('goal-line-title').value.trim() || `${project.name}: meaningful progress`;
+      schedule.items.push(HubUtils.stampCreate({
+        id: 'si-' + uid(), sourceTool: null, sourceId: null, title, type: 'goal',
+        start: date, end: date, startTime: null, endTime: null,
+        color: project.color || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), projectId: project.id, projectRef: project.name,
+        notes: '', done: false,
+      }));
+      HubStorage.set('schedule-v1', schedule);
+      closeModal('modal-goal-line');
+      _goalLineProjectId = null;
+      renderContent();
+      showToast('Goal line set — it will never become overdue');
+    }
 
     // ─── Task dependency links (feeds Dependency Graph's Critical Path) ───────────
     let _dependsTaskId = null, _dependsProjectId = null;

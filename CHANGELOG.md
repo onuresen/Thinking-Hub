@@ -7,6 +7,7 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Projects has a quiet **Attention** view and can set Schedule goal lines directly. A passed goal line offers reflection but never becomes overdue, red, or mandatory to reschedule.
 - Signals Today preserves the full **World · My projects · New ideas** reading in three compact doors, and Brief carries the same groups. Personal Lab still owns Prove and the operational tools.
 - Schedule has independently toggleable layers for commitments, personal plans, observances, goal lines and focus windows. Only a title and date are required; the rest is optional.
 - Projects use attention states: Active, Maintaining, Resting, Incubating and Complete. Existing saved values remain compatible.

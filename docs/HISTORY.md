@@ -4,6 +4,22 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 190 — Project attention without goal-line debt~~ ✓ Done `[group: projects]`
+Projects now connects its attention states to Schedule goal lines. A project card and detail panel can set a dated reflection point with an optional meaningful-progress description; the result is a normal Schedule Goal line tied to that project. Cards show the nearest future line or the most recent passed line.
+
+The new Attention view separates reflection available, an approaching goal line, recently receiving attention, open without pressure, and intentional lower-attention states. It offers Set next line, Open project and Let it rest / Make active. Nothing has to be cleared.
+
+**Binding rule:** passing a goal line never creates an overdue state, red treatment, backlog count, required explanation or automatic rescheduling. It only makes a quiet reflection available.
+
+**Key decisions**
+- **Decision:** a goal line is stored as a Schedule `type: goal` item, not a project deadline or task. **Why:** it should share the calendar layer while remaining outside completion pressure. **Alternative:** add a project due date; rejected because due dates create debt semantics. **Confidence:** high.
+- **Decision:** Attention includes intentionally quiet states and uses optional actions only. **Why:** the view must explain why something is quiet rather than manufacture maintenance work. **Alternative:** a neglected-project queue; rejected because it would make Onur the system's bottleneck again. **Confidence:** high.
+- **Decision:** missing activity history says unknown, never stale. **Why:** legacy records must not be treated as neglected. **Confidence:** high.
+
+**Verified:** flow22 covers passed-line reflection, neutral presentation, intentional rest and creation of a linked Schedule Goal line. Full suite passes.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### ~~Priority 189 — Full Signals reading without engine complexity~~ ✓ Done `[group: integrations]`
 Thinking Hub now preserves the canonical reading's three groups instead of silently dropping the richer November 14 fields. Today opens World, My projects and New ideas through three compact disclosure doors; Brief carries the same groups in its page and Markdown output. Existing reading frame, featured interpretation, Library, Mine, comments and Take forward remain intact.
 

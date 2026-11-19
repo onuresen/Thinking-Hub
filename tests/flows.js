@@ -1066,6 +1066,45 @@ function startServer() {
     await projects.close();
   }
 
+  // ── Flow 22: project attention and Schedule goal lines (P190) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const today = HubUtils.todayLocal();
+      const shift = (n) => { const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + n); return HubUtils.localYmd(d); };
+      const base = (id, name, status, updatedAt) => ({ id, name, status, updatedAt, color: '#888', desc: '', members: [], tasks: [], milestones: [], goals: [], workstreams: [] });
+      state.projects = [
+        base('p1', 'Passed line project', 'active', new Date(Date.now() - 30 * 86400000).toISOString()),
+        base('p2', 'Moving project', 'active', new Date().toISOString()),
+        base('p3', 'Resting project', 'onhold', ''),
+      ];
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: state.projects });
+      HubStorage.set('schedule-v1', { items: [{ id: 'g1', type: 'goal', title: 'Reach a testable shape', start: shift(-2), end: shift(-2), projectId: 'p1', color: '#888', done: false }], settings: {}, dayTags: {} });
+      setView('attention');
+      const attention = {
+        labels: [...document.querySelectorAll('.attention-state')].map(e => e.textContent.trim()),
+        text: document.querySelector('.attention-wrap').textContent,
+        overdueClasses: document.querySelectorAll('.attention-wrap .overdue').length,
+      };
+      setView('overview');
+      const cardLine = [...document.querySelectorAll('.project-card, .compact-tile')].find(c => c.textContent.includes('Passed line project'))?.querySelector('.project-goal-line')?.textContent || '';
+      openGoalLineModal('p2');
+      document.getElementById('goal-line-date').value = shift(10);
+      document.getElementById('goal-line-title').value = 'Reach a reviewable result';
+      saveGoalLine();
+      const made = HubStorage.get('schedule-v1').items.find(item => item.projectId === 'p2');
+      return { attention, cardLine, made };
+    });
+    check('flow22: Attention distinguishes reflection, active attention and intentional rest without an overdue state',
+      r.attention.labels.includes('Reflection available') && r.attention.labels.includes('Receiving attention') && r.attention.labels.includes('Resting')
+      && r.attention.overdueClasses === 0 && /Nothing is overdue/.test(r.attention.text), JSON.stringify(r.attention));
+    check('flow22: a passed goal line stays neutral on the project card', /reflect when useful/.test(r.cardLine), r.cardLine);
+    check('flow22: setting a project goal line creates a Schedule goal, not a task or deadline',
+      r.made && r.made.type === 'goal' && r.made.title === 'Reach a reviewable result' && r.made.projectId === 'p2' && !r.made.done, JSON.stringify(r.made));
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();
