@@ -76,8 +76,8 @@ A private collection of recurring places, symbols, characters, phrases, values a
 
 1. **Cabinet of Curiosities** — implemented as Cabinet (P191): capture, browse and gentle resurfacing.
 2. **Constellation View + Project Weather** — implemented together inside Projects (P192), derived from existing activity and relationships.
-3. **Echoes** — connect present context to the Cabinet and existing history.
-4. **Museum Mode + The Unfinished Symphony** — two respectful views of the archive.
+3. **Echoes** — implemented inside Cabinet's Memory House (P193), returning existing Cabinet, Journal and Decision material without copying it.
+4. **Museum Mode + The Unfinished Symphony** — implemented as two respectful, read-only rooms in the same Memory House (P193).
 5. **Tiny Rituals + Machi Festivals** — private rhythm reflected playfully in the shared world.
 6. **Project Creatures** — add only after the world has enough real history to make them meaningful.
 7. **“What changed in me?” + Personal Mythology** — grow slowly from accumulated evidence and voluntary reflection.

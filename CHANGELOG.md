@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded Cabinet into a read-only Memory House with daily Echoes, Museum mode for completed work, and an Unfinished Symphony for intentionally resting or long-quiet projects.
 - Added a Projects Constellation view and derived Project Weather, using existing activity and relationships without introducing new maintenance fields or negative goal-line pressure.
 - Added Cabinet, a pressure-free home for capturing, browsing and gently resurfacing curious fragments with optional source links.
 

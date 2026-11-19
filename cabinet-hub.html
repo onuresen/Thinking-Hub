@@ -16,11 +16,16 @@
     html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); }
     body { overflow-y: auto; }
     button, textarea, input { font: inherit; }
-    .topbar { position: sticky; top: 0; z-index: 5; height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .topbar { position: sticky; top: 0; z-index: 5; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
     .mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--accent-glow); border-radius: 50% 50% 46% 54%; color: var(--accent); background: var(--accent-dim); }
     .title { font-family: var(--font-display); font-size: 14px; font-weight: 800; }
     .subtitle { color: var(--text3); font-size: 12px; }
+    .room-nav { margin-left: auto; display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface2); }
+    .room-btn { border: 0; border-radius: 6px; padding: 5px 9px; background: transparent; color: var(--text3); cursor: pointer; font-size: 11px; white-space: nowrap; }
+    .room-btn:hover { color: var(--text); }
+    .room-btn.active { color: var(--text); background: var(--surface3); font-weight: 700; }
     main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 60px; }
+    .room[hidden] { display: none; }
     .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 18px; align-items: stretch; }
     .capture, .return { border: 1px solid var(--border); border-radius: calc(var(--r) + 4px); background: var(--surface); padding: 22px; }
     .eyebrow { color: var(--accent); font: 700 10px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
@@ -64,7 +69,36 @@
     .edit-modal { width: min(560px, 100%); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; background: var(--surface); }
     .edit-modal h2 { font-size: 18px; margin-bottom: 14px; }
     .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-    @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } main { width: min(100% - 20px, 1120px); padding-top: 20px; } .capture, .return { padding: 17px; } .subtitle { display: none; } }
+    .memory-hero { padding: 26px; border: 1px solid var(--border); border-radius: calc(var(--r) + 4px); background: var(--surface); }
+    .memory-hero h1 { max-width: 760px; }
+    .memory-hero .intro { margin-bottom: 0; }
+    .memory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px; }
+    .memory-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+    .memory-card h2 { margin: 8px 0 10px; font-size: 18px; line-height: 1.3; }
+    .memory-card p { margin: 0; color: var(--text2); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; font-size: 13px; }
+    .memory-meta { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text3); font: 10px var(--font-mono); }
+    .memory-origin { color: var(--accent); }
+    .memory-open { margin-top: 14px; border: 0; padding: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 11.5px; }
+    .memory-open:hover { text-decoration: underline; }
+    .echo-card { min-height: 220px; display: flex; flex-direction: column; }
+    .echo-card p { flex: 1; font-family: var(--font-display); font-size: 16px; }
+    .gallery-label { margin: 30px 0 12px; font: 700 10px var(--font-mono); color: var(--text3); letter-spacing: .1em; text-transform: uppercase; }
+    .museum-card { position: relative; overflow: hidden; }
+    .museum-card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--memory-color, var(--accent)); }
+    .museum-mark { color: var(--accent); font-size: 20px; }
+    .milestone-wall { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; }
+    .milestone-piece { padding: 13px 14px; border-left: 3px solid var(--accent-like); border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--surface); }
+    .milestone-piece strong, .milestone-piece small { display: block; }
+    .milestone-piece strong { font-family: var(--font-display); font-size: 13px; }
+    .milestone-piece small { margin-top: 4px; color: var(--text3); font-size: 10.5px; }
+    .movement { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 16px; }
+    .movement-no { color: var(--accent); font: 800 28px var(--font-display); }
+    .movement-state { margin-top: 3px; color: var(--text3); font: 9px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+    .motifs { margin: 13px 0 0; padding: 10px 12px; border-left: 2px solid var(--border2); color: var(--text2); font-size: 12px; line-height: 1.55; }
+    .motifs span { display: block; }
+    .memory-empty { grid-column: 1 / -1; }
+    @media (max-width: 900px) { .topbar { flex-wrap: wrap; } .room-nav { order: 2; width: 100%; margin-left: 0; overflow-x: auto; } .room-btn { flex: 1; } }
+    @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } main { width: min(100% - 20px, 1120px); padding-top: 20px; } .capture, .return, .memory-hero { padding: 17px; } .subtitle { display: none; } .movement { grid-template-columns: 50px minmax(0, 1fr); } }
     @media (prefers-reduced-motion: reduce) { .curio { transition: none; } }
   </style>
 </head>
@@ -73,9 +107,16 @@
     <div class="mark" aria-hidden="true">✦</div>
     <div class="title">Cabinet</div>
     <div class="subtitle">a home for things that do not need to become projects</div>
+    <nav class="room-nav" aria-label="Memory House rooms">
+      <button class="room-btn active" type="button" data-room="cabinet">Cabinet</button>
+      <button class="room-btn" type="button" data-room="echoes">Echoes</button>
+      <button class="room-btn" type="button" data-room="museum">Museum</button>
+      <button class="room-btn" type="button" data-room="symphony">Unfinished Symphony</button>
+    </nav>
   </header>
 
   <main>
+    <section class="room" id="room-cabinet">
     <section class="hero">
       <form class="capture" id="capture-form">
         <div class="eyebrow">Leave something here</div>
@@ -107,6 +148,37 @@
       <div><h2>The shelves</h2><div class="shelf-note">Newest arrivals first. Nothing waits to be processed.</div></div>
     </div>
     <section class="shelf" id="shelf" aria-live="polite"></section>
+    </section>
+
+    <section class="room" id="room-echoes" hidden>
+      <div class="memory-hero">
+        <div class="eyebrow">Echoes</div>
+        <h1>The present sometimes brushes against the past.</h1>
+        <p class="intro">A few quiet returns from your curiosities, journal and decisions. They change with the day and ask for no response.</p>
+      </div>
+      <div class="memory-grid" id="echo-grid"></div>
+    </section>
+
+    <section class="room" id="room-museum" hidden>
+      <div class="memory-hero">
+        <div class="eyebrow">Museum mode</div>
+        <h1>Past work deserves context, not just a checkmark.</h1>
+        <p class="intro">Completed projects and reached milestones remain visible as part of your landscape. Nothing here is a performance score.</p>
+      </div>
+      <div class="gallery-label">Completed works</div>
+      <div class="memory-grid" id="museum-projects"></div>
+      <div class="gallery-label">Reached moments</div>
+      <div class="milestone-wall" id="museum-milestones"></div>
+    </section>
+
+    <section class="room" id="room-symphony" hidden>
+      <div class="memory-hero">
+        <div class="eyebrow">The Unfinished Symphony</div>
+        <h1>Some movements pause. Some remain beautifully open.</h1>
+        <p class="intro">Resting, incubating and long-quiet projects appear here without becoming obligations. Revisit only when a motif calls you back.</p>
+      </div>
+      <div class="memory-grid" id="symphony-grid"></div>
+    </section>
   </main>
 
   <div class="edit-overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-title">
@@ -127,6 +199,7 @@
     let state = loadState();
     let returnId = null;
     let editId = null;
+    let activeRoom = 'cabinet';
 
     function loadState() {
       const raw = HubStorage.get(STORAGE_KEY);
@@ -151,6 +224,145 @@
       let label = safe;
       try { label = new URL(safe).hostname.replace(/^www\./, ''); } catch {}
       return `<a class="source-link" href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} ↗</a>`;
+    }
+
+    function projectState() {
+      const raw = HubStorage.get('project-hub-v1') || {};
+      return Array.isArray(raw.projects) ? raw.projects : [];
+    }
+    function navigateTo(tool, itemId) {
+      parent.postMessage({ type: 'hub-navigate', tool, itemId: itemId || null }, window.location.origin || '*');
+    }
+    function compactText(text, limit = 360) {
+      const clean = String(text || '').replace(/\s+/g, ' ').trim();
+      return clean.length > limit ? clean.slice(0, limit - 1).trimEnd() + '…' : clean;
+    }
+    function memoryDate(value) {
+      if (!value) return '';
+      return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : HubUtils.isoToLocalDay(value);
+    }
+    function daysAgo(value) {
+      const day = memoryDate(value);
+      if (!day) return null;
+      return Math.floor((new Date(HubUtils.todayLocal() + 'T12:00:00') - new Date(day + 'T12:00:00')) / 86400000);
+    }
+    function seededNumber(value) {
+      let hash = 2166136261;
+      for (const ch of String(value || '')) { hash ^= ch.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+      return (hash >>> 0) / 4294967295;
+    }
+
+    function memoryArchive() {
+      const archive = state.items.map(item => ({ id: item.id, kind: 'Curiosity', text: item.text, date: memoryDate(item.createdAt), tool: 'cabinet-hub' }));
+      const log = HubStorage.get('log-hub-v1') || {};
+      Object.entries(log.entries || {}).forEach(([date, entry]) => {
+        const text = compactText([entry.text, entry.learning].filter(Boolean).join('\n'));
+        if (text) archive.push({ id: date, kind: 'Journal', text, date, tool: 'journal-hub' });
+      });
+      const decisions = HubStorage.get('decision-hub-v1');
+      (Array.isArray(decisions) ? decisions : []).forEach(decision => {
+        const text = compactText([decision.title, decision.summary || decision.reasoning].filter(Boolean).join(' — '));
+        if (text) archive.push({ id: decision.id, kind: 'Decision', text, date: memoryDate(decision.createdAt || decision.updatedAt), tool: 'decision-hub' });
+      });
+      return archive;
+    }
+
+    function activeProjectTerms() {
+      const terms = [];
+      projectState().filter(project => ['active', 'maintenance'].includes(project.status)).forEach(project => {
+        [project.name, project.group, ...(project.tags || [])].filter(Boolean).forEach(term => {
+          const clean = String(term).trim();
+          if (clean.length >= 3) terms.push({ project: project.name, term: clean.toLowerCase() });
+        });
+      });
+      return terms;
+    }
+
+    function dailyEchoes() {
+      const terms = activeProjectTerms();
+      const today = HubUtils.todayLocal();
+      const archive = memoryArchive();
+      const older = archive.filter(item => { const age = daysAgo(item.date); return age === null || age >= 7; });
+      const pool = older.length ? older : archive;
+      return pool.map(item => {
+        const lower = item.text.toLowerCase();
+        const match = terms.find(entry => lower.includes(entry.term));
+        const age = Math.max(0, daysAgo(item.date) || 0);
+        return { ...item, resonance: match ? `Touches ${match.project}` : 'A quiet return', score: (match ? 20 : 0) + Math.min(age / 30, 8) + seededNumber(today + item.id) * 5 };
+      }).sort((a, b) => b.score - a.score).slice(0, 3);
+    }
+
+    function renderEchoes() {
+      const grid = document.getElementById('echo-grid');
+      const echoes = dailyEchoes();
+      grid.innerHTML = echoes.length ? echoes.map(item => `<article class="memory-card echo-card">
+        <div class="eyebrow">${escapeHtml(item.resonance)}</div><h2>${escapeHtml(item.kind)}</h2><p>${escapeHtml(item.text)}</p>
+        <div class="memory-meta"><span class="memory-origin">${escapeHtml(item.kind)}</span><span>${escapeHtml(item.date || 'date unknown')}</span></div>
+        <button class="memory-open" type="button" onclick="openMemory('${escapeHtml(item.tool)}','${escapeHtml(item.id)}')">Open the source →</button>
+      </article>`).join('') : '<div class="empty memory-empty">Echoes will appear after the Cabinet, Journal or Decisions hold something to return to.</div>';
+    }
+
+    function projectMemoryDate(project) {
+      const dates = [project.updatedAt];
+      (project.tasks || []).forEach(task => dates.push(task.completedAt));
+      (project.milestones || []).forEach(milestone => dates.push(milestone.completedAt));
+      return dates.filter(Boolean).sort().pop() || '';
+    }
+
+    function renderMuseum() {
+      const projects = projectState();
+      const completed = projects.filter(project => project.status === 'done' || project.archived);
+      const projectGrid = document.getElementById('museum-projects');
+      projectGrid.innerHTML = completed.length ? completed.sort((a, b) => projectMemoryDate(b).localeCompare(projectMemoryDate(a))).map(project => `<article class="memory-card museum-card" style="--memory-color:${project.color || 'var(--accent)'}">
+        <div class="museum-mark">◇</div><h2>${escapeHtml(project.name || 'Untitled project')}</h2>
+        <p>${escapeHtml(project.desc || 'The work is complete; its shape remains part of the story.')}</p>
+        <div class="memory-meta"><span>Completed work</span><span>${escapeHtml(dateLabel(projectMemoryDate(project)))}</span></div>
+        <button class="memory-open" type="button" onclick="navigateTo('project-hub','${escapeHtml(project.id)}')">Visit the project →</button>
+      </article>`).join('') : '<div class="empty memory-empty">Completed projects will gather here without disappearing from your history.</div>';
+
+      const milestones = projects.flatMap(project => (project.milestones || []).filter(milestone => milestone.done).map(milestone => ({ ...milestone, projectId: project.id, projectName: project.name })));
+      const wall = document.getElementById('museum-milestones');
+      wall.innerHTML = milestones.length ? milestones.sort((a, b) => String(b.completedAt || b.date || '').localeCompare(String(a.completedAt || a.date || ''))).map(milestone => `<button class="milestone-piece" type="button" onclick="navigateTo('project-hub','${escapeHtml(milestone.projectId)}')"><strong>${escapeHtml(milestone.name || 'Reached milestone')}</strong><small>${escapeHtml(milestone.projectName || 'Project')} · ${escapeHtml(dateLabel(milestone.completedAt || milestone.date))}</small></button>`).join('') : '<div class="empty memory-empty">Reached milestones will form a wall of moments here.</div>';
+    }
+
+    function symphonyProjects() {
+      return projectState().filter(project => {
+        if (project.status === 'done' || project.archived) return false;
+        if (['onhold', 'planning'].includes(project.status)) return true;
+        const age = daysAgo(project.updatedAt);
+        return project.status === 'active' && age !== null && age >= 45;
+      }).map(project => {
+        const age = daysAgo(project.updatedAt);
+        const movement = project.status === 'onhold' ? 'Resting movement' : project.status === 'planning' ? 'Opening movement' : 'Long pause';
+        const motifs = (project.tasks || []).filter(task => !task.done && !task.archived).slice(0, 3).map(task => task.title).filter(Boolean);
+        return { project, movement, age, motifs };
+      });
+    }
+
+    function renderSymphony() {
+      const grid = document.getElementById('symphony-grid');
+      const movements = symphonyProjects();
+      grid.innerHTML = movements.length ? movements.map(({ project, movement, motifs }, index) => `<article class="memory-card movement">
+        <div><div class="movement-no">${String(index + 1).padStart(2, '0')}</div><div class="movement-state">${escapeHtml(movement)}</div></div>
+        <div><h2>${escapeHtml(project.name || 'Untitled project')}</h2><p>${escapeHtml(project.desc || 'Its next shape has not been decided, and does not need to be.')}</p>
+        ${motifs.length ? `<div class="motifs"><span class="eyebrow">Motifs still audible</span>${motifs.map(motif => `<span>· ${escapeHtml(motif)}</span>`).join('')}</div>` : ''}
+        <button class="memory-open" type="button" onclick="navigateTo('project-hub','${escapeHtml(project.id)}')">Listen more closely →</button></div>
+      </article>`).join('') : '<div class="empty memory-empty">No movements are resting or long-quiet right now. This room is allowed to stay empty.</div>';
+    }
+
+    function openMemory(tool, id) {
+      if (tool === 'cabinet-hub') { switchRoom('cabinet'); document.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+      navigateTo(tool, id);
+    }
+
+    function switchRoom(room) {
+      activeRoom = ['cabinet', 'echoes', 'museum', 'symphony'].includes(room) ? room : 'cabinet';
+      document.querySelectorAll('.room').forEach(section => { section.hidden = section.id !== 'room-' + activeRoom; });
+      document.querySelectorAll('.room-btn').forEach(button => button.classList.toggle('active', button.dataset.room === activeRoom));
+      if (activeRoom === 'echoes') renderEchoes();
+      if (activeRoom === 'museum') renderMuseum();
+      if (activeRoom === 'symphony') renderSymphony();
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
 
     function renderShelf() {
@@ -262,10 +474,15 @@
       saveState();
       closeEdit(); renderShelf(); renderReturn();
     });
+    document.querySelector('.room-nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-room]');
+      if (button) switchRoom(button.dataset.room);
+    });
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && editId) closeEdit(); });
 
     renderShelf();
     chooseReturn();
+    switchRoom('cabinet');
     HubBootstrap.start('cabinet-hub');
   </script>
 </body>

@@ -4,6 +4,19 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 193 — Memory House: Echoes, Museum and Unfinished Symphony~~ ✓ Done `[group: learning]`
+Cabinet has grown into one Memory House with four rooms rather than three additional hubs. Echoes chooses up to three deterministic daily returns from existing Cabinet fragments, Journal entries and Decisions; terms from active projects can make a return contextually resonant without creating a link. Museum presents completed projects and reached milestones with their descriptions and dates. Unfinished Symphony presents resting, incubating and long-quiet projects as movements with a few open-task motifs.
+
+**Key decisions**
+- **Decision:** all three experiences live as rooms inside Cabinet. **Why:** they share one memory purpose and should not add three navigation destinations. **Alternative:** separate Echoes, Museum and Symphony hubs; rejected because more surfaces would compete for attention. **Confidence:** high.
+- **Decision:** the rooms read live source data and store nothing new. **Why:** Journal, Decisions and Projects remain authoritative, and the user never has to curate a parallel archive. **Alternative:** copy selected records into `cabinet-v1`; rejected because copies drift and create filing work. **Confidence:** high.
+- **Decision:** Echoes changes deterministically with the local day and appears only when opened. **Why:** resurfacing should feel like discovery without notifications, unread counts or view tracking. **Confidence:** high.
+- **Decision:** Unfinished Symphony includes intentional states and active projects with known quiet history, but never uses overdue, abandoned or neglected language. Missing timestamps remain unknown and do not qualify. **Why:** unfinished work can be meaningful without becoming debt. **Confidence:** high.
+
+**Verified:** flow25 covers multi-source Echoes, contextual resonance, Museum exhibits, Symphony inclusion rules, neutral language and zero-write rendering. Full suite passes.
+
+**Files:** `cabinet-hub.html`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `docs/CREATIVE-DIRECTIONS.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 192 — Constellation View + Project Weather~~ ✓ Done `[group: projects]`
 Projects now has a Constellation view: every open project appears as a star, while existing direct links, shared tags and shared groups form restrained constellation lines. Each star carries a poetic weather reading derived from attention state, current activity, blocked threads and future goal lines. A compact weather shelf keeps the readings accessible on smaller screens.
 

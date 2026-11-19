@@ -1183,6 +1183,55 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 25: Memory House reads history without creating memory chores (P193) ──
+  {
+    const page = await ctx.newPage();
+    await page.addInitScript(() => {
+      localStorage.setItem('cabinet-v1', JSON.stringify({ items: [{ id: 'c-old', text: 'A Systems constellation from long ago', source: '', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }] }));
+      localStorage.setItem('log-hub-v1', JSON.stringify({ entries: { '2025-02-03': { text: 'Noticed a recurring threshold in the work.', learning: 'Leave more room.' } } }));
+      localStorage.setItem('decision-hub-v1', JSON.stringify([{ id: 'd-old', title: 'Keep the quieter shape', summary: 'Fewer controls made the work clearer.', createdAt: '2025-03-01T00:00:00.000Z' }]));
+      const old = '2025-01-05T00:00:00.000Z';
+      localStorage.setItem('project-hub-v1', JSON.stringify({ members: [], concepts: [], projects: [
+        { id: 'done', name: 'Finished Atlas', status: 'done', updatedAt: '2025-06-01T00:00:00.000Z', desc: 'A map that found its final form.', color: 'var(--accent)', tags: [], members: [], tasks: [], milestones: [{ id: 'm1', name: 'First exhibition', done: true, completedAt: '2025-05-20T00:00:00.000Z' }] },
+        { id: 'rest', name: 'Resting Garden', status: 'onhold', updatedAt: old, desc: 'Waiting without asking.', tags: [], members: [], tasks: [{ id: 't1', title: 'Try a moonlit path', done: false }], milestones: [] },
+        { id: 'quiet', name: 'Quiet Systems', status: 'active', updatedAt: old, desc: '', tags: ['Systems'], members: [], tasks: [], milestones: [] },
+        { id: 'unknown', name: 'Unknown Age', status: 'active', updatedAt: '', desc: '', tags: [], members: [], tasks: [], milestones: [] }
+      ] }));
+    });
+    await page.goto(`${BASE}/cabinet-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const before = {
+        cabinet: JSON.stringify(HubStorage.get('cabinet-v1')),
+        projects: JSON.stringify(HubStorage.get('project-hub-v1')),
+        journal: JSON.stringify(HubStorage.get('log-hub-v1')),
+        decisions: JSON.stringify(HubStorage.get('decision-hub-v1')),
+      };
+      switchRoom('echoes');
+      const echoes = [...document.querySelectorAll('#echo-grid .echo-card')].map(card => card.textContent);
+      switchRoom('museum');
+      const museum = document.getElementById('room-museum').textContent;
+      switchRoom('symphony');
+      const symphony = document.getElementById('room-symphony').textContent;
+      const movements = [...document.querySelectorAll('#symphony-grid .movement h2')].map(el => el.textContent);
+      const after = {
+        cabinet: JSON.stringify(HubStorage.get('cabinet-v1')),
+        projects: JSON.stringify(HubStorage.get('project-hub-v1')),
+        journal: JSON.stringify(HubStorage.get('log-hub-v1')),
+        decisions: JSON.stringify(HubStorage.get('decision-hub-v1')),
+      };
+      return { echoes, museum, symphony, movements, unchanged: JSON.stringify(before) === JSON.stringify(after), room: activeRoom };
+    });
+    check('flow25: Echoes returns Cabinet, Journal and Decision memories with contextual resonance',
+      r.echoes.length === 3 && r.echoes.some(text => /Curiosity/.test(text) && /Touches Quiet Systems/.test(text))
+      && r.echoes.some(text => /Journal/.test(text)) && r.echoes.some(text => /Decision/.test(text)), JSON.stringify(r.echoes));
+    check('flow25: Museum remembers completed projects and reached milestones',
+      /Finished Atlas/.test(r.museum) && /First exhibition/.test(r.museum) && !/Resting Garden/.test(r.museum), r.museum);
+    check('flow25: Symphony includes resting and known long-quiet work, never unknown-age work or debt language',
+      r.movements.join('|') === 'Resting Garden|Quiet Systems' && !/Unknown Age|overdue|neglect|abandon/i.test(r.symphony), JSON.stringify(r));
+    check('flow25: visiting every Memory House room writes no source state', r.unchanged && r.room === 'symphony', JSON.stringify(r));
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();

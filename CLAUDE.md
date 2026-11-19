@@ -24,7 +24,7 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 | `tool-portfolio.html` | Tool directory: radar ring, Freshness × Mastery matrix, own icon upload |
 | `town-hub.html` | Machi — pixel city from hub data. Fun, not insight (see below) |
 | `learning-hub.html` | Reading & learning log |
-| `cabinet-hub.html` | Cabinet (P191): capture, browse and gently resurface curious fragments without taxonomy, processing state or required explanation |
+| `cabinet-hub.html` | Memory House: Cabinet captures curious fragments without processing pressure (P191); Echoes returns existing Cabinet, Journal and Decision material; Museum remembers completed projects/milestones; Unfinished Symphony presents resting and long-quiet work without debt (P193) |
 | `idea-swiper.html` | Swipe triage of ideas |
 | `canvas-hub.html` | Canvas — boards, live cards, frames, layers, color key. See "Canvas" below |
 | `decision-hub.html` | Decision log + Assumptions tab (`assumptions-hub-v1`) + Calibration |
