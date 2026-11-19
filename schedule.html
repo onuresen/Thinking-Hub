@@ -27,8 +27,9 @@
         <button class="sch-view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
         <button class="sch-view-btn" id="btn-timeline" onclick="switchView('timeline')">Timeline</button>
       </div>
+      <div class="sch-layer-toggle" id="sch-layer-toggle" aria-label="Visible schedule layers"></div>
       <div style="flex:1"></div>
-      <button class="sch-add-btn" onclick="openDrawer(null)">+ Add Item</button>
+      <button class="sch-add-btn" onclick="openDrawer(null)">+ Add</button>
     </div>
 
     <div class="sch-view-host">
@@ -99,12 +100,15 @@
         <input class="sch-input" id="f-title" type="text" placeholder="Item title…" />
       </div>
       <div class="sch-field">
-        <label class="sch-label">Type</label>
+        <label class="sch-label">Layer</label>
         <select class="sch-select" id="f-type">
-          <option value="task">Task</option>
-          <option value="milestone">Milestone</option>
-          <option value="event">Event</option>
+          <option value="commitment">Commitment</option>
+          <option value="personal">Personal plan</option>
+          <option value="observance">Observance</option>
+          <option value="goal">Goal line</option>
+          <option value="focus">Focus window</option>
         </select>
+        <div class="sch-field-hint" id="f-type-hint"></div>
       </div>
       <div class="sch-date-row">
         <div class="sch-field">
@@ -116,6 +120,8 @@
           <input class="sch-input" id="f-end" type="date" />
         </div>
       </div>
+      <details class="sch-optional" id="f-optional">
+      <summary>Optional details</summary>
       <div class="sch-date-row">
         <div class="sch-field">
           <label class="sch-label">Start time <span style="opacity:.6">(optional)</span></label>
@@ -144,6 +150,7 @@
         <input type="checkbox" id="f-done" />
         <label for="f-done">Mark as done</label>
       </div>
+      </details>
     </div>
     <div class="sch-drawer-footer">
       <button class="sch-save-btn" onclick="saveDrawer()">Save</button>
@@ -259,6 +266,13 @@
     ];
 
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const LAYERS = {
+      commitment: { label: 'Commitments', hint: 'Fixed plans and things you have agreed to.' },
+      personal: { label: 'Personal', hint: 'Personal plans, separate from project work.' },
+      observance: { label: 'Observances', hint: 'Meaningful dates such as Eid or a kandil night; no task implied.' },
+      goal: { label: 'Goal lines', hint: 'A desired progress point, not a deadline.' },
+      focus: { label: 'Focus windows', hint: 'A flexible period for giving something sustained attention.' },
+    };
 
     // Day-level status tags — a day is "out of office", not one more timed
     // item. Reuses the app's existing node/border token pairs (P41's colored
@@ -310,6 +324,7 @@
       multiZoom: 'week',
       multiOffset: 0,
       collapsedProjects: new Set(),
+      visibleLayers: new Set(Object.keys(LAYERS)),
     };
     let _drawerColor = PALETTE[2];
 
@@ -321,6 +336,7 @@
         const saved = HubStorage.get(STORAGE_KEY);
         if (saved) {
           if (!saved.dayTags) saved.dayTags = {};
+          if (!saved.settings) saved.settings = {};
           return saved;
         }
       } catch { }
@@ -339,7 +355,30 @@
     // draws every meeting, so the copy showed twice.
     function filteredItems() {
       const copies = meetingCopyIds();
-      return state.items.filter(it => !copies.has(it.id));
+      return state.items.filter(it => !copies.has(it.id) && ui.visibleLayers.has(itemLayer(it)));
+    }
+
+    // Old Task / Milestone / Event records stay valid and appear as commitments.
+    function itemLayer(item) {
+      return LAYERS[item.type] ? item.type : 'commitment';
+    }
+
+    function renderLayerToggle() {
+      const host = document.getElementById('sch-layer-toggle');
+      host.innerHTML = Object.entries(LAYERS).map(([key, def]) =>
+        `<button class="sch-layer-btn${ui.visibleLayers.has(key) ? ' active' : ''}" onclick="toggleLayer('${key}')" title="${esc(def.hint)}">${esc(def.label)}</button>`
+      ).join('');
+    }
+
+    function toggleLayer(layer) {
+      if (ui.visibleLayers.has(layer)) ui.visibleLayers.delete(layer); else ui.visibleLayers.add(layer);
+      state.settings.visibleLayers = [...ui.visibleLayers];
+      saveState(); renderLayerToggle(); render();
+    }
+
+    function updateTypeHint() {
+      const type = document.getElementById('f-type').value;
+      document.getElementById('f-type-hint').textContent = (LAYERS[type] || LAYERS.commitment).hint;
     }
 
     function meetingCopyIds() {
@@ -446,7 +485,7 @@
         const isToday = iso === TODAY;
         const isWE = isWeekend(iso);
 
-        const dayMeetings = (meetingsByDate[iso] || []).slice().sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        const dayMeetings = ui.visibleLayers.has('commitment') ? (meetingsByDate[iso] || []).slice().sort((a, b) => (a.time || '').localeCompare(b.time || '')) : [];
         const dayItems = items.filter(it => it.start <= iso && iso <= it.end);
         const total = dayMeetings.length + dayItems.length;
         const shownLimit = 4;
@@ -460,7 +499,7 @@
           const bg = it.color + '28';
           const bd = it.color + '88';
           const cont = it.start !== it.end && it.end > iso ? ' →' : '';
-          return `<span class="cal-pill${it.done ? ' done' : ''}"
+          return `<span class="cal-pill layer-${itemLayer(it)}${it.done ? ' done' : ''}"
         style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
         onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
         title="${esc(it.title)}">${esc(it.title || '')}${cont}</span>`;
@@ -571,7 +610,7 @@
       const alldayCols = days.map(iso => {
         const isWE = isWeekend(iso);
         const isToday = iso === TODAY;
-        const dayMeetings = (meetingsByDate[iso] || []).filter(m => !m.time);
+        const dayMeetings = ui.visibleLayers.has('commitment') ? (meetingsByDate[iso] || []).filter(m => !m.time) : [];
         const dayItems = items.filter(it => {
           if (it.start > iso || iso > it.end) return false;
           if (it.start === it.end && it.start === iso && it.startTime) return false;
@@ -583,7 +622,7 @@
           const bg = it.color + '28';
           const bd = it.color + '88';
           const cont = it.start !== it.end && it.end > iso ? ' →' : '';
-          return `<span class="cal-pill${it.done ? ' done' : ''}"
+          return `<span class="cal-pill layer-${itemLayer(it)}${it.done ? ' done' : ''}"
         style="background:${bg}; border:1px solid ${bd}; color:${it.color}"
         onclick="event.stopPropagation(); selectAndEdit('${it.id}')"
         title="${esc(it.title)}">${esc(it.title || '')}${cont}</span>`;
@@ -624,7 +663,7 @@
             });
           }
         });
-        (meetingsByDate[iso] || []).forEach(m => {
+        (ui.visibleLayers.has('commitment') ? (meetingsByDate[iso] || []) : []).forEach(m => {
           if (m.time) {
             const startMin = timeToMinutes(m.time);
             blocks.push({ startMin, endMin: startMin + (m.durationMins || 30), type: 'meeting', m });
@@ -648,7 +687,7 @@
           const it = b.it;
           const bg = it.color + '28';
           const bd = it.color + '88';
-          return `<div class="wg-block${it.done ? ' done' : ''}" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%; background:${bg}; border-color:${bd}; color:${it.color}"
+          return `<div class="wg-block layer-${itemLayer(it)}${it.done ? ' done' : ''}" style="top:${top}px;height:${height}px;left:${left}%;width:${laneW}%; background:${bg}; border-color:${bd}; color:${it.color}"
         data-iso="${iso}"
         onmousedown="wgBlockMouseDown(event, 'item', '${it.id}', '${iso}', ${b.startMin}, ${b.endMin})"
         title="${esc(it.title)}">${esc(it.title || '(untitled)')}<div class="wg-resize-handle" onmousedown="wgResizeMouseDown(event, 'item', '${it.id}', '${iso}', ${b.startMin}, ${b.endMin})"></div></div>`;
@@ -932,7 +971,7 @@
 
       let projects = [];
       try { projects = (JSON.parse(localStorage.getItem('project-hub-v1') || '{}').projects || []); } catch {}
-      const meetings = meetingsByProject();
+      const meetings = ui.visibleLayers.has('commitment') ? meetingsByProject() : {};
       const own = ownItemsByProject(projects);
       const groups = projects.filter(p => p.status !== 'done').map(p => ({ proj: p, id: p.id, name: p.name, color: p.color || 'var(--text3)' }));
       if ((meetings[''] || []).length || (own[''] || []).length) groups.push({ proj: null, id: '', name: 'No project', color: 'var(--text3)' });
@@ -1180,7 +1219,7 @@
 
       const defaultDate = prefillDate || TODAY;
       document.getElementById('f-title').value = item ? (item.title || '') : '';
-      document.getElementById('f-type').value = item ? (item.type || 'task') : 'task';
+      document.getElementById('f-type').value = item ? itemLayer(item) : 'commitment';
       document.getElementById('f-start').value = item ? (item.start || defaultDate) : defaultDate;
       document.getElementById('f-end').value = item ? (item.end || defaultDate) : defaultDate;
       document.getElementById('f-start-time').value = item ? (item.startTime || '') : (prefillTime || '');
@@ -1188,6 +1227,8 @@
       document.getElementById('f-project').value = item ? (item.projectId || '') : '';
       document.getElementById('f-notes').value = item ? (item.notes || '') : '';
       document.getElementById('f-done').checked = item ? !!item.done : false;
+      document.getElementById('f-optional').open = !!(item && (item.startTime || item.projectId || item.notes || item.done));
+      updateTypeHint();
 
       _drawerColor = item ? (item.color || PALETTE[2]) : PALETTE[2];
       buildSwatches(_drawerColor);
@@ -1236,7 +1277,7 @@
       } else {
         state.items.push({
           id: uid(), sourceTool: null, sourceId: null,
-          createdAt: new Date().toISOString(), ...patch,
+          ...HubUtils.stampCreate({}), ...patch,
         });
       }
 
@@ -1435,6 +1476,10 @@
         if (ui.activeView === 'timeline') renderTimeline();
       });
     } catch { }
+    const savedLayers = state.settings && state.settings.visibleLayers;
+    if (Array.isArray(savedLayers)) ui.visibleLayers = new Set(savedLayers.filter(x => LAYERS[x]));
+    document.getElementById('f-type').addEventListener('change', updateTypeHint);
+    renderLayerToggle();
     // Initialize view state (sets view-hidden classes + filter section visibility) then render
     switchView(ui.activeView);
   </script>

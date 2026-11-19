@@ -75,6 +75,14 @@
       color: var(--text);
     }
 
+    .sch-layer-toggle { display:flex; gap:4px; flex-wrap:wrap; }
+    .sch-layer-btn {
+      border:1px solid var(--border); background:transparent; color:var(--text3);
+      border-radius:999px; padding:4px 8px; font:600 10px var(--font-body); cursor:pointer;
+    }
+    .sch-layer-btn:hover { color:var(--text); border-color:var(--border2); }
+    .sch-layer-btn.active { color:var(--text); background:var(--surface3); }
+
     .sch-add-btn {
       padding: 6px 14px;
       background: var(--accent);
@@ -436,6 +444,11 @@
       opacity: 0.38;
     }
 
+    .cal-pill.layer-observance { background:transparent !important; border-style:dotted !important; }
+    .cal-pill.layer-goal { background:transparent !important; border-style:dashed !important; font-weight:700; }
+    .cal-pill.layer-focus { opacity:.82; }
+    .wg-block.layer-observance, .wg-block.layer-goal { background:var(--surface2) !important; border-style:dashed; }
+
     .cal-pill.meeting {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -685,6 +698,11 @@
       flex-direction: column;
       gap: 5px;
     }
+
+    .sch-field-hint { color:var(--text3); font-size:11px; line-height:1.4; }
+    .sch-optional { border-top:1px solid var(--border); padding-top:12px; }
+    .sch-optional summary { color:var(--text2); font-size:12px; cursor:pointer; margin-bottom:12px; }
+    .sch-optional:not([open]) summary { margin-bottom:0; }
 
     .sch-label {
       font-size: 11px;
@@ -980,4 +998,4 @@
       color: var(--text3); font-size: 13px; text-align: center; padding: 40px;
     }
     .multi-empty-icon { font-size: 36px; opacity: 0.3; margin-bottom: 6px; }
-  
+

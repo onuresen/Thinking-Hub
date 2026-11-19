@@ -1008,6 +1008,48 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 21: Schedule layers and project attention states (P188) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/schedule.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const t = HubUtils.todayLocal();
+      state = { items: [
+        { id: 'legacy', type: 'task', title: 'Legacy task', start: t, end: t, color: '#888' },
+        { id: 'eid', type: 'observance', title: 'Eid', start: t, end: t, color: '#888' },
+        { id: 'line', type: 'goal', title: 'Playable build', start: t, end: t, color: '#888' },
+      ], settings: {}, dayTags: {} };
+      ui.visibleLayers = new Set(Object.keys(LAYERS));
+      renderLayerToggle();
+      const before = filteredItems().map(i => i.id);
+      toggleLayer('observance');
+      const after = filteredItems().map(i => i.id);
+      const saved = HubStorage.get('schedule-v1').settings.visibleLayers;
+      openDrawer(null, t);
+      return {
+        labels: [...document.querySelectorAll('.sch-layer-btn')].map(e => e.textContent),
+        before, after, saved,
+        legacyLayer: itemLayer(state.items[0]),
+        optionalOpen: document.getElementById('f-optional').open,
+        defaultType: document.getElementById('f-type').value,
+      };
+    });
+    check('flow21: Schedule exposes five independent layers',
+      r.labels.join('|') === 'Commitments|Personal|Observances|Goal lines|Focus windows', JSON.stringify(r.labels));
+    check('flow21: hiding Observances filters only that layer and persists the choice',
+      r.before.join('|') === 'legacy|eid|line' && r.after.join('|') === 'legacy|line' && !r.saved.includes('observance'), JSON.stringify(r));
+    check('flow21: legacy items remain Commitments; new items keep details optional',
+      r.legacyLayer === 'commitment' && r.defaultType === 'commitment' && !r.optionalOpen, JSON.stringify(r));
+    await page.close();
+
+    const projects = await ctx.newPage();
+    await projects.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const states = await projects.evaluate(() => ['active', 'maintenance', 'onhold', 'planning', 'done'].map(statusLabel));
+    check('flow21: project states describe attention without changing stored values',
+      states.join('|') === 'Active|Maintaining|Resting|Incubating|Complete', states.join('|'));
+    await projects.close();
+  }
+
 
   await browser.close();
   server.close();

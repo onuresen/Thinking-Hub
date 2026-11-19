@@ -4,6 +4,18 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 188 — Schedule layers and project attention states~~ ✓ Done `[group: schedule]`
+Schedule can hold work and personal time without flattening them into one task list. Items are Commitments, Personal plans, Observances, Goal lines or Focus windows; each layer can be hidden independently. New items require only a title and date, with time, project, notes, color and completion under Optional details. Legacy Task, Milestone and Event records appear as Commitments without migration.
+
+Project status language now describes the attention a project should ask for: Active, Maintaining, Resting, Incubating and Complete. Stored values are unchanged so backups, filters and integrations remain compatible.
+
+**Key decisions**
+- **Decision:** layer is a property of the schedule item, not a second calendar or a new hub. **Why:** one view can show life together while toggles prevent personal, faith and work entries from becoming one undifferentiated list. **Alternative:** separate personal and work calendars; rejected because switching calendars hides useful context. **Confidence:** high.
+- **Decision:** observances and goal lines are visually quiet and do not become tasks. **Why:** a meaningful date is not work, and a desired progress point is not a deadline. **Alternative:** reuse tasks and milestones; rejected because their completion and overdue language adds pressure. **Confidence:** high.
+- **Decision:** keep the existing project status values and change their product meaning. **Why:** it gives the clearer attention model without a risky data migration. **Confidence:** high.
+
+**Files:** `schedule.html`, `styles/schedule.css`, `project-hub.html`, `tests/flows.js`, `sw.js`, `CHANGELOG.md`, `docs/HISTORY.md`
+
 ### Rule change 2026-11-15 — P168 "backups go to GitHub only encrypted" removed
 Onur (2026-11-15) dropped the rule. Plain JSON exports in the private `esen-inbox` repo are fine. The "Export encrypted" feature stays. If it changes, its envelope format in `index.html` and `hub_changes.py decrypt` still change together.
 

@@ -7,6 +7,9 @@ All notable changes to Thinking Hub are recorded here. Releases follow
 
 ### Added
 
+- Schedule has independently toggleable layers for commitments, personal plans, observances, goal lines and focus windows. Only a title and date are required; the rest is optional.
+- Projects use attention states: Active, Maintaining, Resting, Incubating and Complete. Existing saved values remain compatible.
+
 - Home Today shows **Current Direction** from the connected vault: the chosen item first, followed by work already in motion. It is read-only and does not create another priority list.
 - Current Direction also shows the current proof status returned to the vault. A completed or parked move stays current until you replace it.
 - Meetings list groups by **Date** (Today, This week, Next week, Later, then past months, folded) or by **Project**. Each row shows the day, time, length and project color. Past meetings are dimmed.
