@@ -4,6 +4,18 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 191 — Cabinet of Curiosities~~ ✓ Done `[group: learning]`
+Cabinet is a small home for fragments that do not need to become projects. A single quiet surface captures text with an optional source link, browses the shelf and randomly resurfaces one existing curiosity. Items can be corrected or removed, but have no categories, processing status, completion state, reminders or required explanation.
+
+**Key decisions**
+- **Decision:** Cabinet is a distinct plain-noun tool backed by `cabinet-v1`. **Why:** curiosities need a durable home whose meaning is not “learning material” or “idea to evaluate.” **Alternative:** route them through Capture or Idea Swiper; rejected because both imply later processing. **Confidence:** high.
+- **Decision:** resurfacing happens only when Cabinet is opened and does not record views, streaks or freshness. **Why:** returning should feel like wandering, not a new attention system. **Alternative:** scheduled reminders and resurfacing scores; rejected because they create maintenance pressure. **Confidence:** high.
+- **Decision:** the first experiment accepts text and an optional source link only. **Why:** it proves the emotional loop without adding image storage, taxonomy or import complexity. **Revisit when:** the shelf earns regular use and local image keepsakes clearly matter. **Confidence:** high.
+
+**Verified:** flow23 covers creation, backup-key ownership, optional links, editing, wandering and removal. Full suite passes.
+
+**Files:** `cabinet-hub.html`, `index.html`, `town-hub.html`, `machi-fun.js`, `sw.js`, `tests/flows.js`, `CLAUDE.md`, `docs/CREATIVE-DIRECTIONS.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 190 — Project attention without goal-line debt~~ ✓ Done `[group: projects]`
 Projects now connects its attention states to Schedule goal lines. A project card and detail panel can set a dated reflection point with an optional meaningful-progress description; the result is a normal Schedule Goal line tied to that project. Cards show the nearest future line or the most recent passed line.
 

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://*.gstatic.com; font-src 'self'; connect-src 'self' https://api.anthropic.com; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cabinet</title>
+  <script src="hub-storage.js"></script>
+  <script src="hub-utils.js"></script>
+  <script src="hub-toast.js"></script>
+  <script src="hub-bootstrap.js"></script>
+  <link rel="stylesheet" href="styles/fonts.css">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+    body { overflow-y: auto; }
+    button, textarea, input { font: inherit; }
+    .topbar { position: sticky; top: 0; z-index: 5; height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--accent-glow); border-radius: 50% 50% 46% 54%; color: var(--accent); background: var(--accent-dim); }
+    .title { font-family: var(--font-display); font-size: 14px; font-weight: 800; }
+    .subtitle { color: var(--text3); font-size: 12px; }
+    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 60px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 18px; align-items: stretch; }
+    .capture, .return { border: 1px solid var(--border); border-radius: calc(var(--r) + 4px); background: var(--surface); padding: 22px; }
+    .eyebrow { color: var(--accent); font: 700 10px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+    h1, h2 { font-family: var(--font-display); margin: 0; }
+    h1 { margin-top: 10px; font-size: clamp(25px, 4vw, 42px); line-height: 1.06; max-width: 680px; }
+    .intro { color: var(--text2); line-height: 1.6; margin: 12px 0 18px; max-width: 650px; }
+    textarea { width: 100%; min-height: 108px; resize: vertical; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface2); color: var(--text); outline: none; line-height: 1.5; }
+    textarea:focus, input:focus { border-color: var(--accent); }
+    textarea::placeholder, input::placeholder { color: var(--text3); }
+    details { margin-top: 9px; }
+    summary { width: fit-content; color: var(--text3); font-size: 12px; cursor: pointer; user-select: none; }
+    .source-input { width: 100%; margin-top: 8px; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface2); color: var(--text); outline: none; }
+    .capture-actions { margin-top: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .hint { color: var(--text3); font-size: 11px; line-height: 1.4; }
+    .btn { cursor: pointer; }
+    .return { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+    .return::after { content: '✦'; position: absolute; right: 18px; top: 10px; color: var(--accent-glow); font-size: 72px; pointer-events: none; }
+    .return h2 { margin-top: 9px; font-size: 20px; }
+    .return-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px 2px 18px; position: relative; z-index: 1; }
+    .return-text { white-space: pre-wrap; font-family: var(--font-display); font-size: 18px; line-height: 1.5; }
+    .return-empty { color: var(--text3); line-height: 1.5; }
+    .source-link { color: var(--accent); font: 11px var(--font-mono); text-decoration: none; overflow-wrap: anywhere; }
+    .source-link:hover { text-decoration: underline; }
+    .return-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; position: relative; z-index: 1; }
+    .date { color: var(--text3); font: 10px var(--font-mono); }
+    .shelf-head { margin: 34px 0 14px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+    .shelf-head h2 { font-size: 21px; }
+    .shelf-note { color: var(--text3); font-size: 12px; margin-top: 4px; }
+    .shelf { columns: 3 250px; column-gap: 14px; }
+    .curio { break-inside: avoid; display: inline-block; width: 100%; margin: 0 0 14px; padding: 17px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); transition: transform .15s, border-color .15s; }
+    .curio:hover { transform: translateY(-2px); border-color: var(--accent-glow); }
+    .curio-text { margin: 0 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; font-size: 14px; }
+    .curio-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .curio-actions { display: flex; gap: 4px; }
+    .icon-btn { border: 0; background: transparent; color: var(--text3); border-radius: var(--r-sm); padding: 4px 6px; cursor: pointer; font-size: 11px; }
+    .icon-btn:hover { color: var(--text); background: var(--surface2); }
+    .icon-btn.delete:hover { color: var(--accent-nope); }
+    .empty { border: 1px dashed var(--border); border-radius: var(--r); padding: 38px 20px; color: var(--text3); text-align: center; line-height: 1.6; }
+    .edit-overlay { position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 20px; background: var(--surface2); }
+    .edit-overlay.open { display: grid; }
+    .edit-modal { width: min(560px, 100%); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; background: var(--surface); }
+    .edit-modal h2 { font-size: 18px; margin-bottom: 14px; }
+    .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    @media (max-width: 760px) { .hero { grid-template-columns: 1fr; } main { width: min(100% - 20px, 1120px); padding-top: 20px; } .capture, .return { padding: 17px; } .subtitle { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .curio { transition: none; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="mark" aria-hidden="true">✦</div>
+    <div class="title">Cabinet</div>
+    <div class="subtitle">a home for things that do not need to become projects</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <form class="capture" id="capture-form">
+        <div class="eyebrow">Leave something here</div>
+        <h1>Keep the spark.<br>Skip the filing.</h1>
+        <p class="intro">A sentence, question, strange reference, image link or half-formed thought. It can stay exactly as it is.</p>
+        <textarea id="fragment-text" maxlength="4000" required aria-label="Fragment" placeholder="Something curious…"></textarea>
+        <details id="source-details">
+          <summary>Optional source link</summary>
+          <input class="source-input" id="fragment-source" type="url" maxlength="1000" placeholder="https://…" aria-label="Optional source link">
+        </details>
+        <div class="capture-actions">
+          <span class="hint">No category or next action required.</span>
+          <button class="btn btn-primary" type="submit">Place in cabinet</button>
+        </div>
+      </form>
+
+      <aside class="return" aria-live="polite">
+        <div class="eyebrow">A quiet return</div>
+        <h2>Wander into something</h2>
+        <div class="return-body" id="return-body"></div>
+        <div class="return-foot">
+          <span class="date" id="return-date"></span>
+          <button class="btn btn-ghost" type="button" id="wander-btn">Another</button>
+        </div>
+      </aside>
+    </section>
+
+    <div class="shelf-head">
+      <div><h2>The shelves</h2><div class="shelf-note">Newest arrivals first. Nothing waits to be processed.</div></div>
+    </div>
+    <section class="shelf" id="shelf" aria-live="polite"></section>
+  </main>
+
+  <div class="edit-overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <form class="edit-modal" id="edit-form">
+      <h2 id="edit-title">Tend this curiosity</h2>
+      <textarea id="edit-text" maxlength="4000" required aria-label="Fragment text"></textarea>
+      <input class="source-input" id="edit-source" type="url" maxlength="1000" placeholder="Optional source link" aria-label="Optional source link">
+      <div class="edit-actions">
+        <button class="btn btn-ghost" type="button" id="edit-cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit">Keep changes</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    'use strict';
+    const STORAGE_KEY = 'cabinet-v1';
+    let state = loadState();
+    let returnId = null;
+    let editId = null;
+
+    function loadState() {
+      const raw = HubStorage.get(STORAGE_KEY);
+      return raw && Array.isArray(raw.items) ? raw : { items: [] };
+    }
+
+    function saveState() { HubStorage.set(STORAGE_KEY, state); }
+    function escapeHtml(value) { return HubUtils.esc(String(value || '')); }
+    function validSource(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      try { const url = new URL(text); return /^https?:$/.test(url.protocol) ? url.href : ''; } catch { return ''; }
+    }
+    function dateLabel(iso) {
+      if (!iso) return '';
+      const date = new Date(iso);
+      return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function sourceMarkup(url) {
+      const safe = validSource(url);
+      if (!safe) return '';
+      let label = safe;
+      try { label = new URL(safe).hostname.replace(/^www\./, ''); } catch {}
+      return `<a class="source-link" href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)} ↗</a>`;
+    }
+
+    function renderShelf() {
+      const shelf = document.getElementById('shelf');
+      if (!state.items.length) {
+        shelf.innerHTML = '<div class="empty">The cabinet is empty.<br>Leave the first thing that makes you pause.</div>';
+        return;
+      }
+      shelf.innerHTML = state.items.map(item => `
+        <article class="curio" data-id="${escapeHtml(item.id)}">
+          <p class="curio-text">${escapeHtml(item.text)}</p>
+          ${sourceMarkup(item.source)}
+          <div class="curio-foot">
+            <span class="date">${escapeHtml(dateLabel(item.createdAt))}</span>
+            <span class="curio-actions">
+              <button class="icon-btn edit" type="button" data-action="edit" aria-label="Edit curiosity">Edit</button>
+              <button class="icon-btn delete" type="button" data-action="delete" aria-label="Remove curiosity">Remove</button>
+            </span>
+          </div>
+        </article>`).join('');
+    }
+
+    function chooseReturn(avoidId) {
+      if (!state.items.length) { returnId = null; renderReturn(); return; }
+      const choices = state.items.filter(item => item.id !== avoidId);
+      const pool = choices.length ? choices : state.items;
+      returnId = pool[Math.floor(Math.random() * pool.length)].id;
+      renderReturn();
+    }
+
+    function renderReturn() {
+      const item = state.items.find(entry => entry.id === returnId);
+      const body = document.getElementById('return-body');
+      const date = document.getElementById('return-date');
+      const button = document.getElementById('wander-btn');
+      if (!item) {
+        body.innerHTML = '<div class="return-empty">Once the cabinet holds something, this window will gently bring one fragment back.</div>';
+        date.textContent = '';
+        button.disabled = true;
+        return;
+      }
+      body.innerHTML = `<div class="return-text">${escapeHtml(item.text)}</div>${sourceMarkup(item.source)}`;
+      date.textContent = dateLabel(item.createdAt);
+      button.disabled = state.items.length < 2;
+    }
+
+    function addItem(text, source) {
+      const item = { id: 'curio-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), text: text.trim(), source: validSource(source) };
+      HubUtils.stampCreate(item);
+      HubUtils.stampUpdate(item);
+      state.items.unshift(item);
+      saveState();
+      returnId = item.id;
+      renderShelf();
+      renderReturn();
+      return item;
+    }
+
+    function removeItem(id) {
+      const item = state.items.find(entry => entry.id === id);
+      if (!item || !confirm('Remove this curiosity from the cabinet?')) return;
+      state.items = state.items.filter(entry => entry.id !== id);
+      saveState();
+      if (returnId === id) chooseReturn(); else renderReturn();
+      renderShelf();
+    }
+
+    function openEdit(id) {
+      const item = state.items.find(entry => entry.id === id);
+      if (!item) return;
+      editId = id;
+      document.getElementById('edit-text').value = item.text;
+      document.getElementById('edit-source').value = item.source || '';
+      document.getElementById('edit-overlay').classList.add('open');
+      document.getElementById('edit-text').focus();
+    }
+    function closeEdit() { editId = null; document.getElementById('edit-overlay').classList.remove('open'); }
+
+    document.getElementById('capture-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const text = document.getElementById('fragment-text');
+      const source = document.getElementById('fragment-source');
+      if (!text.value.trim()) return;
+      addItem(text.value, source.value);
+      text.value = '';
+      source.value = '';
+      document.getElementById('source-details').open = false;
+      text.focus();
+      if (window.HubToast) HubToast.show('Placed in the cabinet');
+    });
+    document.getElementById('wander-btn').addEventListener('click', () => chooseReturn(returnId));
+    document.getElementById('shelf').addEventListener('click', event => {
+      const action = event.target.closest('[data-action]');
+      const card = event.target.closest('[data-id]');
+      if (!action || !card) return;
+      if (action.dataset.action === 'edit') openEdit(card.dataset.id);
+      if (action.dataset.action === 'delete') removeItem(card.dataset.id);
+    });
+    document.getElementById('edit-cancel').addEventListener('click', closeEdit);
+    document.getElementById('edit-overlay').addEventListener('mousedown', event => { if (event.target.id === 'edit-overlay') closeEdit(); });
+    document.getElementById('edit-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const item = state.items.find(entry => entry.id === editId);
+      const text = document.getElementById('edit-text').value.trim();
+      if (!item || !text) return;
+      item.text = text;
+      item.source = validSource(document.getElementById('edit-source').value);
+      HubUtils.stampUpdate(item);
+      saveState();
+      closeEdit(); renderShelf(); renderReturn();
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && editId) closeEdit(); });
+
+    renderShelf();
+    chooseReturn();
+    HubBootstrap.start('cabinet-hub');
+  </script>
+</body>
+</html>

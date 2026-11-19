@@ -454,6 +454,7 @@
       { id: 'town-hub', label: 'Machi', group: 'People & Network', wg: 'People & Network', icon: '🏙', file: 'town-hub.html', desc: 'A living pixel city of Hub activity, tools, projects, people, achievements and risk response' },
       // ── Learning & Ideas ──────────────────────────────────────────────
       { id: 'learning-hub', label: 'Learning', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '◑', file: 'learning-hub.html', desc: 'Log books, articles and courses — capture highlights, key insights and reading progress' },
+      { id: 'cabinet-hub', label: 'Cabinet', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '✦', file: 'cabinet-hub.html', desc: 'Keep curious fragments without turning them into projects or a processing queue' },
       { id: 'idea-swiper', label: 'Idea Swiper', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '⟳', file: 'idea-swiper.html', desc: 'Capture ideas and swipe to sort them — keep the strong ones, discard the rest' },
       { id: 'canvas-hub', label: 'Canvas', group: 'Learning & Ideas', wg: 'Learning & Ideas', icon: '✏️', file: 'canvas-hub.html', desc: 'Free-form whiteboard — place notes, connect thoughts, think spatially' },
       // ── Strategy & Decisions ──────────────────────────────────────────
@@ -2954,6 +2955,7 @@
       'people-hub-v1': 'people',
       'hub-vault-bridge-v1': 'vault_bridge',
       'signals-hub-v1': 'signals_hub',
+      'cabinet-v1': 'cabinet',
     };
 
     // Tool file → storage keys it owns (for "Current Tool" scope)
@@ -2975,6 +2977,7 @@
       'capture-hub.html': ['capture-hub-v1'],
       'people-hub.html': ['people-hub-v1'],
       'signals-hub.html': ['signals-hub-v1'],
+      'cabinet-hub.html': ['cabinet-v1'],
     };
 
     // Storage keys included in each scope
@@ -2984,7 +2987,7 @@
         'project-hub-v1', 'goals-hub-v1', 'decision-hub-v1', 'review-hub-v1',
         'risk-hub-v1', 'meetings-hub-v1', 'assumptions-hub-v1',
         'schedule-v1', 'learning-hub-v1', 'stakeholder-hub-v1',
-        'tool-portfolio-v1', 'people-hub-v1',
+        'tool-portfolio-v1', 'people-hub-v1', 'cabinet-v1',
       ],
       // Full Backup: everything except cloud credentials and ephemeral UI state
       full: [
@@ -2994,7 +2997,7 @@
         'focus-hub-v1', 'log-hub-v1', 'canvas-v1',
         'ideaswipe_history_v6', 'hub-links-v1', 'hub-activity-v1', 'hub-settings-v1',
         'tool-portfolio-v1', 'hub-tags-v1', 'capture-hub-v1', 'people-hub-v1',
-        'hub-vault-bridge-v1', 'signals-hub-v1',
+        'hub-vault-bridge-v1', 'signals-hub-v1', 'cabinet-v1',
       ],
     };
     // P157: keys of deleted tools. Dropped from this browser once (after a

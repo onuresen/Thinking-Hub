@@ -565,7 +565,7 @@ const MachiFun = (() => {
   const LANDMARKS = {
     'project-hub': 'depot', 'schedule': 'clocktower', 'meetings-hub': 'terminal', 'capture-hub': 'post',
     'journal-hub': 'cafe', 'graph-hub': 'dovecote', 'people-hub': 'apartments', 'stakeholder-hub': 'embassy',
-    'tool-portfolio': 'greenhouse', 'town-hub': 'cityhall', 'learning-hub': 'library', 'idea-swiper': 'ferris',
+    'tool-portfolio': 'greenhouse', 'town-hub': 'cityhall', 'learning-hub': 'library', 'cabinet-hub': 'market', 'idea-swiper': 'ferris',
     'canvas-hub': 'studio', 'decision-hub': 'shrine', 'goals-hub': 'stadium', 'risk-hub': 'firestation', 'signals-hub': 'dovecote',
     'achievements-hub': 'home', 'tags-hub': 'market', 'help-hub': 'school',
   };
@@ -1345,6 +1345,7 @@ const MachiFun = (() => {
       return n ? `📮 Post office · ${n} letter${n === 1 ? '' : 's'} waiting in the inbox`
         : '📮 Post office · inbox zero — the cat is napping';
     }
+    if (appId === 'cabinet-hub') return '🗄 Curiosity cabinet · strange little finds are safe here';
     if (appId === 'canvas-hub') {
       const s = data.studio;
       return `🎨 Art studio · ${s.boards.length} easel${s.boards.length === 1 ? '' : 's'} · ${s.cards} cards · ${s.lines} lines of bunting`;

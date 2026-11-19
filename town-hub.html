@@ -273,7 +273,8 @@
       'graph-hub': ['Dependency Graph', '🕸️', 'People & Network'], 'people-hub': ['People', '◉', 'People & Network'],
       'stakeholder-hub': ['Stakeholders', '◇', 'People & Network'], 'tool-portfolio': ['Tool Portfolio', '🧰', 'People & Network'],
       'town-hub': ['Machi', '🏙', 'People & Network'],
-      'learning-hub': ['Learning', '◑', 'Learning & Ideas'], 'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
+      'learning-hub': ['Learning', '◑', 'Learning & Ideas'], 'cabinet-hub': ['Cabinet', '✦', 'Learning & Ideas'],
+      'idea-swiper': ['Idea Swiper', '⟳', 'Learning & Ideas'],
       'canvas-hub': ['Canvas', '✏️', 'Learning & Ideas'],
       'decision-hub': ['Decisions', '⊕', 'Strategy & Decisions'], 'goals-hub': ['Goals', '◎', 'Strategy & Decisions'],
       'risk-hub': ['Risk Register', '⚠', 'Strategy & Decisions'], 'signals-hub': ['Signals', '📡', 'Strategy & Decisions'],
@@ -1038,7 +1039,7 @@
     // fromDataChange=true here (unlike lens toggles/resize) so milestone
     // celebrations only fire when something real actually changed.
     for (const key of ['tool-portfolio-v1', 'project-hub-v1', 'people-hub-v1', 'hub-activity-v1', 'risk-hub-v1',
-                       'decision-hub-v1', 'hub-vault-bridge-v1', 'learning-hub-v1', 'capture-hub-v1',
+                       'decision-hub-v1', 'hub-vault-bridge-v1', 'learning-hub-v1', 'cabinet-v1', 'capture-hub-v1',
                        'meetings-hub-v1', 'canvas-v1', 'hub-links-v1', 'log-hub-v1']) {
       HubStorage.subscribe(key, () => rebuild(true));
     }

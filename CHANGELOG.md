@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added Cabinet, a pressure-free home for capturing, browsing and gently resurfacing curious fragments with optional source links.
+
 All notable changes to Thinking Hub are recorded here. Releases follow
 [Semantic Versioning](https://semver.org/) from version 1.1.0 onward.
 

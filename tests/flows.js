@@ -1105,6 +1105,44 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 23: Cabinet captures and resurfaces without a processing queue (P191) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/cabinet-hub.html`, { waitUntil: 'load' });
+    const made = await page.evaluate(() => {
+      addItem('A door painted the color of rain', 'https://example.com/door');
+      addItem('Could a project have a season?', 'javascript:alert(1)');
+      const stored = HubStorage.get('cabinet-v1');
+      const before = document.querySelectorAll('.curio').length;
+      const firstReturn = returnId;
+      chooseReturn(returnId);
+      return {
+        before,
+        firstReturn,
+        secondReturn: returnId,
+        items: stored.items,
+        processControls: document.querySelectorAll('[data-status], .status, .category, [data-action="complete"]').length,
+      };
+    });
+    check('flow23: Cabinet captures fragments with lifecycle timestamps and safe optional links',
+      made.before === 2 && made.items[0].createdAt && made.items[0].updatedAt
+      && made.items[1].source === 'https://example.com/door' && made.items[0].source === '', JSON.stringify(made));
+    check('flow23: wandering returns a different fragment when possible without process controls',
+      made.firstReturn !== made.secondReturn && made.processControls === 0, JSON.stringify(made));
+    const changed = await page.evaluate(() => {
+      const id = state.items[0].id;
+      openEdit(id);
+      document.getElementById('edit-text').value = 'Could a project have two seasons?';
+      document.getElementById('edit-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      window.confirm = () => true;
+      removeItem(state.items[1].id);
+      return { count: state.items.length, text: state.items[0].text, storageCount: HubStorage.get('cabinet-v1').items.length };
+    });
+    check('flow23: a curiosity can be corrected or removed without a queue',
+      changed.count === 1 && changed.storageCount === 1 && changed.text === 'Could a project have two seasons?', JSON.stringify(changed));
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();

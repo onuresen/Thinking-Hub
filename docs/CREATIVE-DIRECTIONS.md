@@ -74,7 +74,7 @@ A private collection of recurring places, symbols, characters, phrases, values a
 
 ## Suggested experiment order
 
-1. **Cabinet of Curiosities** — smallest useful seed: capture, browse and gentle resurfacing.
+1. **Cabinet of Curiosities** — implemented as Cabinet (P191): capture, browse and gentle resurfacing.
 2. **Constellation View + Project Weather** — two expressions of one shared interpretation layer.
 3. **Echoes** — connect present context to the Cabinet and existing history.
 4. **Museum Mode + The Unfinished Symphony** — two respectful views of the archive.
