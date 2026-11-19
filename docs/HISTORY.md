@@ -4,6 +4,19 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 192 — Constellation View + Project Weather~~ ✓ Done `[group: projects]`
+Projects now has a Constellation view: every open project appears as a star, while existing direct links, shared tags and shared groups form restrained constellation lines. Each star carries a poetic weather reading derived from attention state, current activity, blocked threads and future goal lines. A compact weather shelf keeps the readings accessible on smaller screens.
+
+**Key decisions**
+- **Decision:** Constellation and Weather are one Projects view, not two new tools. **Why:** they are two readings of the same project state and should not grow navigation or input requirements. **Alternative:** separate Constellation and Weather hubs; rejected because the user would have to maintain and revisit more surfaces. **Confidence:** high.
+- **Decision:** weather is derived and never stored as a project field or score. **Why:** conditions should change naturally with work already recorded. **Alternative:** ask the user to select weather; rejected because it creates another upkeep loop. **Confidence:** high.
+- **Decision:** a passed goal line never creates storm, debt or negative weather. **Why:** goal lines are reflection points, not deadlines. Blocked tasks can produce Headwind because that describes explicit current evidence; long quiet periods become Long calm, not neglect. **Confidence:** high.
+- **Decision:** lines require a direct project link, shared tag or shared group. Shared people only annotate an existing line. **Why:** common collaborators alone would turn a solo portfolio into a dense, misleading web. **Confidence:** high.
+
+**Verified:** flow24 covers derived weather, neutral passed goal lines, deterministic star placement, restrained relationship lines and project opening. Full suite passes.
+
+**Files:** `project-hub.html`, `styles/project-hub.css`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `docs/CREATIVE-DIRECTIONS.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 191 — Cabinet of Curiosities~~ ✓ Done `[group: learning]`
 Cabinet is a small home for fragments that do not need to become projects. A single quiet surface captures text with an optional source link, browses the shelf and randomly resurfaces one existing curiosity. Items can be corrected or removed, but have no categories, processing status, completion state, reminders or required explanation.
 

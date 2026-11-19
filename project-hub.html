@@ -42,6 +42,9 @@
           <span class="nav-icon">▦</span> Overview
           <span class="nav-badge" id="badge-overview">0</span>
         </div>
+        <div class="nav-item" onclick="setView('constellation')">
+          <span class="nav-icon">✦</span> Constellation
+        </div>
         <div class="nav-item" onclick="setView('attention')">
           <span class="nav-icon">◌</span> Attention
         </div>
@@ -847,11 +850,11 @@
       document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${view}'`));
       });
-      const titles = { overview: 'Overview', attention: 'Attention', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', concepts: 'Concept Matrix' };
+      const titles = { overview: 'Overview', constellation: 'Constellation', attention: 'Attention', groupings: 'Groupings', tasks: 'All Tasks', milestones: 'Milestones', goals: 'Goals', concepts: 'Concept Matrix' };
       document.getElementById('topbar-title').textContent = titles[view] || view;
       const btnLabels = { overview: '+ Task', tasks: '+ Task', milestones: '+ Milestone', goals: '+ Goal', matrix: '+ Item', concepts: '+ Concept' };
       document.getElementById('main-action-btn').textContent = btnLabels[view] || '+ Task';
-      document.getElementById('main-action-btn').style.display = ['groupings', 'attention'].includes(view) ? 'none' : '';
+      document.getElementById('main-action-btn').style.display = ['groupings', 'attention', 'constellation'].includes(view) ? 'none' : '';
       document.getElementById('view-toggle').style.display = view === 'tasks' ? 'flex' : 'none';
       renderContent();
     }
@@ -901,6 +904,116 @@
       showToast(status === 'onhold' ? 'Project is resting' : status === 'done' ? 'Project completed' : 'Project is active');
     }
 
+    // ─── CONSTELLATION + PROJECT WEATHER (P192) ────────────────────────────────
+    // Both are readings of existing data. They never persist a score or ask the
+    // user to maintain another project field.
+    const PROJECT_WEATHER = {
+      headwind: { icon: '≋', label: 'Headwind' },
+      bright: { icon: '☀', label: 'Bright intervals' },
+      gathering: { icon: '◐', label: 'Gathering light' },
+      gentle: { icon: '≈', label: 'Gentle climate' },
+      snow: { icon: '❄', label: 'Quiet snow' },
+      mist: { icon: '≋', label: 'Dawn mist' },
+      calm: { icon: '○', label: 'Long calm' },
+      unknown: { icon: '·', label: 'Uncharted sky' },
+    };
+
+    function projectWeather(project) {
+      if (project.status === 'onhold') return { kind: 'snow', ...PROJECT_WEATHER.snow, text: 'Intentionally resting. No thaw is required.' };
+      if (project.status === 'planning') return { kind: 'mist', ...PROJECT_WEATHER.mist, text: 'Still forming; the shape can remain indistinct.' };
+      if (project.status === 'maintenance') return { kind: 'gentle', ...PROJECT_WEATHER.gentle, text: 'A steady climate where occasional attention is enough.' };
+      const liveTasks = (project.tasks || []).filter(task => !task.done && !task.archived);
+      const blocked = liveTasks.filter(task => task.status === 'blocked').length;
+      if (blocked) return { kind: 'headwind', ...PROJECT_WEATHER.headwind, text: `${blocked} blocked ${blocked === 1 ? 'thread is' : 'threads are'} creating resistance.` };
+      const age = project.updatedAt ? HubUtils.daysSince(project.updatedAt) : Infinity;
+      if (!Number.isFinite(age)) return { kind: 'unknown', ...PROJECT_WEATHER.unknown, text: 'Not enough history to read the conditions yet.' };
+      if (age <= 7) return { kind: 'bright', ...PROJECT_WEATHER.bright, text: `Movement ${HubUtils.relativeAge(project.updatedAt)} is keeping the sky bright.` };
+      const line = projectGoalLine(project.id);
+      const until = line && !line.passed ? daysUntil(line.item.start) : null;
+      if (until !== null && until <= 21) return { kind: 'gathering', ...PROJECT_WEATHER.gathering, text: `Light is gathering toward the ${formatDate(line.item.start)} reflection point.` };
+      if (age <= 45) return { kind: 'gentle', ...PROJECT_WEATHER.gentle, text: `Last movement was ${HubUtils.relativeAge(project.updatedAt)}.` };
+      return { kind: 'calm', ...PROJECT_WEATHER.calm, text: `The project has been quiet for a while. Quiet is not neglect.` };
+    }
+
+    function hashNumber(value) {
+      let hash = 2166136261;
+      for (const ch of String(value || '')) { hash ^= ch.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+      return hash >>> 0;
+    }
+
+    function constellationRelations(projects) {
+      const ids = new Set(projects.map(project => project.id));
+      const explicit = new Set();
+      if (typeof HubLinks !== 'undefined') HubLinks.getAll().forEach(link => {
+        if (link.a.tool !== 'project-hub' || link.b.tool !== 'project-hub') return;
+        if (!ids.has(link.a.itemId) || !ids.has(link.b.itemId)) return;
+        explicit.add([link.a.itemId, link.b.itemId].sort().join('|'));
+      });
+      const edges = [];
+      for (let a = 0; a < projects.length; a++) for (let b = a + 1; b < projects.length; b++) {
+        const one = projects[a], two = projects[b];
+        const key = [one.id, two.id].sort().join('|');
+        const tags = (one.tags || []).filter(tag => (two.tags || []).some(other => other.toLowerCase() === String(tag).toLowerCase()));
+        const sameGroup = one.group && two.group && one.group === two.group;
+        const members = getProjMemberIds(one).filter(id => getProjMemberIds(two).includes(id));
+        const reasons = [];
+        if (explicit.has(key)) reasons.push('linked');
+        if (tags.length) reasons.push(tags.slice(0, 2).join(', '));
+        if (sameGroup) reasons.push(one.group);
+        if (members.length && reasons.length) reasons.push(`${members.length} shared ${members.length === 1 ? 'person' : 'people'}`);
+        if (reasons.length) edges.push({ a: one.id, b: two.id, reasons });
+      }
+      return edges;
+    }
+
+    function constellationLayout(projects) {
+      const width = 1000, height = 600, cx = width / 2, cy = height / 2;
+      const sorted = projects.slice().sort((a, b) => hashNumber(a.id) - hashNumber(b.id));
+      const positions = {};
+      sorted.forEach((project, index) => {
+        const seed = hashNumber(project.id) / 4294967295;
+        const ring = 105 + Math.sqrt((index + 1) / Math.max(1, sorted.length)) * 185;
+        const angle = index * 2.399963 + seed * .9;
+        positions[project.id] = { x: cx + Math.cos(angle) * ring * 1.45, y: cy + Math.sin(angle) * ring };
+      });
+      return positions;
+    }
+
+    function renderConstellation(container) {
+      const projects = state.projects.filter(project => project.status !== 'done' && !project.archived);
+      const wrap = document.createElement('div');
+      wrap.className = 'constellation-wrap animate-in';
+      if (!projects.length) {
+        wrap.innerHTML = '<div class="empty-state"><div class="e-icon">✦</div><div class="e-title">No open projects in the sky</div></div>';
+        container.appendChild(wrap); return;
+      }
+      const positions = constellationLayout(projects);
+      const edges = constellationRelations(projects);
+      const weather = new Map(projects.map(project => [project.id, projectWeather(project)]));
+      const edgeSvg = edges.map(edge => {
+        const a = positions[edge.a], b = positions[edge.b];
+        return `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"><title>${HubUtils.esc(edge.reasons.join(' · '))}</title></line>`;
+      }).join('');
+      const stars = projects.map(project => {
+        const pos = positions[project.id], reading = weather.get(project.id);
+        const size = Math.max(9, Math.min(17, 9 + Math.sqrt((project.tasks || []).filter(task => !task.archived).length) * 1.6));
+        return `<button class="constellation-star weather-${reading.kind}" style="left:${(pos.x / 10).toFixed(2)}%;top:${(pos.y / 6).toFixed(2)}%;--star-color:${project.color || 'var(--accent)'};--star-size:${size}px" onclick="openProject('${HubUtils.esc(project.id)}')" aria-label="${HubUtils.esc(project.name)}, ${HubUtils.esc(reading.label)}">
+          <span class="star-light"></span><span class="star-name">${HubUtils.esc(project.name)}</span><span class="star-weather">${reading.icon} ${HubUtils.esc(reading.label)}</span>
+          <span class="star-reading">${HubUtils.esc(reading.text)}</span>
+        </button>`;
+      }).join('');
+      const kinds = [...new Set(projects.map(project => weather.get(project.id).kind))];
+      wrap.innerHTML = `<section class="constellation-intro card">
+        <div><div class="mono">A living map, not a ranking</div><h2>Your projects share one sky.</h2><p>Lines come from links, shared tags or groups. Weather describes present conditions and never asks to be cleared.</p></div>
+        <div class="weather-key">${kinds.map(kind => `<span class="weather-key-item weather-${kind}">${PROJECT_WEATHER[kind].icon} ${HubUtils.esc(PROJECT_WEATHER[kind].label)}</span>`).join('')}</div>
+      </section>
+      <section class="constellation-sky" aria-label="Project constellation">
+        <svg viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">${edgeSvg}</svg>${stars}
+      </section>
+      <section class="weather-cards">${projects.map(project => { const reading = weather.get(project.id); return `<button class="weather-card weather-${reading.kind}" onclick="openProject('${HubUtils.esc(project.id)}')"><span class="weather-icon">${reading.icon}</span><span><strong>${HubUtils.esc(project.name)}</strong><small>${HubUtils.esc(reading.label)} · ${HubUtils.esc(reading.text)}</small></span></button>`; }).join('')}</section>`;
+      container.appendChild(wrap);
+    }
+
     function renderAttention(container) {
       const wrap = document.createElement('div');
       wrap.className = 'attention-wrap animate-in';
@@ -933,6 +1046,7 @@
       c.innerHTML = '';
       updateBadges();
       if (state.currentView === 'overview') renderOverview(c);
+      else if (state.currentView === 'constellation') renderConstellation(c);
       else if (state.currentView === 'attention') renderAttention(c);
       else if (state.currentView === 'tasks') {
         if (state.currentSubView === 'kanban') renderKanban(c);

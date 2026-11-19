@@ -75,7 +75,7 @@ A private collection of recurring places, symbols, characters, phrases, values a
 ## Suggested experiment order
 
 1. **Cabinet of Curiosities** — implemented as Cabinet (P191): capture, browse and gentle resurfacing.
-2. **Constellation View + Project Weather** — two expressions of one shared interpretation layer.
+2. **Constellation View + Project Weather** — implemented together inside Projects (P192), derived from existing activity and relationships.
 3. **Echoes** — connect present context to the Cabinet and existing history.
 4. **Museum Mode + The Unfinished Symphony** — two respectful views of the archive.
 5. **Tiny Rituals + Machi Festivals** — private rhythm reflected playfully in the shared world.

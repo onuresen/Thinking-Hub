@@ -1964,3 +1964,41 @@
     .ct-jump-dot { width: 8px; height: 8px; border-radius: 50%; }
     .ct-jump-n { font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
     .project-grid.compact .proj-group-header { scroll-margin-top: 12px; }
+
+    /* ── P192: Constellation + Project Weather ───────────────────────── */
+    .constellation-wrap { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .constellation-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 18px 20px; }
+    .constellation-intro h2 { margin: 5px 0 4px; font-family: var(--font-display); font-size: 21px; }
+    .constellation-intro p { margin: 0; color: var(--text2); font-size: 12.5px; line-height: 1.5; }
+    .weather-key { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 430px; }
+    .weather-key-item { padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--text2); background: var(--surface2); font-size: 10.5px; white-space: nowrap; }
+    .constellation-sky { position: relative; min-height: 560px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+    .constellation-sky::before { content: ''; position: absolute; inset: 0; opacity: .7; background-image: radial-gradient(circle at 20% 30%, var(--accent-glow) 0, transparent 20%), radial-gradient(circle at 80% 70%, var(--surface3) 0, transparent 26%); pointer-events: none; }
+    .constellation-sky svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .constellation-sky line { stroke: var(--border2); stroke-width: 1.2; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; }
+    .constellation-star { position: absolute; z-index: 1; width: 0; height: 0; border: 0; padding: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left; }
+    .star-light { position: absolute; width: var(--star-size); height: var(--star-size); left: calc(var(--star-size) / -2); top: calc(var(--star-size) / -2); border-radius: 50%; background: var(--star-color); box-shadow: 0 0 0 4px var(--accent-dim), 0 0 18px var(--star-color); transition: transform .15s; }
+    .constellation-star:hover .star-light, .constellation-star:focus-visible .star-light { transform: scale(1.35); }
+    .star-name { position: absolute; left: 13px; top: -16px; width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-size: 12px; font-weight: 700; text-shadow: 0 1px var(--surface); }
+    .star-weather { position: absolute; left: 13px; top: 1px; width: 150px; color: var(--text3); font-size: 9.5px; white-space: nowrap; }
+    .star-reading { display: none; position: absolute; left: 13px; top: 22px; width: 210px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: var(--r-sm); background: var(--surface2); color: var(--text2); font-size: 11px; line-height: 1.4; }
+    .constellation-star:hover .star-reading, .constellation-star:focus-visible .star-reading { display: block; }
+    .weather-cards { display: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+    .weather-card { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; background: var(--surface); color: var(--text); text-align: left; display: flex; gap: 10px; cursor: pointer; }
+    .weather-card:hover { border-color: var(--accent-glow); }
+    .weather-icon { color: var(--accent); font-size: 18px; }
+    .weather-card strong, .weather-card small { display: block; }
+    .weather-card strong { font-family: var(--font-display); font-size: 12.5px; }
+    .weather-card small { margin-top: 3px; color: var(--text3); font-size: 10.5px; line-height: 1.35; }
+    .weather-headwind .weather-icon, .weather-key-item.weather-headwind, .weather-headwind .star-weather { color: var(--accent-super); }
+    .weather-bright .weather-icon, .weather-key-item.weather-bright, .weather-bright .star-weather { color: var(--accent); }
+    .weather-snow .weather-icon, .weather-key-item.weather-snow, .weather-snow .star-weather { color: var(--text2); }
+    @media (max-width: 760px) {
+      .constellation-intro { align-items: flex-start; flex-direction: column; }
+      .weather-key { justify-content: flex-start; }
+      .constellation-sky { min-height: 430px; }
+      .star-name { width: 90px; font-size: 10.5px; }
+      .star-weather { display: none; }
+      .weather-cards { display: grid; }
+    }
+    @media (prefers-reduced-motion: reduce) { .star-light { transition: none; } }

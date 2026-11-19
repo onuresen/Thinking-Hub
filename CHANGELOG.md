@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a Projects Constellation view and derived Project Weather, using existing activity and relationships without introducing new maintenance fields or negative goal-line pressure.
 - Added Cabinet, a pressure-free home for capturing, browsing and gently resurfacing curious fragments with optional source links.
 
 All notable changes to Thinking Hub are recorded here. Releases follow

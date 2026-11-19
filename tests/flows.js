@@ -1143,6 +1143,46 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 24: Constellation + Project Weather derive, never demand (P192) ──
+  {
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const r = await page.evaluate(() => {
+      const now = new Date().toISOString();
+      const old = new Date(Date.now() - 80 * 86400000).toISOString();
+      const base = (id, name, status, updatedAt, tags = [], group = '') => ({ id, name, status, updatedAt, tags, group, color: 'var(--accent)', desc: '', members: [], tasks: [], milestones: [], goals: [], workstreams: [] });
+      const bright = base('p-bright', 'Bright project', 'active', now, ['systems'], 'World');
+      const windy = base('p-wind', 'Windy project', 'active', now, ['systems']);
+      windy.tasks = [{ id: 'blocked', title: 'Waiting thread', status: 'blocked', done: false }];
+      const snow = base('p-snow', 'Snow project', 'onhold', old);
+      const calm = base('p-calm', 'Calm project', 'active', old);
+      const unknown = base('p-unknown', 'Unknown project', 'active', '');
+      state.projects = [bright, windy, snow, calm, unknown];
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: state.projects });
+      HubStorage.set('schedule-v1', { items: [{ id: 'passed', type: 'goal', title: 'Old reflection', start: '2020-01-01', end: '2020-01-01', projectId: 'p-calm' }] });
+      HubStorage.set('hub-links-v1', []);
+      setView('constellation');
+      const readings = Object.fromEntries(state.projects.map(project => [project.id, projectWeather(project)]));
+      const firstPositions = constellationLayout(state.projects);
+      const secondPositions = constellationLayout(state.projects);
+      const edges = constellationRelations(state.projects);
+      const stars = [...document.querySelectorAll('.constellation-star')];
+      const title = document.getElementById('topbar-title').textContent;
+      stars[0].click();
+      return { readings, firstPositions, secondPositions, edges, stars: stars.length, lines: document.querySelectorAll('.constellation-sky line').length, title, opened: state.selectedProject };
+    });
+    check('flow24: Project Weather reads existing conditions without storing a field',
+      r.readings['p-bright'].kind === 'bright' && r.readings['p-wind'].kind === 'headwind'
+      && r.readings['p-snow'].kind === 'snow' && r.readings['p-unknown'].kind === 'unknown', JSON.stringify(r.readings));
+    check('flow24: long quiet and passed goal lines stay neutral, never overdue or stormy',
+      r.readings['p-calm'].kind === 'calm' && /not neglect/.test(r.readings['p-calm'].text), JSON.stringify(r.readings['p-calm']));
+    check('flow24: shared tags create a restrained line and star placement is deterministic',
+      r.edges.length === 1 && r.lines === 1 && JSON.stringify(r.firstPositions) === JSON.stringify(r.secondPositions), JSON.stringify(r));
+    check('flow24: Constellation shows every open project and a star opens its project',
+      r.title === 'Constellation' && r.stars === 5 && !!r.opened, JSON.stringify(r));
+    await page.close();
+  }
+
 
   await browser.close();
   server.close();
