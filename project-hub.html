@@ -941,6 +941,24 @@
       return hash >>> 0;
     }
 
+    const PROJECT_CREATURES = [
+      { icon: '🦊', species: 'fox' }, { icon: '🦉', species: 'owl' }, { icon: '🐢', species: 'turtle' },
+      { icon: '🐇', species: 'hare' }, { icon: '🦌', species: 'deer' }, { icon: '🐈', species: 'cat' },
+    ];
+
+    function projectCreature(project) {
+      const creature = PROJECT_CREATURES[hashNumber(project.id) % PROJECT_CREATURES.length];
+      const history = (project.tasks || []).filter(task => !task.archived).length + (project.milestones || []).filter(milestone => milestone.done).length * 2;
+      const stage = history >= 10 ? 'old soul' : history >= 4 ? 'familiar companion' : 'new companion';
+      const weather = projectWeather(project);
+      const motion = {
+        headwind: 'leans into the wind', bright: 'darts between the stars', gathering: 'watches the horizon',
+        gentle: 'pads along at an easy pace', snow: 'is curled up somewhere warm', mist: 'sniffs out a possible path',
+        calm: 'sleeps nearby', unknown: 'has just arrived',
+      }[weather.kind];
+      return { ...creature, stage, motion, weather: weather.kind };
+    }
+
     function constellationRelations(projects) {
       const ids = new Set(projects.map(project => project.id));
       const explicit = new Set();
@@ -997,8 +1015,9 @@
       const stars = projects.map(project => {
         const pos = positions[project.id], reading = weather.get(project.id);
         const size = Math.max(9, Math.min(17, 9 + Math.sqrt((project.tasks || []).filter(task => !task.archived).length) * 1.6));
-        return `<button class="constellation-star weather-${reading.kind}" style="left:${(pos.x / 10).toFixed(2)}%;top:${(pos.y / 6).toFixed(2)}%;--star-color:${project.color || 'var(--accent)'};--star-size:${size}px" onclick="openProject('${HubUtils.esc(project.id)}')" aria-label="${HubUtils.esc(project.name)}, ${HubUtils.esc(reading.label)}">
-          <span class="star-light"></span><span class="star-name">${HubUtils.esc(project.name)}</span><span class="star-weather">${reading.icon} ${HubUtils.esc(reading.label)}</span>
+        const creature = projectCreature(project);
+        return `<button class="constellation-star weather-${reading.kind}" style="left:${(pos.x / 10).toFixed(2)}%;top:${(pos.y / 6).toFixed(2)}%;--star-color:${project.color || 'var(--accent)'};--star-size:${size}px" onclick="openProject('${HubUtils.esc(project.id)}')" aria-label="${HubUtils.esc(project.name)}, ${HubUtils.esc(reading.label)}, ${creature.species}">
+          <span class="star-light"></span><span class="star-creature" aria-hidden="true">${creature.icon}</span><span class="star-name">${HubUtils.esc(project.name)}</span><span class="star-weather">${reading.icon} ${HubUtils.esc(reading.label)}</span>
           <span class="star-reading">${HubUtils.esc(reading.text)}</span>
         </button>`;
       }).join('');
@@ -1010,7 +1029,8 @@
       <section class="constellation-sky" aria-label="Project constellation">
         <svg viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">${edgeSvg}</svg>${stars}
       </section>
-      <section class="weather-cards">${projects.map(project => { const reading = weather.get(project.id); return `<button class="weather-card weather-${reading.kind}" onclick="openProject('${HubUtils.esc(project.id)}')"><span class="weather-icon">${reading.icon}</span><span><strong>${HubUtils.esc(project.name)}</strong><small>${HubUtils.esc(reading.label)} · ${HubUtils.esc(reading.text)}</small></span></button>`; }).join('')}</section>`;
+      <section class="weather-cards">${projects.map(project => { const reading = weather.get(project.id); return `<button class="weather-card weather-${reading.kind}" onclick="openProject('${HubUtils.esc(project.id)}')"><span class="weather-icon">${reading.icon}</span><span><strong>${HubUtils.esc(project.name)}</strong><small>${HubUtils.esc(reading.label)} · ${HubUtils.esc(reading.text)}</small></span></button>`; }).join('')}</section>
+      <section class="creature-garden"><div class="creature-head"><div class="mono">Project creatures</div><p>Companions shaped by project history. They need no care.</p></div><div class="creature-grid">${projects.map(project => { const creature = projectCreature(project); return `<button class="creature-card weather-${creature.weather}" onclick="openProject('${HubUtils.esc(project.id)}')"><span class="creature-icon">${creature.icon}</span><span><strong>${HubUtils.esc(project.name)}</strong><small>${HubUtils.esc(creature.stage)} · ${HubUtils.esc(creature.motion)}</small></span></button>`; }).join('')}</div></section>`;
       container.appendChild(wrap);
     }
 

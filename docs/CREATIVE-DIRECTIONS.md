@@ -78,8 +78,8 @@ A private collection of recurring places, symbols, characters, phrases, values a
 2. **Constellation View + Project Weather** — implemented together inside Projects (P192), derived from existing activity and relationships.
 3. **Echoes** — implemented inside Cabinet's Memory House (P193), returning existing Cabinet, Journal and Decision material without copying it.
 4. **Museum Mode + The Unfinished Symphony** — implemented as two respectful, read-only rooms in the same Memory House (P193).
-5. **Tiny Rituals + Machi Festivals** — private rhythm reflected playfully in the shared world.
-6. **Project Creatures** — add only after the world has enough real history to make them meaningful.
+5. **Tiny Rituals + Machi Festivals** — implemented (P194): three optional Journal gestures can join Schedule observances and project completions as temporary Machi celebrations.
+6. **Project Creatures** — implemented in the Constellation (P195), derived from existing identity, weather and history with no care mechanics.
 7. **“What changed in me?” + Personal Mythology** — grow slowly from accumulated evidence and voluntary reflection.
 
 The order is a starting path, not a promise. Each experiment should be reviewed on three questions: Did it feel alive? Did it reuse what was already known? Did it reduce rather than increase the user's maintenance burden?

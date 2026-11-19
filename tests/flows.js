@@ -1232,6 +1232,57 @@ function startServer() {
     await page.close();
   }
 
+  // ── Flow 26: Tiny Rituals, Machi festivals and Project Creatures (P194–P195) ──
+  {
+    const journal = await ctx.newPage();
+    await journal.goto(`${BASE}/journal-hub.html`, { waitUntil: 'load' });
+    const rituals = await journal.evaluate(() => {
+      const today = HubUtils.todayLocal();
+      lhOpenDate(today);
+      lhToggleRitual('lanternAt'); lhToggleRitual('pebbleAt'); lhToggleRitual('gateAt');
+      const entry = HubStorage.get('log-hub-v1').entries[today];
+      return { keys: Object.keys(entry.rituals).sort(), active: document.querySelectorAll('.tr-btn.active').length, text: document.getElementById('tiny-rituals').textContent };
+    });
+    check('flow26: three optional Tiny Rituals store on the local day without streak language',
+      rituals.keys.join('|') === 'gateAt|lanternAt|pebbleAt' && rituals.active === 3 && !/streak|complete|missed/i.test(rituals.text), JSON.stringify(rituals));
+    await journal.close();
+
+    const machi = await ctx.newPage();
+    await machi.goto(`${BASE}/town-hub.html`, { waitUntil: 'load' });
+    const festival = await machi.evaluate(() => {
+      const today = HubUtils.todayLocal();
+      HubStorage.set('schedule-v1', { items: [{ id: 'eid', type: 'observance', title: 'Eid', start: today, end: today }] });
+      const log = HubStorage.get('log-hub-v1') || { entries: {} };
+      log.entries = log.entries || {}; log.entries[today] = log.entries[today] || {};
+      log.entries[today].rituals = { lanternAt: new Date().toISOString() };
+      HubStorage.set('log-hub-v1', log);
+      MachiFun.refresh();
+      const civic = MachiFun.civicBuildings();
+      return { names: MachiFun._debug().data.festival, festival: civic.some(entity => entity.meta.look === 'festival') };
+    });
+    check("flow26: today's observance and ritual open Machi festival with no festival configuration",
+      festival.festival && festival.names.some(name => /Eid/.test(name)) && festival.names.some(name => /lantern/.test(name)), JSON.stringify(festival));
+    await machi.close();
+
+    const projects = await ctx.newPage();
+    await projects.goto(`${BASE}/project-hub.html`, { waitUntil: 'load' });
+    const creatures = await projects.evaluate(() => {
+      const now = new Date().toISOString();
+      const base = { status: 'active', updatedAt: now, color: 'var(--accent)', desc: '', members: [], tags: [], goals: [], workstreams: [] };
+      const young = { ...base, id: 'stable-creature', name: 'Young Project', tasks: [], milestones: [] };
+      const elder = { ...base, id: 'elder-creature', name: 'Elder Project', tasks: Array.from({ length: 8 }, (_, i) => ({ id: 't' + i, title: 'Thread ' + i })), milestones: [{ id: 'm', done: true }] };
+      state.projects = [young, elder];
+      HubStorage.set('project-hub-v1', { members: [], concepts: [], projects: state.projects });
+      setView('constellation');
+      return { first: projectCreature(young), again: projectCreature(young), elder: projectCreature(elder), cards: document.querySelectorAll('.creature-card').length, text: document.querySelector('.creature-garden').textContent };
+    });
+    check('flow26: Project Creatures keep a stable identity and grow only from existing history',
+      creatures.first.species === creatures.again.species && creatures.first.stage === 'new companion' && creatures.elder.stage === 'old soul' && creatures.cards === 2, JSON.stringify(creatures));
+    check('flow26: creatures describe companionship without care mechanics',
+      !/feed|hungry|health|streak|care for|needs you/i.test(creatures.text), creatures.text);
+    await projects.close();
+  }
+
 
   await browser.close();
   server.close();

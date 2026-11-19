@@ -4,6 +4,27 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 195 — Project Creatures~~ ✓ Done `[group: projects]`
+Every open project now has a stable creature companion in Constellation. Species comes deterministically from project identity; new companion, familiar companion and old soul stages come from existing task and reached-milestone history; motion comes from Project Weather. The creature appears beside its star and in a small garden below the sky.
+
+**Key decisions**
+- **Decision:** creatures are derived companions, not pets to maintain. **Why:** feeding, naming, health or happiness mechanics would turn play into another responsibility. **Alternative:** a creature-care loop; rejected because the user would become its bottleneck. **Confidence:** high.
+- **Decision:** identity is stable while stage and motion can change from real project history. **Why:** the creature should feel recognizable without adding a stored profile. **Confidence:** high.
+
+**Verified:** flow26 covers stable identity, history-derived stages, weather-derived motion and the absence of care mechanics.
+
+### ~~Priority 194 — Tiny Rituals + Machi Festivals~~ ✓ Done `[group: journal, machi]`
+Daily Log offers three optional one-click gestures on today only: light a lantern, leave a pebble and close the gate. They live inside the day's `log-hub-v1` entry and can be toggled off. They do not count toward Journal streaks and carry no completion score. Machi's existing festival ground now appears for today's rituals and Schedule observances as well as recent project completions, in both Street and Bird's-eye views.
+
+**Key decisions**
+- **Decision:** rituals are gestures, not habits. **Why:** missing one must mean nothing. **Alternative:** reminders, streaks or daily completion; rejected because they manufacture obligation. **Confidence:** high.
+- **Decision:** Machi derives celebrations from Journal and Schedule rather than storing festival setup. **Why:** meaningful days should animate the world without event-management input. **Confidence:** high.
+- **Decision:** reuse the festival ground already drawn by both Machi views. **Why:** this preserves the two-view contract without introducing parallel rendering or duplicate state. **Confidence:** high.
+
+**Verified:** flow26 covers ritual toggling, local-day storage, no streak semantics, observance and ritual festivals, and zero festival configuration.
+
+**Files:** `journal-hub.html`, `project-hub.html`, `styles/project-hub.css`, `machi-fun.js`, `town-hub.html`, `tests/flows.js`, `sw.js`, `CLAUDE.md`, `docs/CREATIVE-DIRECTIONS.md`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 193 — Memory House: Echoes, Museum and Unfinished Symphony~~ ✓ Done `[group: learning]`
 Cabinet has grown into one Memory House with four rooms rather than three additional hubs. Echoes chooses up to three deterministic daily returns from existing Cabinet fragments, Journal entries and Decisions; terms from active projects can make a return contextually resonant without creating a link. Museum presents completed projects and reached milestones with their descriptions and dates. Unfinished Symphony presents resting, incubating and long-quiet projects as movements with a few open-task motifs.
 

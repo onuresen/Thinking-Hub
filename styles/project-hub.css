@@ -1978,6 +1978,7 @@
     .constellation-sky line { stroke: var(--border2); stroke-width: 1.2; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; }
     .constellation-star { position: absolute; z-index: 1; width: 0; height: 0; border: 0; padding: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left; }
     .star-light { position: absolute; width: var(--star-size); height: var(--star-size); left: calc(var(--star-size) / -2); top: calc(var(--star-size) / -2); border-radius: 50%; background: var(--star-color); box-shadow: 0 0 0 4px var(--accent-dim), 0 0 18px var(--star-color); transition: transform .15s; }
+    .star-creature { position: absolute; right: 8px; bottom: 7px; font-size: 13px; filter: saturate(.85); }
     .constellation-star:hover .star-light, .constellation-star:focus-visible .star-light { transform: scale(1.35); }
     .star-name { position: absolute; left: 13px; top: -16px; width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-size: 12px; font-weight: 700; text-shadow: 0 1px var(--surface); }
     .star-weather { position: absolute; left: 13px; top: 1px; width: 150px; color: var(--text3); font-size: 9.5px; white-space: nowrap; }
@@ -1993,6 +1994,16 @@
     .weather-headwind .weather-icon, .weather-key-item.weather-headwind, .weather-headwind .star-weather { color: var(--accent-super); }
     .weather-bright .weather-icon, .weather-key-item.weather-bright, .weather-bright .star-weather { color: var(--accent); }
     .weather-snow .weather-icon, .weather-key-item.weather-snow, .weather-snow .star-weather { color: var(--text2); }
+    .creature-garden { padding: 16px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+    .creature-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .creature-head p { margin: 0; color: var(--text3); font-size: 11px; }
+    .creature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 7px; }
+    .creature-card { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface2); color: var(--text); text-align: left; cursor: pointer; }
+    .creature-card:hover { border-color: var(--accent-glow); }
+    .creature-icon { width: 30px; font-size: 22px; text-align: center; }
+    .creature-card strong, .creature-card small { display: block; }
+    .creature-card strong { font-family: var(--font-display); font-size: 12px; }
+    .creature-card small { margin-top: 2px; color: var(--text3); font-size: 10.5px; line-height: 1.3; }
     @media (max-width: 760px) {
       .constellation-intro { align-items: flex-start; flex-direction: column; }
       .weather-key { justify-content: flex-start; }

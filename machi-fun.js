@@ -48,7 +48,7 @@ const MachiFun = (() => {
       journal: { week: 0 },
       projects: { total: 0, open: 0 },
       responders: 0,
-      festival: [],  // names of projects finished in the last 14 days
+      festival: [],  // names of current celebrations from existing Hub data
       tags: 0,
       burning: false,
     };
@@ -153,15 +153,23 @@ const MachiFun = (() => {
     return { week };
   }
 
-  // Project counts, a festival for projects marked done in the last 14 days
-  // (only with a real updatedAt — unknown age never counts, P90), risks being
-  // treated (hospital), and the tag count (market stalls).
+  // Project completions, today's observances and Tiny Rituals can all make the
+  // festival ground appear. Everything is derived; Machi asks for no input.
   function readCity() {
     const projects = arr((HubStorage.get('project-hub-v1') || {}).projects).filter(Boolean);
     const cutoff = Date.now() - 14 * 86400000;
     const festival = projects
       .filter((p) => p.status === 'done' && p.updatedAt && new Date(p.updatedAt).getTime() >= cutoff)
-      .map((p) => p.name || 'Project');
+      .map((p) => `Project completed · ${p.name || 'Project'}`);
+    const today = HubUtils.todayLocal();
+    arr((HubStorage.get('schedule-v1') || {}).items)
+      .filter((item) => item && item.type === 'observance' && item.start <= today && (item.end || item.start) >= today)
+      .forEach((item) => festival.push(`Observance · ${item.title || 'A meaningful day'}`));
+    const todayEntry = (((HubStorage.get('log-hub-v1') || {}).entries || {})[today] || {});
+    const rituals = todayEntry.rituals || {};
+    if (rituals.lanternAt) festival.push('Tiny ritual · lantern lighting');
+    if (rituals.pebbleAt) festival.push('Tiny ritual · pebble path');
+    if (rituals.gateAt) festival.push('Tiny ritual · gate-closing evening');
     const responders = arr((HubStorage.get('risk-hub-v1') || {}).risks)
       .filter((r) => r && r.status === 'mitigating' && r.owner).length;
     return {
@@ -1392,8 +1400,8 @@ const MachiFun = (() => {
         note: 'The ambulances drive out from here.', link: ['risk-hub.html', 'Open Risk Register →'] };
     }
     if (m.lens === 'fun-festival') {
-      return { title: '🎪 Festival', status: 'Celebrating projects finished in the last two weeks',
-        note: data.festival.join('\n'), link: ['project-hub.html', 'Open Projects →'] };
+      return { title: '🎪 Machi festival', status: 'A temporary celebration drawn from today',
+        note: data.festival.join('\n'), link: ['schedule.html', 'Open Schedule →'] };
     }
     if (m.lens === 'fun-train') {
       const n = data.journal.week;

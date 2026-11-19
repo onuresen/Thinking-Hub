@@ -13,11 +13,11 @@ Sidebar tools (20, must match `APPS` in `index.html` and `HUB_PAGES` in `town-hu
 
 | File | Role |
 |------|------|
-| `project-hub.html` | Projects + tasks. Attention states: Active, Maintaining, Resting, Incubating, Complete (P188). Attention view and project-level Schedule goal lines use reflection without overdue state (P190). Constellation + Project Weather derive a non-ranking living map from existing activity and relationships (P192). Views: Overview (Cards show the Next line, P165; or Compact tiles with Jump to, P182), Constellation, Attention, Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
+| `project-hub.html` | Projects + tasks. Attention states: Active, Maintaining, Resting, Incubating, Complete (P188). Attention view and project-level Schedule goal lines use reflection without overdue state (P190). Constellation + Project Weather derive a non-ranking living map from existing activity and relationships (P192); stable Project Creatures grow from that same history without care mechanics (P195). Views: Overview (Cards show the Next line, P165; or Compact tiles with Jump to, P182), Constellation, Attention, Groupings, All Tasks, Milestones, Goals, Concept Matrix. Kanban, One-Pager, linked vault note review |
 | `schedule.html` | Calendar (month / hourly week grid with drag-resize, ‹ › moves either) + Timeline: open projects with milestones, tasks, meetings and Schedule's own items, plus a "No project" group (P184). Toggleable Commitments, Personal, Observances, Goal lines and Focus windows keep one calendar without mixing meanings (P188). Project goal lines are reflection points and never overdue (P190). Meetings carry their time and project color; a click opens the meeting panel (P164) |
 | `meetings-hub.html` | Meetings: list grouped by date or project (P184), notes left and decisions + actions right, type templates, attendee roles, weekly series, .ics import (project guess, P164), linked vault note review |
 | `capture-hub.html` | Brain-dump inbox with routing to other tools. Also the PWA share target |
-| `journal-hub.html` | Tabs: Daily Log (`log-hub-v1`), Weekly Review (`review-hub-v1`), Time Journal (`focus-hub-v1`) |
+| `journal-hub.html` | Tabs: Daily Log (`log-hub-v1`), Weekly Review (`review-hub-v1`), Time Journal (`focus-hub-v1`). Tiny Rituals are optional one-click local-day gestures stored on the day's log entry, with no streak or completion semantics (P194) |
 | `graph-hub.html` | Dependency graph (vis-network): critical path, reasoning/impact trace, shortest path, suggested links, tag nodes |
 | `people-hub.html` | Member roster, org tree, load matrix, "Me View" |
 | `stakeholder-hub.html` | Organizations roster (default) + Power/Interest grid |
@@ -189,7 +189,7 @@ Every persisted **record** should carry a consistent lifecycle-timestamp trio so
 
 ## Machi
 Built by a Codex agent (history in `docs/HISTORY.md`). **For fun, not insight** (Onur, 2026-10-01): add playful, data-driven life; no stats or dashboards. Buildings burn only on evidence of neglect (real `lastUsedAt` ≥ 60 days). `machi-milestones-v1` stays out of backups.
-Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and Bird's-eye (`machi-iso.js`). New Machi features go in both until Onur retires one. The tab choice lives in `machi-milestones-v1.view`. Places carry `meta.look`; each view draws its own version of a look.
+Two views behind a tab (P160): Street (`machi-engine.js` + `machi-fun.js`) and Bird's-eye (`machi-iso.js`). New Machi features go in both until Onur retires one. The tab choice lives in `machi-milestones-v1.view`. Places carry `meta.look`; each view draws its own version of a look. The shared festival ground appears for recent project completions, today's Schedule observances or today's Tiny Rituals (P194).
 
 ## Decision Log Convention
 <!-- decision-schema v1 · canonical: esen-vault/work/playbook/Decision Schema (Canonical).md -->
