@@ -605,9 +605,9 @@
     }
     async function useHandle(handle, ask) {
       let perm = 'prompt';
-      try { perm = await handle.queryPermission({ mode: 'readwrite' }); } catch { }
+      try { perm = await handle.queryPermission({ mode: 'read' }); } catch { }
       if (perm !== 'granted' && ask) {
-        try { perm = await handle.requestPermission({ mode: 'readwrite' }); } catch { }
+        try { perm = await handle.requestPermission({ mode: 'read' }); } catch { }
       }
       linkHandle = handle;
       if (perm !== 'granted') { needsPermission = true; folder = null; render(); return false; }
@@ -621,7 +621,7 @@
       if (!supported()) { showToast('This browser cannot link a folder. Use Import files.', 'error'); return; }
       if (linkHandle && needsPermission) { await useHandle(linkHandle, true); return; }
       try {
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'thinking-hub-signals' });
+        const handle = await window.showDirectoryPicker({ mode: 'read', id: 'thinking-hub-signals' });
         await idb('readwrite', (s) => s.put(handle, HANDLE));
         await useHandle(handle, true);
       } catch (e) { if (e.name !== 'AbortError') showToast('Could not link the folder.', 'error'); }
@@ -646,11 +646,17 @@
       save(false);
       if (readings) shownIndex = 0;
       render();
-      setStatus(readings || news ? [readings && `${readings} new reading${readings > 1 ? 's' : ''}`, news && `${news} new items`].filter(Boolean).join(', ') : 'Up to date');
+      setStatus(readings || news ? [readings && `${readings} new reading${readings > 1 ? 's' : ''}`, news && `${news} new items`, latestReadingLabel()].filter(Boolean).join(' · ') : `Up to date · ${latestReadingLabel()}`);
     }
     async function writeState() {
       if (!folder) { setStatus('Taps saved here. Save the taps file to send them.', true); return; }
       try {
+        let perm = 'prompt';
+        try { perm = await linkHandle.queryPermission({ mode: 'readwrite' }); } catch { }
+        if (perm !== 'granted') {
+          try { perm = await linkHandle.requestPermission({ mode: 'readwrite' }); } catch { }
+        }
+        if (perm !== 'granted') throw new Error('write permission not granted');
         const dir = await folder.getDirectoryHandle('state', { create: true });
         const fh = await dir.getFileHandle('hub-state.json', { create: true });
         const w = await fh.createWritable();
@@ -686,8 +692,20 @@
       save(false);
       if (readings) shownIndex = 0;
       render();
+      setStatus(`${readings || news ? 'Imported' : 'No new data'} · ${latestReadingLabel()}`);
       showToast(`${readings} reading${readings === 1 ? '' : 's'}, ${news} news items${other ? `, ${other} files skipped` : ''}`);
       return { readings, news, other };
+    }
+
+    function latestReadingLabel() {
+      const latest = data.readings[0];
+      if (!latest) return 'no reading imported on this device';
+      const day = String(latest.createdAt || '').slice(0, 10);
+      return `latest ${day || latest.requestId}`;
+    }
+    function sourceSummary() {
+      const latest = data.readings[0] || null;
+      return { linked: !!folder, supported: supported(), requestId: latest && latest.requestId || '', createdAt: latest && latest.createdAt || '', label: latestReadingLabel() };
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -850,12 +868,13 @@
 
     function emptyPage() {
       return `<div class="empty-wrap">
-        <div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading yet</div>
-        <div class="e-sub">Link the folder that holds the reading files, or import a reading file.</div></div>
+        <div class="empty-state"><span class="e-icon">📡</span><div class="e-title">No reading on this device yet</div>
+        <div class="e-sub">Signals stays on each device. A phone cannot read your PC's <code>E:\\GitHub\\esen-inbox</code> folder automatically.</div></div>
         <div class="card help"><ol>
-          <li><b>Link folder</b>: pick the folder with the <code>signals-hub</code> folder in it. New readings and news come in each time you open this page.</li>
+          <li><b>On the PC</b>: link the folder with <code>signals-hub</code>. Reading access is requested first; write access is requested only when saving a comment or Take forward.</li>
           <li><b>Import files</b>: a reading file and its request file, or a news file.</li>
-          <li>Comment naturally, or Take forward only when you want a move to enter Prove. State goes into the linked folder and full backup.</li>
+          <li><b>On another device</b>: import a Full Backup made after the PC has loaded Signals. It carries readings, news, comments and choices.</li>
+          <li>Comment naturally, or Take forward only when you want a move to enter Prove.</li>
         </ol>
         <div class="row" style="margin-top:12px">${folderButtons()}</div></div></div>`;
     }
@@ -1439,7 +1458,7 @@
 
     function render() {
       renderRadar(); renderLibrary(); renderBrief(); renderMine();
-      setStatus(needsPermission ? 'Reconnect the folder to read new files' : statusText, needsPermission || statusWarn);
+      setStatus(needsPermission ? 'Reconnect the folder to read new files' : statusText || latestReadingLabel(), needsPermission || statusWarn);
     }
     function showPlace(name) {
       place = name;
@@ -1471,7 +1490,7 @@
     });
 
     // For tests and the shell; no storage beyond signals-hub-v1.
-    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, tap, mark, addNote, render, showPlace, briefMarkdown, addSignal, updateSignal, signalLinks, get data() { return data; } };
+    window.SignalsHubTool = { addReading, addNews, importFiles, adoptPcState, stateFile, sourceSummary, tap, mark, addNote, render, showPlace, briefMarkdown, addSignal, updateSignal, signalLinks, get data() { return data; } };
 
     render();
     if (supported()) idb('readonly', (s) => s.get(HANDLE)).then((handle) => { if (handle) useHandle(handle, false); });

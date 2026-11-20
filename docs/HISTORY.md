@@ -4,6 +4,17 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 197 — Device-honest Signals loading~~ ✓ Done `[group: signals]`
+Signals now explains that linked esen-inbox folders and browser storage are device-local. Folder linking requests read access only; write access is requested later, only when a comment or Take forward must update `state/hub-state.json`. The status line names the latest imported reading so an empty or stale phone can be distinguished from an empty source folder. Full Backup remains the portable path between devices.
+
+**Key decisions**
+- **Decision:** keep Signals local-first and make the device boundary visible. **Why:** a phone cannot read a Windows folder, and pretending otherwise makes a healthy source look broken. **Alternative:** add automatic cloud synchronization; rejected by the standing no-cloud-sync boundary for confidential work data. **Confidence:** high.
+- **Decision:** request read permission for loading and defer write permission until state is written. **Why:** reading news should not require unnecessary write authority. **Confidence:** high.
+
+**Verified:** flow12 covers rich reading import, the latest-reading source status and portable backed-up state.
+
+**Files:** `signals-hub.html`, `tests/flows.js`, `sw.js`, `docs/HISTORY.md`, `CHANGELOG.md`
+
 ### ~~Priority 196 — Inner Atlas: What changed in me? + Personal Mythology~~ ✓ Done `[group: learning]`
 Memory House now includes an Inner Atlas room. “What changed in me?” compares document-level recurring language across an older season and the most recent 120 days, using only dated Cabinet fragments, Journal entries and Decisions. It shows newly recurring, enduring and earlier language, or refuses to infer when either season has fewer than two records. Personal Mythology detects a small fixed vocabulary of poetic motifs across those sources plus Projects; motifs need at least two supporting records and remain suggestions until the user optionally chooses “This feels true.” Confirmations are reversible and live in backed-up `cabinet-v1`.
 

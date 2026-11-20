@@ -606,6 +606,8 @@ function startServer() {
       featured: /Worth your attention/.test(document.querySelector('#place-radar .featured').textContent),
       doors: [...document.querySelectorAll('#place-radar .reading-door h3')].map((e) => e.textContent),
       rich: (() => { const r = SignalsHubTool.data.readings[0]; return [r.worldNews.length, r.companies.length, r.solutions.length, r.trends.length, r.projectReadings.length, r.feedback.length, r.ideas.length]; })(),
+      source: SignalsHubTool.sourceSummary(),
+      status: document.getElementById('status').textContent,
       briefGroups: ['World', 'My projects', 'New ideas'].every((x) => document.querySelector('#place-brief .paper').textContent.includes(x)),
       markdownGroups: ['## World', '## My projects', '## New ideas'].every((x) => SignalsHubTool.briefMarkdown(SignalsHubTool.data.readings[0]).includes(x)),
     }));
@@ -613,6 +615,9 @@ function startServer() {
     check('flow12: radar, featured reading, library and brief are drawn', shown.radar === 2 && shown.library === 3 && shown.brief && shown.featured, JSON.stringify(shown));
     check('flow12: richer reading fields survive import behind three compact doors',
       shown.doors.join('|') === 'World|My projects|New ideas' && shown.rich.every((n) => n === 1), JSON.stringify(shown));
+    check('flow12: source status names the latest device-local reading',
+      shown.source.requestId === 'req-2026-11-08-abc' && shown.source.label === 'latest 2026-11-08'
+      && /latest 2026-11-08/.test(shown.status), JSON.stringify(shown.source));
     check('flow12: Brief carries World, My projects and New ideas in the page and Markdown', shown.briefGroups && shown.markdownGroups, JSON.stringify(shown));
     const follow = page.locator('.move-card [data-tap="take-forward"]').first();
     await follow.scrollIntoViewIfNeeded();
