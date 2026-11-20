@@ -4,6 +4,17 @@ All priorities, decisions and verification notes, newest at the top of the backl
 
 ## Latest
 
+### ~~Priority 198 — Current-data backup and Copilot exchange proof~~ ✓ Done `[group: data]`
+Full Backup's byte-identical round trip now carries explicit fixtures for every attention-oriented Project state, all five Schedule meanings, Journal Tiny Rituals, rich Signals readings and citations, and confirmed Cabinet mythology. The esen-vault Copilot contract and slice tests carry the same Project and Schedule vocabulary, including legacy `event` compatibility and the rule that passed goal lines create reflection rather than overdue debt.
+
+**Key decisions**
+- **Decision:** prove the current nested shapes inside the existing Full Backup instead of adding another export format. **Why:** one durable backup is easier to trust and maintain than feature-specific bundles. **Confidence:** high.
+- **Decision:** preserve stored status codes and document their newer human meanings. **Why:** existing data remains compatible while Copilot sees Active, Maintaining, Resting, Incubating and Complete correctly. **Confidence:** high.
+
+**Verified:** flow2 restores all 25 backup keys byte-identically and makes explicit assertions for the new nested shapes; esen-vault `test_hub_changes.py` verifies current Project and Schedule slice semantics.
+
+**Files:** `tests/flows.js`, `docs/HISTORY.md`, `CHANGELOG.md`; esen-vault `scripts/hub_changes.py`, `scripts/test_hub_changes.py`, and Copilot documentation.
+
 ### ~~Priority 197 — Device-honest Signals loading~~ ✓ Done `[group: signals]`
 Signals now explains that linked esen-inbox folders and browser storage are device-local. Folder linking requests read access only; write access is requested later, only when a comment or Take forward must update `state/hub-state.json`. The status line names the latest imported reading so an empty or stale phone can be distinguished from an empty source folder. Full Backup remains the portable path between devices.
 

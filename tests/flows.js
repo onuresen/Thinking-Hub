@@ -131,6 +131,26 @@ function startServer() {
       // Build a unique marker per backup key
       const seed = {};
       SCOPE_KEYS.full.forEach((k, i) => { seed[k] = { _marker: k, n: i }; });
+      seed['project-hub-v1'] = { projects: [
+        { id: 'p-active', name: 'Active', status: 'active' },
+        { id: 'p-maintain', name: 'Maintaining', status: 'maintenance' },
+        { id: 'p-rest', name: 'Resting', status: 'onhold' },
+        { id: 'p-incubate', name: 'Incubating', status: 'planning' },
+        { id: 'p-complete', name: 'Complete', status: 'done' },
+      ], members: [], concepts: [] };
+      seed['schedule-v1'] = { items: ['commitment', 'personal', 'observance', 'goal', 'focus'].map((type, i) => ({
+        id: `s-${type}`, title: type, type, start: `2026-11-${20 + i}`, end: `2026-11-${20 + i}`,
+        projectId: type === 'goal' ? 'p-active' : '', notes: type === 'goal' ? 'Reflection, never overdue.' : '',
+      })), dayTags: { '2026-11-20': 'holiday' } };
+      seed['log-hub-v1'] = { entries: { '2026-11-20': { text: 'A quiet day.', rituals: { lanternAt: '2026-11-20T01:00:00.000Z' } } } };
+      seed['signals-hub-v1'] = { readings: [{ v: 3, requestId: 'req-roundtrip', createdAt: '2026-11-20T00:00:00.000Z',
+        insights: [{ headline: 'Evidence remains visible', summary: 'A complete portable reading.', citations: ['source'], projects: [] }], directions: [], continuity: [], worldNews: [],
+        companies: [{ name: 'Example', citations: ['source'] }], solutions: [], trends: [],
+        projectReadings: [{ projectId: 'p-active', verdict: 'extends', citations: ['source'] }], feedback: [],
+        ideas: [{ title: 'New path', citations: ['source'] }], signalNotes: [], followUps: [], projects: { 'p-active': 'Active' },
+        docs: { source: { title: 'Evidence', url: 'https://example.com/source', source: 'Example' } } }],
+        news: [{ title: 'News', url: 'https://example.com', source: 'Example', date: '2026-11-20' }], newsFiles: {}, reactions: [], items: {}, signals: [], notes: [] };
+      seed['cabinet-v1'] = { items: [{ id: 'c1', text: 'A lantern by a bridge.', createdAt: '2026-11-20T01:00:00.000Z' }], mythology: [{ id: 'light', label: 'Light and stars', createdAt: '2026-11-20T02:00:00.000Z' }] };
       // hub-settings-v1 carries a secret + a bulky index that MUST be stripped on export,
       // plus a normal field that MUST survive.
       seed['hub-settings-v1'] = { _marker: 'hub-settings-v1', profile: { name: 'Onur' }, anthropicKey: 'sk-ant-SECRET-should-not-export', obsidianIndex: [1, 2, 3, 4] };
@@ -164,11 +184,21 @@ function startServer() {
         if (JSON.stringify(restored) !== JSON.stringify(seed[k])) mismatches.push(k);
       }
       const settings = HubStorage.get('hub-settings-v1') || {};
+      const restoredProjects = HubStorage.get('project-hub-v1') || {};
+      const restoredSchedule = HubStorage.get('schedule-v1') || {};
+      const restoredLog = HubStorage.get('log-hub-v1') || {};
+      const restoredSignals = HubStorage.get('signals-hub-v1') || {};
+      const restoredCabinet = HubStorage.get('cabinet-v1') || {};
       return {
         missingFromPayload, secretLeaked, indexLeaked, allGone, mismatches,
         totalKeys: SCOPE_KEYS.full.length,
         settingsMarkerKept: settings._marker === 'hub-settings-v1',
         settingsProfileKept: settings.profile && settings.profile.name === 'Onur',
+        projectStates: (restoredProjects.projects || []).map((p) => p.status),
+        scheduleTypes: (restoredSchedule.items || []).map((i) => i.type),
+        ritual: restoredLog.entries && restoredLog.entries['2026-11-20'] && restoredLog.entries['2026-11-20'].rituals,
+        richSignal: restoredSignals.readings && restoredSignals.readings[0],
+        mythology: restoredCabinet.mythology,
       };
     });
     check('flow2: Full Backup covers every key (none dropped)', result.missingFromPayload.length === 0, result.missingFromPayload.join(', '));
@@ -177,6 +207,17 @@ function startServer() {
     check('flow2: all keys wiped before import', result.allGone === true);
     check(`flow2: every backup key restored byte-identical (${result.totalKeys} keys)`, result.mismatches.length === 0, result.mismatches.join(', '));
     check('flow2: hub-settings non-secret data restored', result.settingsMarkerKept && result.settingsProfileKept);
+    check('flow2: current project states and Schedule layers round-trip unchanged',
+      result.projectStates.join('|') === 'active|maintenance|onhold|planning|done'
+      && result.scheduleTypes.join('|') === 'commitment|personal|observance|goal|focus', JSON.stringify(result));
+    check('flow2: rituals, rich Signals and confirmed mythology round-trip unchanged',
+      !!result.ritual.lanternAt && result.richSignal.companies[0].name === 'Example'
+      && result.richSignal.projectReadings[0].verdict === 'extends' && result.richSignal.ideas[0].title === 'New path'
+      && result.mythology[0].id === 'light', JSON.stringify(result));
+    await page.evaluate(() => {
+      localStorage.removeItem('signals-hub-v1');
+      localStorage.removeItem('cabinet-v1');
+    });
     await page.close();
   }
 

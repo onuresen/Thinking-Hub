@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Made Signals loading device-honest, read-first, and explicit about the latest imported reading and Full Backup transfer path.
+- Added explicit Full Backup round-trip coverage for current Project states, Schedule meanings, rituals, rich Signals data, and Cabinet mythology.
 
 ## Unreleased
 
